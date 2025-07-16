@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "target/main.js",
   "scripts": {
-    "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start --app-path target/main-dev.js\"",
+    "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\"",
     "build": "shadow-cljs compile main renderer",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",

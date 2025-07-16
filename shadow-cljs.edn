@@ -6,7 +6,7 @@
          :main gremllm.main.core/main}
   
   :main-dev {:target :node-script
-             :output-to "target/main-dev.js"
+             :output-to "target/main.js"
              :main gremllm.main.dev/main}
 
   :renderer {:target :browser
