@@ -1,5 +1,7 @@
 # Gremllm - An Experimental IDE (Idea Development Environment)
 
+<img src="docs/gemini-generated-flyer.jpg" alt="Gremllm Flyer" align="right" width="320" style="margin-left: 20px;">
+
 A desktop chat app for AI-assisted thinking, built with ClojureScript and Electron.
 
 ## What's this?
