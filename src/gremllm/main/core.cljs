@@ -40,13 +40,6 @@
 
 
 (defn main []
-  ;; Load .env file when running in development (not packaged)
-  (when-not (.-isPackaged app)
-    (println "[INFO] Running in development mode.")
-    (let [electron-reload (js/require "electron-reload")]
-      (electron-reload (.cwd js/process) #js {:ignored #"node_modules|[/\\]\.|target"}))
-    (.config (js/require "@dotenvx/dotenvx") #js {:override true}))
-
   (let [store (atom {})]
     (setup-api-handlers store)
     (-> (.whenReady app)

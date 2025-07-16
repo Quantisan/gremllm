@@ -4,6 +4,10 @@
  {:main {:target :node-script
          :output-to "target/main.js"
          :main gremllm.main.core/main}
+  
+  :main-dev {:target :node-script
+             :output-to "target/main-dev.js"
+             :main gremllm.main.dev/main}
 
   :renderer {:target :browser
              :output-dir "resources/public/compiled-js"
