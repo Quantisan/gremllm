@@ -7,8 +7,6 @@
             ["electron-reload" :as electron-reload]
             ["path" :as path]))
 
-(electron-reload (.cwd js/process) #js {:ignored #"node_modules|[/\\]\.|target"})
-
 (defn create-window []
   (let [win (BrowserWindow.
               (clj->js {:width 800
@@ -45,7 +43,8 @@
 (defn main []
   ;; Load .env file when running in development (not packaged)
   (when-not (.-isPackaged app)
-    (println "[INFO] Running in development mode - loading .env file")
+    (println "[INFO] Running in development mode.")
+    (electron-reload (.cwd js/process) #js {:ignored #"node_modules|[/\\]\.|target"})
     (.config (js/require "@dotenvx/dotenvx") #js {:override true}))
 
   (let [store (atom {})]
