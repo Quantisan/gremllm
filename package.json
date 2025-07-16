@@ -1,0 +1,29 @@
+{
+	"name": "gremllm",
+	"version": "0.1.0",
+	"main": "target/main.js",
+	"scripts": {
+		"dev": "concurrently \"shadow-cljs watch main renderer\" \"sleep 10 && electron-forge start\"",
+		"build": "shadow-cljs compile main renderer",
+		"package": "npm run build && electron-forge package",
+		"make": "npm run build && electron-forge make",
+		"repl": "shadow-cljs cljs-repl renderer",
+		"clean": "rm -rf .shadow-cljs target resources/public/compiled-js",
+		"test": "shadow-cljs compile test",
+		"test:watch": "shadow-cljs watch test"
+	},
+	"devDependencies": {
+		"@electron-forge/cli": "^7.8.1",
+		"@electron-forge/maker-deb": "^7.8.1",
+		"@electron-forge/maker-rpm": "^7.8.1",
+		"@electron-forge/maker-squirrel": "^7.8.1",
+		"@electron-forge/maker-zip": "^7.8.1",
+		"@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
+		"@electron-forge/plugin-fuses": "^7.8.1",
+		"@electron/fuses": "^1.8.0",
+		"electron": "^37.2.2",
+		"electron-reload": "^2.0.0-alpha.1",
+		"shadow-cljs": "^3.1.7",
+		"concurrently": "^9.2.0"
+	}
+}

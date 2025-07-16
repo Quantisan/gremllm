@@ -1,0 +1,31 @@
+(ns gremllm.renderer.core
+  (:require [replicant.dom :as r]
+            [nexus.registry :as nxr]
+            [gremllm.renderer.ui :as ui]
+            [gremllm.renderer.actions]))
+
+(defn main []
+  ;; Set up the atom
+  (let [store (atom nil)
+        el    (js/document.getElementById "app")]
+    (.onMenuCommand js/window.electronAPI "topic/save"
+                    (fn []
+                      (nxr/dispatch store {} [[:topic.effects/save-topic "current-topic"]])))
+
+    (.onMenuCommand js/window.electronAPI "topic/open"
+                    (fn []
+                      (nxr/dispatch store {} [[:topic.effects/load-topic]])))
+
+    ;; Render on every change
+    (add-watch store ::render-topic
+               (fn [_ _ _ topic]
+                 (->> topic
+                      (ui/render-topic)
+                      (r/render el))))
+
+    (r/set-dispatch!
+      (fn [dispatch-data actions]
+        (nxr/dispatch store dispatch-data actions)))
+
+    ;; Trigger the first render
+    (nxr/dispatch store {} [[:topic.actions/bootstrap]])))
