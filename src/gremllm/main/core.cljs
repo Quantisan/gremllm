@@ -43,6 +43,11 @@
 
 
 (defn main []
+  ;; Load .env file for development
+  (when (= "development" (.-NODE_ENV (.-env js/process)))
+    (println "DEVELOPMENTQQQ")
+    (.config (js/require "dotenv")))
+
   (let [store (atom {})]
     (setup-api-handlers store)
     (-> (.whenReady app)
