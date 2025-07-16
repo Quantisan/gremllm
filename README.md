@@ -39,7 +39,10 @@ npm run test
 cp .env_example .env
 # Edit .env and add your Anthropic API key
 
-# Run in dev mode
+# Encrypt your .env file (creates .env.keys)
+npx dotenvx encrypt
+
+# Run in dev mode (will use the encrypted vault)
 npm run dev
 ```
 
