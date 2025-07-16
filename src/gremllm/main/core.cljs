@@ -43,8 +43,8 @@
 
 
 (defn main []
-  ;; Load .env file when running in development (not packaged)
   (when-not (.-isPackaged app)
+    (println "[INFO] Running in development mode - loading .env file")
     (.config (js/require "dotenv")))
 
   (let [store (atom {})]
