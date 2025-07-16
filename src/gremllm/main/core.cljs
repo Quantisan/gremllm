@@ -43,6 +43,11 @@
 
 
 (defn main []
+  ;; Load .env file when running in development (not packaged)
+  (when-not (.-isPackaged app)
+    (println "[INFO] Running in development mode - loading .env file")
+    (.config (js/require "@dotenvx/dotenvx") #js {:override true}))
+
   (let [store (atom {})]
     (setup-api-handlers store)
     (-> (.whenReady app)
