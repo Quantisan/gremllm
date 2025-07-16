@@ -43,25 +43,9 @@
 
 
 (defn main []
-  ;; Test different ways to detect development mode
-  (println "\n=== Development Detection Tests ===")
-  (println "1. NODE_ENV:" (.-NODE_ENV (.-env js/process)))
-  (println "2. app.isPackaged:" (.-isPackaged app))
-  (println "3. process.argv:" (.-argv js/process))
-  (println "4. process.execPath:" (.-execPath js/process))
-  (println "5. __dirname:" js/__dirname)
-  (println "6. process.cwd():" (.cwd js/process))
-  (println "7. process.env keys sample:" (take 10 (js/Object.keys (.-env js/process))))
-  (println "8. process.defaultApp:" (.-defaultApp js/process))
-  (println "9. app.getName():" (.getName app))
-  (println "10. app.getVersion():" (.getVersion app))
-  (println "================================\n")
-
-  ;; Try loading dotenv with the most reliable method
+  ;; Load .env file when running in development (not packaged)
   (when-not (.-isPackaged app)
-    (println ">>> App is NOT packaged - loading .env file")
-    (.config (js/require "dotenv"))
-    (println ">>> ANTHROPIC_API_KEY present?:" (boolean (.-ANTHROPIC_API_KEY (.-env js/process)))))
+    (.config (js/require "dotenv")))
 
   (let [store (atom {})]
     (setup-api-handlers store)
