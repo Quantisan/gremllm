@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "main": "target/main.js",
   "scripts": {
-    "dev": "concurrently \"shadow-cljs watch main renderer\" \"sleep 10 && electron-forge start\"",
-    "build": "shadow-cljs compile main renderer",
+    "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\"",
+    "build": "npm run clean && shadow-cljs compile main renderer",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
     "repl": "shadow-cljs cljs-repl renderer",
