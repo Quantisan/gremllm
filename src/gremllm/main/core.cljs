@@ -4,7 +4,6 @@
             [gremllm.main.utils :refer [nxr-result]]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
-            ["electron-reload" :as electron-reload]
             ["path" :as path]))
 
 (defn create-window []
@@ -44,7 +43,8 @@
   ;; Load .env file when running in development (not packaged)
   (when-not (.-isPackaged app)
     (println "[INFO] Running in development mode.")
-    (electron-reload (.cwd js/process) #js {:ignored #"node_modules|[/\\]\.|target"})
+    (let [electron-reload (js/require "electron-reload")]
+      (electron-reload (.cwd js/process) #js {:ignored #"node_modules|[/\\]\.|target"}))
     (.config (js/require "@dotenvx/dotenvx") #js {:override true}))
 
   (let [store (atom {})]
