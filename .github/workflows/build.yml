@@ -21,5 +21,8 @@ jobs:
     - name: Setup environment
       uses: ./.github/actions/setup-environment
 
+    - name: Build ClojureScript
+      run: npm run build
+      
     - name: Publish App
       run: npx electron-forge publish
