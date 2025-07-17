@@ -2,6 +2,7 @@
   "name": "gremllm",
   "version": "0.1.0",
   "description": "An Experimental IDE (Idea Development Environment)",
+  "license": "MIT",
   "main": "target/main.js",
   "scripts": {
     "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\"",
