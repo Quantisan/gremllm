@@ -1,0 +1,38 @@
+name: 'Setup Environment'
+description: 'Setup Java, Clojure, Node and install dependencies'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Install clojure tools
+      uses: DeLaGuardo/setup-clojure@13.4
+      with:
+        cli: 1.12.1.1550
+
+    - name: Cache clojure dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.gitlibs
+          ~/.deps.clj
+          .cpcache
+        # List all files containing dependencies:
+        key: cljdeps-${{ hashFiles('deps.edn', 'shadow-cljs.edn') }}
+        restore-keys: cljdeps-
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci

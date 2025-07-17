@@ -1,0 +1,21 @@
+name: Build and Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup environment
+      uses: ./.github/actions/setup-environment
+
+    - name: Publish App
+      run: npx electron-forge publish
