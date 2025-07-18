@@ -1,8 +1,8 @@
 (ns gremllm.main.io-test
   (:require [cljs.test :refer [deftest is testing]]
+            [clojure.string]
             [gremllm.main.io :as io]
-            ["fs" :as fs]
-            ["path" :as path]))
+            ["fs" :as fs]))
 
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
@@ -41,6 +41,6 @@
 
   (testing "writes EDN format"
     (with-redefs [io/ensure-dir (fn [_])
-                  io/write-file (fn [path content]
+                  io/write-file (fn [_path content]
                                   (is (= "{:api-key \"encrypted\"}" content)))]
       (io/write-secrets-file "/path/secrets.edn" {:api-key "encrypted"}))))

@@ -27,7 +27,7 @@
     (let [mock (mock-safe-storage {:available? true})]
       (with-redefs [secrets/safe-storage mock]
         (is (= true (secrets/check-availability))))))
-  
+
   (testing "returns false when encryption is not available"
     (let [mock (mock-safe-storage {:available? false})]
       (with-redefs [secrets/safe-storage mock]
@@ -37,31 +37,31 @@
   (testing "returns nil when encryption not available"
     (with-redefs [secrets/check-availability (fn [] false)]
       (is (nil? (secrets/encrypt-value "secret-value")))))
-  
+
   (testing "returns nil when given nil value"
     (with-redefs [secrets/check-availability (fn [] true)]
       (is (nil? (secrets/encrypt-value nil)))))
-  
+
   (testing "returns base64 string when encryption available"
-    (let [mock-buffer (clj->js {:toString (fn [encoding] 
+    (let [mock-buffer (clj->js {:toString (fn [encoding]
                                             (when (= encoding "base64")
                                               "bW9jay1lbmNyeXB0ZWQ="))})
           mock (mock-safe-storage {:available? true
-                                  :encrypt-fn (fn [_] mock-buffer)})]
+                                   :encrypt-fn (fn [_] mock-buffer)})]
       (with-redefs [secrets/check-availability (fn [] true)
                     secrets/safe-storage mock]
         (is (= "bW9jay1lbmNyeXB0ZWQ=" (secrets/encrypt-value "secret-value")))))))
 
-(deftest test-decrypt-value  
+(deftest test-decrypt-value
   (testing "returns nil when given nil"
     (is (nil? (secrets/decrypt-value nil))))
-  
+
   (testing "returns nil on decryption error"
-    (let [mock (mock-safe-storage {:decrypt-fn (fn [_] 
+    (let [mock (mock-safe-storage {:decrypt-fn (fn [_]
                                                 (throw (js/Error. "Decryption failed")))})]
       (with-redefs [secrets/safe-storage mock]
         (is (nil? (secrets/decrypt-value "bW9jay1lbmNyeXB0ZWQ="))))))
-  
+
   (testing "returns decrypted string on success"
     (let [mock (mock-safe-storage {:decrypt-fn (fn [_] "decrypted-value")})]
       (with-redefs [secrets/safe-storage mock]
