@@ -14,16 +14,16 @@
   (testing "returns empty map when file doesn't exist"
     (with-redefs [fs/existsSync (fn [_] false)]
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn")))))
-  
+
   (testing "reads and parses EDN content when file exists"
     (with-redefs [fs/existsSync (fn [_] true)
                   io/read-file (fn [_] "{:api-key \"encrypted-value\"}")]
-      (is (= {:api-key "encrypted-value"} 
+      (is (= {:api-key "encrypted-value"}
              (io/read-secrets-file "/fake/path/secrets.edn")))))
-  
+
   (testing "returns empty map on parse error"
     (with-redefs [fs/existsSync (fn [_] true)
-                  io/read-file (fn [_] "invalid-edn{")]
+                  io/read-file (fn [_] "{:key")]
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn"))))))
 
 (deftest test-write-secrets-file
@@ -38,7 +38,7 @@
         (io/write-secrets-file "/app/data/User/secrets.edn" {:key "value"})
         (is @ensure-dir-called?)
         (is @write-file-called?))))
-  
+
   (testing "writes EDN format"
     (with-redefs [io/ensure-dir (fn [_])
                   io/write-file (fn [path content]
