@@ -2,8 +2,8 @@
   (:require [gremllm.main.actions.secrets :as secrets]))
 
 (defn test-safe-storage
-  "Minimal integration test for Electron's safeStorage API.
-   Runs on dev startup to ensure encryption is working."
+  "Hack for integration testing - runs on dev startup since proper 
+   Electron integration tests in CLJS are difficult to set up."
   []
   ;; Core requirement: encryption must be available
   (assert (secrets/check-availability) "safeStorage encryption not available!")
