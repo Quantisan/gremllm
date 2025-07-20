@@ -9,6 +9,8 @@
 (defn create-empty-secrets []
   {})
 
+;; TODO: refactor to use Nexus effects and actions
+
 (defn add-secret [secrets-map key value]
   (assoc secrets-map key value))
 
