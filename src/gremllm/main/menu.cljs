@@ -41,6 +41,10 @@
                                        {:role "pasteAndMatchStyle"})
                                      {:role "delete"}
                                      {:role "selectAll"}
+                                     {:type "separator"}
+                                     {:label "Settings..."
+                                      :accelerator (if is-mac "Cmd+," "Ctrl+,")
+                                      :click #(nxr/dispatch store {} [[:effects/send-to-focused-window "menu:settings"]])}
                                      (when is-mac
                                        {:type "separator"})
                                      (when is-mac

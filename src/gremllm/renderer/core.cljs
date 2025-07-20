@@ -16,6 +16,10 @@
                     (fn []
                       (nxr/dispatch store {} [[:topic.effects/load-topic]])))
 
+    (.onMenuCommand js/window.electronAPI "menu:settings"
+                    (fn []
+                      (nxr/dispatch store {} [[:ui.actions/show-settings]])))
+
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ topic]

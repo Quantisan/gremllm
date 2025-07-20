@@ -34,4 +34,19 @@
     (when-let [element (js/document.getElementById element-id)]
       (set! (.-scrollTop element) (.-scrollHeight element)))))
 
+(defn show-settings [state]
+  [[:ui.effects/save [:ui :showing-settings?] true]])
+
+(defn hide-settings [state]
+  [[:ui.effects/save [:ui :showing-settings?] false]])
+
+;; Register UI effect
+(nxr/register-effect! :ui.effects/save
+  (fn [_ store path value]
+    (swap! store assoc-in path value)))
+
+;; Register the actions
+(nxr/register-action! :ui.actions/show-settings show-settings)
+(nxr/register-action! :ui.actions/hide-settings hide-settings)
+
 

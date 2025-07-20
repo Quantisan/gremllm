@@ -1,7 +1,8 @@
 (ns gremllm.renderer.ui
   (:require [gremllm.renderer.state.messages :as msg-state]
             [gremllm.renderer.state.form :as form-state]
-            [gremllm.renderer.state.loading :as loading-state]))
+            [gremllm.renderer.state.loading :as loading-state]
+            [gremllm.renderer.state.ui :as ui-state]))
 
 (defn render-user-message [message]
   [:div.message-container
@@ -59,6 +60,20 @@
      [:button {:type "submit"
                :disabled loading?} "Send"]]]])
 
+(defn render-settings [encryption-available?]
+  [:div
+   [:div
+    [:h2 "Settings"]
+    [:section
+     [:h3 "API Keys"]
+     (if-not encryption-available?
+       [:div "⚠️ Secrets cannot be encrypted on this system"]
+       [:p "API key storage is available."])]
+    [:div
+     [:button 
+      {:on {:click [[:ui.actions/hide-settings]]}}
+      "Done"]]]])
+
 (defn render-topic [topic]
   [:div {:style {:display "flex"
                  :flex-direction "column"
@@ -68,4 +83,8 @@
    (render-chat-area (msg-state/get-messages topic)
                      (loading-state/get-loading topic)
                      (loading-state/get-assistant-errors topic))
-   (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))])
+   (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
+   
+   ;; Add settings panel when showing
+   (when (ui-state/showing-settings? topic)
+     (render-settings false))])  ;; hardcode false for now
