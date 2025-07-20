@@ -39,7 +39,7 @@
 
 ;; Effect handlers that combine encryption with file I/O
 
-(defn set
+(defn save
   "Save an encrypted secret to the secrets file"
   [_ _ key value]
   (if (check-availability)
@@ -54,7 +54,7 @@
         {:error "Failed to encrypt value"}))
     {:error "Encryption not available"}))
 
-(defn get
+(defn load
   "Retrieve and decrypt a specific secret"
   [_ _ key]
   (let [user-data-dir (.getPath app "userData")
@@ -67,8 +67,8 @@
         {:error "Failed to decrypt value"})
       {:error "Secret not found"})))
 
-(defn delete
-  "Remove a secret from the secrets file"
+(defn del
+  "Delete a secret from the secrets file"
   [_ _ key]
   (let [user-data-dir (.getPath app "userData")
         filepath (io/secrets-file-path user-data-dir)
@@ -77,7 +77,7 @@
     (io/write-secrets-file filepath updated-secrets)
     {:ok true}))
 
-(defn list
+(defn list-keys
   "Get all secret keys (not values)"
   [_ _]
   (let [user-data-dir (.getPath app "userData")
