@@ -36,6 +36,32 @@
   (.handle ipcMain "topic/load"
            (fn [_event]
              (let [dispatch-result (nxr/dispatch store {} [[:ipc.effects/load-topic (topics-dir)]])]
+               (nxr-result dispatch-result))))
+
+  ;; Secrets handlers
+  (.handle ipcMain "secrets/save"
+           (fn [_event key value]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save key value]])]
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "secrets/load"
+           (fn [_event key]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load key]])]
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "secrets/delete"
+           (fn [_event key]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete key]])]
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "secrets/list-keys"
+           (fn [_event]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/list-keys]])]
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "secrets/check-availability"
+           (fn [_event]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/check-availability]])]
                (nxr-result dispatch-result)))))
 
 

@@ -19,3 +19,8 @@
   (testing "returns nil when encryption not available"
     (with-redefs [secrets/check-availability (fn [] false)]
       (is (nil? (secrets/encrypt-value "secret-value"))))))
+
+(deftest test-decrypt-invalid-input
+  (testing "decrypt-value returns nil for invalid inputs"
+    (is (nil? (secrets/decrypt-value nil)))
+    (is (nil? (secrets/decrypt-value "")))))

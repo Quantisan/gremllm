@@ -41,4 +41,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	loadTopic: () => ipcRenderer.invoke("topic/load"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
+	// Secrets API
+	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
+	loadSecret: (key) => ipcRenderer.invoke("secrets/load", key),
+	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
+	listSecretKeys: () => ipcRenderer.invoke("secrets/list-keys"),
+	checkSecretsAvailability: () => ipcRenderer.invoke("secrets/check-availability"),
 });

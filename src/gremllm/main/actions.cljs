@@ -3,6 +3,7 @@
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.actions.llm :as llm-actions]
             [gremllm.main.actions.ipc :as ipc-actions]
+            [gremllm.main.actions.secrets :as secrets-actions]
             ["electron/main" :refer [BrowserWindow]]))
 
 ;; Register how to extract state from the system
@@ -42,3 +43,8 @@
 (nxr/register-effect! :ipc.effects/save-topic topic-actions/save)
 (nxr/register-effect! :ipc.effects/load-topic topic-actions/load)
 
+(nxr/register-effect! :secrets.effects/save secrets-actions/save)
+(nxr/register-effect! :secrets.effects/load secrets-actions/load)
+(nxr/register-effect! :secrets.effects/delete secrets-actions/del)
+(nxr/register-effect! :secrets.effects/list-keys secrets-actions/list-keys)
+(nxr/register-effect! :secrets.effects/check-availability (fn [_ _ _] (secrets-actions/check-availability)))
