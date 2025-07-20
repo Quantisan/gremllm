@@ -2,7 +2,8 @@
   (:require [gremllm.renderer.state.messages :as msg-state]
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
-            [gremllm.renderer.state.ui :as ui-state]))
+            [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.ui.settings :as settings-ui]))
 
 (defn render-user-message [message]
   [:div.message-container
@@ -60,18 +61,6 @@
      [:button {:type "submit"
                :disabled loading?} "Send"]]]])
 
-(defn render-settings [encryption-available?]
-  [:div
-   [:section
-    [:h3 "API Keys"]
-    (if-not encryption-available?
-      [:div "⚠️ Secrets cannot be encrypted on this system"]
-      [:p "API key storage is available."])]
-   [:footer
-    [:button
-     {:on {:click [[:ui.actions/hide-settings]]}}
-     "Done"]]])
-
 (defn render-topic [topic]
   [:div {:style {:display "flex"
                  :flex-direction "column"
@@ -83,13 +72,4 @@
                      (loading-state/get-assistant-errors topic))
    (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
 
-   ;; Settings modal using Pico's dialog element
-   [:dialog {:id "settings-dialog"
-             :open (ui-state/showing-settings? topic)}
-    [:article
-     [:header
-      [:button {:aria-label "Close"
-                :rel "prev"
-                :on {:click [[:ui.actions/hide-settings]]}}]
-      [:p [:strong "Settings"]]]
-     (render-settings false)]]])
+   (settings-ui/render-settings-modal (ui-state/showing-settings? topic))])
