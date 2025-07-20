@@ -42,8 +42,9 @@
   (-> (.getPath app "userData")
       (io/secrets-file-path)))
 
-(defn- update-secrets-file [update-fn]
+(defn- update-secrets-file
   "Update secrets file with the given function"
+  [update-fn]
   (let [filepath (get-secrets-filepath)]
     (-> (io/read-secrets-file filepath)
         (update-fn)
