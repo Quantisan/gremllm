@@ -10,7 +10,7 @@
                                {:type "separator"}
                                {:label "Settings..."
                                 :accelerator "Cmd+,"
-                                :click #(nxr/dispatch store {} [[:effects/send-to-focused-window "menu:settings"]])}
+                                :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])}
                                {:type "separator"}
                                {:role "services"
                                 :submenu []}
@@ -34,7 +34,7 @@
                                      (when-not is-mac
                                        {:label "Settings..."
                                         :accelerator "Ctrl+,"
-                                        :click #(nxr/dispatch store {} [[:effects/send-to-focused-window "menu:settings"]])})
+                                        :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])})
                                      {:type "separator"}
                                      (if is-mac
                                        {:role "close"}
