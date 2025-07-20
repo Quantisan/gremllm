@@ -1,5 +1,6 @@
 (ns gremllm.main.actions.secrets
-  (:require ["electron" :refer [safeStorage]]))
+  (:require ["electron" :refer [safeStorage app]]
+            [gremllm.main.io :as io]))
 
 ;; Reference to Electron's safeStorage API
 (def safe-storage safeStorage)
@@ -35,3 +36,51 @@
         (.decryptString safe-storage buffer))
       (catch :default _
         nil))))
+
+;; Effect handlers that combine encryption with file I/O
+
+(defn set
+  "Save an encrypted secret to the secrets file"
+  [_ _ key value]
+  (if (check-availability)
+    (let [user-data-dir (.getPath app "userData")
+          filepath (io/secrets-file-path user-data-dir)
+          current-secrets (io/read-secrets-file filepath)
+          encrypted-value (encrypt-value value)]
+      (if encrypted-value
+        (do
+          (io/write-secrets-file filepath (add-secret current-secrets key encrypted-value))
+          {:ok true})
+        {:error "Failed to encrypt value"}))
+    {:error "Encryption not available"}))
+
+(defn get
+  "Retrieve and decrypt a specific secret"
+  [_ _ key]
+  (let [user-data-dir (.getPath app "userData")
+        filepath (io/secrets-file-path user-data-dir)
+        secrets (io/read-secrets-file filepath)
+        encrypted-value (get secrets key)]
+    (if encrypted-value
+      (if-let [decrypted (decrypt-value encrypted-value)]
+        {:ok decrypted}
+        {:error "Failed to decrypt value"})
+      {:error "Secret not found"})))
+
+(defn delete
+  "Remove a secret from the secrets file"
+  [_ _ key]
+  (let [user-data-dir (.getPath app "userData")
+        filepath (io/secrets-file-path user-data-dir)
+        current-secrets (io/read-secrets-file filepath)
+        updated-secrets (remove-secret current-secrets key)]
+    (io/write-secrets-file filepath updated-secrets)
+    {:ok true}))
+
+(defn list
+  "Get all secret keys (not values)"
+  [_ _]
+  (let [user-data-dir (.getPath app "userData")
+        filepath (io/secrets-file-path user-data-dir)
+        secrets (io/read-secrets-file filepath)]
+    {:ok (keys secrets)}))
