@@ -1,7 +1,8 @@
 (ns gremllm.renderer.actions.ui
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.form :as form-state]
-            [gremllm.renderer.state.loading :as loading-state]))
+            [gremllm.renderer.state.loading :as loading-state]
+            [gremllm.renderer.state.ui :as ui-state]))
 
 (defn update-input [state value]
   [[:form.effects/update-input value]])
@@ -35,10 +36,10 @@
       (set! (.-scrollTop element) (.-scrollHeight element)))))
 
 (defn show-settings [state]
-  [[:ui.effects/save [:ui :showing-settings?] true]])
+  [[:ui.effects/save ui-state/showing-settings-path true]])
 
 (defn hide-settings [state]
-  [[:ui.effects/save [:ui :showing-settings?] false]])
+  [[:ui.effects/save ui-state/showing-settings-path false]])
 
 ;; Register UI effect
 (nxr/register-effect! :ui.effects/save
