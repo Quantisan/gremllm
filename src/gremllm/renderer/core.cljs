@@ -24,7 +24,7 @@
     (add-watch store ::render-topic
                (fn [_ _ _ topic]
                  (->> topic
-                      (ui/render-topic)
+                      (ui/render-app)
                       (r/render el))))
 
     (r/set-dispatch!

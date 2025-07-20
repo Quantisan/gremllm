@@ -61,7 +61,7 @@
      [:button {:type "submit"
                :disabled loading?} "Send"]]]])
 
-(defn render-topic [topic]
+(defn render-app [topic]
   [:div {:style {:display "flex"
                  :flex-direction "column"
                  :height "100vh"}}
