@@ -33,6 +33,15 @@
   (when-let [error (first (vals errors))]
     [:div.assistant-error "⚠️ " error]))
 
+(defn render-api-key-warning []
+  [:article {:role "alert"}
+   [:small
+    "🔑 API key required. "
+    [:a {:href "#"
+         :on {:click [[:effects/prevent-default]
+                      [:ui.actions/show-settings]]}}
+     "Add in Settings"]]])
+
 (defn render-chat-area [messages loading errors]
   [:div.chat-area {:id "chat-messages-container"
                    :style {:overflow-y "auto"
@@ -46,7 +55,7 @@
    ;; Show any errors
    (render-error-message errors)])
 
-(defn render-input-form [input-value loading?]
+(defn render-input-form [input-value loading? has-api-key?]
   [:footer
    [:form
     {:on {:submit [[:effects/prevent-default]
@@ -54,22 +63,32 @@
     [:fieldset {:role "group"}
      [:input {:type "text"
               :value input-value
-              :placeholder "Type a message..."
+              :placeholder (if has-api-key?
+                            "Type a message..."
+                            "Add API key to start chatting...")
               :on {:input [[:form.actions/update-input [:event.target/value]]]}
               :autofocus true}]
 
      [:button {:type "submit"
-               :disabled loading?} "Send"]]]])
+               :disabled (or loading? (not has-api-key?))} "Send"]]]])
 
 (defn render-app [topic]
-  [:div {:style {:display "flex"
-                 :flex-direction "column"
-                 :height "100vh"}}
-   [:header
-    [:h1 "Gremllm"]]
-   (render-chat-area (msg-state/get-messages topic)
-                     (loading-state/get-loading topic)
-                     (loading-state/get-assistant-errors topic))
-   (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
+  (let [has-api-key? false] ;; TODO: need to check on bootup in main process
+    [:div {:style {:display "flex"
+                   :flex-direction "column"
+                   :height "100vh"}}
+     [:header
+      [:h1 "Gremllm"]]
 
-   (settings-ui/render-settings-modal (ui-state/showing-settings? topic))])
+     ;; Add warning when API key is missing
+     (when-not has-api-key?
+       (render-api-key-warning))
+
+     (render-chat-area (msg-state/get-messages topic)
+                       (loading-state/get-loading topic)
+                       (loading-state/get-assistant-errors topic))
+     (render-input-form (form-state/get-user-input topic)
+                        (loading-state/loading? topic)
+                        has-api-key?)
+
+     (settings-ui/render-settings-modal (ui-state/showing-settings? topic))]))
