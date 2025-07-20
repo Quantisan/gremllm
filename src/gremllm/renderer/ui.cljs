@@ -85,25 +85,26 @@
    (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
 
    ;; Modal overlay when showing settings
+   ;; When returns nil when condition is false, which is fine in hiccup
    (when (ui-state/showing-settings? topic)
-     (println "DEBUG: showing settings")
-     [:<>
-      ;; Backdrop - click to close
-      [:div {:style {:position "fixed"
-                     :top 0 :left 0 :right 0 :bottom 0
-                     :background "rgba(0, 0, 0, 0.5)"
-                     :z-index 1000}
-             :on {:click [[:ui.actions/hide-settings]]}}]
-      ;; Modal content
-      [:div {:style {:position "fixed"
-                     :top "50%" :left "50%"
-                     :transform "translate(-50%, -50%)"
-                     :background "white"
-                     :padding "2rem"
-                     :border-radius "8px"
-                     :z-index 1001
-                     :max-width "600px"
-                     :width "90%"
-                     :max-height "80vh"
-                     :overflow-y "auto"}}
-       (render-settings false)]])])  ;; hardcode false for now
+     ;; Backdrop - click to close
+     [:div {:style {:position "fixed"
+                    :top 0 :left 0 :right 0 :bottom 0
+                    :background "rgba(0, 0, 0, 0.5)"
+                    :z-index 1000}
+            :on {:click [[:ui.actions/hide-settings]]}}])
+   
+   (when (ui-state/showing-settings? topic)
+     ;; Modal content
+     [:div {:style {:position "fixed"
+                    :top "50%" :left "50%"
+                    :transform "translate(-50%, -50%)"
+                    :background "white"
+                    :padding "2rem"
+                    :border-radius "8px"
+                    :z-index 1001
+                    :max-width "600px"
+                    :width "90%"
+                    :max-height "80vh"
+                    :overflow-y "auto"}}
+      (render-settings false)])])
