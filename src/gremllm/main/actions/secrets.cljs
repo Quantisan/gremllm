@@ -42,17 +42,21 @@
   (-> (.getPath app "userData")
       (io/secrets-file-path)))
 
+(defn- update-secrets-file [update-fn]
+  "Update secrets file with the given function"
+  (let [filepath (get-secrets-filepath)]
+    (-> (io/read-secrets-file filepath)
+        (update-fn)
+        (->> (io/write-secrets-file filepath)))))
+
 ;; Effect handlers that combine encryption with file I/O
 
 (defn save
   "Save an encrypted secret to the secrets file"
   [_ _ key value]
   (if-let [encrypted-value (encrypt-value value)]
-    (let [filepath (get-secrets-filepath)]
-      (-> (io/read-secrets-file filepath)
-          (add-secret key encrypted-value)
-          (->> (io/write-secrets-file filepath)))
-      {:ok true})
+    (do (update-secrets-file #(add-secret % key encrypted-value))
+        {:ok true})
     {:error (if (check-availability)
               "Failed to encrypt value"
               "Encryption not available")}))
@@ -72,11 +76,8 @@
 (defn del
   "Delete a secret from the secrets file"
   [_ _ key]
-  (let [filepath (get-secrets-filepath)
-        current-secrets (io/read-secrets-file filepath)
-        updated-secrets (remove-secret current-secrets key)]
-    (io/write-secrets-file filepath updated-secrets)
-    {:ok true}))
+  (update-secrets-file #(remove-secret % key))
+  {:ok true})
 
 (defn list-keys
   "Get all secret keys (not values)"
