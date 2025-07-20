@@ -62,13 +62,12 @@
 
 (defn render-settings [encryption-available?]
   [:div
-   [:h2 "Settings"]
    [:section
     [:h3 "API Keys"]
     (if-not encryption-available?
       [:div "⚠️ Secrets cannot be encrypted on this system"]
       [:p "API key storage is available."])]
-   [:div {:style {:margin-top "2rem"}}
+   [:footer
     [:button
      {:on {:click [[:ui.actions/hide-settings]]}}
      "Done"]]])
@@ -91,5 +90,6 @@
      [:header
       [:button {:aria-label "Close"
                 :rel "prev"
-                :on {:click [[:ui.actions/hide-settings]]}}]]
+                :on {:click [[:ui.actions/hide-settings]]}}]
+      [:p [:strong "Settings"]]]
      (render-settings false)]]])
