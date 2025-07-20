@@ -37,28 +37,30 @@
       (catch :default _
         nil))))
 
+;; Helper function to get secrets file path
+(defn- get-secrets-filepath []
+  (-> (.getPath app "userData")
+      (io/secrets-file-path)))
+
 ;; Effect handlers that combine encryption with file I/O
 
 (defn save
   "Save an encrypted secret to the secrets file"
   [_ _ key value]
-  (if (check-availability)
-    (let [user-data-dir (.getPath app "userData")
-          filepath (io/secrets-file-path user-data-dir)
-          current-secrets (io/read-secrets-file filepath)
-          encrypted-value (encrypt-value value)]
-      (if encrypted-value
-        (do
-          (io/write-secrets-file filepath (add-secret current-secrets key encrypted-value))
-          {:ok true})
-        {:error "Failed to encrypt value"}))
-    {:error "Encryption not available"}))
+  (if-let [encrypted-value (encrypt-value value)]
+    (let [filepath (get-secrets-filepath)]
+      (-> (io/read-secrets-file filepath)
+          (add-secret key encrypted-value)
+          (->> (io/write-secrets-file filepath)))
+      {:ok true})
+    {:error (if (check-availability)
+              "Failed to encrypt value"
+              "Encryption not available")}))
 
 (defn load
   "Retrieve and decrypt a specific secret"
   [_ _ key]
-  (let [user-data-dir (.getPath app "userData")
-        filepath (io/secrets-file-path user-data-dir)
+  (let [filepath (get-secrets-filepath)
         secrets (io/read-secrets-file filepath)
         encrypted-value (get secrets key)]
     (if encrypted-value
@@ -70,8 +72,7 @@
 (defn del
   "Delete a secret from the secrets file"
   [_ _ key]
-  (let [user-data-dir (.getPath app "userData")
-        filepath (io/secrets-file-path user-data-dir)
+  (let [filepath (get-secrets-filepath)
         current-secrets (io/read-secrets-file filepath)
         updated-secrets (remove-secret current-secrets key)]
     (io/write-secrets-file filepath updated-secrets)
@@ -80,7 +81,6 @@
 (defn list-keys
   "Get all secret keys (not values)"
   [_ _]
-  (let [user-data-dir (.getPath app "userData")
-        filepath (io/secrets-file-path user-data-dir)
+  (let [filepath (get-secrets-filepath)
         secrets (io/read-secrets-file filepath)]
     {:ok (keys secrets)}))
