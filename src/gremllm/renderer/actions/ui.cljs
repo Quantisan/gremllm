@@ -1,10 +1,9 @@
 (ns gremllm.renderer.actions.ui
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.form :as form-state]
-            [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
-(defn update-input [state value]
+(defn update-input [_state value]
   [[:form.effects/update-input value]])
 
 ;; Domain-specific effects
@@ -35,10 +34,10 @@
     (when-let [element (js/document.getElementById element-id)]
       (set! (.-scrollTop element) (.-scrollHeight element)))))
 
-(defn show-settings [state]
+(defn show-settings [_state]
   [[:ui.effects/save ui-state/showing-settings-path true]])
 
-(defn hide-settings [state]
+(defn hide-settings [_state]
   [[:ui.effects/save ui-state/showing-settings-path false]])
 
 ;; Register UI effect
