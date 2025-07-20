@@ -69,7 +69,7 @@
       [:div "⚠️ Secrets cannot be encrypted on this system"]
       [:p "API key storage is available."])]
    [:div {:style {:margin-top "2rem"}}
-    [:button 
+    [:button
      {:on {:click [[:ui.actions/hide-settings]]}}
      "Done"]]])
 
@@ -83,9 +83,10 @@
                      (loading-state/get-loading topic)
                      (loading-state/get-assistant-errors topic))
    (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
-   
+
    ;; Modal overlay when showing settings
    (when (ui-state/showing-settings? topic)
+     (println "DEBUG: showing settings")
      [:<>
       ;; Backdrop - click to close
       [:div {:style {:position "fixed"
