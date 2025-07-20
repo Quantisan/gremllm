@@ -62,17 +62,16 @@
 
 (defn render-settings [encryption-available?]
   [:div
-   [:div
-    [:h2 "Settings"]
-    [:section
-     [:h3 "API Keys"]
-     (if-not encryption-available?
-       [:div "⚠️ Secrets cannot be encrypted on this system"]
-       [:p "API key storage is available."])]
-    [:div
-     [:button 
-      {:on {:click [[:ui.actions/hide-settings]]}}
-      "Done"]]]])
+   [:h2 "Settings"]
+   [:section
+    [:h3 "API Keys"]
+    (if-not encryption-available?
+      [:div "⚠️ Secrets cannot be encrypted on this system"]
+      [:p "API key storage is available."])]
+   [:div {:style {:margin-top "2rem"}}
+    [:button 
+     {:on {:click [[:ui.actions/hide-settings]]}}
+     "Done"]]])
 
 (defn render-topic [topic]
   [:div {:style {:display "flex"
@@ -85,6 +84,25 @@
                      (loading-state/get-assistant-errors topic))
    (render-input-form (form-state/get-user-input topic) (loading-state/loading? topic))
    
-   ;; Add settings panel when showing
+   ;; Modal overlay when showing settings
    (when (ui-state/showing-settings? topic)
-     (render-settings false))])  ;; hardcode false for now
+     [:<>
+      ;; Backdrop - click to close
+      [:div {:style {:position "fixed"
+                     :top 0 :left 0 :right 0 :bottom 0
+                     :background "rgba(0, 0, 0, 0.5)"
+                     :z-index 1000}
+             :on {:click [[:ui.actions/hide-settings]]}}]
+      ;; Modal content
+      [:div {:style {:position "fixed"
+                     :top "50%" :left "50%"
+                     :transform "translate(-50%, -50%)"
+                     :background "white"
+                     :padding "2rem"
+                     :border-radius "8px"
+                     :z-index 1001
+                     :max-width "600px"
+                     :width "90%"
+                     :max-height "80vh"
+                     :overflow-y "auto"}}
+       (render-settings false)]])])  ;; hardcode false for now
