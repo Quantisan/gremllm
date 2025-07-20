@@ -65,14 +65,12 @@
 (defn load
   "Retrieve and decrypt a specific secret"
   [_ _ key]
-  (let [filepath (get-secrets-filepath)
-        secrets (io/read-secrets-file filepath)
-        encrypted-value (get secrets key)]
-    (if encrypted-value
-      (if-let [decrypted (decrypt-value encrypted-value)]
-        {:ok decrypted}
-        {:error "Failed to decrypt value"})
-      {:error "Secret not found"})))
+  (if-let [decrypted (some-> (get-secrets-filepath)
+                             (io/read-secrets-file)
+                             (get key)
+                             (decrypt-value))]
+    {:ok decrypted}
+    {:error "Secret not found or failed to decrypt"}))
 
 (defn del
   "Delete a secret from the secrets file"
