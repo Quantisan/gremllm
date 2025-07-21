@@ -5,7 +5,7 @@
 (defn create-menu [store]
   (let [is-mac (= (.-platform js/process) "darwin")
         template [(when is-mac
-                    {:label (.-name app)
+                    {:label (.getName app)
                      :submenu [{:role "about"}
                                {:type "separator"}
                                {:label "Settings..."
