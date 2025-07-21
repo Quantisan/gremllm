@@ -19,7 +19,9 @@
 
     ;; Push system info after window loads
     (.once (.-webContents win) "did-finish-load"
-           #(.send (.-webContents win) "system:info" (clj->js system-info)))
+           (fn []
+             (println "[MAIN] Sending system:info:" system-info)
+             (.send (.-webContents win) "system:info" (clj->js system-info))))
 
     win))
 
@@ -78,6 +80,7 @@
 (defn main []
   (let [store (atom {})
         system-info (get-system-info)]
+    (println "[MAIN] System info at startup:" system-info)
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []

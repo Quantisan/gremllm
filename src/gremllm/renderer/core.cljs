@@ -22,7 +22,9 @@
 
     (.onSystemInfo js/window.electronAPI
                    (fn [system-info-js]
+                     (println "[RENDERER] Received system info (raw):" system-info-js)
                      (let [system-info (js->clj system-info-js :keywordize-keys true)]
+                       (println "[RENDERER] Converted system info:" system-info)
                        (nxr/dispatch store {} [[:system.actions/set-info system-info]]))))
 
     ;; Render on every change

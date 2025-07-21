@@ -42,7 +42,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	loadTopic: () => ipcRenderer.invoke("topic/load"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
 	onSystemInfo: (callback) => {
+		console.log("[PRELOAD] Setting up system:info listener");
 		ipcRenderer.on("system:info", (event, systemInfo) => {
+			console.log("[PRELOAD] Received system:info:", systemInfo);
 			callback(systemInfo);
 		});
 	},
