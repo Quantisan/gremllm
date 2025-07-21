@@ -27,8 +27,8 @@
 
     ;; Render on every change
     (add-watch store ::render-topic
-               (fn [_ _ _ topic]
-                 (->> topic
+               (fn [_ _ _ state]
+                 (->> state
                       (ui/render-app)
                       (r/render el))))
 
