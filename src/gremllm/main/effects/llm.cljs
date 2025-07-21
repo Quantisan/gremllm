@@ -1,6 +1,8 @@
-(ns gremllm.main.actions.llm)
+(ns gremllm.main.effects.llm
+  "LLM provider side effects and HTTP operations")
 
 (defn query-llm-provider
+  "Performs HTTP request to Anthropic API"
   [messages api-key]
   (let [request-body {:model "claude-3-5-haiku-latest"
                       :max_tokens 8192
@@ -14,4 +16,3 @@
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(if (.-ok %) (.json %) (throw (js/Error. "API request failed"))))
         (.then #(js->clj % :keywordize-keys true)))))
-

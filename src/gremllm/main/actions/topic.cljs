@@ -1,7 +1,6 @@
 (ns gremllm.main.actions.topic
-  (:require [gremllm.main.io :as io]
-            [clojure.edn :as edn]
-            ["path" :as path]))
+  "Pure actions for topic operations"
+  (:require ["path" :as path]))
 
 (def topic-file-pattern #"topic-\d+\.edn")
 
@@ -27,23 +26,11 @@
     (throw (js/Error. (str "Invalid filename: " filename))))
   plan)
 
-(defn execute-save-plan!
-  [{:keys [dir filepath content]}]
-  (io/ensure-dir dir)
-  (io/write-file filepath content)
-  filepath)
-
-(defn save [_ _ topic-clj topics-dir]
+;; Pure functions that return data for effects
+(defn prepare-save [_ _ topic-clj topics-dir]
   (-> (topic->save-plan topic-clj
                         {:timestamp (.getTime (js/Date.))
                          :topics-dir topics-dir})
-      (validate-save-plan)
-      (execute-save-plan!)))
-
-(defn load [_ _ topics-dir]
-    (when-let [filepath (io/find-latest-topic-file topics-dir topic-file-pattern)]
-      (-> (io/read-file filepath)
-          edn/read-string
-          (clj->js :keywordize-keys false))))
+      (validate-save-plan)))
 
 

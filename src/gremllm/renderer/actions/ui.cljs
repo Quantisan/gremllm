@@ -18,8 +18,10 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when-not (empty? text)
-      (let [assistant-id (random-uuid)]
-        [[:msg.actions/add {:id   (random-uuid)
+      ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
+      ;; Probably with Malli.
+      (let [assistant-id (.now js/Date)]
+        [[:msg.actions/add {:id   (.now js/Date)
                             :type :user
                             :text text}]
          [:form.effects/clear-input]

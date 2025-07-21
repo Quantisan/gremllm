@@ -1,9 +1,10 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
             [gremllm.main.actions.topic :as topic-actions]
-            [gremllm.main.actions.llm :as llm-actions]
             [gremllm.main.actions.ipc :as ipc-actions]
             [gremllm.main.actions.secrets :as secrets-actions]
+            [gremllm.main.effects.llm :as llm-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             ["electron/main" :refer [BrowserWindow]]))
 
 ;; Register how to extract state from the system
@@ -42,10 +43,16 @@
 ;; LLM effects
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages api-key]
-    (dispatch [[:ipc.effects/promise->reply (llm-actions/query-llm-provider messages api-key)]])))
+    (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
-(nxr/register-effect! :ipc.effects/save-topic topic-actions/save)
-(nxr/register-effect! :ipc.effects/load-topic topic-actions/load)
+(nxr/register-effect! :ipc.effects/save-topic
+  (fn [_ _ topic-clj topics-dir]
+    (let [save-plan (topic-actions/prepare-save nil nil topic-clj topics-dir)]
+      (topic-effects/save save-plan))))
+
+(nxr/register-effect! :ipc.effects/load-topic
+  (fn [_ _ topics-dir]
+    (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
 
 (nxr/register-effect! :secrets.effects/save secrets-actions/save)
 (nxr/register-effect! :secrets.effects/load secrets-actions/load)
