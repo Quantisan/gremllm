@@ -41,6 +41,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	loadTopic: () => ipcRenderer.invoke("topic/load"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
+	onSystemInfo: (callback) => {
+		ipcRenderer.on("system:info", (event, systemInfo) => {
+			callback(systemInfo);
+		});
+	},
 	// Secrets API
 	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
 	loadSecret: (key) => ipcRenderer.invoke("secrets/load", key),
