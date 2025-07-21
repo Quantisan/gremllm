@@ -1,6 +1,6 @@
-(ns gremllm.main.actions.llm-test
+(ns gremllm.main.effects.llm-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.actions.llm :as llm]))
+            [gremllm.main.effects.llm :as llm]))
 
 ;; Example send-message response:
 ;;
