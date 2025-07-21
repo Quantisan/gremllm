@@ -3,6 +3,7 @@
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.ui.settings :as settings-ui]))
 
 (defn render-user-message [message]
@@ -83,4 +84,7 @@
                         has-api-key?)
 
      ;; TODO: pass in actual values
-     (settings-ui/render-settings-modal (ui-state/showing-settings? topic) false false)]))
+     (settings-ui/render-settings-modal
+       (ui-state/showing-settings? topic)
+       (system-state/encryption-available? topic)
+       false)]))
