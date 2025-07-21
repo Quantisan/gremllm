@@ -82,4 +82,5 @@
                         (loading-state/loading? topic)
                         has-api-key?)
 
-     (settings-ui/render-settings-modal (ui-state/showing-settings? topic))]))
+     ;; TODO: pass in actual values
+     (settings-ui/render-settings-modal (ui-state/showing-settings? topic) true false)]))
