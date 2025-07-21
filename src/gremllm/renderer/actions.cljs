@@ -2,7 +2,8 @@
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
-            [gremllm.renderer.actions.topic :as topic]))   ; Topic persistence
+            [gremllm.renderer.actions.topic :as topic]
+            [gremllm.renderer.actions.system :as system]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -56,3 +57,6 @@
 (nxr/register-action! :topic.actions/load-error topic/load-topic-error)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
+
+(nxr/register-action! :system.actions/set-info system/set-info)
+

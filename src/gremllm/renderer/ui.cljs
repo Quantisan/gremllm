@@ -3,6 +3,7 @@
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.ui.settings :as settings-ui]))
 
 (defn render-user-message [message]
@@ -63,8 +64,8 @@
      [:button {:type "submit"
                :disabled (or loading? (not has-api-key?))} "Send"]]]])
 
-(defn render-app [topic]
-  (let [has-api-key? false] ;; TODO: need to check on bootup in main process
+(defn render-app [state]
+  (let [has-api-key? false] ;; TODO: pass in actual value
     [:div {:style {:display "flex"
                    :flex-direction "column"
                    :height "100vh"}}
@@ -75,12 +76,14 @@
      (when-not has-api-key?
        (settings-ui/render-api-key-warning))
 
-     (render-chat-area (msg-state/get-messages topic)
-                       (loading-state/get-loading topic)
-                       (loading-state/get-assistant-errors topic))
-     (render-input-form (form-state/get-user-input topic)
-                        (loading-state/loading? topic)
+     (render-chat-area (msg-state/get-messages state)
+                       (loading-state/get-loading state)
+                       (loading-state/get-assistant-errors state))
+     (render-input-form (form-state/get-user-input state)
+                        (loading-state/loading? state)
                         has-api-key?)
 
-     ;; TODO: pass in actual values
-     (settings-ui/render-settings-modal (ui-state/showing-settings? topic) false false)]))
+     (settings-ui/render-settings-modal
+       (ui-state/showing-settings? state)
+       (system-state/encryption-available? state)
+       has-api-key?)]))
