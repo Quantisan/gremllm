@@ -1,33 +1,63 @@
 (ns gremllm.renderer.ui.settings)
 
-(defn render-settings [encryption-available?]
+;; TODO: bloaty...
+(defn render-settings [encryption-available? has-api-key?]
   [:div
-   [:section
-    [:h3 "API Keys"]
-    (if-not encryption-available?
-      [:div "⚠️ Secrets cannot be encrypted on this system"]
-      [:p "API key storage is available."])]
-   [:footer
-    [:button
-     {:on {:click [[:ui.actions/hide-settings]]}}
-     "Done"]]])
+   ;; Encryption warning
+   (when-not encryption-available?
+     [:article {:role "alert"}
+      [:h4 "⚠️ Security Notice"]
+      [:p "Secret encryption is not available on this system. API keys entered will only be used for this current session."]])
 
-(defn render-settings-modal [open?]
+   ;; API Key configuration
+   [:article
+    [:h3 "Anthropic API Key"]
+    (when has-api-key?
+      [:kbd {:class "pico-color-green"} "✓ Configured"])
+
+    [:form
+     [:input {:id "anthropic-api-key"
+              :name "anthropic-api-key"
+              :type "password"
+              :placeholder (if has-api-key?
+                             "Enter new key to replace existing"
+                             "sk-ant-api03-...")
+              :disabled (not encryption-available?)}]
+
+     [:div {:class "grid"}
+      [:button {:type "button"
+                :disabled (not encryption-available?)}
+       "Save Key"]
+
+      (when has-api-key?
+        [:button {:type "button"
+                  :class "secondary outline"
+                  :disabled (not encryption-available?)}
+         "Remove Key"])]]]
+
+   ;; Close button
+   [:button {:type "button"
+             :class "contrast"
+             :on {:click [[:ui.actions/hide-settings]]}}
+    "Close"]])
+
+(defn render-settings-modal [open? encryption-available? has-api-key?]
   [:dialog {:id "settings-dialog"
             :open open?}
    [:article
     [:header
      [:button {:aria-label "Close"
                :rel "prev"
+               :class "close"
                :on {:click [[:ui.actions/hide-settings]]}}]
-     [:p [:strong "⚙️ Settings"]]]
-    (render-settings false)]])
+     [:h3 "⚙️ Settings"]]
+
+    (render-settings encryption-available? has-api-key?)]])
 
 (defn render-api-key-warning []
-  [:article {:role "alert"}
-   [:small
-    "🔑 API key required. "
-    [:a {:href "#"
-         :on {:click [[:effects/prevent-default]
-                      [:ui.actions/show-settings]]}}
-     "Add in Settings"]]])
+  [:mark {:role "alert"}
+   "🔑 API key required — "
+   [:a {:href "#"
+        :on {:click [[:effects/prevent-default]
+                     [:ui.actions/show-settings]]}}
+    "Configure in Settings"]])
