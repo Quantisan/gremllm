@@ -7,7 +7,7 @@
    (when-not encryption-available?
      [:article {:role "alert"}
       [:h4 "⚠️ Security Notice"]
-      [:p "Secret encryption is not available on this system. API keys will be stored in plain text."]])
+      [:p "Secret encryption is not available on this system. API keys entered will only be used for this current session."]])
 
    ;; API Key configuration
    [:article
