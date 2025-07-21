@@ -51,6 +51,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	loadSecret: (key) => ipcRenderer.invoke("secrets/load", key),
 	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
 	listSecretKeys: () => ipcRenderer.invoke("secrets/list-keys"),
-	checkSecretsAvailability: () =>
-		ipcRenderer.invoke("secrets/check-availability"),
 });

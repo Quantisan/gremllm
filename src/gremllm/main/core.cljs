@@ -69,13 +69,7 @@
   (.handle ipcMain "secrets/list-keys"
            (fn [_event]
              (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/list-keys]])]
-               (nxr-result dispatch-result))))
-
-  (.handle ipcMain "secrets/check-availability"
-           (fn [_event]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/check-availability]])]
                (nxr-result dispatch-result)))))
-
 
 (defn main []
   (let [store (atom {})

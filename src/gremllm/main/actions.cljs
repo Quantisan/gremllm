@@ -51,4 +51,3 @@
 (nxr/register-effect! :secrets.effects/load secrets-actions/load)
 (nxr/register-effect! :secrets.effects/delete secrets-actions/del)
 (nxr/register-effect! :secrets.effects/list-keys secrets-actions/list-keys)
-(nxr/register-effect! :secrets.effects/check-availability (fn [_ _ _] (secrets-actions/check-availability)))
