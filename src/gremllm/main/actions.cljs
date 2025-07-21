@@ -29,6 +29,10 @@
   (fn [_ _ _]
     (send-to-focused-window "topic/open")))
 
+(nxr/register-effect! :effects/trigger-settings-in-renderer
+  (fn [_ _ _]
+    (send-to-focused-window "menu:settings")))
+
 (nxr/register-effect! :ipc.effects/reply ipc-actions/reply)
 (nxr/register-effect! :ipc.effects/reply-error ipc-actions/reply-error)
 

@@ -8,6 +8,10 @@
                     {:label (.-name app)
                      :submenu [{:role "about"}
                                {:type "separator"}
+                               {:label "Settings..."
+                                :accelerator "Cmd+,"
+                                :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])}
+                               {:type "separator"}
                                {:role "services"
                                 :submenu []}
                                {:type "separator"}
@@ -18,16 +22,23 @@
                                {:role "quit"}]})
                   ;; File menu
                   {:label "File"
-                   :submenu [{:label "Save"
-                              :accelerator (if is-mac "Cmd+S" "Ctrl+S")
-                              :click #(nxr/dispatch store {} [[:effects/trigger-save-in-renderer]])}
-                             {:label "Open"
-                              :accelerator (if is-mac "Cmd+O" "Ctrl+O")
-                              :click #(nxr/dispatch store {} [[:effects/trigger-open-in-renderer]])}
-                             {:type "separator"}
-                             (if is-mac
-                               {:role "close"}
-                               {:role "quit"})]}
+                   :submenu (filter identity
+                                    [{:label "Save"
+                                      :accelerator (if is-mac "Cmd+S" "Ctrl+S")
+                                      :click #(nxr/dispatch store {} [[:effects/trigger-save-in-renderer]])}
+                                     {:label "Open"
+                                      :accelerator (if is-mac "Cmd+O" "Ctrl+O")
+                                      :click #(nxr/dispatch store {} [[:effects/trigger-open-in-renderer]])}
+                                     (when-not is-mac
+                                       {:type "separator"})
+                                     (when-not is-mac
+                                       {:label "Settings..."
+                                        :accelerator "Ctrl+,"
+                                        :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])})
+                                     {:type "separator"}
+                                     (if is-mac
+                                       {:role "close"}
+                                       {:role "quit"})])}
                   ;; Edit menu
                   {:label "Edit"
                    :submenu (filter identity
