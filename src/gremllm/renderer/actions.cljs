@@ -8,6 +8,8 @@
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
 
+;; TODO: refactor this namespace to separate actions and effects, following FCIS pattern
+
 ;; Register a basic save effect (similar to your assoc-in)
 (nxr/register-effect! :effects/save
   (fn [_ store path value]
