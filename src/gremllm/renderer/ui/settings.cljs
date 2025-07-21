@@ -8,18 +8,18 @@
       [:article {:role "alert" :class "pico-background-yellow-50"}
        [:h4 "⚠️ Security Notice"]
        [:p "Secret encryption is not available on this system. API keys will be stored in plain text."]]])
-   
+
    ;; API Keys section
    [:section
     [:h3 "API Configuration"]
-    
+
     ;; Anthropic API Key form
     [:article
      [:header
       [:h4 "Anthropic API Key"]
       (when has-api-key?
         [:kbd {:class "pico-color-green"} "✓ Configured"])]
-     
+
      [:form
       [:label {:for "anthropic-api-key"}
        "API Key"
@@ -30,24 +30,24 @@
                                "Enter new key to replace existing"
                                "sk-ant-api03-...")
                 :disabled (not encryption-available?)}]]
-      
+
       [:div {:class "grid"}
        [:button {:type "button"
                  :disabled (not encryption-available?)}
         "Save Key"]
-       
+
        (when has-api-key?
          [:button {:type "button"
                    :class "secondary outline"
                    :disabled (not encryption-available?)}
           "Remove Key"])]]]]
-   
+
    ;; Footer
    [:footer
     [:button {:type "button"
               :class "contrast"
               :on {:click [[:ui.actions/hide-settings]]}}
-     "Done"]]])
+     "Close"]]])
 
 (defn render-settings-modal [open? encryption-available? has-api-key?]
   [:dialog {:id "settings-dialog"
@@ -59,7 +59,7 @@
                :class "close"
                :on {:click [[:ui.actions/hide-settings]]}}]
      [:h3 "⚙️ Settings"]]
-    
+
     (render-settings encryption-available? has-api-key?)]])
 
 (defn render-api-key-warning []
