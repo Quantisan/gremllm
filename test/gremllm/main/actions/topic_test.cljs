@@ -13,7 +13,7 @@
       (is (= {:dir "/test/dir"
               :filename "topic-1234567890.edn"
               :filepath "/test/dir/topic-1234567890.edn"
-              :content "{:id \"123\", :messages []}"
+              :content (pr-str {:id uuid :messages []})
               :topic topic}
              plan)))))
 
