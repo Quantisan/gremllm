@@ -80,7 +80,6 @@
 (defn main []
   (let [store (atom {})
         system-info (get-system-info)]
-    (println "[MAIN] System info at startup:" system-info)
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
