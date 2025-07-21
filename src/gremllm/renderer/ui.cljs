@@ -33,15 +33,6 @@
   (when-let [error (first (vals errors))]
     [:div.assistant-error "⚠️ " error]))
 
-(defn render-api-key-warning []
-  [:article {:role "alert"}
-   [:small
-    "🔑 API key required. "
-    [:a {:href "#"
-         :on {:click [[:effects/prevent-default]
-                      [:ui.actions/show-settings]]}}
-     "Add in Settings"]]])
-
 (defn render-chat-area [messages loading errors]
   [:div.chat-area {:id "chat-messages-container"
                    :style {:overflow-y "auto"
@@ -82,7 +73,7 @@
 
      ;; Add warning when API key is missing
      (when-not has-api-key?
-       (render-api-key-warning))
+       (settings-ui/render-api-key-warning))
 
      (render-chat-area (msg-state/get-messages topic)
                        (loading-state/get-loading topic)

@@ -23,3 +23,11 @@
      [:p [:strong "⚙️ Settings"]]]
     (render-settings false)]])
 
+(defn render-api-key-warning []
+  [:article {:role "alert"}
+   [:small
+    "🔑 API key required. "
+    [:a {:href "#"
+         :on {:click [[:effects/prevent-default]
+                      [:ui.actions/show-settings]]}}
+     "Add in Settings"]]])
