@@ -1,17 +1,25 @@
 (ns gremllm.main.core
   (:require [gremllm.main.actions]
+            [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.menu :as menu]
             [gremllm.main.utils :refer [nxr-result]]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
 
-(defn create-window []
+(defn create-window-with-system-info []
   (let [win (BrowserWindow.
               (clj->js {:width 800
                         :height 600
-                        :webPreferences {:preload (.join path js/__dirname "../resources/public/js/preload.js")}}))]
-    (.loadFile win "resources/public/index.html")))
+                        :webPreferences {:preload (.join path js/__dirname "../resources/public/js/preload.js")}}))
+        system-info {:encryption-available? (secrets/check-availability)}]
+    (.loadFile win "resources/public/index.html")
+
+    ;; Push system info after window loads
+    (.once (.-webContents win) "did-finish-load"
+           #(.send (.-webContents win) "system:info" (clj->js system-info)))
+
+    win))
 
 (defn topics-dir []
   (.join path (.getPath app "userData") "topics"))
@@ -70,11 +78,11 @@
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
-                 (create-window)
+                 (create-window-with-system-info)
                  (menu/create-menu store)
                  (.on app "activate"
                       #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                         (create-window))))))
+                         (create-window-with-system-info))))))
 
     (.on app "window-all-closed"
         #(when-not (= (.-platform js/process) "darwin")
