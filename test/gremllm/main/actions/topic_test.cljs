@@ -4,15 +4,18 @@
 
 (deftest test-topic->save-plan
   (testing "creates correct save plan"
-    (let [topic {:id "123" :messages []}
+    (let [uuid  (random-uuid)
+          topic {:id uuid
+                 :messages []}
           config {:timestamp 1234567890
                   :topics-dir "/test/dir"}
           plan (topic/topic->save-plan topic config)]
-      (is (= plan {:dir "/test/dir"
-                   :filename "topic-1234567890.edn"
-                   :filepath "/test/dir/topic-1234567890.edn"
-                   :content "{:id \"123\", :messages []}"
-                   :topic topic})))))
+      (is (= {:dir "/test/dir"
+              :filename "topic-1234567890.edn"
+              :filepath "/test/dir/topic-1234567890.edn"
+              :content "{:id \"123\", :messages []}"
+              :topic topic}
+             plan)))))
 
 (deftest test-validate-save-plan
   (testing "accepts valid plan"
