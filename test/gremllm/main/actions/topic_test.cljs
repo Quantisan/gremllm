@@ -4,8 +4,7 @@
 
 (deftest test-topic->save-plan
   (testing "creates correct save plan"
-    (let [uuid  (random-uuid)
-          topic {:id uuid
+    (let [topic {:id 12345
                  :messages []}
           config {:timestamp 1234567890
                   :topics-dir "/test/dir"}
@@ -13,7 +12,7 @@
       (is (= {:dir "/test/dir"
               :filename "topic-1234567890.edn"
               :filepath "/test/dir/topic-1234567890.edn"
-              :content (str "{:id #uuid \"" uuid "\", :messages []}")
+              :content "{:id 12345, :messages []}"
               :topic topic}
              plan)))))
 
