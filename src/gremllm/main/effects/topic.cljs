@@ -3,14 +3,14 @@
   (:require [gremllm.main.io :as io]
             [clojure.edn :as edn]))
 
-(defn save-topic
+(defn save
   "Performs file I/O to save a topic"
   [{:keys [dir filepath content]}]
   (io/ensure-dir dir)
   (io/write-file filepath content)
   filepath)
 
-(defn load-topic
+(defn load
   "Loads the latest topic from the file system"
   [topics-dir topic-file-pattern]
   (when-let [filepath (io/find-latest-topic-file topics-dir topic-file-pattern)]

@@ -48,11 +48,11 @@
 (nxr/register-effect! :ipc.effects/save-topic
   (fn [_ _ topic-clj topics-dir]
     (let [save-plan (topic-actions/prepare-save nil nil topic-clj topics-dir)]
-      (topic-effects/save-topic save-plan))))
+      (topic-effects/save save-plan))))
 
 (nxr/register-effect! :ipc.effects/load-topic
   (fn [_ _ topics-dir]
-    (topic-effects/load-topic topics-dir topic-actions/topic-file-pattern)))
+    (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
 
 (nxr/register-effect! :secrets.effects/save secrets-actions/save)
 (nxr/register-effect! :secrets.effects/load secrets-actions/load)
