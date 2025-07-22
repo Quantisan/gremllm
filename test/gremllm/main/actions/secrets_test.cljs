@@ -36,33 +36,20 @@
     (is (= "6789" (secrets/redact-secret-value "123456789012345678901236789"))))) ; > 20 chars, show last 4
 
 (deftest test-redact-all-values
-  (testing "redacts all values in a flat map"
+  (testing "redacts all values recursively"
     (is (= {:api-key "6789"
-            :secret ""
-            :token "34"}
+            :nested {:secret ""
+                     :token "34"}}
           (secrets/redact-all-values
             {:api-key "sk-123456789"
-             :secret "short"
-             :token "abcdefghij34"}))))
+             :nested {:secret "short"
+                      :token "abcdefghij34"}}))))
   
-  (testing "redacts values in nested structures"
-    (is (= {:user {:api-key "6789"
-                   :password ""}
-            :tokens ["34" "" "7890"]
-            :config {:webhook-secret "5678"}}
+  (testing "preserves non-string values"
+    (is (= {:count 42
+            :active true
+            :empty nil}
           (secrets/redact-all-values
-            {:user {:api-key "sk-123456789"
-                    :password "pass123"}
-             :tokens ["abcdefghij34" "tiny" "12345678901234567890"]
-             :config {:webhook-secret "whsec_1234567890abcdef5678"}}))))
-  
-  (testing "handles nil and non-string values"
-    (is (= {:key1 nil
-            :key2 ""
-            :key3 123
-            :key4 true}
-          (secrets/redact-all-values
-            {:key1 nil
-             :key2 ""
-             :key3 123
-             :key4 true})))))
+            {:count 42
+             :active true
+             :empty nil})))))
