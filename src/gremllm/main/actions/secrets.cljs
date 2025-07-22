@@ -100,7 +100,7 @@
                {}
                encrypted-secrets)))
 
-(defn- redact-secret-value [value]
+(defn redact-secret-value [value]
   (when-let [s (some-> value str)]
     (let [n (count s)]
       (cond

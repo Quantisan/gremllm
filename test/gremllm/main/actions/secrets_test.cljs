@@ -24,3 +24,13 @@
   (testing "decrypt-value returns nil for invalid inputs"
     (is (nil? (secrets/decrypt-value nil)))
     (is (nil? (secrets/decrypt-value "")))))
+
+(deftest test-redact-secret-value
+  (testing "redaction based on length"
+    (is (nil? (secrets/redact-secret-value nil)))
+    (is (nil? (secrets/redact-secret-value "")))
+    (is (nil? (secrets/redact-secret-value "short")))       ; < 12 chars
+    (is (nil? (secrets/redact-secret-value "still-short"))) ; 11 chars
+    (is (= "12" (secrets/redact-secret-value "123456789012")))     ; 12 chars, show last 2
+    (is (= "90" (secrets/redact-secret-value "12345678901234567890"))) ; 20 chars, show last 2
+    (is (= "6789" (secrets/redact-secret-value "123456789012345678901236789"))))) ; > 20 chars, show last 4
