@@ -1,5 +1,5 @@
 (ns gremllm.renderer.ui
-  (:require [gremllm.renderer.state.messages :as msg-state]
+  (:require [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
@@ -77,7 +77,7 @@
      (when-not has-api-key?
        (settings-ui/render-api-key-warning))
 
-     (render-chat-area (msg-state/get-messages state)
+     (render-chat-area (topic-state/get-messages state)
                        (loading-state/get-loading state)
                        (loading-state/get-assistant-errors state))
      (render-input-form (form-state/get-user-input state)

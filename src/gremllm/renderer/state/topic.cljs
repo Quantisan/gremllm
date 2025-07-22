@@ -1,4 +1,4 @@
-(ns gremllm.renderer.state.messages)
+(ns gremllm.renderer.state.topic)
 
 ;; State accessor functions
 (defn get-messages [state]

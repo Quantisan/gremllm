@@ -1,6 +1,6 @@
 (ns gremllm.renderer.actions.messages
   (:require [nexus.registry :as nxr]
-            [gremllm.renderer.state.messages :as msg-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
 (defn add-message [_state message]
@@ -49,7 +49,7 @@
   (fn [{dispatch :dispatch} store assistant-id]
     (dispatch
       [[:effects/promise
-        {:promise    (-> (msg-state/get-messages @store)
+        {:promise    (-> (topic-state/get-messages @store)
                          (messages->api-format)
                          (clj->js)
                          (js/window.electronAPI.sendMessage))
