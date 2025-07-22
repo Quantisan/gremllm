@@ -47,7 +47,7 @@
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [open? encryption-available? has-api-key? api-key-input]
+(defn render-settings-modal [{:keys [open? encryption-available? has-api-key? api-key-input]}]
   [:dialog {:id "settings-dialog"
             :open open?}
    [:article
