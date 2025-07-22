@@ -99,3 +99,9 @@
                    acc))
                {}
                encrypted-secrets)))
+
+(defn- redact-secret-value [value]
+  (when-let [s (some-> value str)]
+    (let [n (count s)]
+      (when (> n 4)
+        (subs s (- n 4))))))
