@@ -10,7 +10,7 @@
 ;; Domain-specific effects
 (nxr/register-effect! :message.effects/add
   (fn [_ store message]
-    (swap! store update :messages (fnil conj []) message)))
+    (swap! store update-in (conj topic-state/path :messages) (fnil conj []) message)))
 
 (nxr/register-effect! :loading.effects/set-loading?
   (fn [_ store id loading?]

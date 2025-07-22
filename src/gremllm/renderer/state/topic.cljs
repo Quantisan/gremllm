@@ -1,6 +1,7 @@
 (ns gremllm.renderer.state.topic)
 
-;; State accessor functions
+(def path [:topic])
+
 (defn get-messages [state]
-  (get state :messages []))
+  (get-in state (conj path :messages) []))
 
