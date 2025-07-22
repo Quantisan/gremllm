@@ -37,19 +37,19 @@
 
 (deftest test-redact-all-values
   (testing "redacts all values recursively"
-    (is (= {:api-key "6789"
+    (is (= {:api-key "bc"
             :nested {:secret ""
                      :token "34"}}
-          (secrets/redact-all-values
-            {:api-key "sk-123456789"
-             :nested {:secret "short"
-                      :token "abcdefghij34"}}))))
-  
+           (secrets/redact-all-values
+             {:api-key "sk-1234567890abc"
+              :nested {:secret "short"
+                       :token "abcdefghij34"}}))))
+
   (testing "preserves non-string values"
     (is (= {:count 42
             :active true
             :empty nil}
-          (secrets/redact-all-values
-            {:count 42
-             :active true
-             :empty nil})))))
+           (secrets/redact-all-values
+             {:count 42
+              :active true
+              :empty nil})))))
