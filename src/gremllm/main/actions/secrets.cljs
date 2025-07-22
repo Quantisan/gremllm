@@ -121,8 +121,11 @@
   [data]
   (walk/postwalk
     (fn [x]
-      (if (and (not (map? x))
-               (not (coll? x)))
-        (redact-secret-value x)
-        x))
+      (cond
+        (map? x) (into {} (map (fn [[k v]] [k (if (string? v) 
+                                                 (redact-secret-value v) 
+                                                 v)]) 
+                               x))
+        (and (string? x) (not (keyword? x))) (redact-secret-value x)
+        :else x))
     data))
