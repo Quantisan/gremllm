@@ -40,6 +40,8 @@
     [[:topic.actions/start-new]]))
 
 (defn bootstrap [_state]
+  ;; WARN: requesting info on each re-render might be a bit costly. we're reading from disk each
+  ;; time...
   [[:system.actions/request-info]
    [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
 
