@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.settings
-  (:require [gremllm.renderer.state.settings :as settings-state]))
+  (:require [gremllm.renderer.state.sensitive :as sensitive-state]))
 
 ;; Constants
 (def api-key-name "anthropic-api-key")
@@ -7,10 +7,10 @@
 ;; Actions for API key management
 
 (defn update-api-key-input [_state value]
-  [[:effects/save settings-state/api-key-input-path value]])
+  [[:effects/save sensitive-state/api-key-input-path value]])
 
 (defn save-key [state]
-  (let [api-key (settings-state/get-api-key-input state)]
+  (let [api-key (sensitive-state/get-api-key-input state)]
     (if (empty? api-key)
       [] ; No-op if empty
       [[:effects/promise
@@ -27,7 +27,7 @@
 ;; Success/error handlers
 (defn save-success [_state _result]
   (println "API key saved successfully!")
-  [[:effects/save settings-state/api-key-input-path ""] ;; clears cached api key
+  [[:effects/save sensitive-state/api-key-input-path ""] ;; clears cached api key
    [:ui.actions/hide-settings]])
 
 (defn save-error [_state error]
