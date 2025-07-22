@@ -24,3 +24,32 @@
   (testing "decrypt-value returns nil for invalid inputs"
     (is (nil? (secrets/decrypt-value nil)))
     (is (nil? (secrets/decrypt-value "")))))
+
+(deftest test-redact-secret-value
+  (testing "redaction based on length"
+    (is (nil? (secrets/redact-secret-value nil)))
+    (is (= "" (secrets/redact-secret-value "")))
+    (is (= "" (secrets/redact-secret-value "short")))       ; < 12 chars
+    (is (= "" (secrets/redact-secret-value "still-short"))) ; 11 chars
+    (is (= "12" (secrets/redact-secret-value "123456789012")))     ; 12 chars, show last 2
+    (is (= "7890" (secrets/redact-secret-value "12345678901234567890"))) ; 20 chars, show last 4
+    (is (= "6789" (secrets/redact-secret-value "123456789012345678901236789"))))) ; > 20 chars, show last 4
+
+(deftest test-redact-all-values
+  (testing "redacts all values recursively"
+    (is (= {:api-key "bc"
+            :nested {:secret ""
+                     :token "34"}}
+           (secrets/redact-all-string-values
+             {:api-key "sk-1234567890abc"
+              :nested {:secret "short"
+                       :token "abcdefghij34"}}))))
+
+  (testing "preserves non-string values"
+    (is (= {:count 42
+            :active true
+            :empty nil}
+           (secrets/redact-all-string-values
+             {:count 42
+              :active true
+              :empty nil})))))

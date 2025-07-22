@@ -1,6 +1,7 @@
 (ns gremllm.main.actions.secrets
   (:require ["electron" :refer [safeStorage app]]
-            [gremllm.main.io :as io]))
+            [gremllm.main.io :as io]
+            [clojure.walk :as walk]))
 
 ;; Reference to Electron's safeStorage API
 (def safe-storage safeStorage)
@@ -99,3 +100,29 @@
                    acc))
                {}
                encrypted-secrets)))
+
+(defn redact-secret-value
+  "Returns a redacted suffix of the secret value based on its length.
+  nil -> nil
+  < 12 chars -> empty string
+  12-19 chars -> last 2 chars
+  20+ chars -> last 4 chars"
+  [value]
+  (when-let [s (some-> value str)]
+    (let [n (count s)]
+      (cond
+        (< n 12) ""                ; Too short, show nothing
+        (< n 20) (subs s (- n 2))  ; Medium length, show last 2
+        :else (subs s (- n 4)))))) ; Long enough, show last 4
+
+(defn redact-all-string-values
+  "Recursively redacts all string values in a nested data structure.
+  Preserves structure and keys, only redacts leaf string values."
+  [data]
+  (walk/prewalk
+    (fn [x]
+      (if (map-entry? x)
+        (let [[k v] x]
+          [k (if (string? v) (redact-secret-value v) v)])
+        x))
+    data))
