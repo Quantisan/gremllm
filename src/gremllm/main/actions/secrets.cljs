@@ -104,6 +104,6 @@
   (when-let [s (some-> value str)]
     (let [n (count s)]
       (cond
-        (< n 12) ""               ; Too short, show nothing
-        (< n 20) (subs s (- n 2)) ; Medium length, show last 2
-        :else (subs s (- n 4))))))  ; Long enough, show last 4
+        (< n 12) ""                ; Too short, show nothing
+        (< n 20) (subs s (- n 2))  ; Medium length, show last 2
+        :else (subs s (- n 4)))))) ; Long enough, show last 4
