@@ -40,7 +40,7 @@
     (is (= {:api-key "bc"
             :nested {:secret ""
                      :token "34"}}
-           (secrets/redact-all-values
+           (secrets/redact-all-string-values
              {:api-key "sk-1234567890abc"
               :nested {:secret "short"
                        :token "abcdefghij34"}}))))
@@ -49,7 +49,7 @@
     (is (= {:count 42
             :active true
             :empty nil}
-           (secrets/redact-all-values
+           (secrets/redact-all-string-values
              {:count 42
               :active true
               :empty nil})))))

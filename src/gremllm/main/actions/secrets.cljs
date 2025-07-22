@@ -115,7 +115,7 @@
         (< n 20) (subs s (- n 2))  ; Medium length, show last 2
         :else (subs s (- n 4)))))) ; Long enough, show last 4
 
-(defn redact-all-values
+(defn redact-all-string-values
   "Recursively redacts all string values in a nested data structure.
   Preserves structure and keys, only redacts leaf string values."
   [data]

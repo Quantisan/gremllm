@@ -11,11 +11,10 @@
 (def ^:private default-window-height 600)
 
 (defn get-system-info [store]
-  ;; WARN: redact all values!
   ;; TODO: using nxr-result is anti-pattern
   (let [secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
     {:encryption-available? (secrets/check-availability)
-     :secrets               secrets-result}))
+     :secrets               (secrets/redact-all-string-values secrets-result)}))
 
 (defn create-window []
   (let [preload-path (.join path js/__dirname "../resources/public/js/preload.js")
