@@ -40,7 +40,8 @@
     [[:topic.actions/start-new]]))
 
 (defn bootstrap [_state]
-  [[:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
+  [[:system.actions/request-info]
+   [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
 
 (defn start-new-topic [_state]
   [[:effects/save topic-state/path (create-topic)]])

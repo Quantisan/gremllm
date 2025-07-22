@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			callback(systemInfo);
 		});
 	},
+	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),
 	// Secrets API
 	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
 	loadSecret: (key) => ipcRenderer.invoke("secrets/load", key),
