@@ -47,8 +47,3 @@
   (fn [_ store path value]
     (swap! store assoc-in path value)))
 
-;; Register the actions
-(nxr/register-action! :ui.actions/show-settings show-settings)
-(nxr/register-action! :ui.actions/hide-settings hide-settings)
-
-
