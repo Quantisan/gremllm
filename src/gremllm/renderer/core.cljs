@@ -20,11 +20,6 @@
                     (fn []
                       (nxr/dispatch store {} [[:ui.actions/show-settings]])))
 
-    (.onSystemInfo js/window.electronAPI
-                   (fn [system-info-js]
-                     (let [system-info (js->clj system-info-js :keywordize-keys true)]
-                       (nxr/dispatch store {} [[:system.actions/set-info system-info]]))))
-
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]
