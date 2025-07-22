@@ -4,11 +4,11 @@
             [gremllm.renderer.state.loading :as loading-state]))
 
 (defn add-message [_state message]
-  [[:message.actions/add message]
+  [[:messages.actions/append-to-state message]
    [:effects/scroll-to-bottom "chat-messages-container"]])
 
 ;; Domain-specific actions
-(nxr/register-action! :message.actions/add
+(nxr/register-action! :messages.actions/append-to-state
   (fn [state message]
     (let [current-messages (topic-state/get-messages state)]
       [[:effects/save 
@@ -30,9 +30,9 @@
 (defn llm-response-received [_state assistant-id response]
   (let [clj-response (js->clj response :keywordize-keys true)]
     [[:loading.actions/set-loading? assistant-id false]
-     [:msg.actions/add {:id   assistant-id
-                        :type :assistant
-                        :text (get-in clj-response [:content 0 :text])}]]))
+     [:messages.actions/add-to-chat {:id   assistant-id
+                                     :type :assistant
+                                     :text (get-in clj-response [:content 0 :text])}]]))
 
 (defn llm-response-error [_state assistant-id error]
   (js/console.error "LLM API Error:" error)

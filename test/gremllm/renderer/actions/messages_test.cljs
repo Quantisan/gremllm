@@ -17,6 +17,6 @@
     (let [store (atom {})
           message {:id 1 :type :user :text "Hello"}]
       ;; Execute the effect directly
-      ((:message.effects/add (nxr/get-registry)) nil store message)
+      ((:messages.actions/append-to-state (nxr/get-registry)) nil store message)
       ;; Verify message was added to correct path
       (is (= [message] (get-in @store [:topic :messages]))))))
