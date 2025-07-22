@@ -119,13 +119,10 @@
   "Recursively redacts all string values in a nested data structure.
   Preserves structure and keys, only redacts leaf string values."
   [data]
-  (walk/postwalk
+  (walk/prewalk
     (fn [x]
-      (cond
-        (map? x) (into {} (map (fn [[k v]] [k (if (string? v) 
-                                                 (redact-secret-value v) 
-                                                 v)]) 
-                               x))
-        (and (string? x) (not (keyword? x))) (redact-secret-value x)
-        :else x))
+      (if (map-entry? x)
+        (let [[k v] x]
+          [k (if (string? v) (redact-secret-value v) v)])
+        x))
     data))
