@@ -22,17 +22,23 @@
               :placeholder (if has-api-key?
                              "Enter new key to replace existing"
                              "sk-ant-api03-...")
-              :disabled (not encryption-available?)}]
+              :disabled (not encryption-available?)
+              :value ""  ; TODO: wire to actual state
+              :on {:input [[:settings.actions/update-api-key-input [:event.target/value]]]}}]
 
      [:div {:class "grid"}
       [:button {:type "button"
-                :disabled (not encryption-available?)}
+                :disabled (not encryption-available?)
+                :on {:click [[:effects/prevent-default]
+                             [:settings.actions/save-api-key]]}}
        "Save Key"]
 
       (when has-api-key?
         [:button {:type "button"
                   :class "secondary outline"
-                  :disabled (not encryption-available?)}
+                  :disabled (not encryption-available?)
+                  :on {:click [[:effects/prevent-default]
+                               [:settings.actions/remove-api-key]]}}
          "Remove Key"])]]]
 
    ;; Close button
