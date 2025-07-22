@@ -7,8 +7,14 @@
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
 
-(defn get-system-info []
-  {:encryption-available? (secrets/check-availability)})
+(defn get-system-info [store]
+  (let [base-info {:encryption-available? (secrets/check-availability)}
+        ;; WARN: redact all values!
+        ;; TODO: using nxr-result is anti-pattern
+        secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
+    (if-let [secrets (:ok secrets-result)]
+      (assoc base-info :secrets secrets)
+      base-info)))
 
 (defn create-window [system-info]
   (let [win (BrowserWindow.
@@ -72,16 +78,16 @@
                (nxr-result dispatch-result)))))
 
 (defn main []
-  (let [store (atom {})
-        system-info (get-system-info)]
+  (let [store (atom {})]
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
-                 (create-window system-info)
-                 (menu/create-menu store)
-                 (.on app "activate"
-                      #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                         (create-window system-info))))))
+                 (let [system-info (get-system-info store)]
+                   (create-window system-info)
+                   (menu/create-menu store)
+                   (.on app "activate"
+                        #(when (zero? (.-length (.getAllWindows BrowserWindow)))
+                           (create-window system-info)))))))
 
     (.on app "window-all-closed"
         #(when-not (= (.-platform js/process) "darwin")
