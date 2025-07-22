@@ -93,9 +93,9 @@
   [_ _]
   (let [filepath (get-secrets-filepath)
         encrypted-secrets (io/read-secrets-file filepath)]
-    {:ok (reduce-kv (fn [acc k encrypted-v]
-                      (if-let [decrypted (decrypt-value encrypted-v)]
-                        (assoc acc k decrypted)
-                        acc))
-                    {}
-                    encrypted-secrets)}))
+    (reduce-kv (fn [acc k encrypted-v]
+                 (if-let [decrypted (decrypt-value encrypted-v)]
+                   (assoc acc k decrypted)
+                   acc))
+               {}
+               encrypted-secrets)))
