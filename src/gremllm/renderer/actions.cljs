@@ -3,7 +3,8 @@
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
-            [gremllm.renderer.actions.system :as system]))
+            [gremllm.renderer.actions.system :as system]
+            [gremllm.renderer.actions.settings :as settings]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -43,6 +44,8 @@
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
+(nxr/register-action! :ui.actions/show-settings ui/show-settings)
+(nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 
 ;; Message
 (nxr/register-action! :msg.actions/add msg/add-message)
@@ -61,4 +64,13 @@
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 
 (nxr/register-action! :system.actions/set-info system/set-info)
+
+;; Settings
+(nxr/register-action! :settings.actions/update-api-key-input settings/update-api-key-input)
+(nxr/register-action! :settings.actions/save-key settings/save-key)
+(nxr/register-action! :settings.actions/remove-key settings/remove-key)
+(nxr/register-action! :settings.actions/save-success settings/save-success)
+(nxr/register-action! :settings.actions/save-error settings/save-error)
+(nxr/register-action! :settings.actions/remove-success settings/remove-success)
+(nxr/register-action! :settings.actions/remove-error settings/remove-error)
 

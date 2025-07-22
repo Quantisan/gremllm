@@ -4,6 +4,7 @@
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.system :as system-state]
+            [gremllm.renderer.state.settings :as settings-state]
             [gremllm.renderer.ui.settings :as settings-ui]))
 
 (defn render-user-message [message]
@@ -86,4 +87,5 @@
      (settings-ui/render-settings-modal
        (ui-state/showing-settings? state)
        (system-state/encryption-available? state)
-       has-api-key?)]))
+       has-api-key?
+       (settings-state/get-api-key-input state))]))
