@@ -100,7 +100,13 @@
                {}
                encrypted-secrets)))
 
-(defn redact-secret-value [value]
+(defn redact-secret-value
+  "Returns a redacted suffix of the secret value based on its length.
+  nil -> nil
+  < 12 chars -> empty string
+  12-19 chars -> last 2 chars
+  20+ chars -> last 4 chars"
+  [value]
   (when-let [s (some-> value str)]
     (let [n (count s)]
       (cond
