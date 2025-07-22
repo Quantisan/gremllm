@@ -74,7 +74,12 @@
   (.handle ipcMain "secrets/list-keys"
            (fn [_event]
              (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/list-keys]])]
-               (nxr-result dispatch-result)))))
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "system/get-info"
+           (fn [_event]
+             (let [system-info (get-system-info store)]
+               (clj->js system-info)))))
 
 (defn main []
   (let [store (atom {})]
