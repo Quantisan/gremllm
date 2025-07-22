@@ -86,3 +86,16 @@
   (let [filepath (get-secrets-filepath)
         secrets (io/read-secrets-file filepath)]
     {:ok (keys secrets)}))
+
+;; TODO: move some of these fns to effects
+(defn load-all
+  "Load and decrypt all secrets from the secrets file"
+  [_ _]
+  (let [filepath (get-secrets-filepath)
+        encrypted-secrets (io/read-secrets-file filepath)]
+    {:ok (reduce-kv (fn [acc k encrypted-v]
+                      (if-let [decrypted (decrypt-value encrypted-v)]
+                        (assoc acc k decrypted)
+                        acc))
+                    {}
+                    encrypted-secrets)}))
