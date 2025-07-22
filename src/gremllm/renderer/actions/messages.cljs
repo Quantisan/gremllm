@@ -7,13 +7,14 @@
   [[:messages.actions/append-to-state message]
    [:effects/scroll-to-bottom "chat-messages-container"]])
 
+(defn append-to-state [state message]
+  (let [current-messages (topic-state/get-messages state)]
+    [[:effects/save
+      (conj topic-state/path :messages)
+      (conj current-messages message)]]))
+
 ;; Domain-specific actions
-(nxr/register-action! :messages.actions/append-to-state
-  (fn [state message]
-    (let [current-messages (topic-state/get-messages state)]
-      [[:effects/save 
-        (conj topic-state/path :messages) 
-        (conj current-messages message)]])))
+(nxr/register-action! :messages.actions/append-to-state append-to-state)
 
 (nxr/register-action! :loading.actions/set-loading?
   (fn [_state id loading?]

@@ -10,13 +10,11 @@
             [{:type :user :text "Hello"}
              {:type :assistant :text "Hi there"}])))))
 
-;; TODO: refactor for pure fn
-#_
-(deftest test-add-message-effect
-  (testing "messages are added under [:topic :messages]"
-    (let [store (atom {})
-          message {:id 1 :type :user :text "Hello"}]
-      ;; Execute the effect directly
-      ((:messages.actions/append-to-state (nxr/get-registry)) nil store message)
-      ;; Verify message was added to correct path
-      (is (= [message] (get-in @store [:topic :messages]))))))
+(deftest test-append-to-state
+  (testing "returns action to append message to topic messages"
+    (let [state {:topic {:messages [{:id 1 :type :user :text "Hello"}]}}
+          new-message {:id 2 :type :assistant :text "Hi there"}]
+      (is (= [[:effects/save [:topic :messages] 
+               [{:id 1 :type :user :text "Hello"}
+                {:id 2 :type :assistant :text "Hi there"}]]]
+             (msg/append-to-state state new-message))))))
