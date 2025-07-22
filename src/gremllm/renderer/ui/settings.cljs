@@ -1,7 +1,7 @@
 (ns gremllm.renderer.ui.settings)
 
 ;; TODO: bloaty...
-(defn render-settings [encryption-available? has-api-key?]
+(defn render-settings [encryption-available? has-api-key? api-key-input]
   [:div
    ;; Encryption warning
    (when-not encryption-available?
@@ -23,7 +23,7 @@
                              "Enter new key to replace existing"
                              "sk-ant-api03-...")
               :disabled (not encryption-available?)
-              :value ""  ; TODO: wire to actual state
+              :value api-key-input
               :on {:input [[:settings.actions/update-api-key-input [:event.target/value]]]}}]
 
      [:div {:class "grid"}
@@ -47,7 +47,7 @@
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [open? encryption-available? has-api-key?]
+(defn render-settings-modal [open? encryption-available? has-api-key? api-key-input]
   [:dialog {:id "settings-dialog"
             :open open?}
    [:article
@@ -58,7 +58,7 @@
                :on {:click [[:ui.actions/hide-settings]]}}]
      [:h3 "⚙️ Settings"]]
 
-    (render-settings encryption-available? has-api-key?)]])
+    (render-settings encryption-available? has-api-key? api-key-input)]])
 
 (defn render-api-key-warning []
   [:mark {:role "alert"}
