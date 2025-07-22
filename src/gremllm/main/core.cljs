@@ -12,9 +12,7 @@
         ;; WARN: redact all values!
         ;; TODO: using nxr-result is anti-pattern
         secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
-    (if-let [secrets (:ok secrets-result)]
-      (assoc base-info :secrets secrets)
-      base-info)))
+    (assoc base-info :secrets secrets-result)))
 
 (defn create-window [system-info]
   (let [win (BrowserWindow.
