@@ -9,6 +9,6 @@
   (testing "submits message with valid input"
     (let [effects (ui/submit-messages {:form {:user-input "Hello"}})]
       (is (= 6 (count effects)))
-      (is (= :msg.actions/add (ffirst effects)))
+      (is (= :messages.actions/add-to-chat (ffirst effects)))
       (is (= :form.effects/clear-input (first (second effects))))
       (is (= :llm.effects/send-llm-messages (first (last effects)))))))
