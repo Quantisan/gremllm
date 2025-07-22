@@ -5,8 +5,8 @@
 (deftest test-has-anthropic-api-key?
   (testing "returns false when no anthropic key exists"
     (is (false? (system/has-anthropic-api-key? {})))
-    (is (false? (system/has-anthropic-api-key? {:system {:secrets {"other-key" "value"}}}))))
-  
+    (is (false? (system/has-anthropic-api-key? {:system {:secrets {:other-key "value"}}}))))
+
   (testing "returns true when anthropic-api-key exists"
-    (is (true? (system/has-anthropic-api-key? {:system {:secrets {"anthropic-api-key" "1234"}}})))
-    (is (true? (system/has-anthropic-api-key? {:system {:secrets {"anthropic-api-key" ""}}})))))
+    (is (true? (system/has-anthropic-api-key? {:system {:secrets {:anthropic-api-key "1234"}}})))
+    (is (true? (system/has-anthropic-api-key? {:system {:secrets {:anthropic-api-key ""}}})))))
