@@ -30,7 +30,7 @@
       [:button {:type "button"
                 :disabled (not encryption-available?)
                 :on {:click [[:effects/prevent-default]
-                             [:settings.actions/save-api-key]]}}
+                             [:settings.actions/save-key]]}}
        "Save Key"]
 
       (when has-api-key?
@@ -38,7 +38,7 @@
                   :class "secondary outline"
                   :disabled (not encryption-available?)
                   :on {:click [[:effects/prevent-default]
-                               [:settings.actions/remove-api-key]]}}
+                               [:settings.actions/remove-key]]}}
          "Remove Key"])]]]
 
    ;; Close button

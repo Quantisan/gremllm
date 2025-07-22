@@ -67,8 +67,8 @@
 
 ;; Settings
 (nxr/register-action! :settings.actions/update-api-key-input settings/update-api-key-input)
-(nxr/register-action! :settings.actions/save-api-key settings/save-api-key)
-(nxr/register-action! :settings.actions/remove-api-key settings/remove-api-key)
+(nxr/register-action! :settings.actions/save-key settings/save-key)
+(nxr/register-action! :settings.actions/remove-key settings/remove-key)
 (nxr/register-action! :settings.actions/save-success settings/save-success)
 (nxr/register-action! :settings.actions/save-error settings/save-error)
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
