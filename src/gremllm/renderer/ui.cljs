@@ -4,7 +4,7 @@
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.system :as system-state]
-            [gremllm.renderer.state.settings :as settings-state]
+            [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.ui.settings :as settings-ui]))
 
 (defn render-user-message [message]
@@ -66,7 +66,7 @@
                :disabled (or loading? (not has-api-key?))} "Send"]]]])
 
 (defn render-app [state]
-  (let [has-api-key? false] ;; TODO: pass in actual value
+  (let [has-api-key? (system-state/has-anthropic-api-key? state)]
     [:div {:style {:display "flex"
                    :flex-direction "column"
                    :height "100vh"}}
@@ -88,4 +88,4 @@
        (ui-state/showing-settings? state)
        (system-state/encryption-available? state)
        has-api-key?
-       (settings-state/get-api-key-input state))]))
+       (sensitive-state/get-api-key-input state))]))
