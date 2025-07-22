@@ -21,9 +21,9 @@
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
       (let [assistant-id (.now js/Date)]
-        [[:msg.actions/add {:id   (.now js/Date)
-                            :type :user
-                            :text text}]
+        [[:messages.actions/add-to-chat {:id   (.now js/Date)
+                                         :type :user
+                                         :text text}]
          [:form.effects/clear-input]
          [:loading.effects/set-loading? assistant-id true]
          [:llm.effects/unset-all-errors]

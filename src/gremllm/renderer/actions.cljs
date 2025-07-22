@@ -48,7 +48,7 @@
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 
 ;; Message
-(nxr/register-action! :msg.actions/add msg/add-message)
+(nxr/register-action! :messages.actions/add-to-chat msg/add-message)
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
 

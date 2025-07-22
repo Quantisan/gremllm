@@ -133,7 +133,7 @@ Actions can dispatch multiple effects by returning a vector:
 ```clojure
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
-    [[:msg.actions/add {:id (random-uuid) :type :user :text text}]
+    [[:messages.actions/add-to-chat {:id (random-uuid) :type :user :text text}]
      [:form.effects/clear-input]
      [:loading.effects/set-loading? assistant-id true]
      [:effects/scroll-to-bottom "chat-messages-container"]
