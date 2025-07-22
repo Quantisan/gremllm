@@ -170,12 +170,14 @@ Main process handlers include metadata for proper response routing:
 - **Topic Data**: Saved as EDN files to user data directory via IPC
 - **Messages**: Stored in topic state structure
 - **Configuration**: Uses Electron's userData path
+- **Secrets**: Encrypted using Electron's safeStorage API, stored in `userData/User/secrets.edn` (infrastructure ready but not yet used for API keys)
 
 ## IPC Communication
 
 Communication between main and renderer processes uses a consistent promise-based pattern:
 - `chat/send-message`: Send messages to LLM API with Anthropic integration
 - `topic/save`: Save topic data to file system (triggered from menu or renderer)
+- `secrets/*`: Secure storage operations (save, load, delete, list-keys, check-availability)
 - All IPC handlers use Nexus dispatch for consistency with FCIS architecture
 - Promise results are handled via `promise->reply` effect in main process
 
@@ -210,8 +212,9 @@ This is an MVP focused on core concepts rather than production polish. The codeb
 
 - **Separation of Concerns**: Maintain clear boundaries between components
 - **Functional Core, Imperative Shell (FCIS)**:
-  - Actions are pure functions returning effect descriptions
-  - Effects handle all side effects (DOM manipulation, IPC, async operations)
+  - Actions are pure functions returning effect descriptions (renderer) or data transformations (main)
+  - Effects handle all side effects (DOM manipulation, IPC, async operations, file I/O)
+  - Main process separates actions (in `actions/` subdirs) from effects (in `effects/` subdirs)
   - Consistent use of Nexus dispatching throughout both processes
   - IPC handlers use Nexus dispatch rather than direct function calls
 - **Domain-driven Organization**:
