@@ -15,19 +15,12 @@
      :secrets               secrets-result}))
 
 
-(defn create-window [system-info]
+(defn create-window []
   (let [win (BrowserWindow.
               (clj->js {:width 800
                         :height 600
                         :webPreferences {:preload (.join path js/__dirname "../resources/public/js/preload.js")}}))]
     (.loadFile win "resources/public/index.html")
-
-    ;; Push system info after window loads
-    (.once (.-webContents win) "did-finish-load"
-           (fn []
-             (println "[MAIN] Sending system:info:" system-info)
-             (.send (.-webContents win) "system:info" (clj->js system-info))))
-
     win))
 
 (defn topics-dir []
@@ -86,12 +79,11 @@
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
-                 (let [system-info (get-system-info store)]
-                   (create-window system-info)
-                   (menu/create-menu store)
-                   (.on app "activate"
-                        #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                           (create-window system-info)))))))
+                 (create-window)
+                 (menu/create-menu store)
+                 (.on app "activate"
+                      #(when (zero? (.-length (.getAllWindows BrowserWindow)))
+                         (create-window))))))
 
     (.on app "window-all-closed"
         #(when-not (= (.-platform js/process) "darwin")
