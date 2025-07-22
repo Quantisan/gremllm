@@ -8,11 +8,12 @@
             ["path" :as path]))
 
 (defn get-system-info [store]
-  (let [base-info {:encryption-available? (secrets/check-availability)}
-        ;; WARN: redact all values!
-        ;; TODO: using nxr-result is anti-pattern
-        secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
-    (assoc base-info :secrets secrets-result)))
+  ;; WARN: redact all values!
+  ;; TODO: using nxr-result is anti-pattern
+  (let [secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
+    {:encryption-available? (secrets/check-availability)
+     :secrets               secrets-result}))
+
 
 (defn create-window [system-info]
   (let [win (BrowserWindow.
@@ -57,17 +58,17 @@
   ;; Secrets handlers
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save key value]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save (keyword key) value]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/load"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load key]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load (keyword key)]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete key]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete (keyword key)]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/list-keys"
