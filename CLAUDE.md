@@ -27,8 +27,10 @@ Gremllm is a cognitive workspace desktop application built with Electron and Clo
 - `gremllm.main.core`: Main process entry point, window management, menu setup, IPC handlers
 - `gremllm.main.actions`: Central effect registrations and API key management
 - `gremllm.main.actions.ipc`: IPC reply mechanisms and promise handling
-- `gremllm.main.actions.llm`: LLM provider integration (Anthropic)
-- `gremllm.main.actions.topic`: Topic persistence to file system
+- `gremllm.main.actions.secrets`: Secure storage using Electron's safeStorage API
+- `gremllm.main.actions.topic`: Topic operations and data preparation
+- `gremllm.main.effects.llm`: LLM provider HTTP operations (Anthropic)
+- `gremllm.main.effects.topic`: Topic file I/O operations
 - `gremllm.main.menu`: Electron menu configuration
 - `gremllm.main.io`: File system operations
 - `gremllm.main.utils`: Utility functions
