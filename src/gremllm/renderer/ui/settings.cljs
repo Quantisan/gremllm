@@ -35,7 +35,7 @@
 
       (when has-api-key?
         [:button {:type "button"
-                  :class "secondary outline"
+                  :class ["secondary" "outline"]
                   :disabled (not encryption-available?)
                   :on {:click [[:effects/prevent-default]
                                [:settings.actions/remove-key]]}}
