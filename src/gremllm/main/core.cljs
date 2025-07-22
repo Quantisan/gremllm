@@ -7,27 +7,25 @@
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
 
+(def ^:private default-window-width 800)
+(def ^:private default-window-height 600)
+
 (defn get-system-info [store]
-  (let [base-info {:encryption-available? (secrets/check-availability)}
-        ;; WARN: redact all values!
-        ;; TODO: using nxr-result is anti-pattern
-        secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
-    (assoc base-info :secrets secrets-result)))
+  ;; WARN: redact all values!
+  ;; TODO: using nxr-result is anti-pattern
+  (let [secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
+    {:encryption-available? (secrets/check-availability)
+     :secrets               secrets-result}))
 
-(defn create-window [system-info]
-  (let [win (BrowserWindow.
-              (clj->js {:width 800
-                        :height 600
-                        :webPreferences {:preload (.join path js/__dirname "../resources/public/js/preload.js")}}))]
-    (.loadFile win "resources/public/index.html")
-
-    ;; Push system info after window loads
-    (.once (.-webContents win) "did-finish-load"
-           (fn []
-             (println "[MAIN] Sending system:info:" system-info)
-             (.send (.-webContents win) "system:info" (clj->js system-info))))
-
-    win))
+(defn create-window []
+  (let [preload-path (.join path js/__dirname "../resources/public/js/preload.js")
+        window-config {:width default-window-width
+                       :height default-window-height
+                       :webPreferences {:preload preload-path}}
+        main-window (BrowserWindow. (clj->js window-config))
+        html-path "resources/public/index.html"]
+    (.loadFile main-window html-path)
+    main-window))
 
 (defn topics-dir []
   (.join path (.getPath app "userData") "topics"))
@@ -57,35 +55,39 @@
   ;; Secrets handlers
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save key value]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save (keyword key) value]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/load"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load key]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load (keyword key)]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete key]])]
+             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete (keyword key)]])]
                (nxr-result dispatch-result))))
 
   (.handle ipcMain "secrets/list-keys"
            (fn [_event]
              (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/list-keys]])]
-               (nxr-result dispatch-result)))))
+               (nxr-result dispatch-result))))
+
+  (.handle ipcMain "system/get-info"
+           (fn [_event]
+             (let [system-info (get-system-info store)]
+               (clj->js system-info)))))
 
 (defn main []
   (let [store (atom {})]
     (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
-                 (let [system-info (get-system-info store)]
-                   (create-window system-info)
-                   (menu/create-menu store)
-                   (.on app "activate"
-                        #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                           (create-window system-info)))))))
+                 (create-window)
+                 (menu/create-menu store)
+                 (.on app "activate"
+                      #(when (zero? (.-length (.getAllWindows BrowserWindow)))
+                         (create-window))))))
 
     (.on app "window-all-closed"
         #(when-not (= (.-platform js/process) "darwin")

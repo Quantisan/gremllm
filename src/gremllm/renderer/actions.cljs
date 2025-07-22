@@ -41,6 +41,11 @@
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
+;; Console error effect
+(nxr/register-effect! :ui.effects/console-error
+  (fn [_ _ & args]
+    (apply js/console.error args)))
+
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
@@ -63,7 +68,9 @@
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 
+(nxr/register-action! :system.actions/request-info system/request-info)
 (nxr/register-action! :system.actions/set-info system/set-info)
+(nxr/register-action! :system.actions/request-error system/request-error)
 
 ;; Settings
 (nxr/register-action! :settings.actions/update-api-key-input settings/update-api-key-input)
