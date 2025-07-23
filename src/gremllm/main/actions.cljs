@@ -5,6 +5,7 @@
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.topic :as topic-effects]
+            [gremllm.main.utils :refer [nxr-result]]
             ["electron/main" :refer [BrowserWindow]]))
 
 ;; Register how to extract state from the system
@@ -12,8 +13,11 @@
 
 ;; Placeholder for environment variables
 (nxr/register-placeholder! :env/anthropic-api-key
-  (fn [_]
-    (.-ANTHROPIC_API_KEY (.-env js/process))))
+  (fn [store]
+    (or (.-ANTHROPIC_API_KEY (.-env js/process))
+        (some-> (nxr/dispatch store {} [[:secrets.effects/load :anthropic-api-key]])
+                nxr-result
+                :value))))
 
 ;; Electron platform helpers (used by effects)
 (defn send-to-focused-window [channel]
