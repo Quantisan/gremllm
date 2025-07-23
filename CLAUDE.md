@@ -36,6 +36,23 @@ We resist adding abstractions until they prove their worth. Every line of code s
 ### Topic-Centric Vision
 While currently a linear chat, the architecture anticipates branching conversations. Topics will form a tree where context flows down branches. Each conversation branch inherits context from its parent, enabling focused exploration without losing the broader discussion context.
 
+## Development Approach
+
+### Test-First Development
+1. **Write tests first** - Define the behavior before implementation
+2. **Build to pass tests** - Implement the minimal code to make tests green
+3. **Validate it works** - Manual testing in `npm run dev` to ensure real-world behavior
+4. **Refactor excessively** - Once working, refactor until the code is clean and obvious
+5. **Apply Boy Scout Rule** - Leave code better than you found it, every time
+
+### Continuous Architecture Evolution
+- **Weekly refactoring sessions** - Dedicated time for larger architectural improvements
+- **Early attention to code quality** - Don't let technical debt accumulate
+- **Least-surprise principle** - Code should do what it looks like it does
+- **Conscious architecture** - Every decision should improve long-term maintainability
+
+This isn't about perfection—it's about building a codebase that's a joy to work in. Clean code is faster to understand, easier to modify, and less likely to harbor bugs.
+
 ## Architecture
 
 **Process Structure:**
