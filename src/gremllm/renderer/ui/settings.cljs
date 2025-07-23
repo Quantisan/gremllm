@@ -1,7 +1,7 @@
 (ns gremllm.renderer.ui.settings)
 
 ;; TODO: bloaty...
-(defn render-settings [encryption-available? has-api-key? api-key-input redacted-api-key]
+(defn render-settings [encryption-available? api-key-input redacted-api-key]
   [:div
    ;; Encryption warning
    (when-not encryption-available?
@@ -12,7 +12,7 @@
    ;; API Key configuration
    [:article
     [:h3 "Anthropic API Key"]
-    (when has-api-key?
+    (when redacted-api-key
       [:kbd {:class "pico-color-green"} "✓ Configured"])
 
     [:form
@@ -33,7 +33,7 @@
                              [:settings.actions/save-key]]}}
        "Save Key"]
 
-      (when has-api-key?
+      (when redacted-api-key
         [:button {:type "button"
                   :class ["secondary" "outline"]
                   :disabled (not encryption-available?)
@@ -47,7 +47,7 @@
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [{:keys [open? encryption-available? has-api-key? api-key-input redacted-api-key]}]
+(defn render-settings-modal [{:keys [open? encryption-available? api-key-input redacted-api-key]}]
   [:dialog {:id "settings-dialog"
             :open open?}
    [:article
@@ -58,7 +58,7 @@
                :on {:click [[:ui.actions/hide-settings]]}}]
      [:h3 "⚙️ Settings"]]
 
-    (render-settings encryption-available? has-api-key? api-key-input redacted-api-key)]])
+    (render-settings encryption-available? api-key-input redacted-api-key)]])
 
 (defn render-api-key-warning []
   [:mark {:role "alert"}
