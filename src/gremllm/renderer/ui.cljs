@@ -87,4 +87,5 @@
      (settings-ui/render-settings-modal
        {:open? (ui-state/showing-settings? state)
         :encryption-available? (system-state/encryption-available? state)
-        :api-key-input (sensitive-state/get-api-key-input state)})]))
+        :api-key-input (sensitive-state/get-api-key-input state)
+        :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]))
