@@ -1,7 +1,7 @@
 (ns gremllm.renderer.ui.settings)
 
 ;; TODO: bloaty...
-(defn render-settings [encryption-available? has-api-key? api-key-input]
+(defn render-settings [encryption-available? has-api-key? api-key-input redacted-api-key]
   [:div
    ;; Encryption warning
    (when-not encryption-available?
@@ -19,8 +19,8 @@
      [:input {:id "anthropic-api-key"
               :name "anthropic-api-key"
               :type "password"
-              :placeholder (if has-api-key?
-                             "Enter new key to replace existing"
+              :placeholder (if redacted-api-key
+                             (str "Current: •••••••" redacted-api-key)
                              "sk-ant-api03-...")
               :disabled (not encryption-available?)
               :value api-key-input
@@ -47,7 +47,7 @@
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [{:keys [open? encryption-available? has-api-key? api-key-input]}]
+(defn render-settings-modal [{:keys [open? encryption-available? has-api-key? api-key-input redacted-api-key]}]
   [:dialog {:id "settings-dialog"
             :open open?}
    [:article
@@ -58,7 +58,7 @@
                :on {:click [[:ui.actions/hide-settings]]}}]
      [:h3 "⚙️ Settings"]]
 
-    (render-settings encryption-available? has-api-key? api-key-input)]])
+    (render-settings encryption-available? has-api-key? api-key-input redacted-api-key)]])
 
 (defn render-api-key-warning []
   [:mark {:role "alert"}
