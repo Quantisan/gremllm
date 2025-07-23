@@ -10,11 +10,9 @@
 (def ^:private default-window-width 800)
 (def ^:private default-window-height 600)
 
-(defn get-system-info [store]
-  ;; TODO: using nxr-result is anti-pattern
-  (let [secrets-result (nxr-result (nxr/dispatch store {} [[:secrets.effects/load-all]]))]
-    {:encryption-available? (secrets/check-availability)
-     :secrets               (secrets/redact-all-string-values secrets-result)}))
+(defn system-info [secrets encryption-available?]
+  {:encryption-available? encryption-available?
+   :secrets               (secrets/redact-all-string-values secrets)})
 
 (defn create-window []
   (let [preload-path (.join path js/__dirname "../resources/public/js/preload.js")
@@ -74,8 +72,11 @@
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [system-info (get-system-info store)]
-               (clj->js system-info)))))
+             (let [secrets               (secrets/load-all nil nil)
+                   encryption-available? (secrets/check-availability)]
+               (-> (system-info secrets encryption-available?)
+                   (clj->js))))))
+
 
 (defn main []
   (let [store (atom {})]
