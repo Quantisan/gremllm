@@ -13,7 +13,9 @@
 ;; Placeholder for environment variables
 (nxr/register-placeholder! :env/anthropic-api-key
   (fn [_]
-    (.-ANTHROPIC_API_KEY (.-env js/process))))
+    (or (.-ANTHROPIC_API_KEY (.-env js/process))
+        (some-> (secrets-actions/load nil nil :anthropic-api-key)
+                :ok))))
 
 ;; Electron platform helpers (used by effects)
 (defn send-to-focused-window [channel]
