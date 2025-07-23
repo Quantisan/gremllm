@@ -5,6 +5,7 @@ module.exports = {
 	name: "Gremllm",
 	packagerConfig: {
 		asar: true,
+		executableName: "gremllm",
 	},
 	rebuildConfig: {},
 	makers: [
