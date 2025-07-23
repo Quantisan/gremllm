@@ -1,10 +1,8 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.actions.ipc :as ipc-actions]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
-            [gremllm.main.effects.topic :as topic-effects]
             ["electron/main" :refer [BrowserWindow]]))
 
 ;; Register how to extract state from the system
