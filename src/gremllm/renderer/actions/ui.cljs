@@ -37,10 +37,14 @@
       (set! (.-scrollTop element) (.-scrollHeight element)))))
 
 (defn show-settings [_state]
-  [[:ui.effects/save ui-state/showing-settings-path true]])
+  ;; Refresh system info to ensure settings modal displays current API key status
+  [[:system.actions/request-info]
+   [:ui.effects/save ui-state/showing-settings-path true]])
 
 (defn hide-settings [_state]
-  [[:ui.effects/save ui-state/showing-settings-path false]])
+  ;; Refresh system info to ensure has-api-key? is up-to-date
+  [[:system.actions/request-info]
+   [:ui.effects/save ui-state/showing-settings-path false]])
 
 ;; Register UI effect
 (nxr/register-effect! :ui.effects/save
