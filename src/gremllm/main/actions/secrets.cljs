@@ -55,7 +55,7 @@
 
 (defn save
   "Save an encrypted secret to the secrets file"
-  [_ _ key value]
+  [key value]
   (if-let [encrypted-value (encrypt-value value)]
     (do (update-secrets-file #(add-secret % key encrypted-value))
         {:ok true})
@@ -75,14 +75,14 @@
 
 (defn del
   "Delete a secret from the secrets file"
-  [_ _ key]
+  [key]
   (update-secrets-file #(remove-secret % key))
   {:ok true})
 
 ;; TODO: move some of these fns to effects
 (defn load-all
   "Load and decrypt all secrets from the secrets file"
-  [_ _]
+  []
   (let [filepath (get-secrets-filepath)
         encrypted-secrets (io/read-secrets-file filepath)]
     (reduce-kv (fn [acc k encrypted-v]

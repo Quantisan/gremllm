@@ -27,7 +27,7 @@
   plan)
 
 ;; Pure functions that return data for effects
-(defn prepare-save [_ _ topic-clj topics-dir]
+(defn prepare-save [topic-clj topics-dir]
   (-> (topic->save-plan topic-clj
                         {:timestamp (.getTime (js/Date.))
                          :topics-dir topics-dir})
