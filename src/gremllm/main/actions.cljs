@@ -47,17 +47,3 @@
   (fn [{:keys [dispatch]} _ messages api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
-(nxr/register-effect! :ipc.effects/save-topic
-  (fn [_ _ topic-clj topics-dir]
-    (let [save-plan (topic-actions/prepare-save nil nil topic-clj topics-dir)]
-      (topic-effects/save save-plan))))
-
-(nxr/register-effect! :ipc.effects/load-topic
-  (fn [_ _ topics-dir]
-    (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
-
-(nxr/register-effect! :secrets.effects/save secrets-actions/save)
-(nxr/register-effect! :secrets.effects/load secrets-actions/load)
-(nxr/register-effect! :secrets.effects/delete secrets-actions/del)
-(nxr/register-effect! :secrets.effects/list-keys secrets-actions/list-keys)
-(nxr/register-effect! :secrets.effects/load-all secrets-actions/load-all)

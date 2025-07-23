@@ -1,8 +1,9 @@
 (ns gremllm.main.core
   (:require [gremllm.main.actions]
             [gremllm.main.actions.secrets :as secrets]
+            [gremllm.main.actions.topic :as topic-actions]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
-            [gremllm.main.utils :refer [nxr-result]]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
@@ -36,39 +37,33 @@
                                 :channel "chat/send-message"}
                          [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
 
-  ;; NOTE: Electron IPC handlers must return values. We're abusing Nexus effects to return values
-  ;; (not idiomatic) with nxr-result because I'd like to maintain FCIS architecture.
+  ;; Topic handlers - call functions directly at the boundary
   (.handle ipcMain "topic/save"
           (fn [_event topic-data]
             (let [topic-clj (js->clj topic-data :keywordize-keys true)
-                  dispatch-result (nxr/dispatch store {} [[:ipc.effects/save-topic topic-clj (topics-dir)]])]
-              (nxr-result dispatch-result))))
+                  save-plan (topic-actions/prepare-save nil nil topic-clj (topics-dir))]
+              (topic-effects/save save-plan))))
 
   (.handle ipcMain "topic/load"
            (fn [_event]
-             (let [dispatch-result (nxr/dispatch store {} [[:ipc.effects/load-topic (topics-dir)]])]
-               (nxr-result dispatch-result))))
+             (topic-effects/load (topics-dir) topic-actions/topic-file-pattern)))
 
-  ;; Secrets handlers
+  ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/save (keyword key) value]])]
-               (nxr-result dispatch-result))))
+             (secrets/save nil nil (keyword key) value)))
 
   (.handle ipcMain "secrets/load"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/load (keyword key)]])]
-               (nxr-result dispatch-result))))
+             (secrets/load nil nil (keyword key))))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/delete (keyword key)]])]
-               (nxr-result dispatch-result))))
+             (secrets/del nil nil (keyword key))))
 
   (.handle ipcMain "secrets/list-keys"
            (fn [_event]
-             (let [dispatch-result (nxr/dispatch store {} [[:secrets.effects/list-keys]])]
-               (nxr-result dispatch-result))))
+             (secrets/list-keys nil nil)))
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
