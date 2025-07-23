@@ -53,17 +53,9 @@
            (fn [_event key value]
              (secrets/save nil nil (keyword key) value)))
 
-  (.handle ipcMain "secrets/load"
-           (fn [_event key]
-             (secrets/load nil nil (keyword key))))
-
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
              (secrets/del nil nil (keyword key))))
-
-  (.handle ipcMain "secrets/list-keys"
-           (fn [_event]
-             (secrets/list-keys nil nil)))
 
   (.handle ipcMain "system/get-info"
            (fn [_event]

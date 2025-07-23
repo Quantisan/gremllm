@@ -10,8 +10,6 @@
 (defn create-empty-secrets []
   {})
 
-;; TODO: refactor to use Nexus effects and actions
-
 (defn add-secret [secrets-map key value]
   (assoc secrets-map key value))
 
@@ -80,13 +78,6 @@
   [_ _ key]
   (update-secrets-file #(remove-secret % key))
   {:ok true})
-
-(defn list-keys
-  "Get all secret keys (not values)"
-  [_ _]
-  (let [filepath (get-secrets-filepath)
-        secrets (io/read-secrets-file filepath)]
-    {:ok (keys secrets)}))
 
 ;; TODO: move some of these fns to effects
 (defn load-all
