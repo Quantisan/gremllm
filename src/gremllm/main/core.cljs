@@ -41,7 +41,7 @@
   (.handle ipcMain "topic/save"
           (fn [_event topic-data]
             (let [topic-clj (js->clj topic-data :keywordize-keys true)
-                  save-plan (topic-actions/prepare-save nil nil topic-clj (topics-dir))]
+                  save-plan (topic-actions/prepare-save topic-clj (topics-dir))]
               (topic-effects/save save-plan))))
 
   (.handle ipcMain "topic/load"
@@ -51,23 +51,15 @@
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (secrets/save nil nil (keyword key) value)))
-
-  (.handle ipcMain "secrets/load"
-           (fn [_event key]
-             (secrets/load nil nil (keyword key))))
+             (secrets/save (keyword key) value)))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (secrets/del nil nil (keyword key))))
-
-  (.handle ipcMain "secrets/list-keys"
-           (fn [_event]
-             (secrets/list-keys nil nil)))
+             (secrets/del (keyword key))))
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [secrets               (secrets/load-all nil nil)
+             (let [secrets               (secrets/load-all)
                    encryption-available? (secrets/check-availability)]
                (-> (system-info secrets encryption-available?)
                    (clj->js))))))
