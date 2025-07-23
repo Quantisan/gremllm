@@ -126,6 +126,28 @@ npm run repl       # ClojureScript REPL
 - `src/gremllm/renderer/ui.cljs` - Main UI components
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
 
+## Code Style & Conventions
+
+### File Management Philosophy
+- **ALWAYS prefer editing existing files over creating new ones**
+- New files only when introducing a new domain or feature area
+- Before creating a file, ask: "Can this logic live in an existing namespace?"
+- File creation is a design decision, not a convenience
+
+### Clojure Style
+- Threading macros (`->`, `->>`) for clarity in transformation pipelines
+- Destructuring to make data shapes explicit at function boundaries
+- Small, focused functions that do one thing well
+- Descriptive names that make code self-documenting
+- Let bindings for intermediate values that clarify intent
+
+### Working with the Codebase
+1. Study existing patterns before implementing
+2. Check dependencies (`deps.edn`) before assuming libraries exist
+3. Follow established namespace conventions
+4. Run tests (`npm run test`) throughout development
+5. Manual testing with `npm run dev` before considering complete
+
 ## Key Principles
 
 - **FCIS Architecture**: Actions (pure) → Effects (side effects)
