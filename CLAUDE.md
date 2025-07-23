@@ -6,6 +6,36 @@ Guidance for Claude Code when working with the Gremllm codebase.
 
 Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Shadow-CLJS (build tool).
 
+## Design Philosophy
+
+### MVP Approach: The Skateboard
+We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. Currently in skateboard phase: a basic but fully functional chat interface that works end-to-end. This foundation will evolve into topic branching and context inheritance features. The goal is to have something usable at every stage, not building a car one component at a time.
+
+### Strict FCIS (Functional Core, Imperative Shell)
+We maintain a strict separation between pure functions and side effects:
+
+**Functional Core (Pure):**
+- All business logic, data transformations, and decision making
+- Actions that return effect descriptions (not perform them)
+- State derivations and computations
+- UI components (pure data structures)
+- Console logging for debugging is acceptable
+
+**Imperative Shell (Effects):**
+- ALL side effects are isolated in effect handlers
+- DOM manipulation, IPC calls, file I/O, HTTP requests
+- State mutations (only via registered effects)
+- Promise handling and async operations
+- Random value generation (UUIDs, etc.)
+
+Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement.
+
+### Minimal Complexity, Maximum Clarity
+We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
+
+### Topic-Centric Vision
+While currently a linear chat, the architecture anticipates branching conversations. Topics will form a tree where context flows down branches. Each conversation branch inherits context from its parent, enabling focused exploration without losing the broader discussion context.
+
 ## Architecture
 
 **Process Structure:**
