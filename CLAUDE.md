@@ -41,10 +41,16 @@ Gremllm is a cognitive workspace desktop application built with Electron and Clo
 - `gremllm.renderer.actions.ui`: Form state, input handling, focus management, scrolling
 - `gremllm.renderer.actions.messages`: Message management, LLM response handling, error display
 - `gremllm.renderer.actions.topic`: Topic operations and persistence
+- `gremllm.renderer.actions.settings`: API key management and settings actions
+- `gremllm.renderer.actions.system`: System information retrieval and management
 - `gremllm.renderer.ui`: Replicant UI components (chat area, input form)
+- `gremllm.renderer.ui.settings`: Settings modal UI components
 - `gremllm.renderer.state.form`: Form input state management
 - `gremllm.renderer.state.loading`: Loading indicators and error states
 - `gremllm.renderer.state.messages`: Message history management
+- `gremllm.renderer.state.sensitive`: Transient sensitive data handling (API key input)
+- `gremllm.renderer.state.system`: System capabilities and stored secrets info
+- `gremllm.renderer.state.ui`: UI state for modals and visibility
 
 ## Development Commands
 
@@ -164,13 +170,15 @@ Main process handlers include metadata for proper response routing:
 - Actions are always dispatched as vectors: `[[:action-name args]]`
 - Placeholders like `:event.target/value` and `:env/anthropic-api-key` for dynamic values
 - Consistent dispatch interface across main and renderer processes
+- `:env/anthropic-api-key` placeholder checks both environment variables and saved secrets (prioritizing env vars)
 
 ## Data Persistence
 
 - **Topic Data**: Saved as EDN files to user data directory via IPC
 - **Messages**: Stored in topic state structure
 - **Configuration**: Uses Electron's userData path
-- **Secrets**: Encrypted using Electron's safeStorage API, stored in `userData/User/secrets.edn` (infrastructure ready but not yet used for API keys)
+- **Secrets**: Encrypted using Electron's safeStorage API, stored in `userData/User/secrets.edn`
+- **API Keys**: Can be stored securely using safeStorage (when available) or accessed from environment variables
 
 ## IPC Communication
 
@@ -178,8 +186,12 @@ Communication between main and renderer processes uses a consistent promise-base
 - `chat/send-message`: Send messages to LLM API with Anthropic integration
 - `topic/save`: Save topic data to file system (triggered from menu or renderer)
 - `secrets/*`: Secure storage operations (save, load, delete, list-keys, check-availability)
+- `system/get-info`: Retrieves system capabilities and redacted secrets list
 - All IPC handlers use Nexus dispatch for consistency with FCIS architecture
 - Promise results are handled via `promise->reply` effect in main process
+
+### Menu Commands
+- `menu:settings`: Opens the settings modal for API key configuration
 
 ## UI Architecture with Replicant
 
@@ -191,6 +203,10 @@ Replicant provides reactive UI updates based on state changes:
   - Input field focus management after form submission
   - Specific IDs for robust element targeting
   - Better error message display for LLM failures
+  - Settings modal with Pico CSS styling
+  - API key configuration interface with visual feedback
+  - Disabled states when API key is not configured
+  - Redacted API key display for security
 
 ## Testing
 
@@ -206,7 +222,16 @@ This is an MVP focused on core concepts rather than production polish. The codeb
 - Clear demonstration of key features (topic-based chat with context inheritance)
 - Rapid iteration over robustness
 - Functional programming patterns throughout
-- Currently in "Skateboard" phase: basic working chat interface as foundation for future topic branching features
+- Currently in "Skateboard" phase: basic working chat interface with settings management as foundation for future topic branching features
+
+## Security and API Key Management
+
+The application now provides flexible API key management:
+- **Environment Variables**: Primary method via `ANTHROPIC_API_KEY` environment variable
+- **Secure Storage**: API keys can be saved using Electron's safeStorage when encryption is available
+- **Visual Security**: API keys are displayed in redacted form (showing only last few characters)
+- **Fallback Handling**: Gracefully falls back to environment variables when encryption is unavailable
+- **User Feedback**: Clear warnings when API key is not configured or encryption is unavailable
 
 ## Architectural Principles
 
@@ -233,8 +258,9 @@ This is an MVP focused on core concepts rather than production polish. The codeb
 
 ### Core Application
 - `src/gremllm/main/core.cljs`: Main process entry point and window management
-- `src/gremllm/renderer/core.cljs`: Renderer entry point and initialization
-- `src/gremllm/renderer/ui.cljs`: All Replicant UI components
+- `src/gremllm/renderer/core.cljs`: Renderer entry point, initialization, and bootstrap
+- `src/gremllm/renderer/ui.cljs`: Main Replicant UI components (chat area, form)
+- `src/gremllm/renderer/ui/settings.cljs`: Settings modal UI components
 
 ### Action System
 - `src/gremllm/main/actions.cljs`: Main process effect registrations
@@ -242,11 +268,16 @@ This is an MVP focused on core concepts rather than production polish. The codeb
 - `src/gremllm/renderer/actions/ui.cljs`: UI state management and form actions
 - `src/gremllm/renderer/actions/messages.cljs`: Message handling and chat logic
 - `src/gremllm/renderer/actions/topic.cljs`: Topic management and persistence
+- `src/gremllm/renderer/actions/settings.cljs`: API key configuration and settings management
+- `src/gremllm/renderer/actions/system.cljs`: System info retrieval and bootstrap
 
 ### State Management
 - `src/gremllm/renderer/state/form.cljs`: Form input state
 - `src/gremllm/renderer/state/loading.cljs`: Loading and error states
 - `src/gremllm/renderer/state/messages.cljs`: Message history
+- `src/gremllm/renderer/state/sensitive.cljs`: Transient sensitive data (API key input)
+- `src/gremllm/renderer/state/system.cljs`: System capabilities and stored secrets
+- `src/gremllm/renderer/state/ui.cljs`: UI state for modals and visibility
 
 ### Documentation
 - `PLAN.md`: Detailed development roadmap and current sprint goals
