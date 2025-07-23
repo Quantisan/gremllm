@@ -85,7 +85,7 @@
                         has-api-key?)
 
      (settings-ui/render-settings-modal
-       (ui-state/showing-settings? state)
-       (system-state/encryption-available? state)
-       has-api-key?
-       (sensitive-state/get-api-key-input state))]))
+       {:open? (ui-state/showing-settings? state)
+        :encryption-available? (system-state/encryption-available? state)
+        :api-key-input (sensitive-state/get-api-key-input state)
+        :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]))
