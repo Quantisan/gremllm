@@ -1,254 +1,155 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with the Gremllm codebase.
 
-## Project Overview
+## Overview
 
-Gremllm is a cognitive workspace desktop application built with Electron and ClojureScript. It's designed as a topic-based AI chat interface that allows users to organize conversations into branching topics with context inheritance. The project uses Replicant for reactive UI and Nexus for state management.
+Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Shadow-CLJS (build tool).
 
 ## Architecture
 
-### Core Technologies
-- **Electron**: Desktop application framework
-- **ClojureScript**: Primary language for both main and renderer processes
-- **Shadow-CLJS**: ClojureScript build tool and compiler
-- **Replicant** (v2025.06.21): Reactive UI library (alternative to React)
-- **Nexus** (v2025.07.1): State management and action system
+**Process Structure:**
+- `src/gremllm/main/` - Electron main process (IPC, file ops, system integration)
+- `src/gremllm/renderer/` - UI and app logic (browser context)
+- `resources/public/` - Web assets (index.html, compiled JS, preload script)
 
-### Process Structure
-- **Main Process** (`src/gremllm/main/`): Electron main process, handles IPC, file operations, and system integration
-- **Renderer Process** (`src/gremllm/renderer/`): UI and application logic running in browser context
-- **Resources** (`resources/public/`): Web assets including index.html, compiled JS, and preload script
-- **Context Documentation** (`context/`): Product and development documentation
+**Key Namespaces Quick Reference:**
 
-### Key Namespaces
+| Domain | Main Process | Renderer Process |
+|--------|--------------|------------------|
+| Core | `main.core` - entry, window mgmt | `renderer.core` - entry, bootstrap |
+| Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings |
+| State | - | `renderer.state.*` - form, messages, UI, system |
+| UI | - | `renderer.ui`, `renderer.ui.settings` |
+| Effects | `main.effects.*` - LLM, file I/O | (handled in actions) |
 
-#### Main Process
-- `gremllm.main.core`: Main process entry point, window management, menu setup, IPC handlers
-- `gremllm.main.actions`: Central effect registrations and API key management
-- `gremllm.main.actions.ipc`: IPC reply mechanisms and promise handling
-- `gremllm.main.actions.secrets`: Secure storage using Electron's safeStorage API
-- `gremllm.main.actions.topic`: Topic operations and data preparation
-- `gremllm.main.effects.llm`: LLM provider HTTP operations (Anthropic)
-- `gremllm.main.effects.topic`: Topic file I/O operations
-- `gremllm.main.menu`: Electron menu configuration
-- `gremllm.main.io`: File system operations
-- `gremllm.main.utils`: Utility functions
+## Development
 
-#### Renderer Process
-- `gremllm.renderer.core`: Renderer entry point, app initialization, menu command handling
-- `gremllm.renderer.actions`: Central action/effect registrations
-- `gremllm.renderer.actions.ui`: Form state, input handling, focus management, scrolling
-- `gremllm.renderer.actions.messages`: Message management, LLM response handling, error display
-- `gremllm.renderer.actions.topic`: Topic operations and persistence
-- `gremllm.renderer.ui`: Replicant UI components (chat area, input form)
-- `gremllm.renderer.state.form`: Form input state management
-- `gremllm.renderer.state.loading`: Loading indicators and error states
-- `gremllm.renderer.state.messages`: Message history management
-
-## Development Commands
-
-### Build and Development
 ```bash
-# Start development with hot reload
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm run test
-
-# Watch tests
-npm run test:watch
-
-# Clean build artifacts
-npm run clean
-
-# Package application
-npm run package
-
-# Create distributable
-npm run make
+npm run dev        # Start with hot reload
+npm run build      # Production build
+npm run test       # Run tests
+npm run repl       # ClojureScript REPL
 ```
 
-### REPL Development
-```bash
-# Start ClojureScript REPL connected to renderer
-npm run repl
-```
+## Design Philosophy
+
+### MVP Approach: The Skateboard
+We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. Currently in skateboard phase: a basic but fully functional chat interface that works end-to-end. This foundation will evolve into topic branching and context inheritance features. The goal is to have something usable at every stage, not building a car one component at a time.
+
+### Strict FCIS (Functional Core, Imperative Shell)
+We maintain a strict separation between pure functions and side effects:
+
+**Functional Core (Pure):**
+- All business logic, data transformations, and decision making
+- Actions that return effect descriptions (not perform them)
+- State derivations and computations
+- UI components (pure data structures)
+- Console logging for debugging is acceptable
+
+**Imperative Shell (Effects):**
+- ALL side effects are isolated in effect handlers
+- DOM manipulation, IPC calls, file I/O, HTTP requests
+- State mutations (only via registered effects)
+- Promise handling and async operations
+- Random value generation (UUIDs, etc.)
+
+Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement.
+
+### Minimal Complexity, Maximum Clarity
+We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
+
+### Topic-Centric Vision
+While currently a linear chat, the architecture anticipates branching conversations. Topics will form a tree where context flows down branches. Each conversation branch inherits context from its parent, enabling focused exploration without losing the broader discussion context.
+
+## Development Approach
+
+### Test-First Development
+1. **Write tests first** - Define the behavior before implementation
+2. **Build to pass tests** - Implement the minimal code to make tests green
+3. **Validate it works** - Manual testing in `npm run dev` to ensure real-world behavior
+4. **Refactor excessively** - Once working, refactor until the code is clean and obvious
+5. **Apply Boy Scout Rule** - Leave code better than you found it, every time
+
+### Continuous Architecture Evolution
+- **Weekly refactoring sessions** - Dedicated time for larger architectural improvements
+- **Early attention to code quality** - Don't let technical debt accumulate
+- **Least-surprise principle** - Code should do what it looks like it does
+- **Conscious architecture** - Every decision should improve long-term maintainability
+
+This isn't about perfection—it's about building a codebase that's a joy to work in. Clean code is faster to understand, easier to modify, and less likely to harbor bugs.
 
 ## State Management with Nexus
 
-The application uses Nexus for state management with actions and effects:
+Following FCIS principles, all state changes flow through Nexus:
 
-### Action Pattern
-Actions are pure functions that take state and return a vector of effects. Actions are organized by domain with namespaced naming:
 ```clojure
+;; Actions describe what should happen
 (defn update-input [state value]
   [[:ui.effects/save [:form :user-input] value]])
-```
 
-### Effect Registration
-Effects are registered within their respective action namespaces and handle side effects:
-```clojure
-(nxr/register-effect! :ui.effects/save
-  (fn [_ store path value]
-    (swap! store assoc-in path value)))
-```
-
-### Promise-based Effects
-New promise handling patterns for asynchronous operations:
-```clojure
-;; Main process: promise->reply for IPC responses
-(nxr/register-effect! :promise->reply
-  (fn [_ store promise channel event]
-    (.then promise
-      (fn [value] (send-reply! channel event (ok value)))
-      (fn [error] (send-reply! channel event (err error))))))
-
-;; Renderer: promise->actions for chaining actions
-(nxr/register-effect! :promise->actions
-  (fn [deps store promise success-actions failure-actions]
-    (.then promise
-      (fn [result] (apply nxr/dispatch! store (success-actions result)))
-      (fn [error] (apply nxr/dispatch! store (failure-actions error))))))
-```
-
-### Dispatch Patterns
-
-#### UI Event Handling (Replicant)
-UI components use an `:on` map with event names as keys, dispatching action vectors:
-```clojure
-;; Form submission with multiple actions
+;; UI dispatches action vectors
 {:on {:submit [[:effects/prevent-default]
                [:form.actions/submit]]}}
 
-;; Input updates with placeholder values
-{:on {:input [[:form.actions/update-input [:event.target/value]]]}}
-```
-
-#### Action Chaining
-Actions can dispatch multiple effects by returning a vector:
-```clojure
-(defn submit-messages [state]
-  (let [text (form-state/get-user-input state)]
-    [[:messages.actions/add-to-chat {:id (random-uuid) :type :user :text text}]
-     [:form.effects/clear-input]
-     [:loading.effects/set-loading? assistant-id true]
-     [:effects/scroll-to-bottom "chat-messages-container"]
-     [:llm.effects/send-llm-messages assistant-id]]))
-```
-
-#### Promise-based Async Dispatch
-Use the generic `:effects/promise` for async operations:
-```clojure
+;; Async operations via promises
 [[:effects/promise
   {:promise    (js/window.electronAPI.sendMessage messages)
-   :on-success [:llm.actions/response-received assistant-id]
-   :on-error   [:llm.actions/response-error assistant-id]}]]
+   :on-success [:llm.actions/response-received]
+   :on-error   [:llm.actions/response-error]}]]
 ```
 
-#### IPC Dispatch (Main Process)
-Main process handlers include metadata for proper response routing:
-```clojure
-(nxr/dispatch store {:ipc-event event
-                     :request-id request-id
-                     :channel "chat/send-message"}
-              [[:chat.effects/send-message messages [:env/anthropic-api-key]]])
-```
+**Conventions:**
+- Domain namespacing: `form.actions/submit`, `ui.effects/save`
+- Always dispatch as vectors: `[[:action-name args]]`
+- Dynamic placeholders: `:event.target/value`, `:env/anthropic-api-key`
 
-#### Key Patterns:
-- All actions are namespaced by domain (e.g., `form.actions/`, `msg.actions/`)
-- Effects are similarly namespaced (e.g., `form.effects/`, `loading.effects/`)
-- Actions are always dispatched as vectors: `[[:action-name args]]`
-- Placeholders like `:event.target/value` and `:env/anthropic-api-key` for dynamic values
-- Consistent dispatch interface across main and renderer processes
+## IPC & Data
 
-## Data Persistence
+**IPC Channels:**
+- `chat/send-message` - LLM API calls
+- `topic/save` - Topic persistence
+- `secrets/*` - Secure storage ops
+- `system/get-info` - System capabilities
+- `menu:settings` - Settings modal
 
-- **Topic Data**: Saved as EDN files to user data directory via IPC
-- **Messages**: Stored in topic state structure
-- **Configuration**: Uses Electron's userData path
-- **Secrets**: Encrypted using Electron's safeStorage API, stored in `userData/User/secrets.edn` (infrastructure ready but not yet used for API keys)
+**Data Storage:**
+- Topics: EDN files in userData directory
+- Secrets: Encrypted via Electron's safeStorage
+- API Keys: Environment var or secure storage
 
-## IPC Communication
+## Entry Points
 
-Communication between main and renderer processes uses a consistent promise-based pattern:
-- `chat/send-message`: Send messages to LLM API with Anthropic integration
-- `topic/save`: Save topic data to file system (triggered from menu or renderer)
-- `secrets/*`: Secure storage operations (save, load, delete, list-keys, check-availability)
-- All IPC handlers use Nexus dispatch for consistency with FCIS architecture
-- Promise results are handled via `promise->reply` effect in main process
+- `src/gremllm/main/core.cljs` - Main process start
+- `src/gremllm/renderer/core.cljs` - Renderer start
+- `src/gremllm/renderer/ui.cljs` - Main UI components
+- `src/gremllm/*/actions.cljs` - Action/effect registrations
 
-## UI Architecture with Replicant
+## Code Style & Conventions
 
-Replicant provides reactive UI updates based on state changes:
-- Components are pure functions returning hiccup-style data
-- State changes trigger automatic re-renders
-- Event handling through dispatch system
-- Recent improvements include:
-  - Input field focus management after form submission
-  - Specific IDs for robust element targeting
-  - Better error message display for LLM failures
+### File Management Philosophy
+- **ALWAYS prefer editing existing files over creating new ones**
+- New files only when introducing a new domain or feature area
+- Before creating a file, ask: "Can this logic live in an existing namespace?"
+- File creation is a design decision, not a convenience
 
-## Testing
+### Clojure Style
+- Threading macros (`->`, `->>`) for clarity in transformation pipelines
+- Destructuring to make data shapes explicit at function boundaries
+- Small, focused functions that do one thing well
+- Descriptive names that make code self-documenting
+- Let bindings for intermediate values that clarify intent
 
-Tests are organized by namespace:
-- `test/gremllm/main/`: Main process tests
-- `test/gremllm/renderer/`: Renderer process tests
-- Run with `npm run test` or `npm run test:watch`
+### Working with the Codebase
+1. Study existing patterns before implementing
+2. Check dependencies (`deps.edn`) before assuming libraries exist
+3. Follow established namespace conventions
+4. Run tests (`npm run test`) throughout development
+5. Manual testing with `npm run dev` before considering complete
 
-## Development Philosophy
+## API Key Management
 
-This is an MVP focused on core concepts rather than production polish. The codebase prioritizes:
-- Minimal complexity while maintaining clear architecture
-- Clear demonstration of key features (topic-based chat with context inheritance)
-- Rapid iteration over robustness
-- Functional programming patterns throughout
-- Currently in "Skateboard" phase: basic working chat interface as foundation for future topic branching features
-
-## Architectural Principles
-
-- **Separation of Concerns**: Maintain clear boundaries between components
-- **Functional Core, Imperative Shell (FCIS)**:
-  - Actions are pure functions returning effect descriptions (renderer) or data transformations (main)
-  - Effects handle all side effects (DOM manipulation, IPC, async operations, file I/O)
-  - Main process separates actions (in `actions/` subdirs) from effects (in `effects/` subdirs)
-  - Consistent use of Nexus dispatching throughout both processes
-  - IPC handlers use Nexus dispatch rather than direct function calls
-- **Domain-driven Organization**:
-  - Actions and effects are namespaced by domain (form, messages, topic, ui)
-  - State modules are focused on specific concerns
-- **Promise-based Async Handling**:
-  - Standardized promise effect patterns for consistent async flow
-  - Clear success/failure action chaining
-
-## Key Files for Understanding
-
-### Configuration
-- `shadow-cljs.edn`: Build configuration with three targets (main, renderer, test)
-- `deps.edn`: Clojure dependencies and development setup
-- `package.json`: Node dependencies and script commands
-
-### Core Application
-- `src/gremllm/main/core.cljs`: Main process entry point and window management
-- `src/gremllm/renderer/core.cljs`: Renderer entry point and initialization
-- `src/gremllm/renderer/ui.cljs`: All Replicant UI components
-
-### Action System
-- `src/gremllm/main/actions.cljs`: Main process effect registrations
-- `src/gremllm/renderer/actions.cljs`: Renderer effect registrations
-- `src/gremllm/renderer/actions/ui.cljs`: UI state management and form actions
-- `src/gremllm/renderer/actions/messages.cljs`: Message handling and chat logic
-- `src/gremllm/renderer/actions/topic.cljs`: Topic management and persistence
-
-### State Management
-- `src/gremllm/renderer/state/form.cljs`: Form input state
-- `src/gremllm/renderer/state/loading.cljs`: Loading and error states
-- `src/gremllm/renderer/state/messages.cljs`: Message history
-
-### Documentation
-- `PLAN.md`: Detailed development roadmap and current sprint goals
-- `CONTEXT.md`: Product vision and design philosophy
-- `README.md`: Project setup and development instructions
+- Primary: `ANTHROPIC_API_KEY` environment variable
+- Secondary: Secure storage via settings UI (when encryption available)
+- Visual: Redacted display in UI
+- Fallback: Graceful degradation without encryption
