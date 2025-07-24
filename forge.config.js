@@ -6,6 +6,10 @@ module.exports = {
 	packagerConfig: {
 		asar: true,
 		executableName: "gremllm",
+		osxSign: {
+			hardenedRuntime: false, // Disable hardened runtime temporarily
+		},
+		appCategoryType: "public.app-category.productivity",
 	},
 	rebuildConfig: {},
 	makers: [
