@@ -5,7 +5,7 @@ module.exports = {
 	name: "Gremllm",
 	packagerConfig: {
 		asar: true,
-		executableName: "gremllm",
+		executableName: "Gremllm",
 		osxSign: {
 			hardenedRuntime: false, // Disable hardened runtime temporarily
 			entitlements: "resources/macos/entitlements.plist",
