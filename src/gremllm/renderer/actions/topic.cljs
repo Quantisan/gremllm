@@ -13,20 +13,7 @@
 (defn create-topic []
   {:id "topic-1"
    :name "New Topic"
-   :messages [{:id 1
-               :type :user
-               :text "Hello, can you help me understand Replicant?"}
-              {:id 2
-               :type :assistant
-               :text "Of course! Replicant is a ClojureScript library for building reactive user interfaces using a functional approach."}
-              {:id 3
-               :type :user
-               :text "How does it differ from React?"}
-              {:id 4
-               :type :assistant
-               :text "Replicant takes a simpler approach - it renders Hiccup data structures directly to the DOM and automatically tracks changes for efficient updates."}]})
-
-
+   :messages []})
 
 (defn set-topic [_state topic-js]
   (when topic-js
