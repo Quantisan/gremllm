@@ -8,6 +8,7 @@ module.exports = {
 		executableName: "gremllm",
 		osxSign: {
 			hardenedRuntime: false, // Disable hardened runtime temporarily
+			entitlements: "resources/macos/entitlements.plist",
 		},
 		appCategoryType: "public.app-category.productivity",
 	},
