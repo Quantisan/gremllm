@@ -56,6 +56,18 @@ We maintain a strict separation between pure functions and side effects:
 
 Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement.
 
+### Modelarity: Code Reflects the Domain
+We practice a form of domain-driven design where the structure of our code—our namespaces, functions, and data—mirrors the way we think and talk about the problem (credit: Kevlin Henney). If we discuss "saving a topic" or "handling a form submission," the corresponding code should be found in a predictable location like `topic.actions/save` or `form.actions/submit`.
+
+This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
+
+**How this manifests:**
+- **Namespaces:** `renderer.actions.messages`, `main.effects.llm`, and `renderer.state.ui` are organized by domain concepts.
+- **State Actions:** Keywords like `:llm.actions/response-received` are namespaced by the part of the system they affect.
+- **IPC Channels:** Channels like `topic/save` and `chat/send-message` are named for the domain action they perform.
+
+By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
+
 ### Minimal Complexity, Maximum Clarity
 We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
 
