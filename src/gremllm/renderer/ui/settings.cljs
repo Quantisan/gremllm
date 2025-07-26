@@ -41,13 +41,13 @@
    (when (:redacted-api-key props)
      [:kbd {:class "pico-color-green"} "✓ Configured"])
    [:form
-    [render-api-key-input props]
-    [render-api-key-actions props]]])
+    (render-api-key-input props)
+    (render-api-key-actions props)]])
 
 (defn render-settings [props]
   [:div
-   [render-encryption-warning props]
-   [render-api-key-section props]
+   (render-encryption-warning props)
+   (render-api-key-section props)
 
    ;; Close button
    [:button {:type "button"
@@ -58,7 +58,7 @@
 (defn render-settings-modal [{:keys [open?] :as props}]
   [e/modal {:open? open?
             :on-close [[:ui.actions/hide-settings]]}
-   [render-settings props]])
+   (render-settings props)])
 
 (defn render-api-key-warning []
   [:mark {:role "alert"}
