@@ -13,12 +13,10 @@
 (defn render-app [state]
   (let [has-api-key? (system-state/has-anthropic-api-key? state)]
     [e/app-layout
-     [:header
-      [:h1 "Gremllm"]]
-
-     ;; Add warning when API key is missing
-     (when-not has-api-key?
-       (settings-ui/render-api-key-warning))
+     [e/top-bar
+      [:strong "Gremllm"]
+      (when-not has-api-key?
+        (settings-ui/render-api-key-warning))]
 
      (chat-ui/render-chat-area (topic-state/get-messages state)
                                (loading-state/get-loading state)
