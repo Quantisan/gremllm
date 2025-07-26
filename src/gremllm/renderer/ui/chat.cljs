@@ -1,5 +1,6 @@
 (ns gremllm.renderer.ui.chat
-  (:require [gremllm.renderer.ui.elements :as e]))
+  (:require [clojure.string :as str]
+            [gremllm.renderer.ui.elements :as e]))
 
 (defn- render-user-message [message]
   [e/message
@@ -53,4 +54,5 @@
              :autofocus true}]
 
     [:button {:type "submit"
-              :disabled (or loading? (not has-api-key?))} "Send"]]]])
+              :disabled (or loading? (not has-api-key?) (str/blank? input-value))}
+     "Send"]]])
