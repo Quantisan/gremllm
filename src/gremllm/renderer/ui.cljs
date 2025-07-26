@@ -6,14 +6,13 @@
             [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.ui.settings :as settings-ui]
-            [gremllm.renderer.ui.chat :as chat-ui]))
+            [gremllm.renderer.ui.chat :as chat-ui]
+            [gremllm.renderer.ui.elements :as e]))
 
 
 (defn render-app [state]
   (let [has-api-key? (system-state/has-anthropic-api-key? state)]
-    [:div {:style {:display "flex"
-                   :flex-direction "column"
-                   :height "100vh"}}
+    [e/app-layout
      [:header
       [:h1 "Gremllm"]]
 

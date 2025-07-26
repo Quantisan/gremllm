@@ -1,13 +1,14 @@
-(ns gremllm.renderer.ui.chat)
+(ns gremllm.renderer.ui.chat
+  (:require [gremllm.renderer.ui.elements :as e]))
 
 (defn- render-user-message [message]
-  [:div.message-container
-   [:article.user-bubble
+  [e/message
+   [e/user-bubble
     [:span (:text message)]]])
 
 (defn- render-assistant-message [message]
-  [:div.message-container
-   [:article
+  [e/message
+   [e/assistant-bubble
     [:p (:text message)]]])
 
 (defn- render-message [message]
@@ -18,8 +19,8 @@
     [:div "Unknown message type:" (:type message)]))
 
 (defn- render-loading-indicator []
-  [:div.message-container
-   [:article
+  [e/message
+   [e/assistant-bubble
     [:p {:style {:color "#666"
                  :font-style "italic"}}
      "Thinking..."]]])
@@ -29,9 +30,7 @@
     [:div.assistant-error "⚠️ " error]))
 
 (defn render-chat-area [messages loading errors]
-  [:div.chat-area {:id "chat-messages-container"
-                   :style {:overflow-y "auto"
-                           :flex "1"}}
+  [e/chat-area {}
    (for [message messages]
      (render-message message))
    ;; Show loading indicator if any assistant is loading
@@ -42,18 +41,16 @@
    (render-error-message errors)])
 
 (defn render-input-form [input-value loading? has-api-key?]
-  [:footer
-   [:form
-    {:on {:submit [[:effects/prevent-default]
-                   [:form.actions/submit]]}}
-    [:fieldset {:role "group"}
-     [:input {:type "text"
-              :value input-value
-              :placeholder (if has-api-key?
-                             "Type a message..."
-                             "Add API key to start chatting...")
-              :on {:input [[:form.actions/update-input [:event.target/value]]]}
-              :autofocus true}]
+  [e/chat-form {:on {:submit [[:effects/prevent-default]
+                              [:form.actions/submit]]}}
+   [:fieldset {:role "group"}
+    [:input {:type "text"
+             :value input-value
+             :placeholder (if has-api-key?
+                            "Type a message..."
+                            "Add API key to start chatting...")
+             :on {:input [[:form.actions/update-input [:event.target/value]]]}
+             :autofocus true}]
 
-     [:button {:type "submit"
-               :disabled (or loading? (not has-api-key?))} "Send"]]]])
+    [:button {:type "submit"
+              :disabled (or loading? (not has-api-key?))} "Send"]]]])
