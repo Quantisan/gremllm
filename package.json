@@ -14,7 +14,9 @@
     "repl": "shadow-cljs cljs-repl renderer",
     "clean": "rm -rf .shadow-cljs target resources/public/compiled-js",
     "test": "shadow-cljs compile test",
-    "test:watch": "shadow-cljs watch test"
+    "test:watch": "shadow-cljs watch test",
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
+    "release:minor": "npm version minor -m \"chore(release): %s\" && git push --follow-tags"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.8.1",
