@@ -27,14 +27,10 @@
                                attrs)]
         body))
 
-(defalias message [attrs & body]
-  (into [:div.message-container attrs] body))
+(defalias user-message [attrs & body]
+  [:div.message-container
+   (into [:article.user-bubble attrs] body)])
 
-(defalias user-bubble [attrs & body]
-  (into [:article.user-bubble attrs] body))
-
-(defalias assistant-bubble [attrs & body]
-  (into [:article attrs] body))
-
-(defalias chat-form [attrs & body]
-  (into [:footer [:form attrs]] body))
+(defalias assistant-message [attrs & body]
+  [:div.message-container
+   (into [:article attrs] body)])

@@ -3,14 +3,12 @@
             [gremllm.renderer.ui.elements :as e]))
 
 (defn- render-user-message [message]
-  [e/message
-   [e/user-bubble
-    [:span (:text message)]]])
+  [e/user-message
+    [:span (:text message)]])
 
 (defn- render-assistant-message [message]
-  [e/message
-   [e/assistant-bubble
-    [:p (:text message)]]])
+  [e/assistant-message
+    [:p (:text message)]])
 
 (defn- render-message [message]
   (case (:type message)
@@ -20,11 +18,10 @@
     [:div "Unknown message type:" (:type message)]))
 
 (defn- render-loading-indicator []
-  [e/message
-   [e/assistant-bubble
+  [e/assistant-message
     [:p {:style {:color "#666"
                  :font-style "italic"}}
-     "Thinking..."]]])
+     "Thinking..."]])
 
 (defn- render-error-message [errors]
   (when-let [error (first (vals errors))]
@@ -42,17 +39,18 @@
    (render-error-message errors)])
 
 (defn render-input-form [input-value loading? has-api-key?]
-  [e/chat-form {:on {:submit [[:effects/prevent-default]
-                              [:form.actions/submit]]}}
-   [:fieldset {:role "group"}
-    [:input {:type "text"
-             :value input-value
-             :placeholder (if has-api-key?
-                            "Type a message..."
-                            "Add API key to start chatting...")
-             :on {:input [[:form.actions/update-input [:event.target/value]]]}
-             :autofocus true}]
+  [:footer
+   [:form {:on {:submit [[:effects/prevent-default
+                          [:form.actions/submit]]]}}
+    [:fieldset {:role "group"}
+     [:input {:type "text"
+              :value input-value
+              :placeholder (if has-api-key?
+                             "Type a message..."
+                             "Add API key to start chatting...")
+              :on {:input [[:form.actions/update-input [:event.target/value]]]}
+              :autofocus true}]
 
-    [:button {:type "submit"
-              :disabled (or loading? (not has-api-key?) (str/blank? input-value))}
-     "Send"]]])
+     [:button {:type "submit"
+               :disabled (or loading? (not has-api-key?) (str/blank? input-value))}
+      "Send"]]]])
