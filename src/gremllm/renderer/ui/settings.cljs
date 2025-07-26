@@ -1,11 +1,12 @@
-(ns gremllm.renderer.ui.settings)
+(ns gremllm.renderer.ui.settings
+  (:require [gremllm.renderer.ui.elements :as e]))
 
 ;; TODO: bloaty...
 (defn render-settings [encryption-available? api-key-input redacted-api-key]
   [:div
    ;; Encryption warning
    (when-not encryption-available?
-     [:article {:role "alert"}
+     [e/alert
       [:h4 "⚠️ Security Notice"]
       [:p "Secret encryption is not available on this system. API keys entered will only be used for this current session."]])
 
@@ -48,17 +49,9 @@
     "Close"]])
 
 (defn render-settings-modal [{:keys [open? encryption-available? api-key-input redacted-api-key]}]
-  [:dialog {:id "settings-dialog"
-            :open open?}
-   [:article
-    [:header
-     [:button {:aria-label "Close"
-               :rel "prev"
-               :class "close"
-               :on {:click [[:ui.actions/hide-settings]]}}]
-     [:h3 "⚙️ Settings"]]
-
-    (render-settings encryption-available? api-key-input redacted-api-key)]])
+  [e/modal {:open? open?
+            :on-close [[:ui.actions/hide-settings]]}
+   (render-settings encryption-available? api-key-input redacted-api-key)])
 
 (defn render-api-key-warning []
   [:mark {:role "alert"}
