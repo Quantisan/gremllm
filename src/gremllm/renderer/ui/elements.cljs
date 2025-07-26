@@ -18,6 +18,14 @@
        [:h3 "⚙️ Settings"]]
       body]]))
 
+(defalias top-bar [attrs & body]
+  (into [:header (merge {:class "top-bar"
+                         :style {:display "flex"
+                                 :justify-content "space-between"
+                                 :align-items "center"}}
+                        attrs)]
+        body))
+
 (defalias alert [attrs & body]
   (into [:article (merge {:role "alert"} attrs)] body))
 
