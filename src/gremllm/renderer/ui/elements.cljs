@@ -3,9 +3,25 @@
 
 (defalias app-layout [attrs body]
   (into [:div (merge {:style {:display "flex"
-                              :flex-direction "column"
+                              :flex-direction "row"
                               :height "100vh"}}
                      attrs)]
+        body))
+
+(defalias left-panel [attrs & body]
+  (into [:aside (merge {:style {:flex "1"
+                                :border-right "1px solid var(--pico-muted-border-color)"
+                                :overflow-y "auto"
+                                :padding "var(--pico-spacing)"}}
+                       attrs)]
+        body))
+
+(defalias main-panel [attrs & body]
+  (into [:main (merge {:style {:flex "3"
+                               :display "flex"
+                               :flex-direction "column"
+                               :overflow "hidden"}}
+                      attrs)]
         body))
 
 (defalias modal [attrs body]
