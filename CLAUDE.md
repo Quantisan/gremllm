@@ -34,8 +34,8 @@ npm run repl       # ClojureScript REPL
 
 ## Design Philosophy
 
-### MVP Approach: The Skateboard
-We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. Currently in skateboard phase: a basic but fully functional chat interface that works end-to-end. This foundation will evolve into topic branching and context inheritance features. The goal is to have something usable at every stage, not building a car one component at a time.
+### Pragmatic Evolution: From Skateboard to Scooter
+We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. The **Skateboard** is complete: a functional, end-to-end chat interface. We are now building the **Scooter**, which introduces our core domain concept of organizing conversations into **topics**. Every stage delivers a more capable, yet complete, product.
 
 ### Strict FCIS (Functional Core, Imperative Shell)
 We maintain a strict separation between pure functions and side effects:
@@ -62,9 +62,9 @@ We practice a form of domain-driven design where the structure of our code—our
 This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
 
 **How this manifests:**
-- **Namespaces:** `renderer.actions.messages`, `main.effects.llm`, and `renderer.state.ui` are organized by domain concepts.
+- **Namespaces:** Organized by domain concepts like `messages`, `topics`, or `ui` (e.g., `renderer.actions.topics`).
 - **State Actions:** Keywords like `:llm.actions/response-received` are namespaced by the part of the system they affect.
-- **IPC Channels:** Channels like `topic/save` and `chat/send-message` are named for the domain action they perform.
+- **IPC Channels:** Named for the domain action they perform, such as `chat/send-message` or `topic/save`.
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
@@ -72,7 +72,7 @@ By aligning our code with our mental model, we reduce cognitive load, make the s
 We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
 
 ### Topic-Centric Vision
-While currently a linear chat, the architecture anticipates branching conversations. Topics will form a tree where context flows down branches. Each conversation branch inherits context from its parent, enabling focused exploration without losing the broader discussion context.
+The introduction of Topics is the first concrete step toward our vision of a branching, context-aware workspace. This foundational work paves the way for a future topic tree where context will flow down branches, enabling focused exploration without losing the broader discussion.
 
 ## Development Approach
 
