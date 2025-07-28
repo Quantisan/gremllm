@@ -25,8 +25,8 @@
         [:li [:a {:href     "#"
                   :on-click [[:effects/prevent-default] [:topic.actions/start-new-topic]]}
               "➕ New Topic"]]
-        [:li [:a {:href "#" :aria-disabled "true"} "🔍 Search"]]
-        [:li [:a {:href "#" :aria-disabled "true"} "📚 Artifacts"]]]]
+        [:li [:a {:href "#" :aria-disabled "true"} [:del "🔍 Search"]]]
+        [:li [:a {:href "#" :aria-disabled "true"} [:del "📚 Artifacts"]]]]]
       [:hr]
       [:h5 "Topics"]
       [:nav
