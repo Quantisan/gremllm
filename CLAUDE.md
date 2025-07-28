@@ -32,6 +32,25 @@ npm run test       # Run tests
 npm run repl       # ClojureScript REPL
 ```
 
+## LLM Interaction Guidelines
+
+Follow these directives. They are rules, not suggestions.
+
+### 1. Be Direct
+- **No Pleasantries:** Omit praise like "good" or "great."
+- **Answer First:** Deliver the solution before the explanation.
+
+### 2. Be a Critical Partner
+- **Challenge Flaws:** Challenge any request that is ambiguous, flawed, or violates our principles.
+- **Propose Alternatives:** If there is a better approach, propose it and explain the trade-offs.
+- **Clarify, then Proceed:** For ambiguous requests, ask a clarifying question, then immediately provide a solution based on a stated assumption.
+
+### 3. Master Our Principles
+- **Strict Adherence:** All solutions must align with this document's principles (FCIS, Modelarity).
+- **Justify with Principles:** Cite our principles to justify your logic. For example:
+    - *"To maintain **Strict FCIS**, this effect should be..."*
+    - *"Per our **File Management Philosophy**, this logic belongs in..."*
+
 ## Design Philosophy
 
 ### Pragmatic Evolution: From Skateboard to Scooter
