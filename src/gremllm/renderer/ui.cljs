@@ -11,24 +11,22 @@
 
 
 (defn render-app [state]
-  (let [has-api-key? (system-state/has-anthropic-api-key? state)]
+  (let [has-api-key?          (system-state/has-anthropic-api-key? state)
+        workspace-name        "Kaitenzushi Corp Acquisition"
+        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]
     [e/app-layout
      [e/left-panel
-      [:hgroup
-       [:h3 "Kaitenzushi Corp Acquisition"]
-       [:p
-        [:small
-          "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]]]
-      [:hr]
       [:nav
        [:ul
         [:li [:a {:href     "#"
                   :on-click [[:effects/prevent-default] [:topic.actions/start-new-topic]]}
               "➕ New Topic"]]
-        [:li [:a {:href "#" :aria-disabled "true"} [:del "🔍 Search"]]]
-        [:li [:a {:href "#" :aria-disabled "true"} [:del "📚 Artifacts"]]]]]
+        [:li [:a {:href "#" :aria-disabled "true"} "🔍 Search"]]
+        [:li [:a {:href "#" :aria-disabled "true"} "📚 Artifacts"]]]]
       [:hr]
-      [:h5 "Topics"]
+      [:hgroup
+       [:h4 workspace-name]
+       [:p [:small workspace-description]]]
       [:nav
        [:ul
         [:li [:a {:href "#"} "✓ Market Viability Assessment"]]
