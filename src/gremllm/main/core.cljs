@@ -4,22 +4,25 @@
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
+            [gremllm.main.window :as window]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
 
-(def ^:private default-window-width 800)
-(def ^:private default-window-height 600)
+(def ^:private window-dimension-specs
+  {:width-scale  0.60
+   :max-width    1400
+   :height-scale 0.80
+   :max-height   1000})
 
 (defn system-info [secrets encryption-available?]
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
 (defn create-window []
-  (let [preload-path (.join path js/__dirname "../resources/public/js/preload.js")
-        window-config {:width default-window-width
-                       :height default-window-height
-                       :webPreferences {:preload preload-path}}
+  (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
+        preload-path (.join path js/__dirname "../resources/public/js/preload.js")
+        window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
         html-path "resources/public/index.html"]
     (.loadFile main-window html-path)
