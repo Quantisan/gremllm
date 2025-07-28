@@ -16,12 +16,15 @@
    :secrets               (secrets/redact-all-string-values secrets)})
 
 (defn- calculate-window-dimensions []
-  (let [primary-display (.getPrimaryDisplay screen)
-        work-area-size (.-workAreaSize primary-display)
-        desired-width (* (.-width work-area-size) 0.60)
-        desired-height (* (.-height work-area-size) 0.80)]
-    {:width (-> (js/Math.min desired-width max-window-width) js/Math.floor)
-     :height (-> (js/Math.min desired-height max-window-height) js/Math.floor)}))
+  (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
+    {:width (-> (.-width work-area)
+                (* 0.60)
+                (js/Math.min max-window-width)
+                js/Math.floor)
+     :height (-> (.-height work-area)
+                 (* 0.80)
+                 (js/Math.min max-window-height)
+                 js/Math.floor)}))
 
 (defn create-window []
   (let [dimensions (calculate-window-dimensions)
