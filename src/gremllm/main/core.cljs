@@ -8,6 +8,11 @@
             ["electron/main" :refer [app BrowserWindow ipcMain screen]]
             ["path" :as path]))
 
+(def ^:private window-dimension-specs
+  {:width-scale  0.60
+   :max-width    1400
+   :height-scale 0.80
+   :max-height   1000})
 
 (defn system-info [secrets encryption-available?]
   {:encryption-available? encryption-available?
@@ -25,11 +30,7 @@
      :height (calculate-dimension (.-height work-area) height-scale max-height)}))
 
 (defn create-window []
-  (let [dimension-specs {:width-scale 0.60
-                         :max-width 1400
-                         :height-scale 0.80
-                         :max-height 1000}
-        dimensions (calculate-window-dimensions dimension-specs)
+  (let [dimensions (calculate-window-dimensions window-dimension-specs)
         preload-path (.join path js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
