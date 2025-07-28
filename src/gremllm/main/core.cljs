@@ -19,12 +19,12 @@
   (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
     {:width (-> (.-width work-area)
                 (* 0.60)
-                (js/Math.min max-window-width)
-                js/Math.floor)
+                (min max-window-width)
+                long)
      :height (-> (.-height work-area)
                  (* 0.80)
-                 (js/Math.min max-window-height)
-                 js/Math.floor)}))
+                 (min max-window-height)
+                 long)}))
 
 (defn create-window []
   (let [dimensions (calculate-window-dimensions)
