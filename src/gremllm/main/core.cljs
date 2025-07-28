@@ -15,16 +15,16 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
+(defn- calculate-dimension [value scale max-value]
+  (-> value
+      (* scale)
+      (min max-value)
+      long))
+
 (defn- calculate-window-dimensions []
   (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
-    {:width (-> (.-width work-area)
-                (* 0.60)
-                (min max-window-width)
-                long)
-     :height (-> (.-height work-area)
-                 (* 0.80)
-                 (min max-window-height)
-                 long)}))
+    {:width (calculate-dimension (.-width work-area) 0.60 max-window-width)
+     :height (calculate-dimension (.-height work-area) 0.80 max-window-height)}))
 
 (defn create-window []
   (let [dimensions (calculate-window-dimensions)
