@@ -20,9 +20,7 @@
        [:ul
         [:li [:a {:href     "#"
                   :on-click [[:effects/prevent-default] [:topic.actions/start-new-topic]]}
-              "➕ New Topic"]]
-        [:li [:a {:href "#" :aria-disabled "true"} "🔍 Search"]]
-        [:li [:a {:href "#" :aria-disabled "true"} "📚 Artifacts"]]]]
+              "➕ New Topic"]]]]
       [:hr]
       [:hgroup
        [:h4 workspace-name]
