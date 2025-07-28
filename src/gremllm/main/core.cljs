@@ -4,8 +4,9 @@
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
+            [gremllm.main.window :as window]
             [nexus.registry :as nxr]
-            ["electron/main" :refer [app BrowserWindow ipcMain screen]]
+            ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
 
 (def ^:private window-dimension-specs
@@ -18,19 +19,8 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
-(defn- calculate-dimension [value scale max-value]
-  (-> value
-      (* scale)
-      (min max-value)
-      long))
-
-(defn- calculate-window-dimensions [{:keys [width-scale max-width height-scale max-height]}]
-  (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
-    {:width (calculate-dimension (.-width work-area) width-scale max-width)
-     :height (calculate-dimension (.-height work-area) height-scale max-height)}))
-
 (defn create-window []
-  (let [dimensions (calculate-window-dimensions window-dimension-specs)
+  (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
         preload-path (.join path js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
