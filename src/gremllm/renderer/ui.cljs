@@ -20,6 +20,11 @@
         [:small
           "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]]]
       [:hr]
+      [:div.grid
+       [:button {:on-click [[:topic.actions/start-new-topic]]} "New Topic"]
+       [:button {:disabled true} "Search"]
+       [:button {:disabled true} "Library"]]
+      [:hr]
       [:h5 "Topics"]
       [:nav
        [:ul
