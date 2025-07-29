@@ -27,7 +27,7 @@ Not useful yet.
 
 ## Running it
 
-You'll need Node.js 22+ and Java 21+ (for ClojureScript).
+You'll need Node.js 22+, Java 21+, and Clojure installed .
 
 ```bash
 npm install
