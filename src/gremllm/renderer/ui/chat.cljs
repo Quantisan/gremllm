@@ -38,7 +38,6 @@
    ;; Show any errors
    (render-error-message errors)])
 
-;; TODO: add a unit test to ensure on-submit event dispatches 2 vectors correctly
 (defn render-input-form [input-value loading? has-api-key?]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]

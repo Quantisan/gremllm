@@ -6,4 +6,5 @@
  :aliases
  {:dev
   {:extra-paths ["test" "dev"]
-   :extra-deps {no.cjohansen/dataspex {:mvn/version "2025.06.8"}}}}}
+   :extra-deps {no.cjohansen/lookup {:mvn/version "2025.04.12"}
+                no.cjohansen/dataspex {:mvn/version "2025.06.8"}}}}}
