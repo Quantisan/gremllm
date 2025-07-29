@@ -5,11 +5,9 @@
 
 (deftest render-input-form-test
   (testing ":on-submit handler has correct structure"
-    (let [hiccup        (chat-ui/render-input-form "some input" false true)
-          form-hiccup   (lookup/select-one 'form hiccup)
-          form-attrs    (lookup/attrs form-hiccup)
-          on-submit-val (get-in form-attrs [:on :submit])]
-      (is (some? form-hiccup) "A :form element should be rendered.")
-      (is (vector? on-submit-val) "The value of :on-submit should be a vector.")
-      (is (every? vector? on-submit-val) "Each item in the :on-submit vector should also be a vector (i.e., an action tuple).")
-      (is (= [[:effects/prevent-default] [:form.actions/submit]] on-submit-val) "The on-submit actions should be correct and in order."))))
+    (let [hiccup (chat-ui/render-input-form "some input" false true)
+          form   (lookup/select-one 'form hiccup)]
+      (is (some? form) "A :form element should be rendered.")
+      (is (= [[:effects/prevent-default] [:form.actions/submit]]
+             (-> form lookup/attrs (get-in [:on :submit])))
+          "The on-submit actions should be correct and in order."))))
