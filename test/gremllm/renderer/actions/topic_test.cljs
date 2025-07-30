@@ -54,12 +54,11 @@
         "should convert message types from strings to keywords")))
 
 (deftest create-topic-test
-  (let [new-topic (topic/create-topic)]
-    (is (= "topic-1" (:id new-topic)) "should have a default id")
-    (is (= "New Topic" (:name new-topic)) "should have a default name")
-    (is (and (vector? (:messages new-topic))
-             (empty? (:messages new-topic)))
-        "should have an empty vector for messages")))
+  (is (= {:id "topic-1"
+          :name "New Topic"
+          :messages []}
+         (topic/create-topic))
+      "should create a topic with default values"))
 
 (deftest bootstrap-test
   (is (= [[:system.actions/request-info]
