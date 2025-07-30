@@ -10,7 +10,7 @@
 (defn append-to-state [state message]
   (let [current-messages (topic-state/get-messages state)]
     [[:effects/save
-      (conj topic-state/path :messages)
+      (conj topic-state/topics-path :messages)
       (conj current-messages message)]]))
 
 ;; Domain-specific actions

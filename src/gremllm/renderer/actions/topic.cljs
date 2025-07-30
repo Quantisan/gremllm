@@ -19,7 +19,7 @@
   (when topic-js
     (let [clj-topic (js->clj topic-js :keywordize-keys true)
           normalized-topic (normalize-topic clj-topic)]
-      [[:effects/save topic-state/path normalized-topic]])))
+      [[:effects/save topic-state/topics-path normalized-topic]])))
 
 (defn restore-or-create-topic [_state loaded-topic]
   (if loaded-topic
@@ -33,7 +33,7 @@
    [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
 
 (defn start-new-topic [_state]
-  [[:effects/save topic-state/path (create-topic)]])
+  [[:effects/save topic-state/topics-path (create-topic)]])
 
 (defn load-topic-error [_state error]
   (js/console.error "load-topic failed:" error)
@@ -61,7 +61,7 @@
   (fn [{dispatch :dispatch} store topic-id]
     (dispatch
       [[:effects/promise
-        {:promise    (.saveTopic js/window.electronAPI (clj->js (get-in @store topic-state/path)))
+        {:promise    (.saveTopic js/window.electronAPI (clj->js (get-in @store topic-state/topics-path)))
          :on-success [:topic.actions/save-success topic-id]
          :on-error   [:topic.actions/save-error topic-id]}]])))
 

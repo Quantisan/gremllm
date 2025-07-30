@@ -10,7 +10,7 @@
         expected-normalized-topic {:id "t1"
                                    :name "Test Topic"
                                    :messages [{:id "m1" :type :user :content "Hi"}]}]
-    (is (= [[:effects/save topic-state/path expected-normalized-topic]]
+    (is (= [[:effects/save topic-state/topics-path expected-normalized-topic]]
            (topic/set-topic {} test-topic-js))
         "should convert JS object, normalize it, and return a save effect"))
 
@@ -28,7 +28,7 @@
 
 (deftest start-new-topic-test
   (let [new-topic (topic/create-topic)]
-    (is (= [[:effects/save topic-state/path new-topic]]
+    (is (= [[:effects/save topic-state/topics-path new-topic]]
            (topic/start-new-topic {}))
         "should return a save effect with a new topic structure")))
 
