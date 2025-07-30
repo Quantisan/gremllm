@@ -12,7 +12,7 @@
     (let [current-messages (topic-state/get-messages state)
           path-to-messages (-> topic-state/topics-path (conj active-id :messages))]
       [[:effects/save path-to-messages (conj (or current-messages []) message)]])
-    []))
+    (throw (js/Error. "Cannot append message: no active topic."))))
 
 ;; Domain-specific actions
 (nxr/register-action! :messages.actions/append-to-state append-to-state)

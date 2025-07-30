@@ -18,4 +18,10 @@
       (is (= [[:effects/save [:topics "topic-1" :messages]
                [{:id 1 :type :user :text "Hello"}
                 {:id 2 :type :assistant :text "Hi there"}]]]
-             (msg/append-to-state state new-message))))))
+             (msg/append-to-state state new-message)))))
+  (testing "throws an error if no active topic is set"
+    (let [state {:topics {"topic-1" {:messages []}}
+                 :active-topic-id nil}
+          new-message {:id 1, :text "test"}]
+      (is (thrown-with-msg? js/Error #"Cannot append message: no active topic"
+            (msg/append-to-state state new-message))))))
