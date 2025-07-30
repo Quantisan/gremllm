@@ -18,8 +18,10 @@
      [e/left-panel
       [:nav
        [:ul
-        [:li [:a {:href     "#"
-                  :on-click [[:effects/prevent-default] [:topic.actions/start-new-topic]]}
+        [:li [:a {:href          "#"
+                  :on-click      [[:effects/prevent-default]]
+                  :aria-disabled "true"
+                  :data-tooltip  "Not implemented yet"}
               "➕ New Topic"]]]]
       [:hr]
       [:hgroup
