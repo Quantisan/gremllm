@@ -30,3 +30,26 @@
     (is (= [[:effects/save topic-state/path new-topic]]
            (topic/start-new-topic {}))
         "should return a save effect with a new topic structure")))
+
+(deftest normalize-topic-test
+  (let [denormalized {:id "t1"
+                      :messages [{:id "m1" :type "user"}
+                                 {:id "m2" :type "assistant"}]}
+        normalized (topic/normalize-topic denormalized)]
+    (is (= [{:id "m1" :type :user} {:id "m2" :type :assistant}]
+           (:messages normalized))
+        "should convert message types from strings to keywords")))
+
+(deftest create-topic-test
+  (let [new-topic (topic/create-topic)]
+    (is (= "topic-1" (:id new-topic)) "should have a default id")
+    (is (= "New Topic" (:name new-topic)) "should have a default name")
+    (is (and (vector? (:messages new-topic))
+             (empty? (:messages new-topic)))
+        "should have an empty vector for messages")))
+
+(deftest bootstrap-test
+  (is (= [[:system.actions/request-info]
+          [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
+         (topic/bootstrap {}))
+      "should request system info and then load the latest topic"))
