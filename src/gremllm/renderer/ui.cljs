@@ -11,22 +11,44 @@
 
 
 (defn render-app [state]
-  (let [has-api-key? (system-state/has-anthropic-api-key? state)]
+  (let [has-api-key?          (system-state/has-anthropic-api-key? state)
+        workspace-name        "Kaitenzushi Corp Acquisition"
+        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]
     [e/app-layout
-     [e/top-bar
-      [:strong "Gremllm"]
-      (when-not has-api-key?
-        (settings-ui/render-api-key-warning))]
+     [e/left-panel
+      [:nav
+       [:ul
+        [:li [:a {:href          "#"
+                  :on-click      [[:effects/prevent-default]]
+                  :aria-disabled "true"
+                  :data-tooltip  "Not implemented yet"}
+              "➕ New Topic"]]]]
+      [:hr]
+      [:hgroup
+       [:h4 workspace-name]
+       [:p [:small workspace-description]]]
+      [:nav
+       [:ul
+        [:li [:a {:href "#"} "✓ Market Viability Assessment"]]
+        [:li [:a {:href "#"} "~ Target Due Diligence"]
+         [:ul
+          [:li [:a {:href "#"} "~ Tourist-Centric Strategy"]]]]]]]
 
-     (chat-ui/render-chat-area (topic-state/get-messages state)
-                               (loading-state/get-loading state)
-                               (loading-state/get-assistant-errors state))
-     (chat-ui/render-input-form (form-state/get-user-input state)
-                                (loading-state/loading? state)
-                                has-api-key?)
+     [e/main-panel
+      [e/top-bar
+       (when-not has-api-key?
+         (settings-ui/render-api-key-warning))]
 
-     (settings-ui/render-settings-modal
+      (chat-ui/render-chat-area (topic-state/get-messages state)
+                                (loading-state/get-loading state)
+                                (loading-state/get-assistant-errors state))
+
+      (chat-ui/render-input-form (form-state/get-user-input state)
+                                 (loading-state/loading? state)
+                                 has-api-key?)
+
+      (settings-ui/render-settings-modal
        {:open? (ui-state/showing-settings? state)
         :encryption-available? (system-state/encryption-available? state)
         :api-key-input (sensitive-state/get-api-key-input state)
-        :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]))
+        :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]]))
