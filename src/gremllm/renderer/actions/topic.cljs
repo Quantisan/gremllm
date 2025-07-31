@@ -58,6 +58,9 @@
   (js/console.error "save-topic (topic-id: " topic-id ") failed:" error)
   [])
 
+(defn switch-topic [_state topic-id]
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
+
 ;; Effects for topic persistence
 (nxr/register-effect! :topic.effects/load-topic
   (fn [{dispatch :dispatch} _store & [opts]]
