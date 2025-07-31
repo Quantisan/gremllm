@@ -29,7 +29,7 @@
       "should dispatch :start-new when topic is nil"))
 
 (deftest start-new-topic-test
-  (with-redefs [js/Date.now (constantly 12345)]
+  (with-redefs [topic/get-timestamp (constantly 12345)]
     (let [expected-topic {:id "topic-12345" :name "New Topic" :messages []}]
       (is (= [[:effects/save (conj topic-state/topics-path "topic-12345") expected-topic]
               [:effects/save topic-state/active-topic-id-path "topic-12345"]]
@@ -49,7 +49,7 @@
         "should convert message types from strings to keywords")))
 
 (deftest create-topic-test
-  (with-redefs [js/Date.now (constantly 54321)]
+  (with-redefs [topic/get-timestamp (constantly 54321)]
     (is (= {:id "topic-54321"
             :name "New Topic"
             :messages []}

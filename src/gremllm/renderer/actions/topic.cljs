@@ -9,9 +9,12 @@
 (defn normalize-topic [topic]
   (update topic :messages #(mapv normalize-message %)))
 
+(defn get-timestamp []
+  (js/Date.now))
+
 ;; TODO: create a Malli schema for Message
 (defn create-topic []
-  {:id (str "topic-" (js/Date.now))
+  {:id (str "topic-" (get-timestamp))
    :name "New Topic"
    :messages []})
 
