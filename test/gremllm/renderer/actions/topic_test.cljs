@@ -1,22 +1,23 @@
 (ns gremllm.renderer.actions.topic-test
-  (:require [cljs.test :refer [deftest is]]
+  (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (deftest set-topic-test
-  (let [test-topic-js (clj->js {:id "t1"
-                                :name "Test Topic"
-                                :messages [(clj->js {:id "m1" :type "user" :content "Hi"})]})
-        expected-normalized-topic {:id "t1"
-                                   :name "Test Topic"
-                                   :messages [{:id "m1" :type :user :content "Hi"}]}]
-    (is (= [[:effects/save (conj topic-state/topics-path "t1") expected-normalized-topic]
-            [:effects/save topic-state/active-topic-id-path "t1"]]
-           (topic/set-topic {} test-topic-js))
-        "should normalize the topic and save it to the topics map, and set it as active"))
+  (testing "when a valid topic is provided"
+    (let [raw-topic {:id "t1"
+                     :name "Test Topic"
+                     :messages [{:id "m1" :type "user" :content "Hi"}]}
+          test-topic-js (clj->js raw-topic)
+          normalized-topic (topic/normalize-topic raw-topic)]
+      (is (= [[:effects/save (conj topic-state/topics-path (:id raw-topic)) normalized-topic]
+              [:effects/save topic-state/active-topic-id-path (:id raw-topic)]]
+             (topic/set-topic {} test-topic-js))
+          "should normalize the topic, save it to the topics map, and set it as active")))
 
-  (is (nil? (topic/set-topic {} nil))
-      "should return nil if input is nil"))
+  (testing "when input is nil"
+    (is (nil? (topic/set-topic {} nil))
+        "should return nil")))
 
 (deftest restore-or-create-topic-test
   (is (= [[:topic.actions/set {:id "t1"}]]
