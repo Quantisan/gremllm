@@ -25,8 +25,10 @@
 (defn set-topic [_state topic-js]
   (when topic-js
     (let [clj-topic (js->clj topic-js :keywordize-keys true)
-          normalized-topic (normalize-topic clj-topic)]
-      [[:effects/save topic-state/topics-path normalized-topic]])))
+          normalized-topic (normalize-topic clj-topic)
+          topic-id (:id normalized-topic)]
+      [[:effects/save (conj topic-state/topics-path topic-id) normalized-topic]
+       [:effects/save topic-state/active-topic-id-path topic-id]])))
 
 (defn restore-or-create-topic [_state loaded-topic]
   (if loaded-topic
@@ -68,9 +70,11 @@
 
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
-    (dispatch
-      [[:effects/promise
-        {:promise    (.saveTopic js/window.electronAPI (clj->js (get-in @store topic-state/topics-path)))
-         :on-success [:topic.actions/save-success topic-id]
-         :on-error   [:topic.actions/save-error topic-id]}]])))
+    (if-let [topic (get-in @store (conj topic-state/topics-path topic-id))]
+      (dispatch
+        [[:effects/promise
+          {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
+           :on-success [:topic.actions/save-success topic-id]
+           :on-error   [:topic.actions/save-error topic-id]}]])
+      (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found for id: " topic-id))]]))))
 
