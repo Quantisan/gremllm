@@ -24,9 +24,8 @@
 
 (deftest set-topic-test
   (testing "when a valid topic is provided"
-    (let [raw-topic {:id "t1"
-                     :name "Test Topic"
-                     :messages [{:id "m1" :type "user" :content "Hi"}]}
+    (let [raw-topic  (assoc expected-new-topic
+                            :messages [{:id "m1" :type "user" :content "Hi"}])
           test-topic-js (clj->js raw-topic)
           normalized-topic (topic/normalize-topic raw-topic)]
       (is (= [[:effects/save (conj topic-state/topics-path (:id raw-topic)) normalized-topic]
@@ -58,8 +57,6 @@
                              {:id "m2" :type :assistant}]}]
     (is (= expected (topic/normalize-topic denormalized))
         "should convert message types from strings to keywords")))
-
-
 
 (deftest bootstrap-test
   (is (= [[:system.actions/request-info]
