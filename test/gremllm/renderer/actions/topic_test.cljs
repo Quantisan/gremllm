@@ -3,6 +3,12 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]))
 
+(def ^:private test-timestamp 54321)
+(def ^:private expected-new-topic
+  {:id (str "topic-" test-timestamp)
+   :name "New Topic"
+   :messages []})
+
 (deftest set-topic-test
   (testing "when a valid topic is provided"
     (let [raw-topic {:id "t1"
@@ -29,12 +35,11 @@
       "should dispatch :start-new when topic is nil"))
 
 (deftest start-new-topic-test
-  (with-redefs [topic/get-timestamp (constantly 12345)]
-    (let [expected-topic {:id "topic-12345" :name "New Topic" :messages []}]
-      (is (= [[:effects/save (conj topic-state/topics-path "topic-12345") expected-topic]
-              [:effects/save topic-state/active-topic-id-path "topic-12345"]]
-             (topic/start-new-topic {}))
-          "should save a new topic and set it as active"))))
+  (with-redefs [topic/create-topic (constantly expected-new-topic)]
+    (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
+            [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
+           (topic/start-new-topic {}))
+        "should save a new topic and set it as active")))
 
 (deftest normalize-topic-test
   (let [denormalized {:id "t1"
@@ -49,10 +54,8 @@
         "should convert message types from strings to keywords")))
 
 (deftest create-topic-test
-  (with-redefs [topic/get-timestamp (constantly 54321)]
-    (is (= {:id "topic-54321"
-            :name "New Topic"
-            :messages []}
+  (with-redefs [topic/get-timestamp (constantly test-timestamp)]
+    (is (= expected-new-topic
            (topic/create-topic))
         "should create a topic with a unique ID and default values")))
 
