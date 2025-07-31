@@ -13,6 +13,8 @@
   (js/Date.now))
 
 ;; TODO: create a Malli schema for Message
+;; NOTE: We call `get-timestamp` directly for pragmatic FCIS. Passing a timestamp
+;; as an argument would complicate the call stack for a benign, testable effect.
 (defn create-topic []
   {:id (str "topic-" (get-timestamp))
    :name "New Topic"
