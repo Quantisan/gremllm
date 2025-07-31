@@ -9,6 +9,19 @@
    :name "New Topic"
    :messages []})
 
+(deftest create-topic-test
+  (with-redefs [topic/get-timestamp (constantly test-timestamp)]
+    (is (= expected-new-topic
+           (topic/create-topic))
+        "should create a topic with a unique ID and default values")))
+
+(deftest start-new-topic-test
+  (with-redefs [topic/create-topic (constantly expected-new-topic)]
+    (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
+            [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
+           (topic/start-new-topic {}))
+        "should save a new topic and set it as active")))
+
 (deftest set-topic-test
   (testing "when a valid topic is provided"
     (let [raw-topic {:id "t1"
@@ -34,13 +47,6 @@
          (topic/restore-or-create-topic {} nil))
       "should dispatch :start-new when topic is nil"))
 
-(deftest start-new-topic-test
-  (with-redefs [topic/create-topic (constantly expected-new-topic)]
-    (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
-            [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
-           (topic/start-new-topic {}))
-        "should save a new topic and set it as active")))
-
 (deftest normalize-topic-test
   (let [denormalized {:id "t1"
                       :name "String Types"
@@ -53,11 +59,7 @@
     (is (= expected (topic/normalize-topic denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest create-topic-test
-  (with-redefs [topic/get-timestamp (constantly test-timestamp)]
-    (is (= expected-new-topic
-           (topic/create-topic))
-        "should create a topic with a unique ID and default values")))
+
 
 (deftest bootstrap-test
   (is (= [[:system.actions/request-info]
