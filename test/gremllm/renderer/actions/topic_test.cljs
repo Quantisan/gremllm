@@ -47,14 +47,12 @@
       "should dispatch :start-new when topic is nil"))
 
 (deftest normalize-topic-test
-  (let [denormalized {:id "t1"
-                      :name "String Types"
-                      :messages [{:id "m1" :type "user"}
-                                 {:id "m2" :type "assistant"}]}
-        expected {:id "t1"
-                  :name "String Types"
-                  :messages [{:id "m1" :type :user}
-                             {:id "m2" :type :assistant}]}]
+  (let [denormalized (assoc expected-new-topic
+                            :messages [{:id "m1" :type "user"}
+                                       {:id "m2" :type "assistant"}])
+        expected     (assoc expected-new-topic
+                            :messages [{:id "m1" :type :user}
+                                       {:id "m2" :type :assistant}])]
     (is (= expected (topic/normalize-topic denormalized))
         "should convert message types from strings to keywords")))
 
