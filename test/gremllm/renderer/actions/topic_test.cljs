@@ -29,11 +29,12 @@
       "should dispatch :start-new when topic is nil"))
 
 (deftest start-new-topic-test
-  (let [new-topic (topic/create-topic)]
-    (is (= [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
-            [:effects/save topic-state/active-topic-id-path (:id new-topic)]]
-           (topic/start-new-topic {}))
-        "should save a new topic and set it as active")))
+  (with-redefs [js/Date.now (constantly 12345)]
+    (let [expected-topic {:id "topic-12345" :name "New Topic" :messages []}]
+      (is (= [[:effects/save (conj topic-state/topics-path "topic-12345") expected-topic]
+              [:effects/save topic-state/active-topic-id-path "topic-12345"]]
+             (topic/start-new-topic {}))
+          "should save a new topic and set it as active"))))
 
 (deftest normalize-topic-test
   (let [denormalized {:id "t1"
@@ -48,11 +49,12 @@
         "should convert message types from strings to keywords")))
 
 (deftest create-topic-test
-  (is (= {:id "topic-1"
-          :name "New Topic"
-          :messages []}
-         (topic/create-topic))
-      "should create a topic with default values"))
+  (with-redefs [js/Date.now (constantly 54321)]
+    (is (= {:id "topic-54321"
+            :name "New Topic"
+            :messages []}
+           (topic/create-topic))
+        "should create a topic with a unique ID and default values")))
 
 (deftest bootstrap-test
   (is (= [[:system.actions/request-info]

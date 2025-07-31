@@ -11,7 +11,7 @@
 
 ;; TODO: create a Malli schema for Message
 (defn create-topic []
-  {:id "topic-1"
+  {:id (str "topic-" (js/Date.now))
    :name "New Topic"
    :messages []})
 
@@ -33,7 +33,9 @@
    [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
 
 (defn start-new-topic [_state]
-  [[:effects/save topic-state/topics-path (create-topic)]])
+  (let [new-topic (create-topic)]
+    [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
+     [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
 
 (defn load-topic-error [_state error]
   (js/console.error "load-topic failed:" error)
