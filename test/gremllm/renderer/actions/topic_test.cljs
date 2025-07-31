@@ -10,9 +10,10 @@
         expected-normalized-topic {:id "t1"
                                    :name "Test Topic"
                                    :messages [{:id "m1" :type :user :content "Hi"}]}]
-    (is (= [[:effects/save topic-state/topics-path expected-normalized-topic]]
+    (is (= [[:effects/save (conj topic-state/topics-path "t1") expected-normalized-topic]
+            [:effects/save topic-state/active-topic-id-path "t1"]]
            (topic/set-topic {} test-topic-js))
-        "should convert JS object, normalize it, and return a save effect"))
+        "should normalize the topic and save it to the topics map, and set it as active"))
 
   (is (nil? (topic/set-topic {} nil))
       "should return nil if input is nil"))
@@ -28,9 +29,10 @@
 
 (deftest start-new-topic-test
   (let [new-topic (topic/create-topic)]
-    (is (= [[:effects/save topic-state/topics-path new-topic]]
+    (is (= [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
+            [:effects/save topic-state/active-topic-id-path (:id new-topic)]]
            (topic/start-new-topic {}))
-        "should return a save effect with a new topic structure")))
+        "should save a new topic and set it as active")))
 
 (deftest normalize-topic-test
   (let [denormalized {:id "t1"
