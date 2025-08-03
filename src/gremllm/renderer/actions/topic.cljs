@@ -71,7 +71,7 @@
            :on-success on-success
            :on-error   [:topic.actions/load-error]}]]))))
 
-(nxr/register-effect! :topic.effects/save-topic
+(nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
     (let [active-topic (topic-state/get-active-topic @store)]
       (if-let [topic-id (:id active-topic)]

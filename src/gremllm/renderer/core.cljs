@@ -10,7 +10,7 @@
         el    (js/document.getElementById "app")]
     (.onMenuCommand js/window.electronAPI "topic/save"
                     (fn []
-                      (nxr/dispatch store {} [[:topic.effects/save-topic "current-topic"]])))
+                      (nxr/dispatch store {} [[:topic.effects/save-active-topic]])))
 
     (.onMenuCommand js/window.electronAPI "topic/open"
                     (fn []
