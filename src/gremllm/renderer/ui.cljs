@@ -19,7 +19,7 @@
       [:nav
        [:ul
         [:li [:a {:href          "#"
-                  :on-click      [[:effects/prevent-default]]
+                  :on            {:click [[:effects/prevent-default]]}
                   :aria-disabled "true"
                   :data-tooltip  "Not implemented yet"}
               "➕ New Topic"]]]]
