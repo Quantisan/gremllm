@@ -90,8 +90,15 @@ By aligning our code with our mental model, we reduce cognitive load, make the s
 ### Minimal Complexity, Maximum Clarity
 We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
 
-### Topic-Centric Vision
-The introduction of Topics is the first concrete step toward our vision of a branching, context-aware workspace. This foundational work paves the way for a future topic tree where context will flow down branches, enabling focused exploration without losing the broader discussion.
+### Vision: An IDE for Thought
+
+Gremllm is not a chat app; it is an **Idea Development Environment (IDE)**—a structured workspace for complex cognitive tasks like strategic planning, analysis, and creative exploration. Our entire architecture is modeled directly on the familiar and powerful metaphor of a code repository.
+
+-   **Workspace as Repository:** A Workspace is the root of a project, equivalent to a git repository's top-level folder. It contains all related thinking on a single macro-subject. Switching workspaces is like switching project directories.
+
+-   **Topic as Source File:** A Topic is an individual file within that repository. It is a container for a specific line of inquiry, a single analysis, or a focused creative thread. It inherits context from its parent but allows for the isolated "development" of an idea.
+
+This structure creates a **topic tree** where context flows from the workspace down through parent topics to children. This hierarchy supports both broad, high-level context and deep, specific exploration without cross-contamination. Every feature we build must serve this model of structured, hierarchical, and context-aware thinking.
 
 ## Development Approach
 
