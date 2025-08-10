@@ -3,6 +3,8 @@
             ["fs" :as fs]
             [cljs.reader :as edn]))
 
+(def ^:private user-subdir "User")
+
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
   "Join path segments using Node's path.join."
@@ -13,6 +15,12 @@
   "Return the directory name of a path using Node's path.dirname."
   [p]
   (.dirname path p))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn user-dir-path
+  "Build a path under the app's user scope directory (User)."
+  [user-data-dir & segments]
+  (apply path-join user-data-dir user-subdir segments))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -42,7 +50,7 @@
       (path-join dir latest-file))))
 
 (defn secrets-file-path [user-data-dir]
-  (path-join user-data-dir "User" "secrets.edn"))
+  (user-dir-path user-data-dir "secrets.edn"))
 
 (defn read-secrets-file [filepath]
   (if (file-exists? filepath)
@@ -57,4 +65,4 @@
   (write-file filepath (pr-str secrets-map)))
 
 (defn topics-dir-path [user-data-dir]
-  (path-join user-data-dir "topics"))
+  (user-dir-path user-data-dir "topics"))
