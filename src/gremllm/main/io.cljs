@@ -57,4 +57,4 @@
   (write-file filepath (pr-str secrets-map)))
 
 (defn topics-dir-path [user-data-dir]
-  (path-join user-data-dir "topics"))
+  (path-join user-data-dir "User" "topics"))
