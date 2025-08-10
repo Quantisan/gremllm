@@ -5,6 +5,7 @@
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
+            [gremllm.main.io :as io]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
@@ -28,10 +29,7 @@
     (.loadFile main-window html-path)
     main-window))
 
-(defn topics-dir []
-  (.join path (.getPath app "userData") "topics"))
-
-(defn setup-api-handlers [store]
+(defn setup-api-handlers [store topics-dir secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -42,37 +40,40 @@
 
   ;; Topic handlers - call functions directly at the boundary
   (.handle ipcMain "topic/save"
-          (fn [_event topic-data]
-            (let [topic-clj (js->clj topic-data :keywordize-keys true)
-                  save-plan (topic-actions/prepare-save topic-clj (topics-dir))]
-              (topic-effects/save save-plan))))
+           (fn [_event topic-data]
+             (-> (js->clj topic-data :keywordize-keys true)
+                 (topic-actions/prepare-save topics-dir)
+                 (topic-effects/save))))
 
   (.handle ipcMain "topic/load"
            (fn [_event]
-             (topic-effects/load (topics-dir) topic-actions/topic-file-pattern)))
+             (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
 
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (secrets/save (keyword key) value)))
+             (secrets/save secrets-filepath (keyword key) value)))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (secrets/del (keyword key))))
+             (secrets/del secrets-filepath (keyword key))))
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [secrets               (secrets/load-all)
-                   encryption-available? (secrets/check-availability)]
-               (-> (system-info secrets encryption-available?)
-                   (clj->js))))))
+             (-> (system-info
+                   (secrets/load-all secrets-filepath)
+                   (secrets/check-availability))
+                 (clj->js)))))
 
 
 (defn main []
   (let [store (atom {})]
-    (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
+                 (let [user-data-dir     (.getPath app "userData")
+                       topics-dir        (io/topics-dir-path user-data-dir)
+                       secrets-filepath  (io/secrets-file-path user-data-dir)]
+                   (setup-api-handlers store topics-dir secrets-filepath))
                  (create-window)
                  (menu/create-menu store)
                  (.on app "activate"
