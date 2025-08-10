@@ -44,3 +44,16 @@
                   io/write-file (fn [_path content]
                                   (is (= "{:api-key \"encrypted\"}" content)))]
       (io/write-secrets-file "/path/secrets.edn" {:api-key "encrypted"}))))
+
+(deftest test-path-join
+  (testing "joins multiple relative segments"
+    (is (= "a/b/c" (io/path-join "a" "b" "c"))))
+  (testing "joins with absolute first segment"
+    (is (= "/root/folder/file.txt"
+           (io/path-join "/root" "folder" "file.txt")))))
+
+(deftest test-path-dirname
+  (testing "returns parent directory for file path"
+    (is (= "/a/b" (io/path-dirname "/a/b/c.txt"))))
+  (testing "returns parent directory for directory path"
+    (is (= "/a" (io/path-dirname "/a/b")))))
