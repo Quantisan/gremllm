@@ -3,6 +3,8 @@
             ["fs" :as fs]
             [cljs.reader :as edn]))
 
+(def ^:private user-subdir "User")
+
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
   "Join path segments using Node's path.join."
@@ -13,8 +15,7 @@
   "Return the directory name of a path using Node's path.dirname."
   [p]
   (.dirname path p))
-
-(def ^:private user-subdir "User")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn user-dir-path
   "Build a path under the app's user scope directory (User)."
