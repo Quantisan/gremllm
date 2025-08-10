@@ -14,6 +14,13 @@
   [p]
   (.dirname path p))
 
+(def ^:private user-subdir "User")
+
+(defn user-dir-path
+  "Build a path under the app's user scope directory (User)."
+  [user-data-dir & segments]
+  (apply path-join user-data-dir user-subdir segments))
+
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
 
@@ -42,7 +49,7 @@
       (path-join dir latest-file))))
 
 (defn secrets-file-path [user-data-dir]
-  (path-join user-data-dir "User" "secrets.edn"))
+  (user-dir-path user-data-dir "secrets.edn"))
 
 (defn read-secrets-file [filepath]
   (if (file-exists? filepath)
@@ -57,4 +64,4 @@
   (write-file filepath (pr-str secrets-map)))
 
 (defn topics-dir-path [user-data-dir]
-  (path-join user-data-dir "User" "topics"))
+  (user-dir-path user-data-dir "topics"))
