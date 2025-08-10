@@ -7,8 +7,7 @@
             [gremllm.main.window :as window]
             [gremllm.main.io :as io]
             [nexus.registry :as nxr]
-            ["electron/main" :refer [app BrowserWindow ipcMain]]
-            ["path" :as path]))
+            ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
 (def ^:private window-dimension-specs
   {:width-scale  0.60
@@ -22,7 +21,7 @@
 
 (defn create-window []
   (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
-        preload-path (.join path js/__dirname "../resources/public/js/preload.js")
+        preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
         html-path "resources/public/index.html"]
