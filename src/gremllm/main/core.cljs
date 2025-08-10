@@ -40,10 +40,10 @@
 
   ;; Topic handlers - call functions directly at the boundary
   (.handle ipcMain "topic/save"
-          (fn [_event topic-data]
-            (let [topic-clj (js->clj topic-data :keywordize-keys true)
-                  save-plan (topic-actions/prepare-save topic-clj topics-dir)]
-              (topic-effects/save save-plan))))
+           (fn [_event topic-data]
+             (-> (js->clj topic-data :keywordize-keys true)
+                 (topic-actions/prepare-save topics-dir)
+                 (topic-effects/save))))
 
   (.handle ipcMain "topic/load"
            (fn [_event]
@@ -60,10 +60,10 @@
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [secrets               (secrets/load-all secrets-filepath)
-                   encryption-available? (secrets/check-availability)]
-               (-> (system-info secrets encryption-available?)
-                   (clj->js))))))
+             (-> (system-info
+                   (secrets/load-all secrets-filepath)
+                   (secrets/check-availability))
+                 (clj->js)))))
 
 
 (defn main []
