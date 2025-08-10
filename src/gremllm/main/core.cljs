@@ -29,7 +29,7 @@
     (.loadFile main-window html-path)
     main-window))
 
-(defn setup-api-handlers [store topics-dir]
+(defn setup-api-handlers [store topics-dir secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -52,15 +52,15 @@
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
-             (secrets/save (keyword key) value)))
+             (secrets/save secrets-filepath (keyword key) value)))
 
   (.handle ipcMain "secrets/delete"
            (fn [_event key]
-             (secrets/del (keyword key))))
+             (secrets/del secrets-filepath (keyword key))))
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [secrets               (secrets/load-all)
+             (let [secrets               (secrets/load-all secrets-filepath)
                    encryption-available? (secrets/check-availability)]
                (-> (system-info secrets encryption-available?)
                    (clj->js))))))
@@ -70,9 +70,10 @@
   (let [store (atom {})]
     (-> (.whenReady app)
         (.then (fn []
-                 (let [user-data-dir (.getPath app "userData")
-                       topics-dir    (io/topics-dir-path user-data-dir)]
-                   (setup-api-handlers store topics-dir))
+                 (let [user-data-dir     (.getPath app "userData")
+                       topics-dir        (io/topics-dir-path user-data-dir)
+                       secrets-filepath  (io/secrets-file-path user-data-dir)]
+                   (setup-api-handlers store topics-dir secrets-filepath))
                  (create-window)
                  (menu/create-menu store)
                  (.on app "activate"

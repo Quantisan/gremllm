@@ -1,5 +1,5 @@
 (ns gremllm.main.actions.secrets
-  (:require ["electron" :refer [safeStorage app]]
+  (:require ["electron" :refer [safeStorage]]
             [gremllm.main.io :as io]
             [clojure.walk :as walk]))
 
@@ -38,35 +38,29 @@
       (catch :default _
         nil))))
 
-;; Helper function to get secrets file path
-(defn- get-secrets-filepath []
-  (-> (.getPath app "userData")
-      (io/secrets-file-path)))
-
 (defn- update-secrets-file
-  "Update secrets file with the given function"
-  [update-fn]
-  (let [filepath (get-secrets-filepath)]
-    (-> (io/read-secrets-file filepath)
-        (update-fn)
-        (->> (io/write-secrets-file filepath)))))
+  "Update secrets file at filepath with the given function"
+  [filepath update-fn]
+  (-> (io/read-secrets-file filepath)
+      (update-fn)
+      (->> (io/write-secrets-file filepath))))
 
 ;; Effect handlers that combine encryption with file I/O
 
 (defn save
-  "Save an encrypted secret to the secrets file"
-  [key value]
+  "Save an encrypted secret to the secrets file at filepath"
+  [filepath key value]
   (if-let [encrypted-value (encrypt-value value)]
-    (do (update-secrets-file #(add-secret % key encrypted-value))
+    (do (update-secrets-file filepath #(add-secret % key encrypted-value))
         {:ok true})
     {:error (if (check-availability)
               "Failed to encrypt value"
               "Encryption not available")}))
 
 (defn load
-  "Retrieve and decrypt a specific secret"
-  [_ _ key]
-  (if-let [decrypted (some-> (get-secrets-filepath)
+  "Retrieve and decrypt a specific secret from filepath"
+  [filepath key]
+  (if-let [decrypted (some-> filepath
                              (io/read-secrets-file)
                              (get key)
                              (decrypt-value))]
@@ -74,17 +68,16 @@
     {:error "Secret not found or failed to decrypt"}))
 
 (defn del
-  "Delete a secret from the secrets file"
-  [key]
-  (update-secrets-file #(remove-secret % key))
+  "Delete a secret from the secrets file at filepath"
+  [filepath key]
+  (update-secrets-file filepath #(remove-secret % key))
   {:ok true})
 
 ;; TODO: move some of these fns to effects
 (defn load-all
-  "Load and decrypt all secrets from the secrets file"
-  []
-  (let [filepath (get-secrets-filepath)
-        encrypted-secrets (io/read-secrets-file filepath)]
+  "Load and decrypt all secrets from the secrets file at filepath"
+  [filepath]
+  (let [encrypted-secrets (io/read-secrets-file filepath)]
     (reduce-kv (fn [acc k encrypted-v]
                  (if-let [decrypted (decrypt-value encrypted-v)]
                    (assoc acc k decrypted)
