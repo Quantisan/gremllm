@@ -56,3 +56,15 @@
     (is (= "/a/b" (io/path-dirname "/a/b/c.txt"))))
   (testing "returns parent directory for directory path"
     (is (= "/a" (io/path-dirname "/a/b")))))
+
+(deftest test-topics-dir-path-default-workspace
+  (testing "default topics dir path is under User/workspaces/default/topics"
+    (let [user-data-dir "/app/data"]
+      (is (= "/app/data/User/workspaces/default/topics"
+             (io/topics-dir-path user-data-dir))))))
+
+(deftest test-topics-dir-path-custom-workspace
+  (testing "topics dir path for a named workspace"
+    (let [user-data-dir "/app/data"]
+      (is (= "/app/data/User/workspaces/acme/topics"
+             (io/topics-dir-path user-data-dir "acme"))))))
