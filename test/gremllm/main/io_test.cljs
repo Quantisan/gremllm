@@ -1,8 +1,7 @@
 (ns gremllm.main.io-test
   (:require [cljs.test :refer [deftest is testing]]
             [clojure.string]
-            [gremllm.main.io :as io]
-            ["fs" :as fs]))
+            [gremllm.main.io :as io]))
 
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
@@ -12,17 +11,17 @@
 
 (deftest test-read-secrets-file
   (testing "returns empty map when file doesn't exist"
-    (with-redefs [fs/existsSync (fn [_] false)]
+    (with-redefs [io/file-exists? (fn [_] false)]
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn")))))
 
   (testing "reads and parses EDN content when file exists"
-    (with-redefs [fs/existsSync (fn [_] true)
+    (with-redefs [io/file-exists? (fn [_] true)
                   io/read-file (fn [_] "{:api-key \"encrypted-value\"}")]
       (is (= {:api-key "encrypted-value"}
              (io/read-secrets-file "/fake/path/secrets.edn")))))
 
   (testing "returns empty map on parse error"
-    (with-redefs [fs/existsSync (fn [_] true)
+    (with-redefs [io/file-exists? (fn [_] true)
                   io/read-file (fn [_] "{:key")]
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn"))))))
 

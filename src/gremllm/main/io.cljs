@@ -14,14 +14,6 @@
   [p]
   (.dirname path p))
 
-(defn find-latest-topic-file [dir file-pattern]
-  (when (.existsSync fs dir)
-    (when-let [latest-file (->> (.readdirSync fs dir)
-                                (filter #(re-matches file-pattern %))
-                                (sort)
-                                (last))]
-      (path-join dir latest-file))))
-
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
 
@@ -31,11 +23,29 @@
 (defn read-file [filepath]
   (.readFileSync fs filepath "utf8"))
 
+(defn file-exists?
+  "Return true if a file or directory exists at path."
+  [p]
+  (.existsSync fs p))
+
+(defn read-dir
+  "Return a seq of entries in dir."
+  [dir]
+  (array-seq (.readdirSync fs dir)))
+
+(defn find-latest-topic-file [dir file-pattern]
+  (when (file-exists? dir)
+    (when-let [latest-file (->> (read-dir dir)
+                                (filter #(re-matches file-pattern %))
+                                sort
+                                last)]
+      (path-join dir latest-file))))
+
 (defn secrets-file-path [user-data-dir]
   (path-join user-data-dir "User" "secrets.edn"))
 
 (defn read-secrets-file [filepath]
-  (if (.existsSync fs filepath)
+  (if (file-exists? filepath)
     (try
       (edn/read-string (read-file filepath))
       (catch :default _
