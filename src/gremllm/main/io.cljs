@@ -4,6 +4,8 @@
             [cljs.reader :as edn]))
 
 (def ^:private user-subdir "User")
+(def ^:private workspaces-subdir "workspaces")
+(def ^:private default-workspace "default")
 
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
@@ -21,6 +23,11 @@
   "Build a path under the app's user scope directory (User)."
   [user-data-dir & segments]
   (apply path-join user-data-dir user-subdir segments))
+
+(defn workspace-dir-path
+  "Path to a specific workspace: <userData>/User/workspaces/<workspace-id>"
+  [user-data-dir workspace-id]
+  (user-dir-path user-data-dir workspaces-subdir workspace-id))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -64,5 +71,11 @@
   (ensure-dir (path-dirname filepath))
   (write-file filepath (pr-str secrets-map)))
 
-(defn topics-dir-path [user-data-dir]
-  (user-dir-path user-data-dir "topics"))
+(defn topics-dir-path
+  "Path to topics within a workspace. Default workspace is \"default\".
+   1-arity: <userData>/User/workspaces/default/topics
+   2-arity: <userData>/User/workspaces/<workspace-id>/topics"
+  ([user-data-dir]
+   (topics-dir-path user-data-dir default-workspace))
+  ([user-data-dir workspace-id]
+   (path-join (workspace-dir-path user-data-dir workspace-id) "topics")))
