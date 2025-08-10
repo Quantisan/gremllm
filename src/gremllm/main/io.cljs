@@ -35,3 +35,6 @@
   (let [dir-path (.dirname path filepath)]
     (ensure-dir dir-path)
     (write-file filepath (pr-str secrets-map))))
+
+(defn topics-dir-path [user-data-dir]
+  (.join path user-data-dir "topics"))

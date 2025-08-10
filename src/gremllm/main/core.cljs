@@ -5,6 +5,7 @@
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
+            [gremllm.main.io :as io]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]
             ["path" :as path]))
@@ -28,10 +29,7 @@
     (.loadFile main-window html-path)
     main-window))
 
-(defn topics-dir []
-  (.join path (.getPath app "userData") "topics"))
-
-(defn setup-api-handlers [store]
+(defn setup-api-handlers [store topics-dir]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -44,12 +42,12 @@
   (.handle ipcMain "topic/save"
           (fn [_event topic-data]
             (let [topic-clj (js->clj topic-data :keywordize-keys true)
-                  save-plan (topic-actions/prepare-save topic-clj (topics-dir))]
+                  save-plan (topic-actions/prepare-save topic-clj topics-dir)]
               (topic-effects/save save-plan))))
 
   (.handle ipcMain "topic/load"
            (fn [_event]
-             (topic-effects/load (topics-dir) topic-actions/topic-file-pattern)))
+             (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
 
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
@@ -70,9 +68,11 @@
 
 (defn main []
   (let [store (atom {})]
-    (setup-api-handlers store)
     (-> (.whenReady app)
         (.then (fn []
+                 (let [user-data-dir (.getPath app "userData")
+                       topics-dir    (io/topics-dir-path user-data-dir)]
+                   (setup-api-handlers store topics-dir))
                  (create-window)
                  (menu/create-menu store)
                  (.on app "activate"
