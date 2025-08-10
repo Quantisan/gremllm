@@ -3,7 +3,8 @@
             [gremllm.main.actions.ipc :as ipc-actions]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
-            ["electron/main" :refer [BrowserWindow]]))
+            [gremllm.main.io :as io]
+            ["electron/main" :refer [BrowserWindow app]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -12,7 +13,9 @@
 (nxr/register-placeholder! :env/anthropic-api-key
   (fn [_]
     (or (.-ANTHROPIC_API_KEY (.-env js/process))
-        (some-> (secrets-actions/load nil nil :anthropic-api-key)
+        (some-> (.getPath app "userData")
+                (io/secrets-file-path)
+                (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
 ;; Electron platform helpers (used by effects)
