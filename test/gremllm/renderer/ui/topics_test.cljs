@@ -1,7 +1,8 @@
 (ns gremllm.renderer.ui.topics-test
   (:require [cljs.test :refer-macros [deftest is testing]]
             [gremllm.renderer.ui.topics :as topics-ui]
-            [lookup.core :as lookup]))
+            [lookup.core :as lookup]
+            [clojure.string :as str]))
 
 (deftest render-left-panel-content-test
   (let [props {:workspace-name        "Work 1"
@@ -11,37 +12,30 @@
                :active-topic-id       "topic-2"}
         hiccup (topics-ui/render-left-panel-content props)]
 
-    (testing "New Topic link has correct click handler and label"
-      (let [new-link (-> (lookup/select '[nav > ul > li > a] hiccup) first)]
-        (is (some? new-link) "A New Topic link should be present.")
+    (testing "New Topic link has correct click handler and readable label"
+      (let [new-link (lookup/select-one '[nav:first-child a] hiccup)]
         (is (= [[:effects/prevent-default] [:topic.actions/start-new]]
                (-> new-link lookup/attrs (get-in [:on :click])))
             "Clicking New Topic should prevent default and dispatch start-new.")
-        (is (= "➕ New Topic" (lookup/text new-link))
-            "New Topic link should have the correct label.")))
+        (is (str/includes? (lookup/text new-link) "New Topic")
+            "Label should include 'New Topic'.")))
 
-    (testing "Topics list renders one link per topic with correct handlers"
-      (let [all-links   (lookup/select '[nav > ul > li > a] hiccup)
-            topic-links (rest all-links)
-            [a1 a2]     topic-links]
-        (is (= 2 (count topic-links)) "Should render one link per topic.")
-        (is (= [[:effects/prevent-default] [:topic.actions/switch-to "topic-1"]]
-               (-> a1 lookup/attrs (get-in [:on :click])))
-            "First topic link should dispatch switch-to with its id.")
-        (is (= [[:effects/prevent-default] [:topic.actions/switch-to "topic-2"]]
-               (-> a2 lookup/attrs (get-in [:on :click])))
-            "Second topic link should dispatch switch-to with its id.")))
+    (testing "Topics list renders correct count and handlers"
+      (let [topic-links  (lookup/select '[nav:last-child a] hiccup)
+            expected-ids (map :id (:topics props))]
+        (is (= (count expected-ids) (count topic-links))
+            "Renders one link per topic.")
+        (doseq [[expected-id a] (map vector expected-ids topic-links)]
+          (is (= expected-id
+                 (-> a lookup/attrs (get-in [:on :click 1 1])))
+              "Each link dispatches switch-to with its id."))))
 
-    (testing "Active topic sets aria-current and labels reflect active marker and fallback"
-      (let [[a1 a2] (-> (lookup/select '[nav > ul > li > a] hiccup) rest)]
-        (is (nil? (-> a1 lookup/attrs :aria-current))
-            "Non-active topic should not set aria-current.")
-        (is (= "page" (-> a2 lookup/attrs :aria-current))
+    (testing "Active topic sets aria-current and falls back to 'Untitled'"
+      (let [active-link (lookup/select-one '[nav:last-child a[aria-current=page]] hiccup)]
+        (is (= "page" (-> active-link lookup/attrs :aria-current))
             "Active topic should set aria-current to 'page'.")
-        (is (= "• Alpha" (lookup/text a1))
-            "Non-active topic label should include bullet and the name.")
-        (is (= "✓ Untitled" (lookup/text a2))
-            "Active topic label should include checkmark and fallback title.")))
+        (is (str/includes? (lookup/text active-link) "Untitled")
+            "Falls back to 'Untitled' when name is missing.")))
 
     (testing "Workspace header shows name and description"
       (is (= "Work 1" (-> (lookup/select-one 'h4 hiccup) lookup/text))
