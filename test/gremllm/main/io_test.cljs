@@ -3,6 +3,7 @@
             [clojure.string]
             [gremllm.main.io :as io]))
 
+;; TODO: refactor for DRY: with-temp-dir is duplicated in gremllm.main.effects.topic-test
 (defn- with-temp-dir [suffix f]
   (let [os  (js/require "os")
         dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
