@@ -39,7 +39,7 @@ const createIPCBoundary = (channel) => {
 contextBridge.exposeInMainWorld("electronAPI", {
 	sendMessage: createIPCBoundary("chat/send-message"),
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
-	loadTopic: () => ipcRenderer.invoke("topic/load"),
+	loadLatestTopic: () => ipcRenderer.invoke("topic/load-latest"),
 	listTopics: () => ipcRenderer.invoke("topic/list"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
 	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),

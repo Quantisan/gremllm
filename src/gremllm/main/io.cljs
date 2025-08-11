@@ -43,18 +43,29 @@
   [p]
   (.existsSync fs p))
 
+(defn- file-stats
+  "Return Node.js fs.Stats for the given filepath."
+  [filepath]
+  (.statSync fs filepath))
+
+(defn file-timestamps
+  "Return a map of file timestamp metadata (in ms since epoch)."
+  [filepath]
+  (let [stats (file-stats filepath)
+        created-ms  (or (.-birthtimeMs stats)
+                        (.-ctimeMs stats)
+                        (some-> (.-birthtime stats) (.getTime))
+                        (some-> (.-ctime stats) (.getTime)))
+        accessed-ms (or (.-atimeMs stats)
+                        (some-> (.-atime stats) (.getTime)))]
+    {:created-at       created-ms
+     :last-accessed-at accessed-ms}))
+
 (defn read-dir
   "Return a seq of entries in dir."
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-(defn find-latest-topic-file [dir file-pattern]
-  (when (file-exists? dir)
-    (when-let [latest-file (->> (read-dir dir)
-                                (filter #(re-matches file-pattern %))
-                                sort
-                                last)]
-      (path-join dir latest-file))))
 
 (defn delete-file
   "Delete a file at filepath."

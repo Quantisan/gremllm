@@ -3,6 +3,19 @@
             [clojure.string]
             [gremllm.main.io :as io]))
 
+;; TODO: refactor for DRY: with-temp-dir is duplicated in gremllm.main.effects.topic-test
+(defn- with-temp-dir [suffix f]
+  (let [os  (js/require "os")
+        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
+    (try
+      (io/ensure-dir dir)
+      (f dir)
+      (finally
+        (when (io/file-exists? dir)
+          (doseq [file (io/read-dir dir)]
+            (io/delete-file (io/path-join dir file)))
+          (io/remove-dir dir))))))
+
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
     (let [user-data-dir "/app/data"
@@ -68,3 +81,17 @@
     (let [user-data-dir "/app/data"]
       (is (= "/app/data/User/workspaces/acme/topics"
              (io/topics-dir-path user-data-dir "acme"))))))
+
+(deftest test-file-timestamps
+  (testing "returns created-at and last-accessed-at (ms)"
+    (with-temp-dir "timestamps"
+      (fn [dir]
+        (let [start    (.getTime (js/Date.))
+              filename (str "gremllm-io-ts-" start ".txt")
+              filepath (io/path-join dir filename)]
+          (io/write-file filepath "hello")
+          (let [{:keys [created-at last-accessed-at]} (io/file-timestamps filepath)]
+            (is (number? created-at))
+            (is (number? last-accessed-at))
+            (is (<= start created-at))
+            (is (<= start last-accessed-at))))))))

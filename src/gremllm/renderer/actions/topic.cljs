@@ -35,11 +35,22 @@
     [[:topic.actions/set loaded-topic]]
     [[:topic.actions/start-new]]))
 
+(defn determine-initial-topic [_state topics-js]
+  (let [entries (js->clj topics-js :keywordize-keys true)]
+    (if (seq entries)
+      [[:topic.effects/load-latest-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
+      [[:topic.actions/start-new]])))
+
+(defn list-topics-error [_state error]
+  (js/console.error "list-topics failed:" error)
+  [[:topic.actions/start-new]])
+
+;; TODO: this triggers a cross-domain action (system info) from within the topics domain. Violating
+;; modelarity and FCIS
 (defn bootstrap [_state]
-  ;; WARN: requesting info on each re-render might be a bit costly. we're reading from disk each
-  ;; time...
   [[:system.actions/request-info]
-   [:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]])
+   [:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
+                         :on-error   [:topic.actions/list-topics-error]}]])
 
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
@@ -62,14 +73,22 @@
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 ;; Effects for topic persistence
-(nxr/register-effect! :topic.effects/load-topic
+(nxr/register-effect! :topic.effects/load-latest-topic
   (fn [{dispatch :dispatch} _store & [opts]]
     (let [on-success (or (:on-success opts) [:topic.actions/set])]
       (dispatch
         [[:effects/promise
-          {:promise    (.loadTopic js/window.electronAPI)
+          {:promise    (.loadLatestTopic js/window.electronAPI)
            :on-success on-success
-           :on-error   [:topic.actions/load-error]}]]))))
+           :on-error   [:topic.actions/load-topic-error]}]]))))
+
+(nxr/register-effect! :topic.effects/list
+  (fn [{dispatch :dispatch} _store & [opts]]
+   (dispatch
+     [[:effects/promise
+       {:promise    (.listTopics js/window.electronAPI)
+        :on-success (:on-success opts)
+        :on-error   (:on-error opts)}]])))
 
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]

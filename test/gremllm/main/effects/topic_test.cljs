@@ -29,7 +29,7 @@
                                        :filepath filepath
                                        :content (pr-str topic)})
 
-              loaded-js (topic/load temp-dir #"topic-\d+\.edn")
+              loaded-js (topic/load-latest temp-dir #"topic-\d+\.edn")
               loaded    (js->clj loaded-js :keywordize-keys true)]
           (is (= topic loaded)))
 
@@ -49,8 +49,11 @@
         (let [files-to-create ["topic-200.edn" "notes.txt" "topic-100.edn"]
               _               (doseq [f files-to-create]
                                 (io/write-file (io/path-join dir f) "{}"))]
-          (is (= [{:filename "topic-100.edn"
-                   :filepath (io/path-join dir "topic-100.edn")}
-                  {:filename "topic-200.edn"
-                   :filepath (io/path-join dir "topic-200.edn")}]
-                 (topic/enumerate dir #"topic-\d+\.edn"))))))))
+          (let [entries (topic/enumerate dir #"topic-\d+\.edn")]
+            (is (= [{:filename "topic-100.edn"
+                     :filepath (io/path-join dir "topic-100.edn")}
+                    {:filename "topic-200.edn"
+                     :filepath (io/path-join dir "topic-200.edn")}]
+                   (mapv #(select-keys % [:filename :filepath]) entries)))
+            (is (every? number? (map :created-at entries)))
+            (is (every? number? (map :last-accessed-at entries)))))))))
