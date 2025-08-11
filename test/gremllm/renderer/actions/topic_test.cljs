@@ -57,11 +57,10 @@
         "should convert message types from strings to keywords")))
 
 (deftest bootstrap-test
-  (is (= [[:system.actions/request-info]
-          [:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
+  (is (= [[:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
                                 :on-error   [:topic.actions/list-topics-error]}]]
          (topic/bootstrap {}))
-      "should request system info and then list topics to decide newest-or-create"))
+      "should list topics to decide newest-or-create"))
 
 (deftest determine-initial-topic-test
   (testing "when topics exist"
