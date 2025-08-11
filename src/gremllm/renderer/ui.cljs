@@ -13,26 +13,32 @@
 (defn render-app [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
         workspace-name        "Kaitenzushi Corp Acquisition"
-        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]
+        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
+        active-topic-id       (topic-state/get-active-topic-id state)
+        topics                (topic-state/get-topics state)]
     [e/app-layout
      [e/left-panel
       [:nav
        [:ul
-        [:li [:a {:href          "#"
-                  :on            {:click [[:effects/prevent-default]]}
-                  :aria-disabled "true"
-                  :data-tooltip  "Not implemented yet"}
-              "➕ New Topic"]]]]
+        [:li
+         [:a {:href "#"
+              :on   {:click [[:effects/prevent-default]
+                             [:topic.actions/start-new]]}}
+          "➕ New Topic"]]]]
       [:hr]
       [:hgroup
        [:h4 workspace-name]
        [:p [:small workspace-description]]]
       [:nav
        [:ul
-        [:li [:a {:href "#"} "✓ Market Viability Assessment"]]
-        [:li [:a {:href "#"} "~ Target Due Diligence"]
-         [:ul
-          [:li [:a {:href "#"} "~ Tourist-Centric Strategy"]]]]]]]
+        (for [{:keys [id name]} topics]
+          [:li
+           [:a {:href         "#"
+                :aria-current (when (= id active-topic-id) "page")
+                :on           {:click [[:effects/prevent-default]
+                                       [:topic.actions/switch-to id]]}}
+            (str (if (= id active-topic-id) "✓ " "• ")
+                 (or name "Untitled"))]])]]]
 
      [e/main-panel
       [e/top-bar
