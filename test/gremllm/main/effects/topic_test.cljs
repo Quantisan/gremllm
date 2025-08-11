@@ -3,6 +3,18 @@
             [gremllm.main.effects.topic :as topic]
             [gremllm.main.io :as io]))
 
+(defn- with-temp-dir [suffix f]
+  (let [os  (js/require "os")
+        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
+    (try
+      (io/ensure-dir dir)
+      (f dir)
+      (finally
+        (when (io/file-exists? dir)
+          (doseq [file (io/read-dir dir)]
+            (io/delete-file (io/path-join dir file)))
+          (io/remove-dir dir))))))
+
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data"
     (let [os       (js/require "os")
@@ -32,25 +44,10 @@
 
 (deftest test-enumerate-topics
   (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
-    (let [os       (js/require "os")
-          temp-dir (io/path-join (.tmpdir os) (str "gremllm-test-enumerate-topics" (.getTime (js/Date.))))
-          f1       "topic-100.edn"
-          f2       "topic-200.edn"
-          other    "notes.txt"
-          p1       (io/path-join temp-dir f1)
-          p2       (io/path-join temp-dir f2)
-          p3       (io/path-join temp-dir other)]
-      (try
-        (io/ensure-dir temp-dir)
-        (io/write-file p1 "{}")
-        (io/write-file p2 "{}")
-        (io/write-file p3 "{}")
-        (let [listed (topic/enumerate temp-dir #"topic-\d+\.edn")]
-          (is (= [{:filename f1 :filepath p1}
-                  {:filename f2 :filepath p2}]
-                 listed)))
-        (finally
-          (when (io/file-exists? temp-dir)
-            (doseq [file (io/read-dir temp-dir)]
-              (io/delete-file (io/path-join temp-dir file)))
-            (io/remove-dir temp-dir)))))))
+    (with-temp-dir "list"
+      (fn [dir]
+        (doseq [f ["topic-100.edn" "topic-200.edn" "notes.txt"]]
+          (io/write-file (io/path-join dir f) "{}"))
+        (is (= (mapv (fn [f] {:filename f :filepath (io/path-join dir f)})
+                     ["topic-100.edn" "topic-200.edn"])
+               (topic/enumerate dir #"topic-\d+\.edn")))))))
