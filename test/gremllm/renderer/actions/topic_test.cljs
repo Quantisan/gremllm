@@ -58,18 +58,18 @@
 
 (deftest bootstrap-test
   (is (= [[:system.actions/request-info]
-          [:topic.effects/list {:on-success [:topic.actions/handle-list]
-                                :on-error   [:topic.actions/list-error]}]]
+          [:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
+                                :on-error   [:topic.actions/list-topics-error]}]]
          (topic/bootstrap {}))
       "should request system info and then list topics to decide newest-or-create"))
 
-(deftest handle-list-test
+(deftest determine-initial-topic-test
   (testing "when topics exist"
     (is (= [[:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
-           (topic/handle-list {} (clj->js [{:filename "topic-1.edn" :filepath "/tmp/topic-1.edn"}])))))
+           (topic/determine-initial-topic {} (clj->js [{:filename "topic-1.edn" :filepath "/tmp/topic-1.edn"}])))))
   (testing "when no topics exist"
     (is (= [[:topic.actions/start-new]]
-           (topic/handle-list {} (clj->js []))))))
+           (topic/determine-initial-topic {} (clj->js []))))))
 
 (deftest switch-topic-test
   (testing "switching active topic"

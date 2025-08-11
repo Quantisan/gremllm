@@ -62,6 +62,8 @@
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/set topic/set-topic)
 (nxr/register-action! :topic.actions/bootstrap topic/bootstrap)
+(nxr/register-action! :topic.actions/determine-initial-topic topic/determine-initial-topic)
+(nxr/register-action! :topic.actions/list-topics-error topic/list-topics-error)
 (nxr/register-action! :topic.actions/restore-or-create-topic topic/restore-or-create-topic)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)

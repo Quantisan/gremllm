@@ -35,20 +35,20 @@
     [[:topic.actions/set loaded-topic]]
     [[:topic.actions/start-new]]))
 
-(defn handle-list [_state topics-js]
+(defn determine-initial-topic [_state topics-js]
   (let [entries (js->clj topics-js :keywordize-keys true)]
     (if (seq entries)
       [[:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
       [[:topic.actions/start-new]])))
 
-(defn list-error [_state error]
+(defn list-topics-error [_state error]
   (js/console.error "list-topics failed:" error)
   [[:topic.actions/start-new]])
 
 (defn bootstrap [_state]
   [[:system.actions/request-info]
-   [:topic.effects/list {:on-success [:topic.actions/handle-list]
-                         :on-error   [:topic.actions/list-error]}]])
+   [:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
+                         :on-error   [:topic.actions/list-topics-error]}]])
 
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
@@ -82,8 +82,8 @@
 
 (nxr/register-effect! :topic.effects/list
   (fn [{dispatch :dispatch} _store & [opts]]
-    (let [on-success (or (:on-success opts) [:topic.actions/handle-list])
-          on-error   (or (:on-error opts)   [:topic.actions/list-error])]
+    (let [on-success (or (:on-success opts) [:topic.actions/determine-initial-topic])
+          on-error   (or (:on-error opts)   [:topic.actions/list-topics-error])]
       (dispatch
         [[:effects/promise
           {:promise    (.listTopics js/window.electronAPI)
