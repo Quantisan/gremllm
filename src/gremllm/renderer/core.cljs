@@ -33,4 +33,6 @@
         (nxr/dispatch store dispatch-data actions)))
 
     ;; Trigger the first render
-    (nxr/dispatch store {} [[:topic.actions/bootstrap]])))
+    (nxr/dispatch store {}
+                  [[:system.actions/request-info]
+                   [:topic.actions/bootstrap]])))

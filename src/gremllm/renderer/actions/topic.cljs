@@ -45,11 +45,8 @@
   (js/console.error "list-topics failed:" error)
   [[:topic.actions/start-new]])
 
-;; TODO: this triggers a cross-domain action (system info) from within the topics domain. Violating
-;; modelarity and FCIS
 (defn bootstrap [_state]
-  [[:system.actions/request-info]
-   [:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
+  [[:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
                          :on-error   [:topic.actions/list-topics-error]}]])
 
 (defn start-new-topic [_state]
