@@ -21,12 +21,12 @@
 (defn enumerate
   "Return a vector of {:filename .. :filepath ..} for files in topics-dir matching pattern."
   [topics-dir topic-file-pattern]
-  (if (io/file-exists? topics-dir)
+  (if-not (io/file-exists? topics-dir)
+    []
     (->> (io/read-dir topics-dir)
-         (filter #(re-matches topic-file-pattern %))
-         sort ;; TODO: sort by latest access
-         ;; TODO: return :created-at and :last-accessed for each topic file
-         (map (fn [f] {:filename f
-                       :filepath (io/path-join topics-dir f)}))
-         vec)
-    []))
+         (keep (fn [f]
+                 (when (re-matches topic-file-pattern f)
+                   {:filename f
+                    :filepath (io/path-join topics-dir f)})))
+         (sort-by :filename)
+         vec)))
