@@ -33,7 +33,7 @@
 (deftest test-enumerate-topics
   (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
     (let [os       (js/require "os")
-          temp-dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-list"))
+          temp-dir (io/path-join (.tmpdir os) (str "gremllm-test-enumerate-topics" (.getTime (js/Date.))))
           f1       "topic-100.edn"
           f2       "topic-200.edn"
           other    "notes.txt"
