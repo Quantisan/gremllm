@@ -13,7 +13,7 @@
         hiccup (topics-ui/render-left-panel-content props)]
 
     (testing "New Topic link has correct click handler and readable label"
-      (let [new-link (lookup/select-one '[nav:first-child a] hiccup)]
+      (let [new-link (-> (lookup/select '[nav > ul > li > a] hiccup) first)]
         (is (= [[:effects/prevent-default] [:topic.actions/start-new]]
                (-> new-link lookup/attrs (get-in [:on :click])))
             "Clicking New Topic should prevent default and dispatch start-new.")
@@ -21,7 +21,7 @@
             "Label should include 'New Topic'.")))
 
     (testing "Topics list renders correct count and handlers"
-      (let [topic-links  (lookup/select '[nav:last-child a] hiccup)
+      (let [topic-links  (-> (lookup/select '[nav > ul > li > a] hiccup) rest)
             expected-ids (map :id (:topics props))]
         (is (= (count expected-ids) (count topic-links))
             "Renders one link per topic.")
@@ -31,7 +31,7 @@
               "Each link dispatches switch-to with its id."))))
 
     (testing "Active topic sets aria-current and falls back to 'Untitled'"
-      (let [active-link (lookup/select-one '[nav:last-child a[aria-current=page]] hiccup)]
+      (let [active-link (lookup/select-one 'a[aria-current=page] hiccup)]
         (is (= "page" (-> active-link lookup/attrs :aria-current))
             "Active topic should set aria-current to 'page'.")
         (is (str/includes? (lookup/text active-link) "Untitled")
