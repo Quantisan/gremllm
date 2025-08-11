@@ -82,13 +82,11 @@
 
 (nxr/register-effect! :topic.effects/list
   (fn [{dispatch :dispatch} _store & [opts]]
-    (let [on-success (or (:on-success opts) [:topic.actions/determine-initial-topic])
-          on-error   (or (:on-error opts)   [:topic.actions/list-topics-error])]
-      (dispatch
-        [[:effects/promise
-          {:promise    (.listTopics js/window.electronAPI)
-           :on-success on-success
-           :on-error   on-error}]]))))
+   (dispatch
+     [[:effects/promise
+       {:promise    (.listTopics js/window.electronAPI)
+        :on-success (:on-success opts)
+        :on-error   (:on-error opts)}]])))
 
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
