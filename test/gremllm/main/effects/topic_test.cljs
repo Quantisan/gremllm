@@ -29,7 +29,7 @@
                                        :filepath filepath
                                        :content (pr-str topic)})
 
-              loaded-js (topic/load temp-dir #"topic-\d+\.edn")
+              loaded-js (topic/load-latest temp-dir #"topic-\d+\.edn")
               loaded    (js->clj loaded-js :keywordize-keys true)]
           (is (= topic loaded)))
 

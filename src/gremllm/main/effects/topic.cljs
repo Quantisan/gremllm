@@ -10,7 +10,7 @@
   (io/write-file filepath content)
   filepath)
 
-(defn load
+(defn load-latest
   "Loads the latest topic from the file system"
   [topics-dir topic-file-pattern]
   (when-let [filepath (io/find-latest-topic-file topics-dir topic-file-pattern)]

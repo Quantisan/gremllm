@@ -44,9 +44,9 @@
                  (topic-actions/prepare-save topics-dir)
                  (topic-effects/save))))
 
-  (.handle ipcMain "topic/load"
+  (.handle ipcMain "topic/load-latest"
            (fn [_event]
-             (topic-effects/load topics-dir topic-actions/topic-file-pattern)))
+             (topic-effects/load-latest topics-dir topic-actions/topic-file-pattern)))
 
   (.handle ipcMain "topic/list"
            (fn [_event]

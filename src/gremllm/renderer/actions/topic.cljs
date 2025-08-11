@@ -38,7 +38,7 @@
 (defn determine-initial-topic [_state topics-js]
   (let [entries (js->clj topics-js :keywordize-keys true)]
     (if (seq entries)
-      [[:topic.effects/load-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
+      [[:topic.effects/load-latest-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
       [[:topic.actions/start-new]])))
 
 (defn list-topics-error [_state error]
@@ -71,12 +71,12 @@
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 ;; Effects for topic persistence
-(nxr/register-effect! :topic.effects/load-topic
+(nxr/register-effect! :topic.effects/load-latest-topic
   (fn [{dispatch :dispatch} _store & [opts]]
     (let [on-success (or (:on-success opts) [:topic.actions/set])]
       (dispatch
         [[:effects/promise
-          {:promise    (.loadTopic js/window.electronAPI)
+          {:promise    (.loadLatestTopic js/window.electronAPI)
            :on-success on-success
            :on-error   [:topic.actions/load-topic-error]}]]))))
 
