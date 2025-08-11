@@ -48,13 +48,6 @@
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-(defn find-latest-topic-file [dir file-pattern]
-  (when (file-exists? dir)
-    (when-let [latest-file (->> (read-dir dir)
-                                (filter #(re-matches file-pattern %))
-                                sort
-                                last)]
-      (path-join dir latest-file))))
 
 (defn delete-file
   "Delete a file at filepath."

@@ -10,14 +10,6 @@
   (io/write-file filepath content)
   filepath)
 
-(defn load-latest
-  "Loads the latest topic from the file system"
-  [topics-dir topic-file-pattern]
-  (when-let [filepath (io/find-latest-topic-file topics-dir topic-file-pattern)]
-    (-> (io/read-file filepath)
-        edn/read-string
-        (clj->js :keywordize-keys false))))
-
 (defn- file->topic-entry [topics-dir pattern filename]
   (when (re-matches pattern filename)
     {:filename filename
@@ -35,3 +27,12 @@
          (keep (partial file->topic-entry topics-dir topic-file-pattern))
          (sort-by :filename)
          vec)))
+
+(defn load-latest
+  "Loads the latest topic from the file system (reuses enumerate for DRY)."
+  [topics-dir topic-file-pattern]
+  ;; TODO: output of `enumerate` isn't sorted by last-accesssed, thus last is not latest
+  (when-let [{:keys [filepath]} (last (enumerate topics-dir topic-file-pattern))]
+    (-> (io/read-file filepath)
+        edn/read-string
+        (clj->js :keywordize-keys false))))
