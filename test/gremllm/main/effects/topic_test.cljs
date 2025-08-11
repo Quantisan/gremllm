@@ -43,11 +43,16 @@
             (.rmdirSync fs temp-dir)))))))
 
 (deftest test-enumerate-topics
-  (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
+  (testing "enumerate returns only topic files, sorted, with filename and filepath"
     (with-temp-dir "list"
       (fn [dir]
-        (doseq [f ["topic-100.edn" "topic-200.edn" "notes.txt"]]
-          (io/write-file (io/path-join dir f) "{}"))
-        (is (= (mapv (fn [f] {:filename f :filepath (io/path-join dir f)})
-                     ["topic-100.edn" "topic-200.edn"])
-               (topic/enumerate dir #"topic-\d+\.edn")))))))
+        (let [pattern #"topic-\d+\.edn"
+              files-to-create ["topic-200.edn" "notes.txt" "topic-100.edn"]
+              _ (doseq [f files-to-create]
+                  (io/write-file (io/path-join dir f) "{}"))
+              expected [{:filename "topic-100.edn"
+                         :filepath (io/path-join dir "topic-100.edn")}
+                        {:filename "topic-200.edn"
+                         :filepath (io/path-join dir "topic-200.edn")}]
+              actual (topic/enumerate dir pattern)]
+          (is (= expected actual)))))))
