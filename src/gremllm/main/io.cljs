@@ -43,6 +43,11 @@
   [p]
   (.existsSync fs p))
 
+(defn file-stats
+  "Return Node.js fs.Stats for the given filepath."
+  [filepath]
+  (.statSync fs filepath))
+
 (defn read-dir
   "Return a seq of entries in dir."
   [dir]
