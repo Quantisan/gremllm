@@ -15,7 +15,7 @@
         (let [_saved-path (topic/save {:dir temp-dir
                                        :filepath filepath
                                        :content (pr-str topic)})
-              
+
               loaded-js (topic/load temp-dir #"topic-\d+\.edn")
               loaded    (js->clj loaded-js :keywordize-keys true)]
           (is (= topic loaded)))
@@ -29,7 +29,7 @@
             ;; Then remove the directory
             (.rmdirSync fs temp-dir)))))))
 
-(deftest test-list-topics
+(deftest test-enumerate-topics
   (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
     (let [os       (js/require "os")
           path     (js/require "path")
@@ -46,7 +46,7 @@
         (.writeFileSync fs p1 "{}" "utf8")
         (.writeFileSync fs p2 "{}" "utf8")
         (.writeFileSync fs p3 "{}" "utf8")
-        (let [listed (topic/list temp-dir #"topic-\d+\.edn")]
+        (let [listed (topic/enumerate temp-dir #"topic-\d+\.edn")]
           (is (= [{:filename f1 :filepath p1}
                   {:filename f2 :filepath p2}]
                  listed)))

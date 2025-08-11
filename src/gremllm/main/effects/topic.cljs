@@ -18,7 +18,7 @@
         edn/read-string
         (clj->js :keywordize-keys false))))
 
-(defn list
+(defn enumerate
   "Return a vector of {:filename .. :filepath ..} for files in topics-dir matching pattern."
   [topics-dir topic-file-pattern]
   (if (io/file-exists? topics-dir)

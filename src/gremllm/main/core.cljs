@@ -50,7 +50,7 @@
 
   (.handle ipcMain "topic/list"
            (fn [_event]
-             (-> (topic-effects/list topics-dir topic-actions/topic-file-pattern)
+             (-> (topic-effects/enumerate topics-dir topic-actions/topic-file-pattern)
                  (clj->js))))
 
   ;; Secrets handlers - call functions directly at the boundary
