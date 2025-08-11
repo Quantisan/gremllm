@@ -7,6 +7,7 @@
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
+            [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.elements :as e]))
 
 
@@ -18,27 +19,11 @@
         topics                (topic-state/get-topics state)]
     [e/app-layout
      [e/left-panel
-      [:nav
-       [:ul
-        [:li
-         [:a {:href "#"
-              :on   {:click [[:effects/prevent-default]
-                             [:topic.actions/start-new]]}}
-          "➕ New Topic"]]]]
-      [:hr]
-      [:hgroup
-       [:h4 workspace-name]
-       [:p [:small workspace-description]]]
-      [:nav
-       [:ul
-        (for [{:keys [id name]} topics]
-          [:li
-           [:a {:href         "#"
-                :aria-current (when (= id active-topic-id) "page")
-                :on           {:click [[:effects/prevent-default]
-                                       [:topic.actions/switch-to id]]}}
-            (str (if (= id active-topic-id) "✓ " "• ")
-                 (or name "Untitled"))]])]]]
+      (topics-ui/render-left-panel-content
+        {:workspace-name        workspace-name
+         :workspace-description workspace-description
+         :active-topic-id       active-topic-id
+         :topics                topics})]
 
      [e/main-panel
       [e/top-bar
