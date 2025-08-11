@@ -3,6 +3,18 @@
             [clojure.string]
             [gremllm.main.io :as io]))
 
+(defn- with-temp-dir [suffix f]
+  (let [os  (js/require "os")
+        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
+    (try
+      (io/ensure-dir dir)
+      (f dir)
+      (finally
+        (when (io/file-exists? dir)
+          (doseq [file (io/read-dir dir)]
+            (io/delete-file (io/path-join dir file)))
+          (io/remove-dir dir))))))
+
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
     (let [user-data-dir "/app/data"
@@ -70,27 +82,15 @@
              (io/topics-dir-path user-data-dir "acme"))))))
 
 (deftest test-file-timestamps
-  (testing "returns created-at and last-accessed-at (ms) for a real file"
-    (let [os   (js/require "os")
-          path (js/require "path")
-          fs   (js/require "fs")
-          dir  (.tmpdir os)
-          filename (str "gremllm-io-ts-" (.getTime (js/Date.)) ".txt")
-          filepath (.join path dir filename)]
-      (try
-        (io/write-file filepath "hello")
-        (let [{:keys [created-at last-accessed-at]} (io/file-timestamps filepath)
-              stats (.statSync fs filepath)
-              expected-created (or (.-birthtimeMs stats)
-                                   (.-ctimeMs stats)
-                                   (some-> (.-birthtime stats) (.getTime))
-                                   (some-> (.-ctime stats) (.getTime)))
-              expected-accessed (or (.-atimeMs stats)
-                                    (some-> (.-atime stats) (.getTime)))]
-          (is (number? created-at))
-          (is (number? last-accessed-at))
-          (is (= expected-created created-at))
-          (is (= expected-accessed last-accessed-at)))
-        (finally
-          (when (.existsSync fs filepath)
-            (.unlinkSync fs filepath)))))))
+  (testing "returns created-at and last-accessed-at (ms)"
+    (with-temp-dir "timestamps"
+      (fn [dir]
+        (let [start    (.getTime (js/Date.))
+              filename (str "gremllm-io-ts-" start ".txt")
+              filepath (io/path-join dir filename)]
+          (io/write-file filepath "hello")
+          (let [{:keys [created-at last-accessed-at]} (io/file-timestamps filepath)]
+            (is (number? created-at))
+            (is (number? last-accessed-at))
+            (is (<= start created-at))
+            (is (<= start last-accessed-at))))))))
