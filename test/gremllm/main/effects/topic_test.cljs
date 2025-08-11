@@ -53,5 +53,5 @@
         (finally
           (when (.existsSync fs temp-dir)
             (doseq [file (.readdirSync fs temp-dir)]
-              (.unlinkSync fs (.join path temp-dir file)))
+              (.unlinkSync fs (io/path-join temp-dir file)))
             (.rmdirSync fs temp-dir)))))))
