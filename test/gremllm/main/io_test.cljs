@@ -68,3 +68,29 @@
     (let [user-data-dir "/app/data"]
       (is (= "/app/data/User/workspaces/acme/topics"
              (io/topics-dir-path user-data-dir "acme"))))))
+
+(deftest test-file-timestamps
+  (testing "returns created-at and last-accessed-at (ms) for a real file"
+    (let [os   (js/require "os")
+          path (js/require "path")
+          fs   (js/require "fs")
+          dir  (.tmpdir os)
+          filename (str "gremllm-io-ts-" (.getTime (js/Date.)) ".txt")
+          filepath (.join path dir filename)]
+      (try
+        (io/write-file filepath "hello")
+        (let [{:keys [created-at last-accessed-at]} (io/file-timestamps filepath)
+              stats (.statSync fs filepath)
+              expected-created (or (.-birthtimeMs stats)
+                                   (.-ctimeMs stats)
+                                   (some-> (.-birthtime stats) (.getTime))
+                                   (some-> (.-ctime stats) (.getTime)))
+              expected-accessed (or (.-atimeMs stats)
+                                    (some-> (.-atime stats) (.getTime)))]
+          (is (number? created-at))
+          (is (number? last-accessed-at))
+          (is (= expected-created created-at))
+          (is (= expected-accessed last-accessed-at)))
+        (finally
+          (when (.existsSync fs filepath)
+            (.unlinkSync fs filepath)))))))
