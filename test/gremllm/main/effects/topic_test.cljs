@@ -46,13 +46,11 @@
   (testing "enumerate returns only topic files, sorted, with filename and filepath"
     (with-temp-dir "list"
       (fn [dir]
-        (let [pattern #"topic-\d+\.edn"
-              files-to-create ["topic-200.edn" "notes.txt" "topic-100.edn"]
-              _ (doseq [f files-to-create]
-                  (io/write-file (io/path-join dir f) "{}"))
-              expected [{:filename "topic-100.edn"
-                         :filepath (io/path-join dir "topic-100.edn")}
-                        {:filename "topic-200.edn"
-                         :filepath (io/path-join dir "topic-200.edn")}]
-              actual (topic/enumerate dir pattern)]
-          (is (= expected actual)))))))
+        (let [files-to-create ["topic-200.edn" "notes.txt" "topic-100.edn"]
+              _               (doseq [f files-to-create]
+                                (io/write-file (io/path-join dir f) "{}"))]
+          (is (= [{:filename "topic-100.edn"
+                   :filepath (io/path-join dir "topic-100.edn")}
+                  {:filename "topic-200.edn"
+                   :filepath (io/path-join dir "topic-200.edn")}]
+                 (topic/enumerate dir #"topic-\d+\.edn"))))))))
