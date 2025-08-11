@@ -24,7 +24,8 @@
   (if (io/file-exists? topics-dir)
     (->> (io/read-dir topics-dir)
          (filter #(re-matches topic-file-pattern %))
-         sort
+         sort ;; TODO: sort by latest access
+         ;; TODO: return :created-at and :last-accessed for each topic file
          (map (fn [f] {:filename f
                        :filepath (io/path-join topics-dir f)}))
          vec)
