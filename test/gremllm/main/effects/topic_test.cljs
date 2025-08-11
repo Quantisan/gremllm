@@ -33,7 +33,6 @@
 (deftest test-enumerate-topics
   (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
     (let [os       (js/require "os")
-          fs       (js/require "fs")
           temp-dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-list"))
           f1       "topic-100.edn"
           f2       "topic-200.edn"
@@ -42,16 +41,16 @@
           p2       (io/path-join temp-dir f2)
           p3       (io/path-join temp-dir other)]
       (try
-        (.mkdirSync fs temp-dir #js {:recursive true})
-        (.writeFileSync fs p1 "{}" "utf8")
-        (.writeFileSync fs p2 "{}" "utf8")
-        (.writeFileSync fs p3 "{}" "utf8")
+        (io/ensure-dir temp-dir)
+        (io/write-file p1 "{}")
+        (io/write-file p2 "{}")
+        (io/write-file p3 "{}")
         (let [listed (topic/enumerate temp-dir #"topic-\d+\.edn")]
           (is (= [{:filename f1 :filepath p1}
                   {:filename f2 :filepath p2}]
                  listed)))
         (finally
-          (when (.existsSync fs temp-dir)
-            (doseq [file (.readdirSync fs temp-dir)]
-              (.unlinkSync fs (io/path-join temp-dir file)))
-            (.rmdirSync fs temp-dir)))))))
+          (when (io/file-exists? temp-dir)
+            (doseq [file (io/read-dir temp-dir)]
+              (io/delete-file (io/path-join temp-dir file)))
+            (io/remove-dir temp-dir)))))))
