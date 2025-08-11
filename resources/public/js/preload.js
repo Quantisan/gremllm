@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	sendMessage: createIPCBoundary("chat/send-message"),
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	loadTopic: () => ipcRenderer.invoke("topic/load"),
+	listTopics: () => ipcRenderer.invoke("topic/list"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
 	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),
 	// Secrets API

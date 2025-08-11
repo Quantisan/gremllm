@@ -17,3 +17,15 @@
     (-> (io/read-file filepath)
         edn/read-string
         (clj->js :keywordize-keys false))))
+
+(defn list
+  "Return a vector of {:filename .. :filepath ..} for files in topics-dir matching pattern."
+  [topics-dir topic-file-pattern]
+  (if (io/file-exists? topics-dir)
+    (->> (io/read-dir topics-dir)
+         (filter #(re-matches topic-file-pattern %))
+         sort
+         (map (fn [f] {:filename f
+                       :filepath (io/path-join topics-dir f)}))
+         vec)
+    []))

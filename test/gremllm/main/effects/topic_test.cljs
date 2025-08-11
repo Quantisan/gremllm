@@ -28,3 +28,30 @@
               (.unlinkSync fs (.join path temp-dir file)))
             ;; Then remove the directory
             (.rmdirSync fs temp-dir)))))))
+
+(deftest test-list-topics
+  (testing "lists only topic files sorted and returns filename + filepath (CLJ data)"
+    (let [os       (js/require "os")
+          path     (js/require "path")
+          fs       (js/require "fs")
+          temp-dir (.join path (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-list"))
+          f1       "topic-100.edn"
+          f2       "topic-200.edn"
+          other    "notes.txt"
+          p1       (.join path temp-dir f1)
+          p2       (.join path temp-dir f2)
+          p3       (.join path temp-dir other)]
+      (try
+        (.mkdirSync fs temp-dir #js {:recursive true})
+        (.writeFileSync fs p1 "{}" "utf8")
+        (.writeFileSync fs p2 "{}" "utf8")
+        (.writeFileSync fs p3 "{}" "utf8")
+        (let [listed (topic/list temp-dir #"topic-\d+\.edn")]
+          (is (= [{:filename f1 :filepath p1}
+                  {:filename f2 :filepath p2}]
+                 listed)))
+        (finally
+          (when (.existsSync fs temp-dir)
+            (doseq [file (.readdirSync fs temp-dir)]
+              (.unlinkSync fs (.join path temp-dir file)))
+            (.rmdirSync fs temp-dir)))))))
