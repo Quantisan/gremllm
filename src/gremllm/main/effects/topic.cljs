@@ -12,18 +12,10 @@
 
 (defn- file->topic-entry [topics-dir pattern filename]
   (when (re-matches pattern filename)
-    (let [filepath      (io/path-join topics-dir filename)
-          stats         (io/file-stats filepath)
-          created-ms    (or (.-birthtimeMs stats)
-                            (.-ctimeMs stats)
-                            (some-> (.-birthtime stats) (.getTime))
-                            (some-> (.-ctime stats) (.getTime)))
-          accessed-ms   (or (.-atimeMs stats)
-                            (some-> (.-atime stats) (.getTime)))]
-      {:filename         filename
-       :filepath         filepath
-       :created-at       created-ms
-       :last-accessed-at accessed-ms})))
+    (let [filepath (io/path-join topics-dir filename)]
+      (merge {:filename filename
+              :filepath filepath}
+             (io/file-timestamps filepath)))))
 
 (defn enumerate
   "Enumerate persisted topics for a workspace. Reads topics-dir and returns a vector of
