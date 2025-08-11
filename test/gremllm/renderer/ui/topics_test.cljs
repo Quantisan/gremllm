@@ -22,7 +22,7 @@
 
     (testing "Topics list renders one link per topic with correct handlers"
       (let [all-links   (lookup/select '[nav > ul > li > a] hiccup)
-            topic-links (subvec all-links 1)
+            topic-links (rest all-links)
             [a1 a2]     topic-links]
         (is (= 2 (count topic-links)) "Should render one link per topic.")
         (is (= [[:effects/prevent-default] [:topic.actions/switch-to "topic-1"]]
@@ -33,7 +33,7 @@
             "Second topic link should dispatch switch-to with its id.")))
 
     (testing "Active topic sets aria-current and labels reflect active marker and fallback"
-      (let [[a1 a2] (subvec (lookup/select '[nav > ul > li > a] hiccup) 1)]
+      (let [[a1 a2] (-> (lookup/select '[nav > ul > li > a] hiccup) rest)]
         (is (nil? (-> a1 lookup/attrs :aria-current))
             "Non-active topic should not set aria-current.")
         (is (= "page" (-> a2 lookup/attrs :aria-current))
