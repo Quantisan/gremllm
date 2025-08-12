@@ -7,32 +7,23 @@
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
+            [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.elements :as e]))
 
 
 (defn render-app [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
         workspace-name        "Kaitenzushi Corp Acquisition"
-        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."]
+        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
+        active-topic-id       (topic-state/get-active-topic-id state)
+        topics                (topic-state/get-topics state)]
     [e/app-layout
      [e/left-panel
-      [:nav
-       [:ul
-        [:li [:a {:href          "#"
-                  :on            {:click [[:effects/prevent-default]]}
-                  :aria-disabled "true"
-                  :data-tooltip  "Not implemented yet"}
-              "➕ New Topic"]]]]
-      [:hr]
-      [:hgroup
-       [:h4 workspace-name]
-       [:p [:small workspace-description]]]
-      [:nav
-       [:ul
-        [:li [:a {:href "#"} "✓ Market Viability Assessment"]]
-        [:li [:a {:href "#"} "~ Target Due Diligence"]
-         [:ul
-          [:li [:a {:href "#"} "~ Tourist-Centric Strategy"]]]]]]]
+      (topics-ui/render-left-panel-content
+        {:workspace-name        workspace-name
+         :workspace-description workspace-description
+         :active-topic-id       active-topic-id
+         :topics                topics})]
 
      [e/main-panel
       [e/top-bar

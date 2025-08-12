@@ -13,9 +13,9 @@
 (defn get-messages [state]
   (:messages (get-active-topic state)))
 
-(defn get-topic-id [state]
-  (:id (get-active-topic state)))
+(defn get-topics-map [state]
+  (or (get-in state topics-path) {}))
 
-(defn get-topic-title [state]
-  (:title (get-active-topic state)))
+(defn get-topics [state]
+  (-> (get-topics-map state) vals vec))
 
