@@ -66,6 +66,17 @@
              (done))
         10))))
 
+(deftest test-promise->actions-error-nil-followup
+  (async done
+    (let [dispatched (atom nil)
+          ctx {:dispatch #(reset! dispatched %)}
+          promise (js/Promise.reject "err")]
+      (actions/promise->actions ctx nil {:promise promise :on-error nil})
+      (js/setTimeout
+        #(do (is (nil? @dispatched))
+             (done))
+        10))))
+
 (deftest normalize-followups-nil-test
   (is (nil? (actions/normalize-followups nil :p))))
 
@@ -89,3 +100,15 @@
 
 (deftest normalize-followups-invalid-test
   (is (nil? (actions/normalize-followups "not-valid" :p))))
+
+(deftest test-promise->actions-success-nil-followup
+  (async done
+    (let [dispatched (atom nil)
+          ctx {:dispatch #(reset! dispatched %)}
+          promise (js/Promise.resolve "ok")]
+      (actions/promise->actions ctx nil {:promise promise :on-success nil})
+      (js/setTimeout
+        #(do (is (nil? @dispatched))
+             (done))
+        10))))
+
