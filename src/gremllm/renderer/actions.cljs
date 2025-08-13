@@ -23,6 +23,14 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+(nxr/register-placeholder! :effects.promise/value
+  (fn [dispatch-data]
+    (:effects.promise/value dispatch-data)))
+
+(nxr/register-placeholder! :effects.promise/error
+  (fn [dispatch-data]
+    (:effects.promise/error dispatch-data)))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
@@ -30,13 +38,28 @@
             :replicant/dom-event
             (.preventDefault))))
 
+(defn normalize-followups [followups payload]
+  (cond
+    (nil? followups)                                       nil
+    (and (vector? followups) (keyword? (first followups))) [(conj followups payload)] ;; TODO: unify to always use dispatch-data, no appending payload here
+    (sequential? followups)                                (vec followups)
+
+    :else
+    (do (js/console.error "Invalid follow-up actions for :effects/promise" followups)
+        nil)))
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success (dispatch [(conj on-success result)]))))
+               (let [actions (normalize-followups on-success result)]
+                 (when (seq actions)
+                   (dispatch actions {:effects.promise/value result})))))
+
       (.catch (fn [error]
-                (when on-error (dispatch [(conj on-error error)]))))))
+                (let [actions (normalize-followups on-error error)]
+                  (when (seq actions)
+                    (dispatch actions {:effects.promise/error error})))))))
+
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
