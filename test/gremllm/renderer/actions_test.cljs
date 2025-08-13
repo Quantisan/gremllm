@@ -85,40 +85,60 @@
              (done))
         10))))
 
+;; Concurrency contract:
+;; - Two independent promises resolve out of order (B before A).
+;; - Each dispatch carries only its own extra dispatch-data.
+;; - We capture dispatch calls (both arities) and assert no cross-talk.
 (deftest test-promise->actions-concurrent-out-of-order
   (async done
-    (let [events (atom [])
-          ctx {:dispatch (fn
-                           ([actions] (swap! events conj {:actions actions}))
-                           ([actions extra] (swap! events conj {:actions actions :extra extra})))}
-            deferred (fn []
-                       (let [r (atom nil)
-                             p (js/Promise. (fn [resolve _] (reset! r resolve)))]
-                         {:promise p
-                          :resolve #(when-let [f @r] (f %))}))
-            d1 (deferred)
-            d2 (deferred)]
-        (add-watch events ::done
-          (fn [_ _ _ new]
-            (when (= 2 (count new))
-              (remove-watch events ::done)
-              (is (= [[:b/one [:effects.promise/value]]]
-                     (:actions (first new))))
-              (is (= {:effects.promise/value "B"}
-                     (:extra (first new))))
-              (is (= [[:a/one [:effects.promise/value]]]
-                     (:actions (second new))))
-              (is (= {:effects.promise/value "A"}
-                     (:extra (second new))))
-              (done))))
-        (actions/promise->actions ctx nil
-          {:promise (:promise d1)
-           :on-success [[:a/one [:effects.promise/value]]]})
-        (actions/promise->actions ctx nil
-          {:promise (:promise d2)
-           :on-success [[:b/one [:effects.promise/value]]]})
-        ((:resolve d2) "B")
-        ((:resolve d1) "A"))))
+    (let [dispatches (atom [])]
+      (letfn [
+        ;; Capture dispatch exactly like Nexus would call it (1-arity and 2-arity)
+              (record!
+                ([actions] (swap! dispatches conj {:actions actions}))
+                ([actions extra] (swap! dispatches conj {:actions actions :extra extra})))
+        ;; Create a deferred promise whose resolve we can call later
+              (make-deferred []
+                (let [resolve* (atom nil)
+                      p (js/Promise. (fn [resolve _] (reset! resolve* resolve)))]
+                  {:promise p
+                   :resolve #(when-let [f @resolve*] (f %))}))
+        ;; Complete the test once we’ve observed two dispatches
+              (finish-when-two []
+                (add-watch dispatches ::done
+                  (fn [_ _ _ new]
+                    (when (= 2 (count new))
+                      (remove-watch dispatches ::done)
+                      ;; First dispatch corresponds to pB ("B")
+                      (is (= [[:b/one [:effects.promise/value]]]
+                             (:actions (first new))))
+                      (is (= {:effects.promise/value "B"}
+                             (:extra (first new))))
+                      ;; Second dispatch corresponds to pA ("A")
+                      (is (= [[:a/one [:effects.promise/value]]]
+                             (:actions (second new))))
+                      (is (= {:effects.promise/value "A"}
+                             (:extra (second new))))
+                      (done)))))]
+
+        (let [ctx {:dispatch record!}
+              pA (make-deferred)
+              pB (make-deferred)]
+          ;; Start watching before resolving to avoid races
+          (finish-when-two)
+
+          ;; Wire both promises through the effect. Note: placeholders are not
+          ;; resolved here; we only assert the extra dispatch-data is correct.
+          (actions/promise->actions ctx nil
+            {:promise (:promise pA)
+             :on-success [[:a/one [:effects.promise/value]]]})
+          (actions/promise->actions ctx nil
+            {:promise (:promise pB)
+             :on-success [[:b/one [:effects.promise/value]]]})
+
+          ;; Resolve B first, then A (out-of-order completion)
+          ((:resolve pB) "B")
+          ((:resolve pA) "A"))))))
 
 (deftest normalize-followups-nil-test
   (is (nil? (actions/normalize-followups nil :p))))
