@@ -87,42 +87,38 @@
 
 (deftest test-promise->actions-concurrent-out-of-order
   (async done
-    (let [calls (atom [])
+    (let [events (atom [])
           ctx {:dispatch (fn
-                           ([actions] (swap! calls conj {:actions actions}))
-                           ([actions extra] (swap! calls conj {:actions actions :extra extra})))}
-          res1 (atom nil)
-          res2 (atom nil)
-          p1 (js/Promise.
-               (fn [resolve _reject]
-                 (reset! res1 resolve)))
-          p2 (js/Promise.
-               (fn [resolve _reject]
-                 (reset! res2 resolve)))]
-      ;; Wire both through the promise effect
-      (actions/promise->actions ctx nil
-        {:promise p1
-         :on-success [[:a/one [:effects.promise/value]]]})
-      (actions/promise->actions ctx nil
-        {:promise p2
-         :on-success [[:b/one [:effects.promise/value]]]})
-      ;; Resolve p2 first, then p1
-      (js/setTimeout (fn [] ((deref res2) "B")) 5)
-      (js/setTimeout (fn [] ((deref res1) "A")) 10)
-      ;; Assert each dispatch carried the correct, isolated extra
-      (js/setTimeout
-        (fn []
-          (is (= 2 (count @calls)))
-          (is (= [[:b/one [:effects.promise/value]]]
-                 (:actions (first @calls))))
-          (is (= {:effects.promise/value "B"}
-                 (:extra (first @calls))))
-          (is (= [[:a/one [:effects.promise/value]]]
-                 (:actions (second @calls))))
-          (is (= {:effects.promise/value "A"}
-                 (:extra (second @calls))))
-          (done))
-        30))))
+                           ([actions] (swap! events conj {:actions actions}))
+                           ([actions extra] (swap! events conj {:actions actions :extra extra})))}
+            deferred (fn []
+                       (let [r (atom nil)
+                             p (js/Promise. (fn [resolve _] (reset! r resolve)))]
+                         {:promise p
+                          :resolve #(when-let [f @r] (f %))}))
+            d1 (deferred)
+            d2 (deferred)]
+        (add-watch events ::done
+          (fn [_ _ _ new]
+            (when (= 2 (count new))
+              (remove-watch events ::done)
+              (is (= [[:b/one [:effects.promise/value]]]
+                     (:actions (first new))))
+              (is (= {:effects.promise/value "B"}
+                     (:extra (first new))))
+              (is (= [[:a/one [:effects.promise/value]]]
+                     (:actions (second new))))
+              (is (= {:effects.promise/value "A"}
+                     (:extra (second new))))
+              (done))))
+        (actions/promise->actions ctx nil
+          {:promise (:promise d1)
+           :on-success [[:a/one [:effects.promise/value]]]})
+        (actions/promise->actions ctx nil
+          {:promise (:promise d2)
+           :on-success [[:b/one [:effects.promise/value]]]})
+        ((:resolve d2) "B")
+        ((:resolve d1) "A"))))
 
 (deftest normalize-followups-nil-test
   (is (nil? (actions/normalize-followups nil :p))))
