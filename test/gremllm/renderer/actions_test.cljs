@@ -65,3 +65,27 @@
                    @dispatched))
              (done))
         10))))
+
+(deftest normalize-followups-nil-test
+  (is (nil? (actions/normalize-followups nil :p))))
+
+(deftest normalize-followups-single-test
+  (is (= [[:action/one :p]]
+         (actions/normalize-followups [:action/one] :p))))
+
+(deftest normalize-followups-multiple-vector-test
+  (is (= [[:action/a :p]
+          [:action/b :x :p]]
+         (actions/normalize-followups [[:action/a]
+                                       [:action/b :x]]
+                                      :p))))
+
+(deftest normalize-followups-multiple-list-test
+  (is (= [[:action/a :p]
+          [:action/b :p]]
+         (actions/normalize-followups (list [:action/a]
+                                            [:action/b])
+                                      :p))))
+
+(deftest normalize-followups-invalid-test
+  (is (nil? (actions/normalize-followups "not-valid" :p))))
