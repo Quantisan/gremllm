@@ -23,6 +23,14 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+(nxr/register-placeholder! :effects.promise/value
+  (fn [dispatch-data]
+    (:effects.promise/value dispatch-data)))
+
+(nxr/register-placeholder! :effects.promise/error
+  (fn [dispatch-data]
+    (:effects.promise/error dispatch-data)))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
@@ -34,7 +42,7 @@
   (cond
     (nil? followups)                                       nil
     (and (vector? followups) (keyword? (first followups))) [(conj followups payload)]
-    (sequential? followups)                                (mapv #(conj % payload) followups)
+    (sequential? followups)                                (vec followups)
 
     :else
     (do (js/console.error "Invalid follow-up actions for :effects/promise" followups)
@@ -43,11 +51,19 @@
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (let [actions (normalize-followups on-success result)]
-                 (when (seq actions) (dispatch actions)))))
+               (let [single? (and (vector? on-success) (keyword? (first on-success)))
+                     actions (normalize-followups on-success result)]
+                 (when (seq actions)
+                   (if single?
+                     (dispatch actions)
+                     (dispatch actions {:effects.promise/value result}))))))
       (.catch (fn [error]
-                (let [actions (normalize-followups on-error error)]
-                  (when (seq actions) (dispatch actions)))))))
+                (let [single? (and (vector? on-error) (keyword? (first on-error)))
+                      actions (normalize-followups on-error error)]
+                  (when (seq actions)
+                    (if single?
+                      (dispatch actions)
+                      (dispatch actions {:effects.promise/error error}))))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)

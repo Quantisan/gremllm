@@ -37,32 +37,40 @@
 (deftest test-promise->actions-success-multiple
   (async done
     (let [dispatched (atom nil)
-          ctx {:dispatch #(reset! dispatched %)}
+          ctx {:dispatch (fn
+                           ([actions] (reset! dispatched {:actions actions}))
+                           ([actions extra] (reset! dispatched {:actions actions :extra extra})))}
           promise (js/Promise.resolve "success-value")]
       (actions/promise->actions ctx nil
         {:promise promise
          :on-success [[:action/one]
                       [:action/two :arg]]})
       (js/setTimeout
-        #(do (is (= [[:action/one "success-value"]
-                     [:action/two :arg "success-value"]]
-                   @dispatched))
+        #(do (is (= [[:action/one]
+                     [:action/two :arg]]
+                   (:actions @dispatched)))
+             (is (= {:effects.promise/value "success-value"}
+                    (:extra @dispatched)))
              (done))
         10))))
 
 (deftest test-promise->actions-error-multiple
   (async done
     (let [dispatched (atom nil)
-          ctx {:dispatch #(reset! dispatched %)}
+          ctx {:dispatch (fn
+                           ([actions] (reset! dispatched {:actions actions}))
+                           ([actions extra] (reset! dispatched {:actions actions :extra extra})))}
           promise (js/Promise.reject "error-value")]
       (actions/promise->actions ctx nil
         {:promise promise
          :on-error [[:action/err-one]
                     [:action/err-two :arg]]})
       (js/setTimeout
-        #(do (is (= [[:action/err-one "error-value"]
-                     [:action/err-two :arg "error-value"]]
-                   @dispatched))
+        #(do (is (= [[:action/err-one]
+                     [:action/err-two :arg]]
+                   (:actions @dispatched)))
+             (is (= {:effects.promise/error "error-value"}
+                    (:extra @dispatched)))
              (done))
         10))))
 
@@ -85,15 +93,15 @@
          (actions/normalize-followups [:action/one] :p))))
 
 (deftest normalize-followups-multiple-vector-test
-  (is (= [[:action/a :p]
-          [:action/b :x :p]]
+  (is (= [[:action/a]
+          [:action/b :x]]
          (actions/normalize-followups [[:action/a]
                                        [:action/b :x]]
                                       :p))))
 
 (deftest normalize-followups-multiple-list-test
-  (is (= [[:action/a :p]
-          [:action/b :p]]
+  (is (= [[:action/a]
+          [:action/b]]
          (actions/normalize-followups (list [:action/a]
                                             [:action/b])
                                       :p))))
