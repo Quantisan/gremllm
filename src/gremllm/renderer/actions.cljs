@@ -41,7 +41,7 @@
 (defn normalize-followups [followups payload]
   (cond
     (nil? followups)                                       nil
-    (and (vector? followups) (keyword? (first followups))) [(conj followups payload)]
+    (and (vector? followups) (keyword? (first followups))) [(conj followups payload)] ;; TODO: unify to always use dispatch-data, no appending payload here
     (sequential? followups)                                (vec followups)
 
     :else
@@ -51,19 +51,15 @@
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (let [single? (and (vector? on-success) (keyword? (first on-success)))
-                     actions (normalize-followups on-success result)]
+               (let [actions (normalize-followups on-success result)]
                  (when (seq actions)
-                   (if single?
-                     (dispatch actions)
-                     (dispatch actions {:effects.promise/value result}))))))
+                   (dispatch actions {:effects.promise/value result})))))
+
       (.catch (fn [error]
-                (let [single? (and (vector? on-error) (keyword? (first on-error)))
-                      actions (normalize-followups on-error error)]
+                (let [actions (normalize-followups on-error error)]
                   (when (seq actions)
-                    (if single?
-                      (dispatch actions)
-                      (dispatch actions {:effects.promise/error error}))))))))
+                    (dispatch actions {:effects.promise/error error})))))))
+
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
