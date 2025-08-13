@@ -30,23 +30,24 @@
             :replicant/dom-event
             (.preventDefault))))
 
+(defn normalize-followups [followups payload]
+  (cond
+    (nil? followups)                                       nil
+    (and (vector? followups) (keyword? (first followups))) [(conj followups payload)]
+    (sequential? followups)                                (mapv #(conj % payload) followups)
+
+    :else
+    (do (js/console.error "Invalid follow-up actions for :effects/promise" followups)
+        nil)))
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success
-                 (let [actions (if (and (vector? on-success)
-                                        (keyword? (first on-success)))
-                                 [(conj on-success result)]
-                                 (mapv #(conj % result) on-success))]
-                   (dispatch actions)))))
+               (let [actions (normalize-followups on-success result)]
+                 (when (seq actions) (dispatch actions)))))
       (.catch (fn [error]
-                (when on-error
-                  (let [actions (if (and (vector? on-error)
-                                         (keyword? (first on-error)))
-                                  [(conj on-error error)]
-                                  (mapv #(conj % error) on-error))]
-                    (dispatch actions)))))))
+                (let [actions (normalize-followups on-error error)]
+                  (when (seq actions) (dispatch actions)))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
