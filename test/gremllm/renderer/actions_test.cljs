@@ -13,7 +13,7 @@
         [[:effects/promise
           {:promise promise
            ;; Result of on-success is directed to save at :result of our data store
-           :on-success [:effects/save [:result] [:promise/result]]}]])
+           :on-success [:effects/save [:result] [:promise/success-value]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:result @store)))
@@ -28,7 +28,7 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
-           :on-error [:effects/save [:error] [:promise/error]]}]])
+           :on-error [:effects/save [:error] [:promise/error-value]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:error @store)))

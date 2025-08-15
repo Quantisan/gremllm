@@ -28,14 +28,14 @@
 ;; itself. This delays resolution until `:effects/promise` re-dispatches the
 ;; action with the completed promise's value.
 ;; For context, see: https://clojurians.slack.com/archives/C09440Y2PK5/p1754370067348539?thread_ts=1754338860.774069&cid=C09440Y2PK5
-(nxr/register-placeholder! :promise/result
+(nxr/register-placeholder! :promise/success-value
   (fn [dispatch-data]
-    (get dispatch-data :promise/result [:promise/result])))
+    (get dispatch-data :promise/success-value [:promise/success-value])))
 
-;; See :promise/result for the deferred resolution pattern.
-(nxr/register-placeholder! :promise/error
+;; See :promise/success-value for the deferred resolution pattern.
+(nxr/register-placeholder! :promise/error-value
   (fn [dispatch-data]
-    (get dispatch-data :promise/error [:promise/error])))
+    (get dispatch-data :promise/error-value [:promise/error-value])))
 
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
@@ -47,9 +47,9 @@
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success (dispatch [on-success] {:promise/result result}))))
+               (when on-success (dispatch [on-success] {:promise/success-value result}))))
       (.catch (fn [error]
-                (when on-error (dispatch [on-error] {:promise/error error}))))))
+                (when on-error (dispatch [on-error] {:promise/error-value error}))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
