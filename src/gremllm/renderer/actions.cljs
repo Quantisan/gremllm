@@ -23,6 +23,18 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+(nxr/register-placeholder! :promise/result
+  (fn [dispatch-data]
+    (if (contains? dispatch-data :promise/result)
+      (:promise/result dispatch-data)
+      [:promise/result])))
+
+(nxr/register-placeholder! :promise/error
+  (fn [dispatch-data]
+    (if (contains? dispatch-data :promise/error)
+      (:promise/error dispatch-data)
+      [:promise/error])))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
@@ -30,13 +42,12 @@
             :replicant/dom-event
             (.preventDefault))))
 
-
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success (dispatch [(conj on-success result)]))))
+               (when on-success (dispatch [on-success] {:promise/result result}))))
       (.catch (fn [error]
-                (when on-error (dispatch [(conj on-error error)]))))))
+                (when on-error (dispatch [on-error] {:promise/error error}))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
