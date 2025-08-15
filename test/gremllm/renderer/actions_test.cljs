@@ -3,13 +3,6 @@
             [nexus.registry :as nxr]
             [gremllm.renderer.actions]))
 
-(nxr/register-effect! :test/capture
-  (fn [_ store value]
-    (swap! store assoc :result value)))
-
-(nxr/register-effect! :test/capture-error
-  (fn [_ store value]
-    (swap! store assoc :error value)))
 
 (deftest test-promise->actions-success
   (async done
@@ -18,7 +11,7 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
-           :on-success [:test/capture]}]])
+           :on-success [:effects/save [:result]]}]])
 
       (js/setTimeout
         #(do (is (= "success-value" (:result @store)))
@@ -32,7 +25,7 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
-           :on-error [:test/capture-error]}]])
+           :on-error [:effects/save [:error]]}]])
 
       (js/setTimeout
         #(do (is (= "error-value" (:error @store)))
