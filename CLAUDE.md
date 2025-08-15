@@ -133,8 +133,8 @@ Following FCIS principles, all state changes flow through Nexus:
 ;; Async operations via promises
 [[:effects/promise
   {:promise    (js/window.electronAPI.sendMessage messages)
-   :on-success [:llm.actions/response-received]
-   :on-error   [:llm.actions/response-error]}]]
+   :on-success [:llm.actions/response-received [:promise/success-value]]
+   :on-error   [:llm.actions/response-error [:promise/error-value]]}]]
 ```
 
 **Conventions:**

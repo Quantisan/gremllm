@@ -38,7 +38,7 @@
 (defn determine-initial-topic [_state topics-js]
   (let [entries (js->clj topics-js :keywordize-keys true)]
     (if (seq entries)
-      [[:topic.effects/load-latest-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
+      [[:topic.effects/load-latest-topic {:on-success [:topic.actions/restore-or-create-topic [:promise/success-value]]}]]
       [[:topic.actions/start-new]])))
 
 (defn list-topics-error [_state error]
@@ -46,8 +46,8 @@
   [[:topic.actions/start-new]])
 
 (defn bootstrap [_state]
-  [[:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
-                         :on-error   [:topic.actions/list-topics-error]}]])
+  [[:topic.effects/list {:on-success [:topic.actions/determine-initial-topic [:promise/success-value]]
+                         :on-error   [:topic.actions/list-topics-error [:promise/error-value]]}]])
 
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
@@ -72,12 +72,12 @@
 ;; Effects for topic persistence
 (nxr/register-effect! :topic.effects/load-latest-topic
   (fn [{dispatch :dispatch} _store & [opts]]
-    (let [on-success (or (:on-success opts) [:topic.actions/set])]
+    (let [on-success (or (:on-success opts) [:topic.actions/set [:promise/success-value]])]
       (dispatch
         [[:effects/promise
           {:promise    (.loadLatestTopic js/window.electronAPI)
            :on-success on-success
-           :on-error   [:topic.actions/load-topic-error]}]]))))
+           :on-error   [:topic.actions/load-topic-error [:promise/error-value]]}]]))))
 
 (nxr/register-effect! :topic.effects/list
   (fn [{dispatch :dispatch} _store & [opts]]
@@ -94,7 +94,7 @@
         (dispatch
          [[:effects/promise
            {:promise    (.saveTopic js/window.electronAPI (clj->js active-topic))
-            :on-success [:topic.actions/save-success topic-id]
-            :on-error   [:topic.actions/save-error topic-id]}]])
+            :on-success [:topic.actions/save-success topic-id [:promise/success-value]]
+            :on-error   [:topic.actions/save-error topic-id [:promise/error-value]]}]])
         (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]])))))
 
