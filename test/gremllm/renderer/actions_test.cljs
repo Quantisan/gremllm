@@ -6,28 +6,31 @@
 
 (deftest test-promise->actions-success
   (async done
-    (let [store (atom {})
-          promise (js/Promise.resolve "success-value")]
+    (let [store    (atom {})
+          expected "success-value"
+          promise  (js/Promise.resolve expected)]
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
+           ;; Result of on-success is directed to save at :result of our data store
            :on-success [:effects/save [:result]]}]])
 
       (js/setTimeout
-        #(do (is (= "success-value" (:result @store)))
+        #(do (is (= expected (:result @store)))
              (done))
         10))))
 
 (deftest test-promise->actions-error
   (async done
-    (let [store (atom {})
-          promise (js/Promise.reject "error-value")]
+    (let [store    (atom {})
+          expected "error-value"
+          promise  (js/Promise.reject expected)]
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
            :on-error [:effects/save [:error]]}]])
 
       (js/setTimeout
-        #(do (is (= "error-value" (:error @store)))
+        #(do (is (= expected (:error @store)))
              (done))
         10))))
