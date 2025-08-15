@@ -25,15 +25,11 @@
 
 (nxr/register-placeholder! :promise/result
   (fn [dispatch-data]
-    (if (contains? dispatch-data :promise/result)
-      (:promise/result dispatch-data)
-      [:promise/result])))
+    (get dispatch-data :promise/result [:promise/result])))
 
 (nxr/register-placeholder! :promise/error
   (fn [dispatch-data]
-    (if (contains? dispatch-data :promise/error)
-      (:promise/error dispatch-data)
-      [:promise/error])))
+    (get dispatch-data :promise/error [:promise/error])))
 
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
