@@ -23,10 +23,16 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+;; Defers placeholder resolution for async actions.
+;; If the promise result isn't in `dispatch-data`, we return the placeholder
+;; itself. This delays resolution until `:effects/promise` re-dispatches the
+;; action with the completed promise's value.
+;; For context, see: https://clojurians.slack.com/archives/C09440Y2PK5/p1754370067348539?thread_ts=1754338860.774069&cid=C09440Y2PK5
 (nxr/register-placeholder! :promise/result
   (fn [dispatch-data]
     (get dispatch-data :promise/result [:promise/result])))
 
+;; See :promise/result for the deferred resolution pattern.
 (nxr/register-placeholder! :promise/error
   (fn [dispatch-data]
     (get dispatch-data :promise/error [:promise/error])))
