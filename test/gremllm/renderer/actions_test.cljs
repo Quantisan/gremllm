@@ -1,35 +1,36 @@
 (ns gremllm.renderer.actions-test
   (:require [cljs.test :refer [deftest is async]]
-            [gremllm.renderer.actions :as actions]))
+            [nexus.registry :as nxr]
+            [gremllm.renderer.actions]))
+
 
 (deftest test-promise->actions-success
   (async done
-    (let [dispatched (atom nil)
-          ctx {:dispatch #(reset! dispatched %)}
-          promise (js/Promise.resolve "success-value")]
+    (let [store    (atom {})
+          expected "success-value"
+          promise  (js/Promise.resolve expected)]
+      (nxr/dispatch store {}
+        [[:effects/promise
+          {:promise promise
+           ;; Result of on-success is directed to save at :result of our data store
+           :on-success [:effects/save [:result]]}]])
 
-      (actions/promise->actions ctx nil
-        {:promise promise
-         :on-success [:action/success]})
-
-      ;; Give promise handlers time to execute
       (js/setTimeout
-        #(do (is (= [[:action/success "success-value"]] @dispatched))
+        #(do (is (= expected (:result @store)))
              (done))
         10))))
 
 (deftest test-promise->actions-error
   (async done
-    (let [dispatched (atom nil)
-          ctx {:dispatch #(reset! dispatched %)}
-          promise (js/Promise.reject "error-value")]
+    (let [store    (atom {})
+          expected "error-value"
+          promise  (js/Promise.reject expected)]
+      (nxr/dispatch store {}
+        [[:effects/promise
+          {:promise promise
+           :on-error [:effects/save [:error]]}]])
 
-      (actions/promise->actions ctx nil
-        {:promise promise
-         :on-error [:action/error]})
-
-      ;; Give promise handlers time to execute
       (js/setTimeout
-        #(do (is (= [[:action/error "error-value"]] @dispatched))
+        #(do (is (= expected (:error @store)))
              (done))
         10))))
