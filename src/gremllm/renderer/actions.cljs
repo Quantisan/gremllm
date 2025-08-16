@@ -34,9 +34,9 @@
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success (dispatch (conj on-success result)))))
+               (when on-success (dispatch (mapv #(conj % result) on-success)))))
       (.catch (fn [error]
-                (when on-error (dispatch (conj on-error error)))))))
+                (when on-error (dispatch (mapv #(conj % error) on-error)))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
