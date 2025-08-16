@@ -1,5 +1,6 @@
 (ns gremllm.renderer.actions
   (:require [nexus.registry :as nxr]
+            [clojure.walk :as walk]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
@@ -8,6 +9,24 @@
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
+
+;; State composition helpers (Cannon's method) for interpolating values from state
+(nxr/register-action! :state/->
+  (fn [state path partial-action]
+    (let [v (get-in state path)
+          [first & rest] partial-action
+          with-v (if first [first v] [v])]
+      [(into with-v rest)])))
+
+(nxr/register-action! :state/->>
+  (fn [state path partial-action]
+    (let [v (get-in state path)]
+      [(conj partial-action v)])))
+
+(nxr/register-action! :state/interpolate
+  (fn [state action placeholder path]
+    (let [v (get-in state path)]
+      [(walk/postwalk (fn [x] (if (= placeholder x) v x)) action)])))
 
 ;; TODO: refactor this namespace to separate actions and effects, following FCIS pattern
 
@@ -23,19 +42,6 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
-;; Defers placeholder resolution for async actions.
-;; If the promise result isn't in `dispatch-data`, we return the placeholder
-;; itself. This delays resolution until `:effects/promise` re-dispatches the
-;; action with the completed promise's value.
-;; For context, see: https://clojurians.slack.com/archives/C09440Y2PK5/p1754370067348539?thread_ts=1754338860.774069&cid=C09440Y2PK5
-(nxr/register-placeholder! :promise/success-value
-  (fn [dispatch-data]
-    (get dispatch-data :promise/success-value [:promise/success-value])))
-
-;; See :promise/success-value for the deferred resolution pattern.
-(nxr/register-placeholder! :promise/error-value
-  (fn [dispatch-data]
-    (get dispatch-data :promise/error-value [:promise/error-value])))
 
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
@@ -44,12 +50,21 @@
             :replicant/dom-event
             (.preventDefault))))
 
+(def ^:private promise-success-path [:nexus :promise :success])
+(def ^:private promise-error-path   [:nexus :promise :error])
+
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
-               (when on-success (dispatch [on-success] {:promise/success-value result}))))
+               (when on-success
+                 ;; Save result, then dispatch follow-up so it can read from state
+                 (dispatch [[:effects/save promise-success-path result]])
+                 (dispatch [on-success]))))
       (.catch (fn [error]
-                (when on-error (dispatch [on-error] {:promise/error-value error}))))))
+                (when on-error
+                  ;; Save error, then dispatch follow-up so it can read from state
+                  (dispatch [[:effects/save promise-error-path error]])
+                  (dispatch [on-error]))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
