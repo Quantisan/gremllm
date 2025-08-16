@@ -12,7 +12,7 @@
         [[:effects/promise
           {:promise promise
            ;; Result of on-success is directed to save at :result of our data store
-           :on-success [:effects/save [:result]]}]])
+           :on-success [[:effects/save [:result]]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:result @store)))
@@ -27,7 +27,7 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
-           :on-error [:effects/save [:error]]}]])
+           :on-error [[:effects/save [:error]]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:error @store)))
@@ -50,7 +50,7 @@
       (fn [_ topics-data]
         [[:effects/save [:level-2-action-called] topics-data]  ; Track level-2 action was called with correct data
          [:test.effects/level-2
-          {:on-success [:effects/save [:result]]}]]))
+          {:on-success [[:effects/save [:result]]]}]]))
 
     ;; Effect that dispatches promise with on-success pointing to action (mimics topic.effects/list)
     (nxr/register-effect! :test.effects/level-1
@@ -66,7 +66,7 @@
       (fn [_ _]
         [[:effects/save [:bootstrap-called] true]  ; Track that bootstrap was called
          [:test.effects/level-1
-          {:on-success [:test.actions/level-2]}]]))
+          {:on-success [[:test.actions/level-2]]}]]))
 
     (let [store (atom {})]
       (nxr/dispatch store {} [[:test.actions/bootstrap]])
