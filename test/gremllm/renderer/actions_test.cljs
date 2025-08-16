@@ -12,7 +12,7 @@
         [[:effects/promise
           {:promise promise
            ;; Result of on-success is directed to save at :result of our data store
-           :on-success [:effects/save [:result]]}]])
+           :on-success [[:effects/save [:result]]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:result @store)))
