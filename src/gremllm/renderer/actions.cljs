@@ -52,15 +52,20 @@
 
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error scope success-path error-path]}]
-  (let [success-path (or success-path (when scope [:nexus :promise scope :success]) [:nexus :promise :success])
-        error-path   (or error-path   (when scope [:nexus :promise scope :error])   [:nexus :promise :error])]
+  (let [success-path (or success-path (when scope [:nexus :promise scope :success]))
+        error-path   (or error-path   (when scope [:nexus :promise scope :error]))]
+    ;; No implicit default paths; require scope or explicit paths
+    (when (and on-success (nil? success-path))
+      (dispatch [[:ui.effects/console-error "effects/promise missing :scope or :success-path for :on-success"]]))
+    (when (and on-error (nil? error-path))
+      (dispatch [[:ui.effects/console-error "effects/promise missing :scope or :error-path for :on-error"]]))
     (-> promise
         (.then (fn [result]
-                 (when on-success
+                 (when (and on-success success-path)
                    (dispatch [[:effects/save success-path result]])
                    (dispatch [on-success]))))
         (.catch (fn [error]
-                  (when on-error
+                  (when (and on-error error-path)
                     (dispatch [[:effects/save error-path error]])
                     (dispatch [on-error])))))))
 
