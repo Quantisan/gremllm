@@ -50,21 +50,19 @@
             :replicant/dom-event
             (.preventDefault))))
 
-(def ^:private promise-success-path [:nexus :promise :success])
-(def ^:private promise-error-path   [:nexus :promise :error])
 
-(defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
-  (-> promise
-      (.then (fn [result]
-               (when on-success
-                 ;; Save result, then dispatch follow-up so it can read from state
-                 (dispatch [[:effects/save promise-success-path result]])
-                 (dispatch [on-success]))))
-      (.catch (fn [error]
-                (when on-error
-                  ;; Save error, then dispatch follow-up so it can read from state
-                  (dispatch [[:effects/save promise-error-path error]])
-                  (dispatch [on-error]))))))
+(defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error scope success-path error-path]}]
+  (let [success-path (or success-path (when scope [:nexus :promise scope :success]) [:nexus :promise :success])
+        error-path   (or error-path   (when scope [:nexus :promise scope :error])   [:nexus :promise :error])]
+    (-> promise
+        (.then (fn [result]
+                 (when on-success
+                   (dispatch [[:effects/save success-path result]])
+                   (dispatch [on-success]))))
+        (.catch (fn [error]
+                  (when on-error
+                    (dispatch [[:effects/save error-path error]])
+                    (dispatch [on-error])))))))
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)

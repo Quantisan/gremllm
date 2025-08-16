@@ -11,8 +11,9 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
+           :scope   :t1
            ;; Result of on-success is directed to save at :result of our data store
-           :on-success [:state/->> [:nexus :promise :success] [:effects/save [:result]]]}]])
+           :on-success [:state/->> [:nexus :promise :t1 :success] [:effects/save [:result]]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:result @store)))
@@ -27,7 +28,8 @@
       (nxr/dispatch store {}
         [[:effects/promise
           {:promise promise
-           :on-error [:state/->> [:nexus :promise :error] [:effects/save [:error]]]}]])
+           :scope   :t2
+           :on-error [:state/->> [:nexus :promise :t2 :error] [:effects/save [:error]]]}]])
 
       (js/setTimeout
         #(do (is (= expected (:error @store)))
@@ -43,6 +45,7 @@
           [[:effects/save [:level-2-called] true]  ; Track that level-2 effect was called
            [:effects/promise
             {:promise    (js/Promise.resolve "inner-result")
+             :scope      (:scope opts)
              :on-success (:on-success opts)}]])))
 
     ;; Action that returns the above effect (mimics topic.actions/determine-initial-topic)
@@ -50,7 +53,8 @@
       (fn [_ topics-data]
         [[:effects/save [:level-2-action-called] topics-data]  ; Track level-2 action was called with correct data
          [:test.effects/level-2
-          {:on-success [:state/->> [:nexus :promise :success] [:effects/save [:result]]]}]]))
+          {:scope      :inner
+           :on-success [:state/->> [:nexus :promise :inner :success] [:effects/save [:result]]]}]]))
 
     ;; Effect that dispatches promise with on-success pointing to action (mimics topic.effects/list)
     (nxr/register-effect! :test.effects/level-1
@@ -59,6 +63,7 @@
           [[:effects/save [:level-1-called] true]  ; Track that level-1 effect was called
            [:effects/promise
             {:promise    (js/Promise.resolve "outer-result")
+             :scope      (:scope opts)
              :on-success (:on-success opts)}]])))
 
     ;; Action that starts the chain (mimics bootstrap)
@@ -66,7 +71,8 @@
       (fn [_ _]
         [[:effects/save [:bootstrap-called] true]  ; Track that bootstrap was called
          [:test.effects/level-1
-          {:on-success [:state/-> [:nexus :promise :success] [:test.actions/level-2]]}]]))
+          {:scope      :outer
+           :on-success [:state/-> [:nexus :promise :outer :success] [:test.actions/level-2]]}]]))
 
     (let [store (atom {})]
       (nxr/dispatch store {} [[:test.actions/bootstrap]])
