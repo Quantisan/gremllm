@@ -58,6 +58,6 @@
                          (messages->api-format)
                          (clj->js)
                          (js/window.electronAPI.sendMessage))
-         :on-success [:llm.actions/response-received assistant-id]
-         :on-error   [:llm.actions/response-error assistant-id]}]])))
+         :on-success [[:llm.actions/response-received assistant-id]]
+         :on-error   [[:llm.actions/response-error assistant-id]]}]])))
 

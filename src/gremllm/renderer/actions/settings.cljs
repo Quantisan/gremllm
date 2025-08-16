@@ -15,14 +15,14 @@
       [] ; No-op if empty
       [[:effects/promise
         {:promise    (.saveSecret js/window.electronAPI api-key-name api-key)
-         :on-success [:settings.actions/save-success]
-         :on-error   [:settings.actions/save-error]}]])))
+         :on-success [[:settings.actions/save-success]]
+         :on-error   [[:settings.actions/save-error]]}]])))
 
 (defn remove-key [_state]
   [[:effects/promise
     {:promise    (.deleteSecret js/window.electronAPI api-key-name)
-     :on-success [:settings.actions/remove-success]
-     :on-error   [:settings.actions/remove-error]}]])
+     :on-success [[:settings.actions/remove-success]]
+     :on-error   [[:settings.actions/remove-error]]}]])
 
 ;; Success/error handlers
 (defn save-success [_state _result]

@@ -57,14 +57,14 @@
         "should convert message types from strings to keywords")))
 
 (deftest bootstrap-test
-  (is (= [[:topic.effects/list {:on-success [:topic.actions/determine-initial-topic]
-                                :on-error   [:topic.actions/list-topics-error]}]]
+  (is (= [[:topic.effects/list {:on-success [[:topic.actions/determine-initial-topic]]
+                                :on-error   [[:topic.actions/list-topics-error]]}]]
          (topic/bootstrap {}))
       "should list topics to decide newest-or-create"))
 
 (deftest determine-initial-topic-test
   (testing "when topics exist"
-    (is (= [[:topic.effects/load-latest-topic {:on-success [:topic.actions/restore-or-create-topic]}]]
+    (is (= [[:topic.effects/load-latest-topic {:on-success [[:topic.actions/restore-or-create-topic]]}]]
            (topic/determine-initial-topic {} (clj->js [{:filename "topic-1.edn" :filepath "/tmp/topic-1.edn"}])))))
   (testing "when no topics exist"
     (is (= [[:topic.actions/start-new]]
