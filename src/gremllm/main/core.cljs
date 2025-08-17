@@ -48,6 +48,11 @@
            (fn [_event]
              (topic-effects/load-latest topics-dir topic-actions/topic-file-pattern)))
 
+  (.handle ipcMain "workspace/load-folder"
+           (fn [_event]
+             (-> (workspace-effects/ls workspace-dir)
+                 (clj->js))))
+
   (.handle ipcMain "topic/list"
            (fn [_event]
              (-> (topic-effects/enumerate topics-dir topic-actions/topic-file-pattern)
