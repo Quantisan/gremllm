@@ -97,11 +97,6 @@
   (ensure-dir (path-dirname filepath))
   (write-file filepath (pr-str secrets-map)))
 
-(defn topics-dir-path
-  "Path to topics within a workspace. Default workspace is \"default\".
-   1-arity: <userData>/User/workspaces/default/topics
-   2-arity: <userData>/User/workspaces/<workspace-id>/topics"
-  ([user-data-dir]
-   (path-join (workspace-dir-path user-data-dir) topics-subdir))
-  ([user-data-dir workspace-id]
-   (path-join (workspace-dir-path user-data-dir workspace-id) topics-subdir)))
+(defn topics-dir-path [workspace-dir]
+  (path-join workspace-dir topics-subdir))
+
