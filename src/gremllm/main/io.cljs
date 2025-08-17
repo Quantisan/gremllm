@@ -102,6 +102,6 @@
    1-arity: <userData>/User/workspaces/default/topics
    2-arity: <userData>/User/workspaces/<workspace-id>/topics"
   ([user-data-dir]
-   (path-join (workspace-dir-path user-data-dir) "topics"))
+   (path-join (workspace-dir-path user-data-dir) topics-subdir))
   ([user-data-dir workspace-id]
-   (path-join (workspace-dir-path user-data-dir workspace-id) "topics")))
+   (path-join (workspace-dir-path user-data-dir workspace-id) topics-subdir)))
