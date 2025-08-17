@@ -6,6 +6,7 @@
 (def ^:private user-subdir "User")
 (def ^:private workspaces-subdir "workspaces")
 (def ^:private default-workspace "default")
+(def ^:private topics-subdir "topics")
 
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
