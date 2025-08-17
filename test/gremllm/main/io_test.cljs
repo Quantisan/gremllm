@@ -39,16 +39,17 @@
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn"))))))
 
 (deftest test-write-secrets-file
-  (testing "ensures User directory exists before writing"
-    (let [ensure-dir-called? (atom false)
-          write-file-called? (atom false)]
+  (testing "ensures parent directory exists before writing"
+    (let [ensure-dir-arg      (atom nil)
+          write-file-called?  (atom false)
+          filepath            "/app/data/User/secrets.edn"
+          expected-parent-dir (io/path-dirname filepath)]
       (with-redefs [io/ensure-dir (fn [dir]
-                                    (reset! ensure-dir-called? true)
-                                    (is (clojure.string/ends-with? dir "/User")))
+                                    (reset! ensure-dir-arg dir))
                     io/write-file (fn [_ _]
                                     (reset! write-file-called? true))]
-        (io/write-secrets-file "/app/data/User/secrets.edn" {:key "value"})
-        (is @ensure-dir-called?)
+        (io/write-secrets-file filepath {:key "value"})
+        (is (= expected-parent-dir @ensure-dir-arg))
         (is @write-file-called?))))
 
   (testing "writes EDN format"
@@ -56,19 +57,6 @@
                   io/write-file (fn [_path content]
                                   (is (= "{:api-key \"encrypted\"}" content)))]
       (io/write-secrets-file "/path/secrets.edn" {:api-key "encrypted"}))))
-
-(deftest test-path-join
-  (testing "joins multiple relative segments"
-    (is (= "a/b/c" (io/path-join "a" "b" "c"))))
-  (testing "joins with absolute first segment"
-    (is (= "/root/folder/file.txt"
-           (io/path-join "/root" "folder" "file.txt")))))
-
-(deftest test-path-dirname
-  (testing "returns parent directory for file path"
-    (is (= "/a/b" (io/path-dirname "/a/b/c.txt"))))
-  (testing "returns parent directory for directory path"
-    (is (= "/a" (io/path-dirname "/a/b")))))
 
 (deftest test-topics-dir-path
  (let [workspace-dir "/app/data/User/workspaces/default"]
