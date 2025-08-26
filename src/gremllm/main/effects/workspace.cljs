@@ -5,6 +5,4 @@
   (if-not (io/file-exists? workspace-dir)
     []
     (->> (io/read-dir workspace-dir)
-         (keep (partial file->topic-entry topics-dir topic-file-pattern))
-         (sort-by :filename)
          vec)))
