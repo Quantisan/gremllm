@@ -4,12 +4,11 @@
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
-
 (deftest test-ls
   (testing "returns empty vector when directory doesn't exist"
     (let [non-existent-dir "/path/that/does/not/exist/workspace"]
       (is (= [] (workspace/ls non-existent-dir)))))
-  
+
   (testing "returns directory contents when directory exists"
     (with-temp-dir "workspace-test-"
       (fn [temp-dir]
@@ -17,7 +16,7 @@
         (io/write-file (io/path-join temp-dir "file1.txt") "content1")
         (io/write-file (io/path-join temp-dir "file2.edn") "{:data 123}")
         (io/ensure-dir (io/path-join temp-dir "subdir"))
-        
+
         ;; Test ls function
         (let [contents (workspace/ls temp-dir)]
           (is (vector? contents))
