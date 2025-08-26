@@ -2,16 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [gremllm.main.effects.workspace :as workspace]
             [gremllm.main.io :as io]
-            ["fs" :as fs]
-            ["os" :as os]
-            ["path" :as path]))
+            [gremllm.test-utils :refer [with-temp-dir]]))
 
-(defn- with-temp-dir [suffix f]
-  (let [temp-dir (fs/mkdtempSync (path/join (os/tmpdir) suffix))]
-    (try
-      (f temp-dir)
-      (finally
-        (fs/rmSync temp-dir #js {:recursive true :force true})))))
 
 (deftest test-ls
   (testing "returns empty vector when directory doesn't exist"
