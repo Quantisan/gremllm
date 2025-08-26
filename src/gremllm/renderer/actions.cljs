@@ -3,6 +3,7 @@
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
+            [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]))
 
@@ -57,11 +58,15 @@
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
 
+;; Workspace
+(nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
+(nxr/register-action! :workspace.actions/populate-topics workspace/populate-topics)
+(nxr/register-action! :workspace.actions/load-error workspace/load-error)
+
 ;; Topic
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/set topic/set-topic)
-(nxr/register-action! :topic.actions/bootstrap topic/bootstrap)
 (nxr/register-action! :topic.actions/determine-initial-topic topic/determine-initial-topic)
 (nxr/register-action! :topic.actions/list-topics-error topic/list-topics-error)
 (nxr/register-action! :topic.actions/restore-or-create-topic topic/restore-or-create-topic)
