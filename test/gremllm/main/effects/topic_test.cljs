@@ -1,19 +1,8 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.topic :as topic]
-            [gremllm.main.io :as io]))
-
-(defn- with-temp-dir [suffix f]
-  (let [os  (js/require "os")
-        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
-    (try
-      (io/ensure-dir dir)
-      (f dir)
-      (finally
-        (when (io/file-exists? dir)
-          (doseq [file (io/read-dir dir)]
-            (io/delete-file (io/path-join dir file)))
-          (io/remove-dir dir))))))
+            [gremllm.main.io :as io]
+            [gremllm.test-utils :refer [with-temp-dir]]))
 
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data"

@@ -1,20 +1,8 @@
 (ns gremllm.main.io-test
   (:require [cljs.test :refer [deftest is testing]]
             [clojure.string]
-            [gremllm.main.io :as io]))
-
-;; TODO: refactor for DRY: with-temp-dir is duplicated in gremllm.main.effects.topic-test
-(defn- with-temp-dir [suffix f]
-  (let [os  (js/require "os")
-        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
-    (try
-      (io/ensure-dir dir)
-      (f dir)
-      (finally
-        (when (io/file-exists? dir)
-          (doseq [file (io/read-dir dir)]
-            (io/delete-file (io/path-join dir file)))
-          (io/remove-dir dir))))))
+            [gremllm.main.io :as io]
+            [gremllm.test-utils :refer [with-temp-dir]]))
 
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
