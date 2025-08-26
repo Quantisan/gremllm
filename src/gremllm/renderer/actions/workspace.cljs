@@ -1,11 +1,13 @@
 (ns gremllm.renderer.actions.workspace
   (:require [nexus.registry :as nxr]
-            [gremllm.renderer.actions.topic :as topic]))
+            [gremllm.renderer.actions.topic :as topic]
+            [gremllm.renderer.state.topic :as topic-state]))
 
 (defn bootstrap [_state]
   [[:workspace.effects/load-folder {:on-success [[:workspace.actions/populate-topics]]
                                     :on-error   [[:workspace.actions/load-error]]}]])
 
+;; TODO: review to refactor
 (defn populate-topics [_state workspace-topics-js]
   (let [workspace-topics (js->clj workspace-topics-js :keywordize-keys true)
         topics (or (:topics workspace-topics) {})
@@ -19,8 +21,8 @@
                          last-active-id
                          (first (keys normalized-topics)))]
     (if (seq normalized-topics)
-      [[:effects/save [:topics] normalized-topics]
-       [:effects/save [:active-topic-id] active-topic-id]]
+      [[:effects/save topic-state/topics-path normalized-topics]
+       [:effects/save topic-state/active-topic-id-path active-topic-id]]
 
       [[:topic.actions/start-new]])))
 
