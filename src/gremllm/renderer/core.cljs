@@ -53,4 +53,4 @@
     ;; Trigger the first render
     (nxr/dispatch store {}
                   [[:system.actions/request-info]
-                   [:topic.actions/bootstrap]])))
+                   [:workspace.actions/bootstrap]])))

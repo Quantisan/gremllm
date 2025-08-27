@@ -38,13 +38,12 @@
                                 :channel "chat/send-message"}
                          [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
 
-  (.handle ipcMain "workspace/load-folder"
+  (let [topics-dir (io/topics-dir-path workspace-dir)]
+    (.handle ipcMain "workspace/load-folder"
            (fn [_event]
-             (-> (workspace-effects/ls workspace-dir)
+             (-> (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)
                  (clj->js))))
 
-  ;; Topic handlers - call functions directly at the boundary
-  (let [topics-dir (io/topics-dir-path workspace-dir)]
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
