@@ -68,7 +68,14 @@
         (let [valid-topic {:id "topic-1754952422979-xyz789"
                            :name "Valid Topic"
                            :messages []}
-              _           (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
-              _           (io/write-file (io/path-join dir "topic-666.edn") "{:unclosed")
-              result      (topic/load-all dir #"topic-\d+\.edn")]
+              _              (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
+              _              (io/write-file (io/path-join dir "topic-666.edn") "{:unclosed")
+
+              ;; Temporarily replace console.error with no-op
+              original-error js/console.error
+              _              (set! js/console.error (fn [& _args] nil))
+
+              result         (topic/load-all dir #"topic-\d+\.edn")]
+          ;; Restore original console.error
+          (set! js/console.error original-error)
           (is (= {"1754952422979" valid-topic} result)))))))
