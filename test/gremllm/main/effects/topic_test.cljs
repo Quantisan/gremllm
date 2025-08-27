@@ -8,7 +8,7 @@
   (testing "save and load preserves topic data"
     (with-temp-dir "topic-save-load"
       (fn [temp-dir]
-        (let [topic    {:id "topic-1754952422977-ixubncif66" 
+        (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
                         :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
               filename (str "topic-" (.getTime (js/Date.)) ".edn")
@@ -40,11 +40,13 @@
   (testing "load-all returns map of all topics keyed by ID"
     (with-temp-dir "load-all"
       (fn [dir]
-        (let [topic1 {:id "topic-1754952422977-ixubncif66" 
+        ;; TODO: we should create a topic schema and use that throughout, and to generate these data
+        ;; here
+        (let [topic1 {:id "topic-1754952422977-ixubncif66"
                       :name "Testing 2"
                       :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
               topic2 {:id "topic-1754952422978-abcdef12345"
-                      :name "Another Topic" 
+                      :name "Another Topic"
                       :messages [{:id 1754952440825 :type "assistant" :text "Hi"}]}
               ;; Save with matching filename format
               _      (io/write-file (io/path-join dir "topic-1754952422977.edn") (pr-str topic1))
@@ -54,18 +56,18 @@
           (is (= {"1754952422977" topic1
                   "1754952422978" topic2}
                  result))))))
-  
+
   (testing "returns empty map when directory doesn't exist"
     (let [result (topic/load-all "/nonexistent/dir" #"topic-\d+\.edn")]
       (is (= {} result))))
-  
+
   (testing "continues loading when encountering invalid EDN"
     (with-temp-dir "load-all-invalid"
       (fn [dir]
-        (let [valid-topic {:id "topic-1754952422979-xyz789" 
-                          :name "Valid Topic"
-                          :messages []}
+        (let [valid-topic {:id "topic-1754952422979-xyz789"
+                           :name "Valid Topic"
+                           :messages []}
               _           (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
-              _           (io/write-file (io/path-join dir "topic-666.edn") "invalid { EDN")
+              _           (io/write-file (io/path-join dir "topic-666.edn") "{:unclosed")
               result      (topic/load-all dir #"topic-\d+\.edn")]
           (is (= {"1754952422979" valid-topic} result)))))))
