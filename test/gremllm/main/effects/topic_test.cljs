@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.topic :as topic]
+            [gremllm.main.actions.topic :refer [topic-file-pattern]]
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
@@ -52,7 +53,7 @@
               _      (io/write-file (io/path-join dir "topic-1754952422977.edn") (pr-str topic1))
               _      (io/write-file (io/path-join dir "topic-1754952422978.edn") (pr-str topic2))
               _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
-              result (topic/load-all dir #"topic-\d+\.edn")]
+              result (topic/load-all dir topic-file-pattern)]
           (is (= {"1754952422977" topic1
                   "1754952422978" topic2}
                  result))))))
