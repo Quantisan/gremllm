@@ -8,7 +8,9 @@
   (testing "save and load preserves topic data"
     (with-temp-dir "topic-save-load"
       (fn [temp-dir]
-        (let [topic    {:id "123" :messages [{:role "user" :content "Hello"}]}
+        (let [topic    {:id "topic-1754952422977-ixubncif66" 
+                        :name "Test Topic"
+                        :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
               filename (str "topic-" (.getTime (js/Date.)) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (topic/save {:dir temp-dir
@@ -38,14 +40,19 @@
   (testing "load-all returns map of all topics keyed by ID"
     (with-temp-dir "load-all"
       (fn [dir]
-        (let [topic1 {:id "topic-123" :messages [{:role "user" :content "Hello"}]}
-              topic2 {:id "topic-456" :messages [{:role "assistant" :content "Hi"}]}
-              _      (io/write-file (io/path-join dir "topic-123.edn") (pr-str topic1))
-              _      (io/write-file (io/path-join dir "topic-456.edn") (pr-str topic2))
+        (let [topic1 {:id "topic-1754952422977-ixubncif66" 
+                      :name "Testing 2"
+                      :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
+              topic2 {:id "topic-1754952422978-abcdef12345"
+                      :name "Another Topic" 
+                      :messages [{:id 1754952440825 :type "assistant" :text "Hi"}]}
+              ;; Save with matching filename format
+              _      (io/write-file (io/path-join dir "topic-1754952422977.edn") (pr-str topic1))
+              _      (io/write-file (io/path-join dir "topic-1754952422978.edn") (pr-str topic2))
               _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
               result (topic/load-all dir #"topic-\d+\.edn")]
-          (is (= {"123" topic1
-                  "456" topic2}
+          (is (= {"1754952422977" topic1
+                  "1754952422978" topic2}
                  result))))))
   
   (testing "returns empty map when directory doesn't exist"
@@ -55,8 +62,10 @@
   (testing "continues loading when encountering invalid EDN"
     (with-temp-dir "load-all-invalid"
       (fn [dir]
-        (let [valid-topic {:id "topic-789" :messages []}
-              _           (io/write-file (io/path-join dir "topic-789.edn") (pr-str valid-topic))
+        (let [valid-topic {:id "topic-1754952422979-xyz789" 
+                          :name "Valid Topic"
+                          :messages []}
+              _           (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
               _           (io/write-file (io/path-join dir "topic-666.edn") "invalid { EDN")
               result      (topic/load-all dir #"topic-\d+\.edn")]
-          (is (= {"789" valid-topic} result)))))))
+          (is (= {"1754952422979" valid-topic} result)))))))
