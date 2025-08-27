@@ -40,9 +40,10 @@
 
   (let [topics-dir (io/topics-dir-path workspace-dir)]
     (.handle ipcMain "workspace/load-folder"
-           (fn [_event]
-             (-> (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)
-                 (clj->js))))
+             (fn [_event]
+               (let [topics (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)]
+                 (js/console.log "load-all returned:" topics)
+                 (clj->js topics))))
 
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
