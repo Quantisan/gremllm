@@ -39,29 +39,22 @@
         edn/read-string
         (clj->js :keywordize-keys false))))
 
-;; TODO: review these ...
-;;
-(defn- extract-topic-id
-  "Extract topic ID from filename like 'topic-12345.edn' -> '12345'"
-  [filename]
-  ;; shouldn't hardcode pattern because we just passed that in as topic-file-pattern
-  (when-let [[_ id] (re-matches #"topic-(\d+)\.edn" filename)]
-    id))
-
 (defn load-all
   "Load all topics from the filesystem into a map of {<topic-id> Topic}.
   Returns an empty map if topics-dir doesn't exist or contains no topics."
   [topics-dir topic-file-pattern]
   (reduce (fn [acc {:keys [filename filepath]}]
-            (if-let [topic-id (extract-topic-id filename)]
-              (try
-                (let [topic-content (-> (io/read-file filepath)
-                                        edn/read-string)]
-                  (assoc acc topic-id topic-content))
-                (catch :default e
-                  ;; Log error but continue loading other topics
-                  (js/console.error "Failed to load topic file" filename e)
-                  acc))
-              acc))
+            (try
+              (let [topic-content (-> (io/read-file filepath)
+                                      edn/read-string)]
+                (if-let [topic-id (:id topic-content)]
+                  (assoc acc topic-id topic-content)
+                  (do
+                    (js/console.warn "Topic file missing :id field" filename)
+                    acc)))
+              (catch :default e
+                ;; Log error but continue loading other topics
+                (js/console.error "Failed to load topic file" filename e)
+                acc)))
           {}
           (enumerate topics-dir topic-file-pattern)))

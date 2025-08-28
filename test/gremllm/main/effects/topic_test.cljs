@@ -54,8 +54,8 @@
               _      (io/write-file (io/path-join dir "topic-1754952422978.edn") (pr-str topic2))
               _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
               result (topic/load-all dir topic-file-pattern)]
-          (is (= {"1754952422977" topic1
-                  "1754952422978" topic2}
+          (is (= {"topic-1754952422977-ixubncif66" topic1
+                  "topic-1754952422978-abcdef12345" topic2}
                  result))))))
 
   (testing "returns empty map when directory doesn't exist"
@@ -78,4 +78,4 @@
               result         (topic/load-all dir #"topic-\d+\.edn")]
           ;; Restore original console.error
           (set! js/console.error original-error)
-          (is (= {"1754952422979" valid-topic} result)))))))
+          (is (= {"topic-1754952422979-xyz789" valid-topic} result)))))))

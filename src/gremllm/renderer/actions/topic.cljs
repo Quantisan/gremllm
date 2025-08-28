@@ -67,7 +67,7 @@
   [])
 
 (defn switch-topic [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]])
+  [[:effects/save topic-state/active-topic-id-path (keyword topic-id)]])
 
 ;; Effects for topic persistence
 (nxr/register-effect! :topic.effects/load-latest-topic
