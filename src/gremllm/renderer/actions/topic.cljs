@@ -30,33 +30,10 @@
       [[:effects/save (conj topic-state/topics-path topic-id) normalized-topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
-(defn restore-or-create-topic [_state loaded-topic]
-  (if loaded-topic
-    [[:topic.actions/set loaded-topic]]
-    [[:topic.actions/start-new]]))
-
-(defn determine-initial-topic [_state topics-js]
-  (let [entries (js->clj topics-js :keywordize-keys true)]
-    (if (seq entries)
-      [[:topic.effects/load-latest-topic {:on-success [[:topic.actions/restore-or-create-topic]]}]]
-      [[:topic.actions/start-new]])))
-
-(defn list-topics-error [_state error]
-  (js/console.error "list-topics failed:" error)
-  [[:topic.actions/start-new]])
-
-(defn bootstrap [_state]
-  [[:topic.effects/list {:on-success [[:topic.actions/determine-initial-topic]]
-                         :on-error   [[:topic.actions/list-topics-error]]}]])
-
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
     [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
      [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
-
-(defn load-topic-error [_state error]
-  (js/console.error "load-topic failed:" error)
-  [])
 
 (defn save-topic-success [_state topic-id filepath]
   (js/console.log "Topic" topic-id "saved to:" filepath)
@@ -68,16 +45,6 @@
 
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path (keyword topic-id)]])
-
-;; Effects for topic persistence
-(nxr/register-effect! :topic.effects/load-latest-topic
-  (fn [{dispatch :dispatch} _store & [opts]]
-    (let [on-success (or (:on-success opts) [:topic.actions/set])]
-      (dispatch
-        [[:effects/promise
-          {:promise    (.loadLatestTopic js/window.electronAPI)
-           :on-success on-success
-           :on-error   [[:topic.actions/load-topic-error]]}]]))))
 
 (nxr/register-effect! :topic.effects/list
   (fn [{dispatch :dispatch} _store & [opts]]

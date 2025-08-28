@@ -29,10 +29,6 @@
   (fn [_ _ _]
     (send-to-focused-window "topic/save")))
 
-(nxr/register-effect! :effects/trigger-open-in-renderer
-  (fn [_ _ _]
-    (send-to-focused-window "topic/open")))
-
 (nxr/register-effect! :effects/trigger-settings-in-renderer
   (fn [_ _ _]
     (send-to-focused-window "menu:settings")))

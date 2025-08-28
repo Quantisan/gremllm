@@ -26,9 +26,9 @@
                                     [{:label "Save"
                                       :accelerator (if is-mac "Cmd+S" "Ctrl+S")
                                       :click #(nxr/dispatch store {} [[:effects/trigger-save-in-renderer]])}
-                                     {:label "Open"
-                                      :accelerator (if is-mac "Cmd+O" "Ctrl+O")
-                                      :click #(nxr/dispatch store {} [[:effects/trigger-open-in-renderer]])}
+
+                                     ;; TODO: Open ...
+
                                      (when-not is-mac
                                        {:type "separator"})
                                      (when-not is-mac

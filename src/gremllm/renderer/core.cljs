@@ -30,11 +30,6 @@
                     (fn []
                       (nxr/dispatch store {} [[:topic.effects/save-active-topic]])))
 
-    ;; TODO: remove. Menu should open a workspace, not topic
-    (.onMenuCommand js/window.electronAPI "topic/open"
-                    (fn []
-                      (nxr/dispatch store {} [[:topic.effects/load-latest-topic]])))
-
     (.onMenuCommand js/window.electronAPI "menu:settings"
                     (fn []
                       (nxr/dispatch store {} [[:ui.actions/show-settings]])))
