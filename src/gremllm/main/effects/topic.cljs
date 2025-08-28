@@ -1,7 +1,8 @@
 (ns gremllm.main.effects.topic
   "Topic persistence side effects and file I/O operations"
   (:require [gremllm.main.io :as io]
-            [clojure.edn :as edn]))
+            [clojure.edn :as edn]
+            [gremllm.schema :as schema]))
 
 (defn save
   "Performs file I/O to save a topic"
@@ -18,8 +19,8 @@
              (io/file-timestamps filepath)))))
 
 (defn enumerate
-  "Enumerate all .edn files in topics-dir. Returns a vector of maps 
-  {:filename string :filepath string :created-at :last-accessed-at} 
+  "Enumerate all .edn files in topics-dir. Returns a vector of maps
+  {:filename string :filepath string :created-at :last-accessed-at}
   sorted by filename. Returns [] if topics-dir does not exist."
   [topics-dir]
   (if-not (io/file-exists? topics-dir)
@@ -45,15 +46,12 @@
   (reduce (fn [acc {:keys [filename filepath]}]
             (try
               (let [topic-content (-> (io/read-file filepath)
-                                      edn/read-string)]
-                (if-let [topic-id (:id topic-content)]
-                  (assoc acc topic-id topic-content)
-                  (do
-                    (js/console.warn "Topic file missing :id field" filename)
-                    acc)))
+                                      edn/read-string
+                                      schema/validate-topic)]
+                (assoc acc (:id topic-content) topic-content))
               (catch :default e
                 ;; Log error but continue loading other topics
-                (js/console.error "Failed to load topic file" filename e)
+                (js/console.error "Invalid topic file" filename (ex-message e))
                 acc)))
           {}
           (enumerate topics-dir)))

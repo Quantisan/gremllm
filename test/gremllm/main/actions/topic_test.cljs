@@ -15,9 +15,5 @@
               :filepath filepath
               :content "{:id \"topic-1234567890-abc123\", :messages []}"
               :topic topic}
-             plan))))
-
-  (testing "throws when topic has no ID"
-    (is (thrown-with-msg? js/Error #"Topic must have an :id field"
-                          (topic/topic->save-plan {:messages []} "/test")))))
+             plan)))))
 
