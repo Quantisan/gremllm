@@ -1,13 +1,12 @@
 (ns gremllm.renderer.actions.topic
   (:require [nexus.registry :as nxr]
-            [gremllm.renderer.state.topic :as topic-state]))
+            [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.schema :as schema]
+            [malli.core :as m]
+            [malli.transform :as mt]))
 
-(defn normalize-message [message]
-  (update message :type keyword))
-
-;; TODO: use Malli for coercion
 (defn normalize-topic [topic]
-  (update topic :messages #(mapv normalize-message %)))
+  (m/decode schema/Topic topic mt/string-transformer))
 
 (defn generate-topic-id []
 ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
