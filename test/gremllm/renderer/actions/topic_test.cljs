@@ -13,7 +13,7 @@
     (is (every? #(= :effects/save (first %)) result) "both should be save effects")
 
     (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
-    (is (= [:topics (:id saved-topic)] topic-path) "should save to correct topics path")
+    (is (= (conj topic-state/topics-path (:id saved-topic)) topic-path) "should save to correct topics path")
 
     (is (= topic-state/active-topic-id-path active-path) "should save to active topic path")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
