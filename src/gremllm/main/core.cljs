@@ -46,7 +46,7 @@
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
-                    (topic-actions/prepare-save topics-dir)
+                    (topic-actions/topic->save-plan topics-dir)
                     (topic-effects/save))))
 
     (.handle ipcMain "topic/load-latest"

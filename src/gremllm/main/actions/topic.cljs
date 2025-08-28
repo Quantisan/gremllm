@@ -6,7 +6,7 @@
   (str topic-id ".edn"))
 
 (defn topic->save-plan
-  [topic-clj {:keys [topics-dir]}]
+  [topic-clj topics-dir]
   (if-let [id (:id topic-clj)]
     (let [filename (generate-filename id)
           filepath (path/join topics-dir filename)]
@@ -16,6 +16,4 @@
        :content (pr-str topic-clj)
        :topic topic-clj})
     (throw (js/Error. "Topic must have an :id field"))))
-
-
 

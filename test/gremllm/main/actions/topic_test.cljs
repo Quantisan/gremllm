@@ -6,16 +6,18 @@
   (testing "creates correct save plan"
     (let [topic {:id "topic-1234567890-abc123"
                  :messages []}
-          config {:topics-dir "/test/dir"}
-          plan (topic/topic->save-plan topic config)]
-      (is (= {:dir "/test/dir"
-              :filename "topic-1234567890-abc123.edn"
-              :filepath "/test/dir/topic-1234567890-abc123.edn"
+          topics-dir "/test/dir"
+          filename (str (:id topic) ".edn")
+          filepath (str topics-dir "/" filename)
+          plan (topic/topic->save-plan topic topics-dir)]
+      (is (= {:dir      topics-dir
+              :filename filename
+              :filepath filepath
               :content "{:id \"topic-1234567890-abc123\", :messages []}"
               :topic topic}
              plan))))
 
   (testing "throws when topic has no ID"
     (is (thrown-with-msg? js/Error #"Topic must have an :id field"
-          (topic/topic->save-plan {:messages []} {:topics-dir "/test"})))))
+                          (topic/topic->save-plan {:messages []} "/test")))))
 
