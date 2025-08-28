@@ -55,19 +55,19 @@
     (with-temp-dir "load-all"
       (fn [dir]
         ;; Simple test topics with just the essentials
-        (let [topic-1 {:id "topic-1" :name "First" :messages []}
-              topic-2 {:id "topic-2" :name "Second" :messages []}]
-          
+        (let [topic-1 {:id "topic-1-a" :name "First" :messages []}
+              topic-2 {:id "topic-2-b" :name "Second" :messages []}]
+
           ;; Write valid topic files
           (write-topic-file dir topic-1)
           (write-topic-file dir topic-2)
-          
+
           ;; Write non-topic file (should be ignored)
           (write-file dir "readme.txt" "ignored")
-          
+
           ;; Verify we get both topics back as a map
-          (is (= {"topic-1" topic-1
-                  "topic-2" topic-2}
+          (is (= {"topic-1-a" topic-1
+                  "topic-2-b" topic-2}
                  (topic/load-all dir topic-file-pattern)))))))
 
   (testing "returns empty map for non-existent directory"
@@ -76,12 +76,16 @@
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [good-topic {:id "good" :name "Valid" :messages []}]
+        (let [good-topic {:id "topic-111-good" :name "Valid" :messages []}]
           ;; Write one valid and one corrupt file
           (write-topic-file dir good-topic)
-          (write-file dir "topic-bad.edn" "{:broken")
-          
+          (write-file dir "topic-999-bad.edn" "{:broken")
+
           ;; Should load only the valid topic, ignoring corrupt one
-          (with-redefs [js/console.error (constantly nil)]
-            (is (= {"good" good-topic}
-                   (topic/load-all dir topic-file-pattern)))))))))
+          (let [original-error js/console.error]
+            ;; Temporarily suppress console.error
+            (set! js/console.error (constantly nil))
+            (let [result (topic/load-all dir topic-file-pattern)]
+              ;; Restore original console.error
+              (set! js/console.error original-error)
+              (is (= {(:id good-topic) good-topic} result)))))))))
