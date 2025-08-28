@@ -49,9 +49,9 @@
               topic2 {:id "topic-1754952422978-abcdef12345"
                       :name "Another Topic"
                       :messages [{:id 1754952440825 :type "assistant" :text "Hi"}]}
-              ;; Save with matching filename format
-              _      (io/write-file (io/path-join dir "topic-1754952422977.edn") (pr-str topic1))
-              _      (io/write-file (io/path-join dir "topic-1754952422978.edn") (pr-str topic2))
+              ;; Save with matching filename format - use full topic ID
+              _      (io/write-file (io/path-join dir "topic-1754952422977-ixubncif66.edn") (pr-str topic1))
+              _      (io/write-file (io/path-join dir "topic-1754952422978-abcdef12345.edn") (pr-str topic2))
               _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
               result (topic/load-all dir topic-file-pattern)]
           (is (= {"topic-1754952422977-ixubncif66" topic1
@@ -68,8 +68,8 @@
         (let [valid-topic {:id "topic-1754952422979-xyz789"
                            :name "Valid Topic"
                            :messages []}
-              _              (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
-              _              (io/write-file (io/path-join dir "topic-666.edn") "{:unclosed")
+              _              (io/write-file (io/path-join dir "topic-1754952422979-xyz789.edn") (pr-str valid-topic))
+              _              (io/write-file (io/path-join dir "topic-666-invalid.edn") "{:unclosed")
 
               ;; Temporarily replace console.error with no-op
               original-error js/console.error
