@@ -1,6 +1,6 @@
-(ns gremllm.main.actions.ipc-test
+(ns gremllm.main.effects.ipc-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.actions.ipc :as ipc]))
+            [gremllm.main.effects.ipc :as ipc]))
 
 ;; Mock Electron's event.sender.send to capture what gets sent
 (defn mock-event [send-fn]
@@ -88,4 +88,3 @@
            (is (= :ipc.effects/reply-error action-type))
            (is (= error err)))
         10))))
-

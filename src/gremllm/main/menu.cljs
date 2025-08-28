@@ -10,7 +10,7 @@
                                {:type "separator"}
                                {:label "Settings..."
                                 :accelerator "Cmd+,"
-                                :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])}
+                                :click #(nxr/dispatch store {} [[:menu.actions/show-settings]])}
                                {:type "separator"}
                                {:role "services"
                                 :submenu []}
@@ -25,7 +25,7 @@
                    :submenu (filter identity
                                     [{:label "Save"
                                       :accelerator (if is-mac "Cmd+S" "Ctrl+S")
-                                      :click #(nxr/dispatch store {} [[:effects/trigger-save-in-renderer]])}
+                                      :click #(nxr/dispatch store {} [[:menu.actions/save-topic]])}
 
                                      ;; TODO: Open ...
 
@@ -34,7 +34,7 @@
                                      (when-not is-mac
                                        {:label "Settings..."
                                         :accelerator "Ctrl+,"
-                                        :click #(nxr/dispatch store {} [[:effects/trigger-settings-in-renderer]])})
+                                        :click #(nxr/dispatch store {} [[:menu.actions/show-settings]])})
                                      {:type "separator"}
                                      (if is-mac
                                        {:role "close"}

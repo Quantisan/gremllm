@@ -1,10 +1,10 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.main.actions.ipc :as ipc-actions]
+            [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [BrowserWindow app]]))
+            ["electron/main" :refer [app]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -18,26 +18,42 @@
                 (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
-;; Electron platform helpers (used by effects)
-(defn send-to-focused-window [channel]
-  (some-> (.getFocusedWindow BrowserWindow)
-          .-webContents
-          (.send channel)))
+;; Menu Actions & Effects
+;; ======================
+;; Menu IPC Flow in Electron:
+;; 1. User clicks menu item → Menu (main process) dispatches action
+;; 2. Action returns effect to send command to renderer
+;; 3. Effect uses IPC to notify renderer's focused window
+;; 4. Renderer receives command via ipcRenderer.on("menu:command", ...)
+;; 5. Renderer dispatches its own actions to handle the command
+;;
+;; This indirection exists because in Electron's architecture:
+;; - Menus are created in the main process (for native OS integration)
+;; - Application state lives in the renderer process (where the UI is)
+;; - We bridge this gap with IPC, maintaining clean separation
 
-;; Effects
-(nxr/register-effect! :effects/trigger-save-in-renderer
-  (fn [_ _ _]
-    (send-to-focused-window "topic/save")))
+(nxr/register-action! :menu.actions/save-topic
+  (fn [_state]
+    ;; Menu wants to save topic. The topic state lives in renderer,
+    ;; so we send the command there via IPC.
+    [[:menu.effects/send-command :save-topic]]))
 
-(nxr/register-effect! :effects/trigger-settings-in-renderer
-  (fn [_ _ _]
-    (send-to-focused-window "menu:settings")))
+(nxr/register-action! :menu.actions/show-settings
+  (fn [_state]
+    [[:menu.effects/send-command :show-settings]]))
 
-(nxr/register-effect! :ipc.effects/reply ipc-actions/reply)
-(nxr/register-effect! :ipc.effects/reply-error ipc-actions/reply-error)
+;; IPC Effects Registration
+;; ========================
+;; All IPC boundary effects are implemented in main.effects.ipc
+;; to maintain clear FCIS separation.
 
-;; Generic promise handling
-(nxr/register-effect! :ipc.effects/promise->reply ipc-actions/promise->reply)
+(nxr/register-effect! :menu.effects/send-command
+  (fn [_ _ command]
+    (ipc-effects/send-to-renderer "menu:command" (name command))))
+
+(nxr/register-effect! :ipc.effects/reply ipc-effects/reply)
+(nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
+(nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
 ;; LLM effects
 (nxr/register-effect! :chat.effects/send-message

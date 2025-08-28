@@ -26,13 +26,13 @@
   ;; Set up the atom
   (let [store (atom nil)
         el    (js/document.getElementById "app")]
-    (.onMenuCommand js/window.electronAPI "topic/save"
-                    (fn []
-                      (nxr/dispatch store {} [[:topic.effects/save-active-topic]])))
-
-    (.onMenuCommand js/window.electronAPI "menu:settings"
-                    (fn []
-                      (nxr/dispatch store {} [[:ui.actions/show-settings]])))
+    ;; Handle menu commands - these originate from main process menus
+    (.onMenuCommand js/window.electronAPI "menu:command"
+                    (fn [_ command-str]
+                      (case (keyword command-str)
+                        :save-topic    (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
+                        :show-settings (nxr/dispatch store {} [[:ui.actions/show-settings]])
+                        nil)))
 
     ;; Render on every change
     (add-watch store ::render-topic
