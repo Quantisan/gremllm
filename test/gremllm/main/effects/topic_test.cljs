@@ -4,11 +4,6 @@
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
-(defn- make-test-topic [id name messages]
-  {:id id
-   :name name
-   :messages messages})
-
 (defn- write-topic-file [dir topic]
   (let [filename (str (:id topic) ".edn")
         filepath (io/path-join dir filename)]

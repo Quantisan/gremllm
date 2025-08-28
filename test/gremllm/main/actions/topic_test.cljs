@@ -14,16 +14,8 @@
               :content "{:id \"topic-1234567890-abc123\", :messages []}"
               :topic topic}
              plan))))
-  
+
   (testing "throws when topic has no ID"
     (is (thrown-with-msg? js/Error #"Topic must have an :id field"
           (topic/topic->save-plan {:messages []} {:topics-dir "/test"})))))
 
-(deftest test-validate-save-plan
-  (testing "accepts valid plan"
-    (let [plan {:filename "topic-123-abc.edn"}]
-      (is (= plan (topic/validate-save-plan plan)))))
-
-  (testing "rejects invalid filename"
-    (is (thrown-with-msg? js/Error #"Invalid filename"
-          (topic/validate-save-plan {:filename "bad-name.edn"})))))
