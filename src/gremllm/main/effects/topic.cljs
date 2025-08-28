@@ -10,31 +10,30 @@
   (io/write-file filepath content)
   filepath)
 
-(defn- file->topic-entry [topics-dir pattern filename]
-  (when (re-matches pattern filename)
+(defn- file->topic-entry [topics-dir filename]
+  (when (.endsWith filename ".edn")
     (let [filepath (io/path-join topics-dir filename)]
       (merge {:filename filename
               :filepath filepath}
              (io/file-timestamps filepath)))))
 
 (defn enumerate
-  "Enumerate persisted topics for a workspace. Reads topics-dir and returns a vector of
-  maps {:filename string :filepath string} for files whose names match topic-file-pattern
-  (e.g., #\"topic-\\d+\\.edn\"). The result is sorted by filename ascending. Returns []
-  if topics-dir does not exist; does not read or parse file contents."
-  [topics-dir topic-file-pattern]
+  "Enumerate all .edn files in topics-dir. Returns a vector of maps 
+  {:filename string :filepath string :created-at :last-accessed-at} 
+  sorted by filename. Returns [] if topics-dir does not exist."
+  [topics-dir]
   (if-not (io/file-exists? topics-dir)
     []
     (->> (io/read-dir topics-dir)
-         (keep (partial file->topic-entry topics-dir topic-file-pattern))
+         (keep (partial file->topic-entry topics-dir))
          (sort-by :filename)
          vec)))
 
 (defn load-latest
-  "Loads the latest topic from the file system (reuses enumerate for DRY)."
-  [topics-dir topic-file-pattern]
+  "Loads the latest topic from the file system."
+  [topics-dir]
   ;; TODO: output of `enumerate` isn't sorted by last-accesssed, thus last is not latest
-  (when-let [{:keys [filepath]} (last (enumerate topics-dir topic-file-pattern))]
+  (when-let [{:keys [filepath]} (last (enumerate topics-dir))]
     (-> (io/read-file filepath)
         edn/read-string
         (clj->js :keywordize-keys false))))
@@ -42,7 +41,7 @@
 (defn load-all
   "Load all topics from the filesystem into a map of {<topic-id> Topic}.
   Returns an empty map if topics-dir doesn't exist or contains no topics."
-  [topics-dir topic-file-pattern]
+  [topics-dir]
   (reduce (fn [acc {:keys [filename filepath]}]
             (try
               (let [topic-content (-> (io/read-file filepath)
@@ -57,4 +56,4 @@
                 (js/console.error "Failed to load topic file" filename e)
                 acc)))
           {}
-          (enumerate topics-dir topic-file-pattern)))
+          (enumerate topics-dir)))

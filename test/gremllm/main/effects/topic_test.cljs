@@ -1,7 +1,6 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.topic :as topic]
-            [gremllm.main.actions.topic :refer [topic-file-pattern]]
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
@@ -30,7 +29,7 @@
               _saved-path (topic/save {:dir temp-dir
                                        :filepath filepath
                                        :content (pr-str topic)})
-              loaded-js (topic/load-latest temp-dir topic-file-pattern)
+              loaded-js (topic/load-latest temp-dir)
               loaded    (js->clj loaded-js :keywordize-keys true)]
           (is (= topic loaded)))))))
 
@@ -41,7 +40,7 @@
         (let [files-to-create ["topic-200-bbb.edn" "notes.txt" "topic-100-aaa.edn"]
               _               (doseq [f files-to-create]
                                 (io/write-file (io/path-join dir f) "{}"))]
-          (let [entries (topic/enumerate dir topic-file-pattern)]
+          (let [entries (topic/enumerate dir)]
             (is (= [{:filename "topic-100-aaa.edn"
                      :filepath (io/path-join dir "topic-100-aaa.edn")}
                     {:filename "topic-200-bbb.edn"
@@ -68,10 +67,10 @@
           ;; Verify we get both topics back as a map
           (is (= {"topic-1-a" topic-1
                   "topic-2-b" topic-2}
-                 (topic/load-all dir topic-file-pattern)))))))
+                 (topic/load-all dir)))))))
 
   (testing "returns empty map for non-existent directory"
-    (is (= {} (topic/load-all "/does/not/exist" topic-file-pattern))))
+    (is (= {} (topic/load-all "/does/not/exist"))))
 
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
@@ -85,7 +84,7 @@
           (let [original-error js/console.error]
             ;; Temporarily suppress console.error
             (set! js/console.error (constantly nil))
-            (let [result (topic/load-all dir topic-file-pattern)]
+            (let [result (topic/load-all dir)]
               ;; Restore original console.error
               (set! js/console.error original-error)
               (is (= {(:id good-topic) good-topic} result)))))))))
