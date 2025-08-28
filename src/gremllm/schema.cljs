@@ -10,9 +10,9 @@
 
 (def Message
   [:map
+   [:id :int]
    [:type [:enum :user :assistant]]
-   [:role [:enum "user" "assistant"]]
-   [:content :string]])
+   [:text :string]])
 
 (def Topic
   [:map
