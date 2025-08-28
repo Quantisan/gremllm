@@ -4,21 +4,24 @@
 
 (deftest test-topic->save-plan
   (testing "creates correct save plan"
-    (let [topic {:id 12345
+    (let [topic {:id "topic-1234567890-abc123"
                  :messages []}
-          config {:timestamp 1234567890
-                  :topics-dir "/test/dir"}
+          config {:topics-dir "/test/dir"}
           plan (topic/topic->save-plan topic config)]
       (is (= {:dir "/test/dir"
-              :filename "topic-1234567890.edn"
-              :filepath "/test/dir/topic-1234567890.edn"
-              :content "{:id 12345, :messages []}"
+              :filename "topic-1234567890-abc123.edn"
+              :filepath "/test/dir/topic-1234567890-abc123.edn"
+              :content "{:id \"topic-1234567890-abc123\", :messages []}"
               :topic topic}
-             plan)))))
+             plan))))
+  
+  (testing "throws when topic has no ID"
+    (is (thrown-with-msg? js/Error #"Topic must have an :id field"
+          (topic/topic->save-plan {:messages []} {:topics-dir "/test"})))))
 
 (deftest test-validate-save-plan
   (testing "accepts valid plan"
-    (let [plan {:filename "topic-123.edn"}]
+    (let [plan {:filename "topic-123-abc.edn"}]
       (is (= plan (topic/validate-save-plan plan)))))
 
   (testing "rejects invalid filename"
