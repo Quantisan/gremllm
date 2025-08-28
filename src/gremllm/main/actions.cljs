@@ -18,11 +18,19 @@
                 (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
-;; Menu Actions (Pure)
-;; ===================
-;; Menu items express user intent. The fact that the actual work
-;; happens in the renderer is an implementation detail of Electron's
-;; architecture, not a domain concept.
+;; Menu Actions & Effects
+;; ======================
+;; Menu IPC Flow in Electron:
+;; 1. User clicks menu item → Menu (main process) dispatches action
+;; 2. Action returns effect to send command to renderer
+;; 3. Effect uses IPC to notify renderer's focused window
+;; 4. Renderer receives command via ipcRenderer.on("menu:command", ...)
+;; 5. Renderer dispatches its own actions to handle the command
+;;
+;; This indirection exists because in Electron's architecture:
+;; - Menus are created in the main process (for native OS integration)
+;; - Application state lives in the renderer process (where the UI is)
+;; - We bridge this gap with IPC, maintaining clean separation
 
 (nxr/register-action! :menu.actions/save-topic
   (fn [_state]
