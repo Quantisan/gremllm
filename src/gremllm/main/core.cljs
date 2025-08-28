@@ -40,22 +40,22 @@
   (let [topics-dir (io/topics-dir-path workspace-dir)]
     (.handle ipcMain "workspace/load-folder"
              (fn [_event]
-               (-> (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)
+               (-> (topic-effects/load-all topics-dir)
                    (clj->js))))
 
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
-                    (topic-actions/prepare-save topics-dir)
+                    (topic-actions/topic->save-plan topics-dir)
                     (topic-effects/save))))
 
     (.handle ipcMain "topic/load-latest"
               (fn [_event]
-                (topic-effects/load-latest topics-dir topic-actions/topic-file-pattern)))
+                (topic-effects/load-latest topics-dir)))
 
     (.handle ipcMain "topic/list"
               (fn [_event]
-                (-> (topic-effects/enumerate topics-dir topic-actions/topic-file-pattern)
+                (-> (topic-effects/enumerate topics-dir)
                     (clj->js)))))
 
   ;; Secrets handlers - call functions directly at the boundary

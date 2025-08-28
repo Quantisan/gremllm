@@ -1,9 +1,16 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.topic :as topic]
-            [gremllm.main.actions.topic :refer [topic-file-pattern]]
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
+
+(defn- write-topic-file [dir topic]
+  (let [filename (str (:id topic) ".edn")
+        filepath (io/path-join dir filename)]
+    (io/write-file filepath (pr-str topic))))
+
+(defn- write-file [dir filename content]
+  (io/write-file (io/path-join dir filename) content))
 
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data"
@@ -12,12 +19,12 @@
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
                         :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
-              filename (str "topic-" (.getTime (js/Date.)) ".edn")
+              filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (topic/save {:dir temp-dir
                                        :filepath filepath
                                        :content (pr-str topic)})
-              loaded-js (topic/load-latest temp-dir #"topic-\d+\.edn")
+              loaded-js (topic/load-latest temp-dir)
               loaded    (js->clj loaded-js :keywordize-keys true)]
           (is (= topic loaded)))))))
 
@@ -25,14 +32,14 @@
   (testing "enumerate returns only topic files, sorted, with filename and filepath"
     (with-temp-dir "list"
       (fn [dir]
-        (let [files-to-create ["topic-200.edn" "notes.txt" "topic-100.edn"]
+        (let [files-to-create ["topic-200-bbb.edn" "notes.txt" "topic-100-aaa.edn"]
               _               (doseq [f files-to-create]
                                 (io/write-file (io/path-join dir f) "{}"))]
-          (let [entries (topic/enumerate dir #"topic-\d+\.edn")]
-            (is (= [{:filename "topic-100.edn"
-                     :filepath (io/path-join dir "topic-100.edn")}
-                    {:filename "topic-200.edn"
-                     :filepath (io/path-join dir "topic-200.edn")}]
+          (let [entries (topic/enumerate dir)]
+            (is (= [{:filename "topic-100-aaa.edn"
+                     :filepath (io/path-join dir "topic-100-aaa.edn")}
+                    {:filename "topic-200-bbb.edn"
+                     :filepath (io/path-join dir "topic-200-bbb.edn")}]
                    (mapv #(select-keys % [:filename :filepath]) entries)))
             (is (every? number? (map :created-at entries)))
             (is (every? number? (map :last-accessed-at entries)))))))))
@@ -41,41 +48,38 @@
   (testing "load-all returns map of all topics keyed by ID"
     (with-temp-dir "load-all"
       (fn [dir]
-        ;; TODO: we should create a topic schema and use that throughout, and to generate these data
-        ;; here
-        (let [topic1 {:id "topic-1754952422977-ixubncif66"
-                      :name "Testing 2"
-                      :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
-              topic2 {:id "topic-1754952422978-abcdef12345"
-                      :name "Another Topic"
-                      :messages [{:id 1754952440825 :type "assistant" :text "Hi"}]}
-              ;; Save with matching filename format
-              _      (io/write-file (io/path-join dir "topic-1754952422977.edn") (pr-str topic1))
-              _      (io/write-file (io/path-join dir "topic-1754952422978.edn") (pr-str topic2))
-              _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
-              result (topic/load-all dir topic-file-pattern)]
-          (is (= {"topic-1754952422977-ixubncif66" topic1
-                  "topic-1754952422978-abcdef12345" topic2}
-                 result))))))
+        ;; Simple test topics with just the essentials
+        (let [topic-1 {:id "topic-1-a" :name "First" :messages []}
+              topic-2 {:id "topic-2-b" :name "Second" :messages []}]
 
-  (testing "returns empty map when directory doesn't exist"
-    (let [result (topic/load-all "/nonexistent/dir" #"topic-\d+\.edn")]
-      (is (= {} result))))
+          ;; Write valid topic files
+          (write-topic-file dir topic-1)
+          (write-topic-file dir topic-2)
 
-  (testing "continues loading when encountering invalid EDN"
-    (with-temp-dir "load-all-invalid"
+          ;; Write non-topic file (should be ignored)
+          (write-file dir "readme.txt" "ignored")
+
+          ;; Verify we get both topics back as a map
+          (is (= {"topic-1-a" topic-1
+                  "topic-2-b" topic-2}
+                 (topic/load-all dir)))))))
+
+  (testing "returns empty map for non-existent directory"
+    (is (= {} (topic/load-all "/does/not/exist"))))
+
+  (testing "skips corrupt files and loads valid ones"
+    (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [valid-topic {:id "topic-1754952422979-xyz789"
-                           :name "Valid Topic"
-                           :messages []}
-              _              (io/write-file (io/path-join dir "topic-1754952422979.edn") (pr-str valid-topic))
-              _              (io/write-file (io/path-join dir "topic-666.edn") "{:unclosed")
+        (let [good-topic {:id "topic-111-good" :name "Valid" :messages []}]
+          ;; Write one valid and one corrupt file
+          (write-topic-file dir good-topic)
+          (write-file dir "topic-999-bad.edn" "{:broken")
 
-              ;; Temporarily replace console.error with no-op
-              original-error js/console.error
-              _              (set! js/console.error (fn [& _args] nil))
-
-              result         (topic/load-all dir #"topic-\d+\.edn")]
-          ;; Restore original console.error
-          (set! js/console.error original-error)
-          (is (= {"topic-1754952422979-xyz789" valid-topic} result)))))))
+          ;; Should load only the valid topic, ignoring corrupt one
+          (let [original-error js/console.error]
+            ;; Temporarily suppress console.error
+            (set! js/console.error (constantly nil))
+            (let [result (topic/load-all dir)]
+              ;; Restore original console.error
+              (set! js/console.error original-error)
+              (is (= {(:id good-topic) good-topic} result)))))))))
