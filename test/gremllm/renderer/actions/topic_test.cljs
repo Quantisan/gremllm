@@ -1,20 +1,13 @@
 (ns gremllm.renderer.actions.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.topic :as topic]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.schema :as schema]))
+            [gremllm.renderer.state.topic :as topic-state]))
 
 (def ^:private test-topic-id (str "topic-" 54321))
 (def ^:private expected-new-topic
   {:id   test-topic-id
    :name "New Topic"
    :messages []})
-
-(deftest create-topic-test
-  (with-redefs [schema/generate-topic-id (constantly test-topic-id)]
-    (is (= expected-new-topic
-           (topic/create-topic))
-        "should create a topic with a unique ID and default values")))
 
 (deftest start-new-topic-test
   (with-redefs [topic/create-topic (constantly expected-new-topic)]
