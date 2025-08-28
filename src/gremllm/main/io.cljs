@@ -6,6 +6,7 @@
 (def ^:private user-subdir "User")
 (def ^:private workspaces-subdir "workspaces")
 (def ^:private default-workspace "default")
+(def ^:private topics-subdir "topics")
 
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
@@ -25,9 +26,13 @@
   (apply path-join user-data-dir user-subdir segments))
 
 (defn workspace-dir-path
-  "Path to a specific workspace: <userData>/User/workspaces/<workspace-id>"
-  [user-data-dir workspace-id]
-  (user-dir-path user-data-dir workspaces-subdir workspace-id))
+  "Path to a workspace directory.
+   1-arity: <userData>/User/workspaces/default
+   2-arity: <userData>/User/workspaces/<workspace-id>"
+  ([user-data-dir]
+   (workspace-dir-path user-data-dir default-workspace))
+  ([user-data-dir workspace-id]
+   (user-dir-path user-data-dir workspaces-subdir workspace-id)))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -92,11 +97,6 @@
   (ensure-dir (path-dirname filepath))
   (write-file filepath (pr-str secrets-map)))
 
-(defn topics-dir-path
-  "Path to topics within a workspace. Default workspace is \"default\".
-   1-arity: <userData>/User/workspaces/default/topics
-   2-arity: <userData>/User/workspaces/<workspace-id>/topics"
-  ([user-data-dir]
-   (topics-dir-path user-data-dir default-workspace))
-  ([user-data-dir workspace-id]
-   (path-join (workspace-dir-path user-data-dir workspace-id) "topics")))
+(defn topics-dir-path [workspace-dir]
+  (path-join workspace-dir topics-subdir))
+

@@ -38,3 +38,23 @@
     (-> (io/read-file filepath)
         edn/read-string
         (clj->js :keywordize-keys false))))
+
+(defn load-all
+  "Load all topics from the filesystem into a map of {<topic-id> Topic}.
+  Returns an empty map if topics-dir doesn't exist or contains no topics."
+  [topics-dir topic-file-pattern]
+  (reduce (fn [acc {:keys [filename filepath]}]
+            (try
+              (let [topic-content (-> (io/read-file filepath)
+                                      edn/read-string)]
+                (if-let [topic-id (:id topic-content)]
+                  (assoc acc topic-id topic-content)
+                  (do
+                    (js/console.warn "Topic file missing :id field" filename)
+                    acc)))
+              (catch :default e
+                ;; Log error but continue loading other topics
+                (js/console.error "Failed to load topic file" filename e)
+                acc)))
+          {}
+          (enumerate topics-dir topic-file-pattern)))

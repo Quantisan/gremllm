@@ -4,6 +4,24 @@
             [gremllm.renderer.ui :as ui]
             [gremllm.renderer.actions]))
 
+;; State Shape Documentation
+;; =========================
+;; The state atom holds the following structure that flows to the UI:
+;;
+;; {:topics          {<topic-id> Topic}  ; Map of all topics by ID
+;;  :active-topic-id string?              ; Currently selected topic ID
+;;  ...}
+;;
+;; Topic Schema:
+;; {:id       string?   ; "topic-<timestamp>-<random>"
+;;  :name     string?   ; Display name in sidebar
+;;  :messages [Message]} ; Conversation history
+;;
+;; Message Schema:
+;; {:type    keyword?  ; :user or :assistant
+;;  :role    string?   ; "user" or "assistant"
+;;  :content string?}  ; The actual message text
+
 (defn main []
   ;; Set up the atom
   (let [store (atom nil)
@@ -35,4 +53,4 @@
     ;; Trigger the first render
     (nxr/dispatch store {}
                   [[:system.actions/request-info]
-                   [:topic.actions/bootstrap]])))
+                   [:workspace.actions/bootstrap]])))

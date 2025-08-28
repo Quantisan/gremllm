@@ -28,7 +28,7 @@
     (.loadFile main-window html-path)
     main-window))
 
-(defn setup-api-handlers [store topics-dir secrets-filepath]
+(defn setup-api-handlers [store workspace-dir secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -37,21 +37,26 @@
                                 :channel "chat/send-message"}
                          [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
 
-  ;; Topic handlers - call functions directly at the boundary
-  (.handle ipcMain "topic/save"
-           (fn [_event topic-data]
-             (-> (js->clj topic-data :keywordize-keys true)
-                 (topic-actions/prepare-save topics-dir)
-                 (topic-effects/save))))
+  (let [topics-dir (io/topics-dir-path workspace-dir)]
+    (.handle ipcMain "workspace/load-folder"
+             (fn [_event]
+               (-> (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)
+                   (clj->js))))
 
-  (.handle ipcMain "topic/load-latest"
-           (fn [_event]
-             (topic-effects/load-latest topics-dir topic-actions/topic-file-pattern)))
+    (.handle ipcMain "topic/save"
+              (fn [_event topic-data]
+                (-> (js->clj topic-data :keywordize-keys true)
+                    (topic-actions/prepare-save topics-dir)
+                    (topic-effects/save))))
 
-  (.handle ipcMain "topic/list"
-           (fn [_event]
-             (-> (topic-effects/enumerate topics-dir topic-actions/topic-file-pattern)
-                 (clj->js))))
+    (.handle ipcMain "topic/load-latest"
+              (fn [_event]
+                (topic-effects/load-latest topics-dir topic-actions/topic-file-pattern)))
+
+    (.handle ipcMain "topic/list"
+              (fn [_event]
+                (-> (topic-effects/enumerate topics-dir topic-actions/topic-file-pattern)
+                    (clj->js)))))
 
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
@@ -75,9 +80,9 @@
     (-> (.whenReady app)
         (.then (fn []
                  (let [user-data-dir     (.getPath app "userData")
-                       topics-dir        (io/topics-dir-path user-data-dir)
+                       workspace-dir     (io/workspace-dir-path user-data-dir)
                        secrets-filepath  (io/secrets-file-path user-data-dir)]
-                   (setup-api-handlers store topics-dir secrets-filepath))
+                   (setup-api-handlers store workspace-dir secrets-filepath))
                  (create-window)
                  (menu/create-menu store)
                  (.on app "activate"

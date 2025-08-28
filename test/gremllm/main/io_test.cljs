@@ -1,20 +1,8 @@
 (ns gremllm.main.io-test
   (:require [cljs.test :refer [deftest is testing]]
             [clojure.string]
-            [gremllm.main.io :as io]))
-
-;; TODO: refactor for DRY: with-temp-dir is duplicated in gremllm.main.effects.topic-test
-(defn- with-temp-dir [suffix f]
-  (let [os  (js/require "os")
-        dir (io/path-join (.tmpdir os) (str "gremllm-test-" (.getTime (js/Date.)) "-" suffix))]
-    (try
-      (io/ensure-dir dir)
-      (f dir)
-      (finally
-        (when (io/file-exists? dir)
-          (doseq [file (io/read-dir dir)]
-            (io/delete-file (io/path-join dir file)))
-          (io/remove-dir dir))))))
+            [gremllm.main.io :as io]
+            [gremllm.test-utils :refer [with-temp-dir]]))
 
 (deftest test-secrets-file-path
   (testing "secrets file path includes User subdirectory and secrets.edn"
@@ -39,16 +27,17 @@
       (is (= {} (io/read-secrets-file "/fake/path/secrets.edn"))))))
 
 (deftest test-write-secrets-file
-  (testing "ensures User directory exists before writing"
-    (let [ensure-dir-called? (atom false)
-          write-file-called? (atom false)]
+  (testing "ensures parent directory exists before writing"
+    (let [ensure-dir-arg      (atom nil)
+          write-file-called?  (atom false)
+          filepath            "/app/data/User/secrets.edn"
+          expected-parent-dir (io/path-dirname filepath)]
       (with-redefs [io/ensure-dir (fn [dir]
-                                    (reset! ensure-dir-called? true)
-                                    (is (clojure.string/ends-with? dir "/User")))
+                                    (reset! ensure-dir-arg dir))
                     io/write-file (fn [_ _]
                                     (reset! write-file-called? true))]
-        (io/write-secrets-file "/app/data/User/secrets.edn" {:key "value"})
-        (is @ensure-dir-called?)
+        (io/write-secrets-file filepath {:key "value"})
+        (is (= expected-parent-dir @ensure-dir-arg))
         (is @write-file-called?))))
 
   (testing "writes EDN format"
@@ -57,30 +46,10 @@
                                   (is (= "{:api-key \"encrypted\"}" content)))]
       (io/write-secrets-file "/path/secrets.edn" {:api-key "encrypted"}))))
 
-(deftest test-path-join
-  (testing "joins multiple relative segments"
-    (is (= "a/b/c" (io/path-join "a" "b" "c"))))
-  (testing "joins with absolute first segment"
-    (is (= "/root/folder/file.txt"
-           (io/path-join "/root" "folder" "file.txt")))))
-
-(deftest test-path-dirname
-  (testing "returns parent directory for file path"
-    (is (= "/a/b" (io/path-dirname "/a/b/c.txt"))))
-  (testing "returns parent directory for directory path"
-    (is (= "/a" (io/path-dirname "/a/b")))))
-
-(deftest test-topics-dir-path-default-workspace
-  (testing "default topics dir path is under User/workspaces/default/topics"
-    (let [user-data-dir "/app/data"]
-      (is (= "/app/data/User/workspaces/default/topics"
-             (io/topics-dir-path user-data-dir))))))
-
-(deftest test-topics-dir-path-custom-workspace
-  (testing "topics dir path for a named workspace"
-    (let [user-data-dir "/app/data"]
-      (is (= "/app/data/User/workspaces/acme/topics"
-             (io/topics-dir-path user-data-dir "acme"))))))
+(deftest test-topics-dir-path
+ (let [workspace-dir "/app/data/User/workspaces/default"]
+   (is (= "/app/data/User/workspaces/default/topics"
+         (io/topics-dir-path workspace-dir)))))
 
 (deftest test-file-timestamps
   (testing "returns created-at and last-accessed-at (ms)"

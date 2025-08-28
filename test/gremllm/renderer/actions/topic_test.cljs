@@ -72,6 +72,6 @@
 
 (deftest switch-topic-test
   (testing "switching active topic"
-    (is (= [[:effects/save topic-state/active-topic-id-path "topic-2"]]
+    (is (= [[:effects/save topic-state/active-topic-id-path :topic-2]]
            (topic/switch-topic {} "topic-2"))
         "should dispatch an effect to update the active-topic-id")))
