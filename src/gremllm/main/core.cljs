@@ -3,7 +3,6 @@
             [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.topic :as topic-effects]
-            [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
             [gremllm.main.io :as io]
@@ -41,9 +40,8 @@
   (let [topics-dir (io/topics-dir-path workspace-dir)]
     (.handle ipcMain "workspace/load-folder"
              (fn [_event]
-               (let [topics (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)]
-                 (js/console.log "load-all returned:" topics)
-                 (clj->js topics))))
+               (-> (topic-effects/load-all topics-dir topic-actions/topic-file-pattern)
+                   (clj->js))))
 
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]

@@ -10,7 +10,7 @@
 ;; TODO: review to refactor
 (defn populate-topics [_state workspace-topics-js]
   (let [workspace-topics (js->clj workspace-topics-js :keywordize-keys true)
-        topics (or (:topics workspace-topics) {})
+        topics (or workspace-topics {})
         normalized-topics (reduce-kv (fn [m k v]
                                        (assoc m k (topic/normalize-topic v)))
                                      {}
