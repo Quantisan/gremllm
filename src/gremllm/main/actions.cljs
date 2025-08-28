@@ -18,12 +18,6 @@
                 (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
-;; Electron platform helpers (used by effects)
-(defn send-to-focused-window [channel]
-  (some-> (.getFocusedWindow BrowserWindow)
-          .-webContents
-          (.send channel)))
-
 ;; Menu Actions (Pure)
 ;; ===================
 ;; Menu items express user intent. The fact that the actual work
@@ -36,7 +30,7 @@
     ;; so we send the command there via IPC.
     [[:menu.effects/send-command :save-topic]]))
 
-(nxr/register-action! :menu.actions/show-settings  
+(nxr/register-action! :menu.actions/show-settings
   (fn [_state]
     [[:menu.effects/send-command :show-settings]]))
 
