@@ -1,26 +1,24 @@
 (ns gremllm.renderer.actions.topic-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.topic :as topic]
-            [gremllm.renderer.state.topic :as topic-state]))
-
-(def ^:private test-topic-id (str "topic-" 54321))
-(def ^:private expected-new-topic
-  {:id   test-topic-id
-   :name "New Topic"
-   :messages []})
-
-(deftest create-topic-test
-  (with-redefs [topic/generate-topic-id (constantly test-topic-id)]
-    (is (= expected-new-topic
-           (topic/create-topic))
-        "should create a topic with a unique ID and default values")))
+            [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.schema :as schema]
+            [malli.core :as m]))
 
 (deftest start-new-topic-test
-  (with-redefs [topic/create-topic (constantly expected-new-topic)]
-    (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
-            [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
-           (topic/start-new-topic {}))
-        "should save a new topic and set it as active")))
+  (let [result (topic/start-new-topic {})
+        [[_ topic-path saved-topic] [_ active-path active-id]] result]
+
+    (is (= 2 (count result)) "should return exactly two effects")
+    (is (every? #(= :effects/save (first %)) result) "both should be save effects")
+
+    (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
+    (is (= (conj topic-state/topics-path (:id saved-topic)) topic-path) "should save to correct topics path")
+
+    (is (= topic-state/active-topic-id-path active-path) "should save to active topic path")
+    (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
+
+(def ^:private expected-new-topic (topic/create-topic))
 
 (deftest set-topic-test
   (testing "when a valid topic is provided"
