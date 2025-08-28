@@ -35,23 +35,6 @@
     [[:topic.actions/set loaded-topic]]
     [[:topic.actions/start-new]]))
 
-;; TODO: remove?
-(defn determine-initial-topic [_state topics-js]
-  (let [entries (js->clj topics-js :keywordize-keys true)]
-    (if (seq entries)
-      []
-      [[:topic.actions/start-new]])))
-
-;; TODO: remove?
-(defn list-topics-error [_state error]
-  (js/console.error "list-topics failed:" error)
-  [[:topic.actions/start-new]])
-
-;; TODO: remove?
-(defn bootstrap [_state]
-  [[:topic.effects/list {:on-success [[:topic.actions/determine-initial-topic]]
-                         :on-error   [[:topic.actions/list-topics-error]]}]])
-
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
     [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
