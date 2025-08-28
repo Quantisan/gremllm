@@ -24,14 +24,33 @@
           .-webContents
           (.send channel)))
 
-;; Effects
-(nxr/register-effect! :effects/trigger-save-in-renderer
-  (fn [_ _ _]
-    (send-to-focused-window "topic/save")))
+;; Menu Actions (Pure)
+;; ===================
+;; Menu items express user intent. The fact that the actual work
+;; happens in the renderer is an implementation detail of Electron's
+;; architecture, not a domain concept.
 
-(nxr/register-effect! :effects/trigger-settings-in-renderer
-  (fn [_ _ _]
-    (send-to-focused-window "menu:settings")))
+(nxr/register-action! :menu.actions/save-topic
+  (fn [_state]
+    ;; Menu wants to save topic. The topic state lives in renderer,
+    ;; so we send the command there via IPC.
+    [[:menu.effects/send-command :save-topic]]))
+
+(nxr/register-action! :menu.actions/show-settings  
+  (fn [_state]
+    [[:menu.effects/send-command :show-settings]]))
+
+;; Menu Effects (Imperative Shell)
+;; ================================
+;; This single effect handles the Electron architectural boundary:
+;; menus live in main process, application state lives in renderer.
+;; This is our explicit imperative shell for crossing that boundary.
+
+(nxr/register-effect! :menu.effects/send-command
+  (fn [_ _ command]
+    (some-> (.getFocusedWindow BrowserWindow)
+            .-webContents
+            (.send "menu:command" (name command)))))
 
 (nxr/register-effect! :ipc.effects/reply ipc-actions/reply)
 (nxr/register-effect! :ipc.effects/reply-error ipc-actions/reply-error)
