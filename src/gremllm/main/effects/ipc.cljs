@@ -15,7 +15,7 @@
 (defn send-to-renderer
   "Send a command to the focused renderer window.
    Used for menu commands and other main→renderer communication."
-  [_ _ channel data]
+  [channel data]
   (when-let [BrowserWindow (get-browser-window)]
     (when-let [^js window (.getFocusedWindow BrowserWindow)]
       (some-> window

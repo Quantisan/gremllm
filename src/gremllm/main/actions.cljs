@@ -41,7 +41,7 @@
 
 (nxr/register-effect! :menu.effects/send-command
   (fn [_ _ command]
-    (ipc-effects/send-to-renderer nil nil "menu:command" (name command))))
+    (ipc-effects/send-to-renderer "menu:command" (name command))))
 
 (nxr/register-effect! :ipc.effects/reply ipc-effects/reply)
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
