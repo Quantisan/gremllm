@@ -1,10 +1,10 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.main.actions.ipc :as ipc-actions]
+            [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [BrowserWindow app]]))
+            ["electron/main" :refer [app]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -34,23 +34,18 @@
   (fn [_state]
     [[:menu.effects/send-command :show-settings]]))
 
-;; Menu Effects (Imperative Shell)
-;; ================================
-;; This single effect handles the Electron architectural boundary:
-;; menus live in main process, application state lives in renderer.
-;; This is our explicit imperative shell for crossing that boundary.
+;; IPC Effects Registration
+;; ========================
+;; All IPC boundary effects are implemented in main.effects.ipc
+;; to maintain clear FCIS separation.
 
 (nxr/register-effect! :menu.effects/send-command
   (fn [_ _ command]
-    (some-> (.getFocusedWindow BrowserWindow)
-            .-webContents
-            (.send "menu:command" (name command)))))
+    (ipc-effects/send-to-renderer nil nil "menu:command" (name command))))
 
-(nxr/register-effect! :ipc.effects/reply ipc-actions/reply)
-(nxr/register-effect! :ipc.effects/reply-error ipc-actions/reply-error)
-
-;; Generic promise handling
-(nxr/register-effect! :ipc.effects/promise->reply ipc-actions/promise->reply)
+(nxr/register-effect! :ipc.effects/reply ipc-effects/reply)
+(nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
+(nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
 ;; LLM effects
 (nxr/register-effect! :chat.effects/send-message
