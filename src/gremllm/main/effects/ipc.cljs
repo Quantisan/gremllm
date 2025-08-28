@@ -2,16 +2,24 @@
   "IPC Effects - The Imperative Shell for Process Communication
    =============================================================
    All effects that cross the main/renderer process boundary.
-   This is our explicit imperative shell for Electron's IPC architecture."
-  (:require ["electron/main" :refer [BrowserWindow]]))
+   This is our explicit imperative shell for Electron's IPC architecture.")
+
+;; Defer the Electron require to runtime to make testing possible
+;; Tests run in Node.js, not Electron, so electron/main isn't available
+(defn- get-browser-window []
+  (when (exists? js/require)
+    (try
+      (.-BrowserWindow (js/require "electron/main"))
+      (catch :default _ nil))))
 
 (defn send-to-renderer
   "Send a command to the focused renderer window.
    Used for menu commands and other main→renderer communication."
   [_ _ channel data]
-  (some-> (.getFocusedWindow BrowserWindow)
-          .-webContents
-          (.send channel data)))
+  (when-let [BrowserWindow (get-browser-window)]
+    (some-> (.getFocusedWindow BrowserWindow)
+            .-webContents
+            (.send channel data))))
 
 (defn reply
   "Reply to an IPC request with success"
