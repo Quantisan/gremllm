@@ -3,18 +3,13 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]))
 
-(def ^:private test-topic-id (str "topic-" 54321))
-(def ^:private expected-new-topic
-  {:id   test-topic-id
-   :name "New Topic"
-   :messages []})
+(def ^:private expected-new-topic (topic/create-topic))
 
 (deftest start-new-topic-test
-  (with-redefs [topic/create-topic (constantly expected-new-topic)]
-    (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
-            [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
-           (topic/start-new-topic {}))
-        "should save a new topic and set it as active")))
+  (is (= [[:effects/save (conj topic-state/topics-path (:id expected-new-topic)) expected-new-topic]
+          [:effects/save topic-state/active-topic-id-path (:id expected-new-topic)]]
+         (topic/start-new-topic {}))
+      "should save a new topic and set it as active"))
 
 (deftest set-topic-test
   (testing "when a valid topic is provided"
