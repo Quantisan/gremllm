@@ -54,36 +54,34 @@
   (testing "load-all returns map of all topics keyed by ID"
     (with-temp-dir "load-all"
       (fn [dir]
-        (let [topics [(make-test-topic "topic-1754952422977-ixubncif66"
-                                       "Testing 2"
-                                       [{:id 1754952440824 :type "user" :text "Hello"}])
-                      (make-test-topic "topic-1754952422978-abcdef12345"
-                                       "Another Topic"
-                                       [{:id 1754952440825 :type "assistant" :text "Hi"}])]
-              expected-map (into {} (map (juxt :id identity)) topics)]
+        ;; Simple test topics with just the essentials
+        (let [topic-1 {:id "topic-1" :name "First" :messages []}
+              topic-2 {:id "topic-2" :name "Second" :messages []}]
           
-          ;; Write topic files
-          (doseq [topic topics]
-            (write-topic-file dir topic))
+          ;; Write valid topic files
+          (write-topic-file dir topic-1)
+          (write-topic-file dir topic-2)
           
-          ;; Write a non-topic file to ensure it's ignored
-          (write-file dir "notes.txt" "ignored file")
+          ;; Write non-topic file (should be ignored)
+          (write-file dir "readme.txt" "ignored")
           
-          (is (= expected-map (topic/load-all dir topic-file-pattern)))))))
+          ;; Verify we get both topics back as a map
+          (is (= {"topic-1" topic-1
+                  "topic-2" topic-2}
+                 (topic/load-all dir topic-file-pattern)))))))
 
-  (testing "returns empty map when directory doesn't exist"
-    (is (= {} (topic/load-all "/nonexistent/dir" topic-file-pattern))))
+  (testing "returns empty map for non-existent directory"
+    (is (= {} (topic/load-all "/does/not/exist" topic-file-pattern))))
 
-  (testing "continues loading when encountering invalid EDN"
-    (with-temp-dir "load-all-invalid"
+  (testing "skips corrupt files and loads valid ones"
+    (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [valid-topic (make-test-topic "topic-1754952422979-xyz789"
-                                          "Valid Topic"
-                                          [])]
-          (write-topic-file dir valid-topic)
-          (write-file dir "topic-666-invalid123.edn" "{:unclosed")
+        (let [good-topic {:id "good" :name "Valid" :messages []}]
+          ;; Write one valid and one corrupt file
+          (write-topic-file dir good-topic)
+          (write-file dir "topic-bad.edn" "{:broken")
           
-          ;; Suppress console.error during test
+          ;; Should load only the valid topic, ignoring corrupt one
           (with-redefs [js/console.error (constantly nil)]
-            (is (= {(:id valid-topic) valid-topic}
+            (is (= {"good" good-topic}
                    (topic/load-all dir topic-file-pattern)))))))))
