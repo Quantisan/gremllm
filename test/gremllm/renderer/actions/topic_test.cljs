@@ -37,15 +37,6 @@
     (is (nil? (topic/set-topic {} nil))
         "should return nil")))
 
-(deftest restore-or-create-topic-test
-  (is (= [[:topic.actions/set {:id "t1"}]]
-         (topic/restore-or-create-topic {} {:id "t1"}))
-      "should dispatch :set when a topic is provided")
-
-  (is (= [[:topic.actions/start-new]]
-         (topic/restore-or-create-topic {} nil))
-      "should dispatch :start-new when topic is nil"))
-
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic
                             :messages [{:id "m1" :type "user"}

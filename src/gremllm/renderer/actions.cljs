@@ -67,7 +67,6 @@
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/set topic/set-topic)
-(nxr/register-action! :topic.actions/restore-or-create-topic topic/restore-or-create-topic)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)

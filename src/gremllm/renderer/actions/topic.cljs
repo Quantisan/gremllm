@@ -30,11 +30,6 @@
       [[:effects/save (conj topic-state/topics-path topic-id) normalized-topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
-(defn restore-or-create-topic [_state loaded-topic]
-  (if loaded-topic
-    [[:topic.actions/set loaded-topic]]
-    [[:topic.actions/start-new]]))
-
 (defn start-new-topic [_state]
   (let [new-topic (create-topic)]
     [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
