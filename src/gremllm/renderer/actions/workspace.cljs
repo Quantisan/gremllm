@@ -15,11 +15,8 @@
                                        (assoc m k (topic/normalize-topic v)))
                                      {}
                                      topics)
-        ;; Hardcoded for now - will be replaced with actual last-active logic
-        last-active-id "topic-xxx"
-        active-topic-id (if (get normalized-topics last-active-id)
-                         last-active-id
-                         (first (keys normalized-topics)))]
+        active-topic-id (first (keys normalized-topics))]
+
     (if (seq normalized-topics)
       [[:effects/save topic-state/topics-path normalized-topics]
        [:effects/save topic-state/active-topic-id-path active-topic-id]]
