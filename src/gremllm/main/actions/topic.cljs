@@ -12,16 +12,15 @@
 
 (defn topic->save-plan
   [topic-clj {:keys [topics-dir]}]
-  (let [topic-id (:id topic-clj)
-        _ (when-not topic-id
-            (throw (js/Error. "Topic must have an :id field")))
-        filename (generate-filename topic-id)
-        filepath (.join path topics-dir filename)]
-    {:dir topics-dir
-     :filename filename
-     :filepath filepath
-     :content (pr-str topic-clj)
-     :topic topic-clj}))
+  (if-let [id (:id topic-clj)]
+    (let [filename (generate-filename id)
+          filepath (path/join topics-dir filename)]
+      {:dir topics-dir
+       :filename filename
+       :filepath filepath
+       :content (pr-str topic-clj)
+       :topic topic-clj})
+    (throw (js/Error. "Topic must have an :id field"))))
 
 (defn validate-save-plan
   [{:keys [filename] :as plan}]
