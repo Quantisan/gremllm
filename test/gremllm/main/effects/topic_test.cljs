@@ -5,6 +5,19 @@
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
+(defn- make-test-topic [id name messages]
+  {:id id
+   :name name
+   :messages messages})
+
+(defn- write-topic-file [dir topic]
+  (let [filename (str (:id topic) ".edn")
+        filepath (io/path-join dir filename)]
+    (io/write-file filepath (pr-str topic))))
+
+(defn- write-file [dir filename content]
+  (io/write-file (io/path-join dir filename) content))
+
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data"
     (with-temp-dir "topic-save-load"
@@ -41,41 +54,36 @@
   (testing "load-all returns map of all topics keyed by ID"
     (with-temp-dir "load-all"
       (fn [dir]
-        ;; TODO: we should create a topic schema and use that throughout, and to generate these data
-        ;; here
-        (let [topic1 {:id "topic-1754952422977-ixubncif66"
-                      :name "Testing 2"
-                      :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
-              topic2 {:id "topic-1754952422978-abcdef12345"
-                      :name "Another Topic"
-                      :messages [{:id 1754952440825 :type "assistant" :text "Hi"}]}
-              ;; Save with matching filename format - use full topic ID
-              _      (io/write-file (io/path-join dir "topic-1754952422977-ixubncif66.edn") (pr-str topic1))
-              _      (io/write-file (io/path-join dir "topic-1754952422978-abcdef12345.edn") (pr-str topic2))
-              _      (io/write-file (io/path-join dir "notes.txt") "ignored file")
-              result (topic/load-all dir topic-file-pattern)]
-          (is (= {"topic-1754952422977-ixubncif66" topic1
-                  "topic-1754952422978-abcdef12345" topic2}
-                 result))))))
+        (let [topics [(make-test-topic "topic-1754952422977-ixubncif66"
+                                       "Testing 2"
+                                       [{:id 1754952440824 :type "user" :text "Hello"}])
+                      (make-test-topic "topic-1754952422978-abcdef12345"
+                                       "Another Topic"
+                                       [{:id 1754952440825 :type "assistant" :text "Hi"}])]
+              expected-map (into {} (map (juxt :id identity)) topics)]
+          
+          ;; Write topic files
+          (doseq [topic topics]
+            (write-topic-file dir topic))
+          
+          ;; Write a non-topic file to ensure it's ignored
+          (write-file dir "notes.txt" "ignored file")
+          
+          (is (= expected-map (topic/load-all dir topic-file-pattern)))))))
 
   (testing "returns empty map when directory doesn't exist"
-    (let [result (topic/load-all "/nonexistent/dir" topic-file-pattern)]
-      (is (= {} result))))
+    (is (= {} (topic/load-all "/nonexistent/dir" topic-file-pattern))))
 
   (testing "continues loading when encountering invalid EDN"
     (with-temp-dir "load-all-invalid"
       (fn [dir]
-        (let [valid-topic {:id "topic-1754952422979-xyz789"
-                           :name "Valid Topic"
-                           :messages []}
-              _              (io/write-file (io/path-join dir "topic-1754952422979-xyz789.edn") (pr-str valid-topic))
-              _              (io/write-file (io/path-join dir "topic-666-invalid123.edn") "{:unclosed")
-
-              ;; Temporarily replace console.error with no-op
-              original-error js/console.error
-              _              (set! js/console.error (fn [& _args] nil))
-
-              result         (topic/load-all dir topic-file-pattern)]
-          ;; Restore original console.error
-          (set! js/console.error original-error)
-          (is (= {"topic-1754952422979-xyz789" valid-topic} result)))))))
+        (let [valid-topic (make-test-topic "topic-1754952422979-xyz789"
+                                          "Valid Topic"
+                                          [])]
+          (write-topic-file dir valid-topic)
+          (write-file dir "topic-666-invalid123.edn" "{:unclosed")
+          
+          ;; Suppress console.error during test
+          (with-redefs [js/console.error (constantly nil)]
+            (is (= {(:id valid-topic) valid-topic}
+                   (topic/load-all dir topic-file-pattern)))))))))
