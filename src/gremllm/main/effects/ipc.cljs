@@ -17,9 +17,10 @@
    Used for menu commands and other main→renderer communication."
   [_ _ channel data]
   (when-let [BrowserWindow (get-browser-window)]
-    (some-> (.getFocusedWindow BrowserWindow)
-            .-webContents
-            (.send channel data))))
+    (when-let [^js window (.getFocusedWindow BrowserWindow)]
+      (some-> window
+              .-webContents
+              (.send channel data)))))
 
 (defn reply
   "Reply to an IPC request with success"
