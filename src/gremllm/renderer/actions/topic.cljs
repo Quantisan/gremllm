@@ -8,18 +8,8 @@
 (defn normalize-topic [topic]
   (m/decode schema/Topic topic mt/string-transformer))
 
-(defn generate-topic-id []
-;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
-;; as argument would complicate the call stack for a benign, testable effect.
-  (let [timestamp (js/Date.now)
-        random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
-    (str "topic-" timestamp "-" random-suffix)))
-
-;; TODO: create a Malli schema for Message
 (defn create-topic []
-  {:id       (generate-topic-id)
-   :name     "New Topic"
-   :messages []})
+  (m/decode schema/Topic {} mt/default-value-transformer))
 
 (defn set-topic [_state topic-js]
   (when topic-js
