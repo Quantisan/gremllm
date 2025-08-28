@@ -32,8 +32,7 @@
 
     ;; TODO: remove. Menu should open a workspace, not topic
     (.onMenuCommand js/window.electronAPI "topic/open"
-                    (fn []
-                      (nxr/dispatch store {} [[:topic.effects/load-latest-topic]])))
+                    (fn []))
 
     (.onMenuCommand js/window.electronAPI "menu:settings"
                     (fn []

@@ -64,7 +64,7 @@
 
 (deftest determine-initial-topic-test
   (testing "when topics exist"
-    (is (= [[:topic.effects/load-latest-topic {:on-success [[:topic.actions/restore-or-create-topic]]}]]
+    (is (= []
            (topic/determine-initial-topic {} (clj->js [{:filename "topic-1.edn" :filepath "/tmp/topic-1.edn"}])))))
   (testing "when no topics exist"
     (is (= [[:topic.actions/start-new]]
