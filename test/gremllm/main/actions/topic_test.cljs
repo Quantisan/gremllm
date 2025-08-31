@@ -20,7 +20,9 @@
     (let [topic {:id "topic-123"
                  :name "Test Topic"
                  :messages []
-                 :unsaved? true}  ; transient field should be stripped
+                 :unsaved? true   ; transient field should be stripped
+                 :random-945 945} ; extra fields should be stripped too
+
           plan (topic/topic->save-plan topic "/test/dir")]
       (is (= {:id "topic-123"
               :name "Test Topic"
