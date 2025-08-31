@@ -1,6 +1,17 @@
 (ns gremllm.main.actions.topic-test
   (:require [cljs.test :refer [deftest is testing]]
+            [malli.core :as m]
             [gremllm.main.actions.topic :as topic]))
+
+(deftest test-strip-optional-transformer
+  (testing "removes optional fields from map"
+    (let [schema [:map
+                  [:required :string]
+                  [:optional {:optional true} :string]]
+          value {:required "keep"
+                 :optional "remove"}
+          result (m/encode schema value topic/strip-optional-transformer)]
+      (is (= {:required "keep"} result)))))
 
 (deftest test-topic->save-plan
   (testing "creates correct save plan structure"
