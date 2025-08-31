@@ -1,5 +1,6 @@
 (ns gremllm.main.actions.topic-test
   (:require [cljs.test :refer [deftest is testing]]
+            [cljs.reader]
             [gremllm.main.actions.topic :as topic]))
 
 (deftest test-topic->save-plan
