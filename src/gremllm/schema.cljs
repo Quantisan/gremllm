@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [malli.core :as m]))
+  (:require [malli.core :as m]
+            [malli.transform :as mt]))
 
 (defn generate-topic-id []
   ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
@@ -21,4 +22,4 @@
    [:messages {:default []} [:vector Message]]])
 
 ;; Coercion helpers for boundaries
-(def validate-topic (partial m/coerce Topic))
+(def validate-topic (m/coercer Topic mt/json-transformer))
