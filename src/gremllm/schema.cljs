@@ -28,7 +28,7 @@
   (mu/merge
     PersistedTopic
     [:map
-     [:unsaved? {:optional true :default false} :boolean]]))
+     [:unsaved? {:optional true} :boolean]]))
 
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
