@@ -8,11 +8,9 @@
 
 (defn topic->save-plan
   [topic-clj topics-dir]
-  (let [persisted-topic (schema/encode-persisted-topic topic-clj)
-        filename (generate-filename (:id persisted-topic))]
+  (let [persisted-topic (schema/encode-persisted-topic topic-clj)]
     {:dir      topics-dir
-     :filename filename
-     :filepath (path/join topics-dir filename)
-     :content  (pr-str persisted-topic)
-     :topic    persisted-topic}))
+     :filepath (->> (generate-filename (:id persisted-topic))
+                    (path/join topics-dir))
+     :content  (pr-str persisted-topic)}))
 
