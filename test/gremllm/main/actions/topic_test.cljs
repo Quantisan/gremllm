@@ -10,10 +10,8 @@
           topics-dir "/test/dir"
           plan (topic/topic->save-plan topic topics-dir)]
       (is (= {:dir      topics-dir
-              :filename "topic-123.edn"
               :filepath "/test/dir/topic-123.edn"
-              :content  "{:id \"topic-123\", :name \"Test Topic\", :messages []}"
-              :topic    topic}
+              :content  "{:id \"topic-123\", :name \"Test Topic\", :messages []}"}
              plan))))
 
   (testing "strips transient fields before saving"
