@@ -1,6 +1,7 @@
 (ns gremllm.schema
   (:require [malli.core :as m]
-            [malli.transform :as mt]))
+            [malli.transform :as mt]
+            [malli.util :as mu]))
 
 (defn generate-topic-id []
   ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
@@ -22,12 +23,17 @@
    [:name {:default "New Topic"} :string]
    [:messages {:default []} [:vector Message]]])
 
+;; Create registry with :merge support
+(def registry (merge (m/default-schemas) (mu/schemas)))
+
 (def Topic
   "Schema for topics in memory (includes transient fields)"
-  [:merge
-   PersistedTopic
-   [:map
-    [:unsaved? {:optional true :default false} :boolean]]])
+  (m/schema
+    [:merge
+     PersistedTopic
+     [:map
+      [:unsaved? {:optional true :default false} :boolean]]]
+    {:registry registry}))
 
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
