@@ -1,6 +1,6 @@
 (ns gremllm.main.actions.topic-test
   (:require [cljs.test :refer [deftest is testing]]
-            [cljs.reader]
+            [clojure.edn :as edn]
             [gremllm.main.actions.topic :as topic]))
 
 (deftest test-topic->save-plan
@@ -26,5 +26,5 @@
       (is (= {:id "topic-123"
               :name "Test Topic"
               :messages []}
-             (cljs.reader/read-string (:content plan)))))))
+             (edn/read-string (:content plan)))))))
 
