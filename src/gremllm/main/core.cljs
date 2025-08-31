@@ -6,6 +6,7 @@
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
             [gremllm.main.io :as io]
+            [gremllm.schema :as schema]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
@@ -46,6 +47,7 @@
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
+                    (schema/validate-topic)
                     (topic-actions/topic->save-plan topics-dir)
                     (topic-effects/save))))
 
