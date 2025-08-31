@@ -22,4 +22,4 @@
    [:messages {:default []} [:vector Message]]])
 
 ;; Coercion helpers for boundaries
-(def validate-topic (m/coercer Topic mt/json-transformer))
+(def decode-topic (m/coercer Topic mt/json-transformer))
