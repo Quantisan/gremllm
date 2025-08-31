@@ -15,12 +15,20 @@
    [:type [:enum :user :assistant]]
    [:text :string]])
 
-(def Topic
+(def PersistedTopic
+  "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:messages {:default []} [:vector Message]]
-   [:unsaved? {:optional true :default false} :boolean]])
+   [:messages {:default []} [:vector Message]]])
+
+(def Topic
+  "Schema for topics in memory (includes transient fields)"
+  [:merge
+   PersistedTopic
+   [:map
+    [:unsaved? {:optional true :default false} :boolean]]])
 
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
+(def encode-persisted-topic (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
