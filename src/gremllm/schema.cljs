@@ -19,7 +19,8 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:messages {:default []} [:vector Message]]])
+   [:messages {:default []} [:vector Message]]
+   [:unsaved? {:optional true :default false} :boolean]])
 
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
