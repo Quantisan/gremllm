@@ -26,5 +26,5 @@
       (is (= {:id "topic-123"
               :name "Test Topic"
               :messages []}
-             (:topic plan))))))
+             (cljs.reader/read-string (:content plan)))))))
 
