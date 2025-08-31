@@ -23,17 +23,12 @@
    [:name {:default "New Topic"} :string]
    [:messages {:default []} [:vector Message]]])
 
-;; Create registry with :merge support
-(def registry (merge (m/default-schemas) (mu/schemas)))
-
 (def Topic
   "Schema for topics in memory (includes transient fields)"
-  (m/schema
-    [:merge
-     PersistedTopic
-     [:map
-      [:unsaved? {:optional true :default false} :boolean]]]
-    {:registry registry}))
+  (mu/merge
+    PersistedTopic
+    [:map
+     [:unsaved? {:optional true :default false} :boolean]]))
 
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
