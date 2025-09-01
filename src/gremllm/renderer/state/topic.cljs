@@ -19,3 +19,6 @@
 (defn get-topics [state]
   (-> (get-topics-map state) vals vec))
 
+(defn topic-field-path [topic-id field]
+  (-> topics-path (conj topic-id field)))
+
