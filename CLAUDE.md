@@ -18,10 +18,11 @@ Gremllm is a cognitive workspace desktop app built with Electron and ClojureScri
 | Domain | Main Process | Renderer Process |
 |--------|--------------|------------------|
 | Core | `main.core` - entry, window mgmt | `renderer.core` - entry, bootstrap |
-| Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings |
-| State | - | `renderer.state.*` - form, messages, UI, system |
-| UI | - | `renderer.ui`, `renderer.ui.settings` |
+| Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings, topic, workspace |
+| State | - | `renderer.state.*` - form, messages, UI, system, topic |
+| UI | - | `renderer.ui.*` - chat, settings, topics |
 | Effects | `main.effects.*` - LLM, file I/O | (handled in actions) |
+| Schema | `schema` - data models, validation | (shared) |
 
 ## Development
 
@@ -146,15 +147,24 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **IPC Channels:**
 - `chat/send-message` - LLM API calls
-- `topic/save` - Topic persistence
+- `topic/save`, `topic/list`, `topic/load-latest` - Topic operations
+- `workspace/load-folder` - Load all topics
 - `secrets/*` - Secure storage ops
 - `system/get-info` - System capabilities
-- `menu:settings` - Settings modal
+- `menu:command` - Menu commands
 
 **Data Storage:**
-- Topics: EDN files in userData directory
+```
+<userData>/
+└── User/
+    ├── secrets.edn
+    └── workspaces/
+        └── <workspace-id>/
+            └── topics/
+                └── topic-<topic-id>.edn
+```
+- Topics: EDN files validated by schema
 - Secrets: Encrypted via Electron's safeStorage
-- API Keys: Environment var or secure storage
 
 ## Entry Points
 
@@ -162,6 +172,7 @@ Following FCIS principles, all state changes flow through Nexus:
 - `src/gremllm/renderer/core.cljs` - Renderer start
 - `src/gremllm/renderer/ui.cljs` - Main UI components
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
+- `src/gremllm/schema.cljs` - Data models and validation
 
 ## Code Style & Conventions
 
