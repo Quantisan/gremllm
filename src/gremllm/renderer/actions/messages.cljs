@@ -5,6 +5,7 @@
 
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
+   [:topic.actions/mark-active-unsaved]
    [:effects/scroll-to-bottom "chat-messages-container"]])
 
 (defn append-to-state [state message]

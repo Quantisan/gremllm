@@ -32,6 +32,11 @@
   (js/console.error "save-topic (topic-id: " topic-id ") failed:" error)
   [])
 
+(defn mark-active-unsaved [state]
+  (if-let [active-id (topic-state/get-active-topic-id state)]
+    [[:effects/save (-> topic-state/topics-path (conj active-id :unsaved?)) true]]
+    []))
+
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path (keyword topic-id)]])
 
