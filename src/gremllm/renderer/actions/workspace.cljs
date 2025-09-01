@@ -7,19 +7,25 @@
   [[:workspace.effects/load-folder {:on-success [[:workspace.actions/populate-topics]]
                                     :on-error   [[:workspace.actions/load-error]]}]])
 
+(defn import-workspace-topics
+  "Transforms a map of topics into normalized form.
+   Returns {:topics normalized-map :active-id first-topic-id}"
+  [topics-map]
+  (let [normalized (reduce-kv (fn [m k v]
+                                (assoc m k (topic/normalize-topic v)))
+                              {}
+                              (or topics-map {}))]
+    {:topics    normalized
+     :active-id (first (keys normalized))}))
+
 ;; TODO: review to refactor
 (defn populate-topics [_state workspace-topics-js]
   (let [workspace-topics (js->clj workspace-topics-js :keywordize-keys true)
-        topics (or workspace-topics {})
-        normalized-topics (reduce-kv (fn [m k v]
-                                       (assoc m k (topic/normalize-topic v)))
-                                     {}
-                                     topics)
-        active-topic-id (first (keys normalized-topics))]
+        {:keys [topics active-id]} (import-workspace-topics workspace-topics)]
 
-    (if (seq normalized-topics)
-      [[:effects/save topic-state/topics-path normalized-topics]
-       [:effects/save topic-state/active-topic-id-path active-topic-id]]
+    (if (seq topics)
+      [[:effects/save topic-state/topics-path topics]
+       [:effects/save topic-state/active-topic-id-path active-id]]
 
       [[:topic.actions/start-new]])))
 

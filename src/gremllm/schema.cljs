@@ -30,6 +30,9 @@
     [:map
      [:unsaved? {:optional true} :boolean]]))
 
+(defn create-topic []
+  (m/decode Topic {} mt/default-value-transformer))
+
 ;; Coercion helpers for boundaries
 (def decode-topic (m/coercer Topic mt/json-transformer))
 (def encode-persisted-topic (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
