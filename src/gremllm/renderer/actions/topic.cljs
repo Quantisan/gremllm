@@ -24,9 +24,12 @@
     [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
      [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
 
+(defn mark-saved [_state topic-id]
+  [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
+
 (defn save-topic-success [_state topic-id filepath]
   (js/console.log "Topic" topic-id "saved to:" filepath)
-  [])
+  [[:topic.actions/mark-saved topic-id]])
 
 (defn save-topic-error [_state topic-id error]
   (js/console.error "save-topic (topic-id: " topic-id ") failed:" error)
