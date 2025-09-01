@@ -28,6 +28,7 @@
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
 
 (defn save-topic-success [_state topic-id filepath]
+  ;; TODO: UI notification
   (js/console.log "Topic" topic-id "saved to:" filepath)
   [[:topic.actions/mark-saved topic-id]])
 
