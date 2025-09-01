@@ -5,12 +5,13 @@
 
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
+   [:topic.actions/mark-active-unsaved]
    [:effects/scroll-to-bottom "chat-messages-container"]])
 
 (defn append-to-state [state message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
     (let [current-messages (topic-state/get-messages state)
-          path-to-messages (-> topic-state/topics-path (conj active-id :messages))]
+          path-to-messages (topic-state/topic-field-path active-id :messages)]
       [[:effects/save path-to-messages (conj (or current-messages []) message)]])
     (throw (js/Error. "Cannot append message: no active topic."))))
 
