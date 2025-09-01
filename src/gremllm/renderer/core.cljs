@@ -22,7 +22,7 @@
 ;;  :role    string?   ; "user" or "assistant"
 ;;  :content string?}  ; The actual message text
 
-(defn main []
+(defn ^:export main []
   ;; Set up the atom
   (let [store (atom nil)
         el    (js/document.getElementById "app")]
