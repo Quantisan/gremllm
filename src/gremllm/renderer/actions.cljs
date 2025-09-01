@@ -70,6 +70,7 @@
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
+(nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 
