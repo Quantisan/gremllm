@@ -18,7 +18,7 @@
     (is (= topic-state/active-topic-id-path active-path) "should save to active topic path")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
-(def ^:private expected-new-topic (topic/create-topic))
+(def ^:private expected-new-topic (schema/create-topic))
 
 (deftest set-topic-test
   (testing "when a valid topic is provided"

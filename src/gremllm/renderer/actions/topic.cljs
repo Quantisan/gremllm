@@ -8,9 +8,6 @@
 (defn normalize-topic [topic]
   (m/decode schema/Topic topic mt/string-transformer))
 
-(defn create-topic []
-  (m/decode schema/Topic {} mt/default-value-transformer))
-
 (defn set-topic [_state topic-js]
   (when topic-js
     (let [clj-topic (js->clj topic-js :keywordize-keys true)
@@ -20,7 +17,7 @@
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
 (defn start-new-topic [_state]
-  (let [new-topic (create-topic)]
+  (let [new-topic (schema/create-topic)]
     [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
      [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
 
