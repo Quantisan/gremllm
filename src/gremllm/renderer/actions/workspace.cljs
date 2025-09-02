@@ -13,6 +13,7 @@
   [workspace-topics-clj]
   (let [topics (schema/workspace-from-ipc workspace-topics-clj)]
     {:topics    (or topics {})
+     ;; TODO: save last active topic id so that user can continue where they left off
      :active-id (first (keys topics))}))
 
 (defn populate-topics [_state workspace-topics-js]
