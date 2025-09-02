@@ -55,7 +55,6 @@
         main-window (BrowserWindow. (clj->js window-config))
         html-path "resources/public/index.html"]
     (.loadFile main-window html-path)
-    (setup-close-handlers main-window)
     main-window))
 
 (defn setup-api-handlers [store workspace-dir secrets-filepath]
@@ -117,13 +116,15 @@
   "Runs once when Electron finishes initializing. Sets up system resources and creates initial window."
   [store]
   (setup-system-resources store)
-  (create-window))
+  (-> (create-window)
+      (setup-close-handlers)))
 
 (defn- handle-app-activate
   "macOS: Fired when app activated (dock clicked). Creates window if none exist."
   [_store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
-    (create-window)))
+    (-> (create-window)
+        (setup-close-handlers))))
 
 (defn- handle-window-all-closed
   "Quit on Windows/Linux when last window closes. macOS apps stay running."
