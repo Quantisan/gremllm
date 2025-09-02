@@ -37,6 +37,9 @@
   "Schema for workspace topics in app state"
   [:map-of :string Topic])
 
+(defn valid-workspace-topics? [topics-map]
+  (m/validate WorkspaceTopics topics-map))
+
 ;; Coercion helpers for boundaries
 (def topic-from-ipc
   "Transforms topic data received via IPC into internal Topic schema.
