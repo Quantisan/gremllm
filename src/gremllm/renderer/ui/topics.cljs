@@ -23,5 +23,5 @@
              :on           {:click [[:effects/prevent-default]
                                     [:topic.actions/switch-to id]]}}
          (str (if (= id active-topic-id) "✓ " "• ")
-              (or name "Untitled")
+              name
               (when unsaved? " *"))]])]]])
