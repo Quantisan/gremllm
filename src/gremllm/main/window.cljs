@@ -1,6 +1,12 @@
 (ns gremllm.main.window
   (:require ["electron/main" :refer [screen]]))
 
+(def window-dimension-specs
+  {:width-scale  0.60
+   :max-width    1400
+   :height-scale 0.80
+   :max-height   1000})
+
 (defn- calculate-dimension [value scale max-value]
   (-> value
       (* scale)

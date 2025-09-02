@@ -10,12 +10,6 @@
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
-(def ^:private window-dimension-specs
-  {:width-scale  0.60
-   :max-width    1400
-   :height-scale 0.80
-   :max-height   1000})
-
 (defn system-info [secrets encryption-available?]
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
@@ -49,7 +43,7 @@
                (.quit app)))))))
 
 (defn create-window []
-  (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
+  (let [dimensions (window/calculate-window-dimensions window/window-dimension-specs)
         preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
