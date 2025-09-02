@@ -57,7 +57,14 @@
     (.loadFile main-window html-path)
     main-window))
 
-(defn setup-api-handlers [store workspace-dir secrets-filepath]
+(defn register-domain-handlers
+  "Register IPC handlers for core domain operations:
+   - Chat: LLM message exchange
+   - Topics: Save/load/list conversation threads
+   - Workspace: Bulk topic operations
+   - Secrets: Secure configuration storage
+   - System: Runtime capability detection"
+  [store workspace-dir secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -104,17 +111,14 @@
                    (secrets/check-availability))
                  (clj->js)))))
 
-
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")
         workspace-dir   (io/workspace-dir-path user-data-dir)
         secrets-filepath (io/secrets-file-path user-data-dir)]
-    (setup-api-handlers store workspace-dir secrets-filepath)
+    (register-domain-handlers store workspace-dir secrets-filepath)
     (menu/create-menu store)))
 
-(defn- handle-app-ready
-  "Runs once when Electron finishes initializing. Sets up system resources and creates initial window."
-  [store]
+(defn- initialize-app [store]
   (setup-system-resources store)
   (-> (create-window)
       (setup-close-handlers)))
@@ -134,7 +138,7 @@
 
 (defn main []
   (let [store (atom {})]
-    (.on app "ready" #(handle-app-ready store))
+    (.on app "ready" #(initialize-app store))
     (.on app "activate" #(handle-app-activate store))
     (.on app "window-all-closed" handle-window-all-closed)))
 
