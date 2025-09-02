@@ -24,7 +24,7 @@
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
-  "Schema for topics in memory (includes transient fields)"
+  "Schema for topics in app state (includes transient fields)"
   (mu/merge
     PersistedTopic
     [:map
@@ -34,7 +34,7 @@
   (m/decode Topic {} mt/default-value-transformer))
 
 (def WorkspaceTopics
-  "Schema for workspace topics as received from IPC"
+  "Schema for workspace topics in app state"
   [:map-of :string Topic])
 
 ;; Coercion helpers for boundaries
