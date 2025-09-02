@@ -34,5 +34,6 @@
   (m/decode Topic {} mt/default-value-transformer))
 
 ;; Coercion helpers for boundaries
+(def normalize-topic (m/decoder Topic mt/string-transformer))
 (def decode-topic (m/coercer Topic mt/json-transformer))
 (def encode-persisted-topic (m/encoder PersistedTopic mt/strip-extra-keys-transformer))

@@ -1,6 +1,6 @@
 (ns gremllm.renderer.actions.workspace
   (:require [nexus.registry :as nxr]
-            [gremllm.renderer.actions.topic :as topic]
+            [gremllm.schema :as schema]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn bootstrap [_state]
@@ -12,7 +12,7 @@
    Returns {:topics normalized-map :active-id first-topic-id}"
   [topics-map]
   (let [normalized (reduce-kv (fn [m k v]
-                                (assoc m k (topic/normalize-topic v)))
+                                (assoc m k (schema/normalize-topic v)))
                               {}
                               (or topics-map {}))]
     {:topics    normalized

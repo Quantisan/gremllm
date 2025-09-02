@@ -25,7 +25,7 @@
     (let [raw-topic  (assoc expected-new-topic
                             :messages [{:id "m1" :type "user" :content "Hi"}])
           test-topic-js (clj->js raw-topic)
-          normalized-topic (topic/normalize-topic raw-topic)]
+          normalized-topic (schema/normalize-topic raw-topic)]
       (is (= [[:effects/save (conj topic-state/topics-path (:id raw-topic)) normalized-topic]
               [:effects/save topic-state/active-topic-id-path (:id raw-topic)]]
              (topic/set-topic {} test-topic-js))
@@ -42,7 +42,7 @@
         expected     (assoc expected-new-topic
                             :messages [{:id "m1" :type :user}
                                        {:id "m2" :type :assistant}])]
-    (is (= expected (topic/normalize-topic denormalized))
+    (is (= expected (schema/normalize-topic denormalized))
         "should convert message types from strings to keywords")))
 
 (deftest switch-topic-test
