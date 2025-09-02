@@ -110,19 +110,18 @@
                  (clj->js)))))
 
 
-(defn- setup-system-resources []
-  (let [store           (atom {})
-        user-data-dir   (.getPath app "userData")
+(defn- setup-system-resources [store]
+  (let [user-data-dir   (.getPath app "userData")
         workspace-dir   (io/workspace-dir-path user-data-dir)
         secrets-filepath (io/secrets-file-path user-data-dir)]
     (setup-api-handlers store workspace-dir secrets-filepath)
-    (menu/create-menu store)
-    store))
+    (menu/create-menu store)))
 
 (defn- handle-app-ready [store]
+  (setup-system-resources store)
   (create-window))
 
-(defn- handle-app-activate [store]
+(defn- handle-app-activate [_store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
     (create-window)))
 
@@ -131,8 +130,7 @@
     (.quit app)))
 
 (defn main []
-  (let [store (setup-system-resources)]
-    ;; Register all app lifecycle handlers together
+  (let [store (atom {})]
     (.on app "ready" #(handle-app-ready store))
     (.on app "activate" #(handle-app-activate store))
     (.on app "window-all-closed" handle-window-all-closed)))
