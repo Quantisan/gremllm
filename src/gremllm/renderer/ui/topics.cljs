@@ -16,11 +16,12 @@
     [:p [:small workspace-description]]]
    [:nav
     [:ul
-     (for [{:keys [id name]} topics]
+     (for [{:keys [id name unsaved?]} topics]
        [:li
         [:a {:href         "#"
              :aria-current (when (= id active-topic-id) "page")
              :on           {:click [[:effects/prevent-default]
                                     [:topic.actions/switch-to id]]}}
          (str (if (= id active-topic-id) "✓ " "• ")
-              (or name "Untitled"))]])]]])
+              name
+              (when unsaved? " *"))]])]]])
