@@ -32,12 +32,12 @@
     (.loadFile main-window html-path)
 
     ;; Intercept app quit
-    (.on app "before-quit" 
+    (.on app "before-quit"
          (fn [event]
            (when-not @closing?
              (.preventDefault event)
              (reset! quitting? true)
-             (js/console.log "Quit intercepted - will quit in 2 seconds...")
+             (js/console.log "Quit intercepted!")
              ;; Trigger window close, which will handle the delay
              (.close main-window))))
 
@@ -50,7 +50,8 @@
              (reset! closing? true)
              (js/console.log "Close intercepted - will close in 2 seconds...")
              ;; Send notification to renderer (for future use)
-             (.send (.-webContents main-window) "check-unsaved-before-close")
+             ;; (.send (.-webContents main-window) "check-unsaved-before-close")  ;; TODO:
+
              ;; Auto-close after 2 seconds
              (js/setTimeout
                (fn []
