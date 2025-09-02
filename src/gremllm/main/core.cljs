@@ -110,21 +110,30 @@
                  (clj->js)))))
 
 
-(defn main []
-  (let [store (atom {})]
-    (-> (.whenReady app)
-        (.then (fn []
-                 (let [user-data-dir     (.getPath app "userData")
-                       workspace-dir     (io/workspace-dir-path user-data-dir)
-                       secrets-filepath  (io/secrets-file-path user-data-dir)]
-                   (setup-api-handlers store workspace-dir secrets-filepath))
-                 (create-window)
-                 (menu/create-menu store)
-                 (.on app "activate"
-                      #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                         (create-window))))))
+(defn- setup-system-resources []
+  (let [store           (atom {})
+        user-data-dir   (.getPath app "userData")
+        workspace-dir   (io/workspace-dir-path user-data-dir)
+        secrets-filepath (io/secrets-file-path user-data-dir)]
+    (setup-api-handlers store workspace-dir secrets-filepath)
+    (menu/create-menu store)
+    store))
 
-    (.on app "window-all-closed"
-        #(when-not (= (.-platform js/process) "darwin")
-            (.quit app)))))
+(defn- handle-app-ready [store]
+  (create-window))
+
+(defn- handle-app-activate [store]
+  (when (zero? (.-length (.getAllWindows BrowserWindow)))
+    (create-window)))
+
+(defn- handle-window-all-closed []
+  (when-not (= (.-platform js/process) "darwin")
+    (.quit app)))
+
+(defn main []
+  (let [store (setup-system-resources)]
+    ;; Register all app lifecycle handlers together
+    (.on app "ready" #(handle-app-ready store))
+    (.on app "activate" #(handle-app-activate store))
+    (.on app "window-all-closed" handle-window-all-closed)))
 
