@@ -21,7 +21,7 @@
       (is (= {} topics))
       (is (nil? active-id))))
   
-  (testing "handles nil input"
+  (testing "handles nil input - workspace-from-ipc handles nil gracefully"
     (let [{:keys [topics active-id]} (workspace/import-workspace-topics nil)]
       (is (= {} topics))
       (is (nil? active-id)))))

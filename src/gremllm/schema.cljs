@@ -33,11 +33,20 @@
 (defn create-topic []
   (m/decode Topic {} mt/default-value-transformer))
 
+(def WorkspaceTopics
+  "Schema for workspace topics as received from IPC"
+  [:map-of :string Topic])
+
 ;; Coercion helpers for boundaries
 (def topic-from-ipc
   "Transforms topic data received via IPC into internal Topic schema.
   Used when renderer receives topic data from main process."
   (m/decoder Topic mt/string-transformer))
+
+(def workspace-from-ipc
+  "Transforms workspace data received via IPC into internal schema.
+  Handles the topic transformation for entire workspace."
+  (m/decoder WorkspaceTopics mt/json-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.

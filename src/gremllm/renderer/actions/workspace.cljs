@@ -8,20 +8,16 @@
                                     :on-error   [[:workspace.actions/load-error]]}]])
 
 (defn import-workspace-topics
-  "Transforms a map of topics into normalized form.
+  "Transforms IPC workspace data into normalized form.
    Returns {:topics normalized-map :active-id first-topic-id}"
-  [topics-map]
-  (let [normalized (reduce-kv (fn [m k v]
-                                (assoc m k (schema/topic-from-ipc v)))
-                              {}
-                              (or topics-map {}))]
-    {:topics    normalized
-     :active-id (first (keys normalized))}))
+  [workspace-topics-clj]
+  (let [topics (schema/workspace-from-ipc workspace-topics-clj)]
+    {:topics    (or topics {})
+     :active-id (first (keys topics))}))
 
-;; TODO: review to refactor
 (defn populate-topics [_state workspace-topics-js]
-  (let [workspace-topics (js->clj workspace-topics-js :keywordize-keys true)
-        {:keys [topics active-id]} (import-workspace-topics workspace-topics)]
+  (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
+        {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
 
     (if (seq topics)
       [[:effects/save topic-state/topics-path topics]
