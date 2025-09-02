@@ -48,20 +48,17 @@
            (when-not @closing?
              (.preventDefault event)
              (reset! closing? true)
-             (js/console.log "Close intercepted - will close in 2 seconds...")
+             (js/console.log "Close intercepted - closing now...")
              ;; Send notification to renderer (for future use)
              ;; (.send (.-webContents main-window) "check-unsaved-before-close")  ;; TODO:
 
-             ;; Auto-close after 2 seconds
-             (js/setTimeout
-               (fn []
-                 (js/console.log "Now closing window...")
-                 (.destroy main-window)
-                 ;; If we were quitting, quit for real now
-                 (when @quitting?
-                   (js/console.log "Now quitting app...")
-                   (.quit app)))
-               2000))))
+             ;; Close immediately
+             (js/console.log "Now closing window...")
+             (.destroy main-window)
+             ;; If we were quitting, quit for real now
+             (when @quitting?
+               (js/console.log "Now quitting app...")
+               (.quit app)))))
 
     main-window))
 
