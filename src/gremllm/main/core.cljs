@@ -27,15 +27,20 @@
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
         html-path "resources/public/index.html"
-        closing? (atom false)]
+        closing? (atom false)
+        quitting? (atom false)]
     (.loadFile main-window html-path)
+
+    ;; Track when app is quitting
+    (.on app "before-quit" 
+         (fn [_event]
+           (reset! quitting? true)))
 
     ;; Intercept window close to check for unsaved changes
     (.on main-window "close"
          (fn [event]
-           ;; TODO: testing behaviour for now. implement...
-           ;; Only intercept if not already closing
-           (when-not @closing?
+           ;; Don't intercept if app is quitting or already closing
+           (when (and (not @quitting?) (not @closing?))
              (.preventDefault event)
              (reset! closing? true)
              (js/console.log "Close intercepted - will close in 2 seconds...")
