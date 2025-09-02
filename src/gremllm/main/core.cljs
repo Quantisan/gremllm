@@ -110,21 +110,34 @@
                  (clj->js)))))
 
 
+(defn- setup-system-resources [store]
+  (let [user-data-dir   (.getPath app "userData")
+        workspace-dir   (io/workspace-dir-path user-data-dir)
+        secrets-filepath (io/secrets-file-path user-data-dir)]
+    (setup-api-handlers store workspace-dir secrets-filepath)
+    (menu/create-menu store)))
+
+(defn- handle-app-ready 
+  "Runs once when Electron finishes initializing. Sets up system resources and creates initial window."
+  [store]
+  (setup-system-resources store)
+  (create-window))
+
+(defn- handle-app-activate 
+  "macOS: Fired when app activated (dock clicked). Creates window if none exist."
+  [_store]
+  (when (zero? (.-length (.getAllWindows BrowserWindow)))
+    (create-window)))
+
+(defn- handle-window-all-closed 
+  "Quit on Windows/Linux when last window closes. macOS apps stay running."
+  []
+  (when-not (= (.-platform js/process) "darwin")
+    (.quit app)))
+
 (defn main []
   (let [store (atom {})]
-    (-> (.whenReady app)
-        (.then (fn []
-                 (let [user-data-dir     (.getPath app "userData")
-                       workspace-dir     (io/workspace-dir-path user-data-dir)
-                       secrets-filepath  (io/secrets-file-path user-data-dir)]
-                   (setup-api-handlers store workspace-dir secrets-filepath))
-                 (create-window)
-                 (menu/create-menu store)
-                 (.on app "activate"
-                      #(when (zero? (.-length (.getAllWindows BrowserWindow)))
-                         (create-window))))))
-
-    (.on app "window-all-closed"
-        #(when-not (= (.-platform js/process) "darwin")
-            (.quit app)))))
+    (.on app "ready" #(handle-app-ready store))
+    (.on app "activate" #(handle-app-activate store))
+    (.on app "window-all-closed" handle-window-all-closed)))
 
