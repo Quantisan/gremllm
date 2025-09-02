@@ -31,16 +31,21 @@
         quitting? (atom false)]
     (.loadFile main-window html-path)
 
-    ;; Track when app is quitting
+    ;; Intercept app quit
     (.on app "before-quit" 
-         (fn [_event]
-           (reset! quitting? true)))
+         (fn [event]
+           (when-not @closing?
+             (.preventDefault event)
+             (reset! quitting? true)
+             (js/console.log "Quit intercepted - will quit in 2 seconds...")
+             ;; Trigger window close, which will handle the delay
+             (.close main-window))))
 
     ;; Intercept window close to check for unsaved changes
     (.on main-window "close"
          (fn [event]
-           ;; Don't intercept if app is quitting or already closing
-           (when (and (not @quitting?) (not @closing?))
+           ;; Only intercept if not already closing
+           (when-not @closing?
              (.preventDefault event)
              (reset! closing? true)
              (js/console.log "Close intercepted - will close in 2 seconds...")
@@ -50,7 +55,11 @@
              (js/setTimeout
                (fn []
                  (js/console.log "Now closing window...")
-                 (.destroy main-window))  ; Use destroy to bypass the close event
+                 (.destroy main-window)
+                 ;; If we were quitting, quit for real now
+                 (when @quitting?
+                   (js/console.log "Now quitting app...")
+                   (.quit app)))
                2000))))
 
     main-window))
