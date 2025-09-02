@@ -47,7 +47,7 @@
             (try
               (let [topic-content (-> (io/read-file filepath)
                                       edn/read-string
-                                      schema/decode-topic)]
+                                      schema/topic-from-disk)]
                 (assoc acc (:id topic-content) topic-content))
               (catch :default e
                 ;; Log error but continue loading other topics

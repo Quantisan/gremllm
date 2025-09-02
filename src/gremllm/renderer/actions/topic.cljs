@@ -1,17 +1,12 @@
 (ns gremllm.renderer.actions.topic
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.schema :as schema]
-            [malli.core :as m]
-            [malli.transform :as mt]))
-
-(defn normalize-topic [topic]
-  (m/decode schema/Topic topic mt/string-transformer))
+            [gremllm.schema :as schema]))
 
 (defn set-topic [_state topic-js]
   (when topic-js
     (let [clj-topic (js->clj topic-js :keywordize-keys true)
-          normalized-topic (normalize-topic clj-topic)
+          normalized-topic (schema/topic-from-ipc clj-topic)
           topic-id (:id normalized-topic)]
       [[:effects/save (conj topic-state/topics-path topic-id) normalized-topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
