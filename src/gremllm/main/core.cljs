@@ -20,6 +20,7 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
+;; TODO: looks dense; refactor
 (defn create-window []
   (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
         preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
