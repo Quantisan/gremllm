@@ -47,7 +47,7 @@
     (.handle ipcMain "topic/save"
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
-                    (schema/decode-topic)
+                    (schema/topic-from-disk)
                     (topic-actions/topic->save-plan topics-dir)
                     (topic-effects/save))))
 

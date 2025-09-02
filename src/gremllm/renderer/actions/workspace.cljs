@@ -12,7 +12,7 @@
    Returns {:topics normalized-map :active-id first-topic-id}"
   [topics-map]
   (let [normalized (reduce-kv (fn [m k v]
-                                (assoc m k (schema/normalize-topic v)))
+                                (assoc m k (schema/topic-from-ipc v)))
                               {}
                               (or topics-map {}))]
     {:topics    normalized

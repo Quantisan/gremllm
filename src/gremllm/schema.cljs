@@ -34,6 +34,16 @@
   (m/decode Topic {} mt/default-value-transformer))
 
 ;; Coercion helpers for boundaries
-(def normalize-topic (m/decoder Topic mt/string-transformer))
-(def decode-topic (m/coercer Topic mt/json-transformer))
-(def encode-persisted-topic (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
+(def topic-from-ipc
+  "Transforms topic data received via IPC into internal Topic schema.
+  Used when renderer receives topic data from main process."
+  (m/decoder Topic mt/string-transformer))
+
+(def topic-from-disk
+  "Loads and validates a topic from persisted EDN format.
+  Throws if the topic data is invalid."
+  (m/coercer Topic mt/json-transformer))
+
+(def topic-for-disk
+  "Prepares a topic for disk persistence, stripping transient fields."
+  (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
