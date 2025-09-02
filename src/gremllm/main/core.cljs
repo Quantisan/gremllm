@@ -27,6 +27,13 @@
         main-window (BrowserWindow. (clj->js window-config))
         html-path "resources/public/index.html"]
     (.loadFile main-window html-path)
+
+    ;; Intercept window close to check for unsaved changes
+    (.on main-window "close"
+         (fn [event]
+           (.preventDefault event)
+           (.send (.-webContents main-window) "check-unsaved-before-close")))
+
     main-window))
 
 (defn setup-api-handlers [store workspace-dir secrets-filepath]
