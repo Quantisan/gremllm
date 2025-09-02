@@ -1,6 +1,7 @@
 (ns gremllm.renderer.ui.topics)
 
 (defn render-left-panel-content
+  ;; topics-map = schema/WorkspaceTopics
   [{:keys [workspace-name workspace-description topics-map active-topic-id]}]
   [:div
    [:nav
