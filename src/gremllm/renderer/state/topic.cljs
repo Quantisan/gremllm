@@ -1,6 +1,4 @@
-(ns gremllm.renderer.state.topic
-  (:require [gremllm.schema :as schema]
-            [malli.core :as m]))
+(ns gremllm.renderer.state.topic)
 
 (def topics-path [:topics])
 (def active-topic-id-path [:active-topic-id])
@@ -23,8 +21,4 @@
 
 (defn topic-field-path [topic-id field]
   (-> topics-path (conj topic-id field)))
-
-(defn valid-topics? [state]
-  (let [topics (get-topics-map state)]
-    (every? #(m/validate schema/Topic %) (vals topics))))
 

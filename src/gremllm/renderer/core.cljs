@@ -3,6 +3,7 @@
             [nexus.registry :as nxr]
             [gremllm.renderer.ui :as ui]
             [gremllm.renderer.actions]
+            [gremllm.schema :as schema]
             [gremllm.renderer.state.topic :as topic-state]))
 
 ;; State Shape Documentation
@@ -38,9 +39,9 @@
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]
-                 (when-not (topic-state/valid-topics? state)
+                 (when-not (schema/valid-workspace-topics? (topic-state/get-topics-map state))
                    (js/console.error "Invalid topics in state!"))
-                 
+
                  (->> state
                       (ui/render-app)
                       (r/render el))))
