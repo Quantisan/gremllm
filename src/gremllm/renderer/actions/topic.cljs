@@ -33,7 +33,7 @@
     [[:effects/save (topic-state/topic-field-path active-id :unsaved?) true]]))
 
 (defn switch-topic [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path (keyword topic-id)]])
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 (nxr/register-effect! :topic.effects/list
   (fn [{dispatch :dispatch} _store & [opts]]
