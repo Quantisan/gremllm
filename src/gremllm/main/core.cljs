@@ -26,14 +26,27 @@
         preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
         main-window (BrowserWindow. (clj->js window-config))
-        html-path "resources/public/index.html"]
+        html-path "resources/public/index.html"
+        closing? (atom false)]
     (.loadFile main-window html-path)
 
     ;; Intercept window close to check for unsaved changes
     (.on main-window "close"
          (fn [event]
-           (.preventDefault event)
-           (.send (.-webContents main-window) "check-unsaved-before-close")))
+           ;; TODO: testing behaviour for now. implement...
+           ;; Only intercept if not already closing
+           (when-not @closing?
+             (.preventDefault event)
+             (reset! closing? true)
+             (js/console.log "Close intercepted - will close in 2 seconds...")
+             ;; Send notification to renderer (for future use)
+             (.send (.-webContents main-window) "check-unsaved-before-close")
+             ;; Auto-close after 2 seconds
+             (js/setTimeout
+               (fn []
+                 (js/console.log "Now closing window...")
+                 (.destroy main-window))  ; Use destroy to bypass the close event
+               2000))))
 
     main-window))
 
