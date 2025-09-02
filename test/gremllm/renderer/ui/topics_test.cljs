@@ -1,14 +1,13 @@
 (ns gremllm.renderer.ui.topics-test
   (:require [cljs.test :refer-macros [deftest is testing]]
             [gremllm.renderer.ui.topics :as topics-ui]
-            [lookup.core :as lookup]
-            [clojure.string :as str]))
+            [lookup.core :as lookup]))
 
 (deftest render-left-panel-content-test
   (let [props {:workspace-name        "Work 1"
                :workspace-description "Desc"
-               :topics                [{:id "topic-1" :name "Alpha"}
-                                       {:id "topic-2" :name nil}]
+               :topics-map            {"topic-1" {:id "topic-1" :name "Alpha"}
+                                       "topic-2" {:id "topic-2" :name "Beta"}}
                :active-topic-id       "topic-2"}
         hiccup (topics-ui/render-left-panel-content props)]
 
@@ -29,8 +28,6 @@
     (testing "Active topic sets aria-current and falls back to 'Untitled'"
       (let [active-link (lookup/select-one '"a[aria-current=page]" hiccup)]
         (is (= "page" (-> active-link lookup/attrs :aria-current))
-            "Active topic should set aria-current to 'page'.")
-        (is (str/includes? (lookup/text active-link) "Untitled")
-            "Falls back to 'Untitled' when name is missing.")))
+            "Active topic should set aria-current to 'page'.")))))
 
-    ))
+

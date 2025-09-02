@@ -16,14 +16,14 @@
         workspace-name        "Kaitenzushi Corp Acquisition"
         workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
         active-topic-id       (topic-state/get-active-topic-id state)
-        topics                (topic-state/get-topics state)] ;; TODO: this should use get-topics-map
+        topics-map            (topic-state/get-topics-map state)]
     [e/app-layout
      [e/left-panel
       (topics-ui/render-left-panel-content
         {:workspace-name        workspace-name
          :workspace-description workspace-description
          :active-topic-id       active-topic-id
-         :topics                topics})]
+         :topics-map            topics-map})]
 
      [e/main-panel
       [e/top-bar

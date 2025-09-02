@@ -1,7 +1,8 @@
 (ns gremllm.renderer.ui.topics)
 
 (defn render-left-panel-content
-  [{:keys [workspace-name workspace-description topics active-topic-id]}]
+  ;; topics-map = schema/WorkspaceTopics
+  [{:keys [workspace-name workspace-description topics-map active-topic-id]}]
   [:div
    [:nav
     [:ul
@@ -16,7 +17,7 @@
     [:p [:small workspace-description]]]
    [:nav
     [:ul
-     (for [{:keys [id name unsaved?]} topics]
+     (for [{:keys [id name unsaved?]} (vals topics-map)]
        [:li
         [:a {:href         "#"
              :aria-current (when (= id active-topic-id) "page")
