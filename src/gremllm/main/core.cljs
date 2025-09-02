@@ -117,15 +117,21 @@
     (setup-api-handlers store workspace-dir secrets-filepath)
     (menu/create-menu store)))
 
-(defn- handle-app-ready [store]
+(defn- handle-app-ready 
+  "Runs once when Electron finishes initializing. Sets up system resources and creates initial window."
+  [store]
   (setup-system-resources store)
   (create-window))
 
-(defn- handle-app-activate [_store]
+(defn- handle-app-activate 
+  "macOS: Fired when app activated (dock clicked). Creates window if none exist."
+  [_store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
     (create-window)))
 
-(defn- handle-window-all-closed []
+(defn- handle-window-all-closed 
+  "Quit on Windows/Linux when last window closes. macOS apps stay running."
+  []
   (when-not (= (.-platform js/process) "darwin")
     (.quit app)))
 
