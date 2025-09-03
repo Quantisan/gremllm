@@ -3,6 +3,7 @@
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]
             ["electron/main" :refer [app dialog]]))
 
@@ -77,7 +78,21 @@
         (.then (fn [^js result]
                  (when-not (.-canceled result)
                    ;; Even with single selection, filePaths is still an array
-                   (let [folder-path (first (.-filePaths result))]
-                     ;; TODO:
-                     (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
+                   (let [workspace-folder-path (first (.-filePaths result))]
+                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer workspace-folder-path]]))))))))
+
+;; Workspace Actions
+;; =================
+;; Handle workspace folder operations from the File menu
+
+(nxr/register-effect! :workspace.effects/sync-with-renderer
+  (fn [_ _ workspace-data]
+    (ipc-effects/send-to-renderer "workspace:sync" (clj->js workspace-data))))
+
+(nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
+  (fn [{:keys [dispatch]} _ workspace-folder-path]
+    (let [topics-dir (io/topics-dir-path workspace-folder-path)
+          topics (topic-effects/load-all topics-dir)]
+      ;; For now, workspace is just topics. Later might include settings, etc.
+      (dispatch [[:workspace.effects/sync-with-renderer topics]]))))
 

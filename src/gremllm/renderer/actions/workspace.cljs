@@ -16,8 +16,8 @@
      ;; TODO: save last active topic id so that user can continue where they left off
      :active-id (first (keys topics))}))
 
-(defn populate-topics [_state workspace-topics-js]
-  (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
+(defn populate-topics [_state workspace-data-js]
+  (let [workspace-topics-clj (js->clj workspace-data-js :keywordize-keys true)
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
 
     (if (seq topics)
