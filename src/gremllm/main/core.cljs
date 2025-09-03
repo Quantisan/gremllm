@@ -14,43 +14,6 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
-(defn- setup-close-handlers
-  "Setup coordinated quit/close handlers for unsaved changes protection (stub)."
-  [^js main-window]
-  (let [closing? (atom false)
-        quitting? (atom false)]
-
-    ;; Intercept app quit
-    (.on app "before-quit"
-         (fn [event]
-           (when-not @closing?
-             (.preventDefault event)
-             (reset! quitting? true)
-             (js/console.log "Quit intercepted!")
-             (.close main-window))))
-
-    ;; Intercept window close
-    (.on main-window "close"
-         (fn [event]
-           (when-not @closing?
-             (.preventDefault event)
-             (reset! closing? true)
-             (js/console.log "Close intercepted - closing now...")
-             ;; TODO: Send notification to renderer for unsaved check
-             (.destroy main-window)
-             (when @quitting?
-               (js/console.log "Now quitting app...")
-               (.quit app)))))))
-
-(defn create-window []
-  (let [dimensions (window/calculate-window-dimensions window/window-dimension-specs)
-        preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
-        window-config (merge dimensions {:webPreferences {:preload preload-path}})
-        main-window (BrowserWindow. (clj->js window-config))
-        html-path "resources/public/index.html"]
-    (.loadFile main-window html-path)
-    main-window))
-
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations:
    - Chat: LLM message exchange
@@ -114,15 +77,15 @@
 
 (defn- initialize-app [store]
   (setup-system-resources store)
-  (-> (create-window)
-      (setup-close-handlers)))
+  (-> (window/create-window)
+      (window/setup-close-handlers)))
 
 (defn- handle-app-activate
   "macOS: Fired when app activated (dock clicked). Creates window if none exist."
   [_store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
-    (-> (create-window)
-        (setup-close-handlers))))
+    (-> (window/create-window)
+        (window/setup-close-handlers))))
 
 (defn- handle-window-all-closed
   "Quit on Windows/Linux when last window closes. macOS apps stay running."
