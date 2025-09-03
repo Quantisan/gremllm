@@ -19,33 +19,33 @@
     {:width (calculate-dimension (.-width work-area) width-scale max-width)
      :height (calculate-dimension (.-height work-area) height-scale max-height)}))
 
+(defn- handle-app-quit
+  "Intercept app quit to close window first (for future unsaved changes check)."
+  [^js main-window event]
+  (when-not (.isDestroyed main-window)
+    (js/console.log "App quit intercepted - closing window first")
+    (.preventDefault event)
+    (set! (.-isQuitting main-window) true)
+    (.close main-window)))
+
+(defn- handle-window-close
+  "Handle window close, checking if app should quit after."
+  [^js main-window _event]
+  (let [quitting? (.-isQuitting main-window)]
+    (js/console.log (str "Window closing" (when quitting? " (app quitting)")))
+    ;; TODO: Check for unsaved changes here
+
+    (when quitting?
+      (.once main-window "closed"
+             (fn []
+               (js/console.log "Window closed - now quitting app")
+               (.quit app))))))
+
 (defn setup-close-handlers
   "Handle window close and app quit with unsaved changes protection."
   [^js main-window]
-  
-  ;; When app tries to quit, close the window first (which may check for unsaved)
-  (.on app "before-quit"
-       (fn [event]
-         (when-not (.isDestroyed main-window)
-           (js/console.log "App quit intercepted - closing window first")
-           (.preventDefault event)
-           (set! (.-isQuitting main-window) true)  ; Mark that we're quitting
-           (.close main-window))))
-
-  ;; Window close is where we'd check for unsaved changes
-  (.on main-window "close"
-       (fn [_event]
-         (let [quitting? (.-isQuitting main-window)]
-           (js/console.log (str "Window closing" (when quitting? " (app quitting)")))
-           ;; TODO: Check for unsaved changes here
-           
-           ;; If app is quitting, quit after window closes
-           (when quitting?
-             (.once main-window "closed"
-                    (fn []
-                      (js/console.log "Window closed - now quitting app")
-                      (.quit app)))))))
-  
+  (.on app "before-quit" (partial handle-app-quit main-window))
+  (.on main-window "close" (partial handle-window-close main-window))
   main-window)
 
 (defn create-window []
