@@ -28,11 +28,11 @@
     ;; Intercept app quit
     (.on app "before-quit"
          (fn [event]
-           (when-not @closing?
+           (when-not (or @closing? (.isDestroyed main-window))
              (.preventDefault event)
-             (reset! quitting? true))
-           (js/console.log "Quit intercepted!")
-           (.close main-window)))
+             (reset! quitting? true)
+             (js/console.log "Quit intercepted!")
+             (.close main-window))))
 
     ;; Intercept window close
     (.on main-window "close"
