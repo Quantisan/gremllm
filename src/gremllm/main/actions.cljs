@@ -87,7 +87,7 @@
 
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
   (fn [_ _ folder-path]
-    (let [topics-dir (io/path-join folder-path "topics")
+    (let [topics-dir (io/topics-dir-path folder-path)
           topics (topic-effects/load-all topics-dir)]
       ;; Send the loaded topics to the renderer for state update
       (ipc-effects/send-to-renderer "workspace:topics-loaded" (clj->js topics)))))
