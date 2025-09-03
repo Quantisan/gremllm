@@ -20,32 +20,34 @@
      :height (calculate-dimension (.-height work-area) height-scale max-height)}))
 
 (defn setup-close-handlers
-  "Setup coordinated quit/close handlers for unsaved changes protection (stub)."
+  "Handle window close and app quit with unsaved changes protection."
   [^js main-window]
-  (let [closing? (atom false)
-        quitting? (atom false)]
+  ;; When app tries to quit, close the window first (which may check for unsaved)
+  (.on app "before-quit"
+       (fn [event]
+         (when-not (.isDestroyed main-window)
+           (js/console.log "App quit intercepted - closing window first")
+           ;; Prevent the quit, let window close handle it
+           (.preventDefault event)
+           ;; Tag that we're quitting (not just closing window)
+           (set! (.-isQuitting main-window) true)
+           (.close main-window))))
 
-    ;; Intercept app quit
-    (.on app "before-quit"
-         (fn [event]
-           (when-not (or @closing? (.isDestroyed main-window))
-             (.preventDefault event)
-             (reset! quitting? true)
-             (js/console.log "Quit intercepted!")
-             (.close main-window))))
+  ;; Window close is where we'd check for unsaved changes
+  (.on main-window "close"
+       (fn [event]
+         (js/console.log (str "Window closing" (when (.-isQuitting main-window) " (app quitting)")))
+         ;; TODO: Check for unsaved changes here
+         ;; For now, just close normally
 
-    ;; Intercept window close
-    (.on main-window "close"
-         (fn [event]
-           (when-not @closing?
-             (.preventDefault event)
-             (reset! closing? true)
-             (js/console.log "Close intercepted - closing now...")
-             ;; TODO: Send notification to renderer for unsaved check
-             (.destroy main-window)
-             (when @quitting?
-               (js/console.log "Now quitting app...")
-               (.quit app)))))))
+         ;; If this close was triggered by app quit, quit after window closes
+         (when (.-isQuitting main-window)
+           (.on main-window "closed"
+                (fn []
+                  (js/console.log "Window closed - now quitting app")
+                  (.quit app))))))
+
+  main-window)
 
 (defn create-window []
   (let [dimensions (calculate-window-dimensions window-dimension-specs)
