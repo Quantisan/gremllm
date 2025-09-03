@@ -4,7 +4,7 @@
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [app]]))
+            ["electron/main" :refer [app dialog]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -42,6 +42,10 @@
   (fn [_state]
     [[:menu.effects/send-command :show-settings]]))
 
+(nxr/register-action! :menu.actions/open-folder
+  (fn [_state]
+    [[:dialog.effects/show-open-folder]]))
+
 ;; IPC Effects Registration
 ;; ========================
 ;; All IPC boundary effects are implemented in main.effects.ipc
@@ -59,4 +63,21 @@
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
+
+;; Dialog effects
+(nxr/register-effect! :dialog.effects/show-open-folder
+  (fn [{:keys [dispatch]} _]
+    ;; TODO: Thinking: should we refactor `:dialog.effects/show-open-folder` to use
+    ;; `:ipc.effects/promise->reply` (or a generic version)? I'm thinking about our Design
+    ;; Principles.
+    (-> (.showOpenDialog dialog
+          #js {:title "Open Workspace Folder"
+               :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
+               :buttonLabel "Open"})
+        (.then (fn [^js result]
+                 (when-not (.-canceled result)
+                   ;; Even with single selection, filePaths is still an array
+                   (let [folder-path (first (.-filePaths result))]
+                     ;; TODO:
+                     (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
 
