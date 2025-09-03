@@ -4,7 +4,7 @@
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [app]]))
+            ["electron/main" :refer [app dialog]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -63,4 +63,16 @@
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
+
+;; Dialog effects
+(nxr/register-effect! :dialog.effects/show-open-folder
+  (fn [{:keys [dispatch]} _]
+    (let [result (.showOpenDialogSync dialog
+                   #js {:title "Open Workspace Folder"
+                        :properties #js ["openDirectory"]
+                        :buttonLabel "Open"})]
+      ;; result is undefined if cancelled, or array of paths if selected
+      (when result
+        (let [folder-path (first result)]
+          (dispatch [[:workspace.actions/load-folder folder-path]]))))))
 
