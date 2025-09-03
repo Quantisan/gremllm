@@ -3,6 +3,7 @@
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]
             ["electron/main" :refer [app dialog]]))
 
@@ -80,4 +81,20 @@
                    (let [folder-path (first (.-filePaths result))]
                      ;; TODO:
                      (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
+
+;; Workspace Actions
+;; =================
+;; Handle workspace folder operations from the File menu
+
+(nxr/register-action! :workspace.actions/load-folder
+  (fn [_state folder-path]
+    ;; Load topics from the selected folder and notify renderer
+    [[:workspace.effects/load-and-send folder-path]]))
+
+(nxr/register-effect! :workspace.effects/load-and-send
+  (fn [_ _ folder-path]
+    (let [topics-dir (io/path-join folder-path "topics")
+          topics (topic-effects/load-all topics-dir)]
+      ;; Send the loaded topics to the renderer for state update
+      (ipc-effects/send-to-renderer "workspace:topics-loaded" (clj->js topics)))))
 
