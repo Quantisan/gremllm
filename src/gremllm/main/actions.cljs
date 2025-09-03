@@ -67,12 +67,14 @@
 ;; Dialog effects
 (nxr/register-effect! :dialog.effects/show-open-folder
   (fn [{:keys [dispatch]} _]
-    (let [result (.showOpenDialogSync dialog
-                   #js {:title "Open Workspace Folder"
-                        :properties #js ["openDirectory"]
-                        :buttonLabel "Open"})]
-      ;; result is undefined if cancelled, or array of paths if selected
-      (when result
-        (let [folder-path (first result)]
-          (dispatch [[:workspace.actions/load-folder folder-path]]))))))
+    (-> (.showOpenDialog dialog
+          #js {:title "Open Workspace Folder"
+               :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
+               :buttonLabel "Open"})
+        (.then (fn [^js result]
+                 (when-not (.-canceled result)
+                   ;; Even with single selection, filePaths is still an array
+                   (let [folder-path (first (.-filePaths result))]
+                     ;; TODO:
+                     (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
 
