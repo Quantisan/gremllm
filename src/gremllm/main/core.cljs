@@ -10,59 +10,18 @@
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
-(def ^:private window-dimension-specs
-  {:width-scale  0.60
-   :max-width    1400
-   :height-scale 0.80
-   :max-height   1000})
-
 (defn system-info [secrets encryption-available?]
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
-;; TODO: looks dense; refactor
-(defn create-window []
-  (let [dimensions (window/calculate-window-dimensions window-dimension-specs)
-        preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
-        window-config (merge dimensions {:webPreferences {:preload preload-path}})
-        main-window (BrowserWindow. (clj->js window-config))
-        html-path "resources/public/index.html"
-        closing? (atom false)
-        quitting? (atom false)]
-    (.loadFile main-window html-path)
-
-    ;; Intercept app quit
-    (.on app "before-quit"
-         (fn [event]
-           (when-not @closing?
-             (.preventDefault event)
-             (reset! quitting? true)
-             (js/console.log "Quit intercepted!")
-             ;; Trigger window close, which will handle the delay
-             (.close main-window))))
-
-    ;; Intercept window close to check for unsaved changes
-    (.on main-window "close"
-         (fn [event]
-           ;; Only intercept if not already closing
-           (when-not @closing?
-             (.preventDefault event)
-             (reset! closing? true)
-             (js/console.log "Close intercepted - closing now...")
-             ;; Send notification to renderer (for future use)
-             ;; (.send (.-webContents main-window) "check-unsaved-before-close")  ;; TODO:
-
-             ;; Close immediately
-             (js/console.log "Now closing window...")
-             (.destroy main-window)
-             ;; If we were quitting, quit for real now
-             (when @quitting?
-               (js/console.log "Now quitting app...")
-               (.quit app)))))
-
-    main-window))
-
-(defn setup-api-handlers [store workspace-dir secrets-filepath]
+(defn register-domain-handlers
+  "Register IPC handlers for core domain operations:
+   - Chat: LLM message exchange
+   - Topics: Save/load/list conversation threads
+   - Workspace: Bulk topic operations
+   - Secrets: Secure configuration storage
+   - System: Runtime capability detection"
+  [store workspace-dir secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -109,27 +68,26 @@
                    (secrets/check-availability))
                  (clj->js)))))
 
-
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")
         workspace-dir   (io/workspace-dir-path user-data-dir)
         secrets-filepath (io/secrets-file-path user-data-dir)]
-    (setup-api-handlers store workspace-dir secrets-filepath)
+    (register-domain-handlers store workspace-dir secrets-filepath)
     (menu/create-menu store)))
 
-(defn- handle-app-ready 
-  "Runs once when Electron finishes initializing. Sets up system resources and creates initial window."
-  [store]
+(defn- initialize-app [store]
   (setup-system-resources store)
-  (create-window))
+  (-> (window/create-window)
+      (window/setup-close-handlers)))
 
-(defn- handle-app-activate 
+(defn- handle-app-activate
   "macOS: Fired when app activated (dock clicked). Creates window if none exist."
   [_store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
-    (create-window)))
+    (-> (window/create-window)
+        (window/setup-close-handlers))))
 
-(defn- handle-window-all-closed 
+(defn- handle-window-all-closed
   "Quit on Windows/Linux when last window closes. macOS apps stay running."
   []
   (when-not (= (.-platform js/process) "darwin")
@@ -137,7 +95,7 @@
 
 (defn main []
   (let [store (atom {})]
-    (.on app "ready" #(handle-app-ready store))
+    (.on app "ready" #(initialize-app store))
     (.on app "activate" #(handle-app-activate store))
     (.on app "window-all-closed" handle-window-all-closed)))
 
