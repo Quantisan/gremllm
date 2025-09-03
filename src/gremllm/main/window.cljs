@@ -22,31 +22,30 @@
 (defn setup-close-handlers
   "Handle window close and app quit with unsaved changes protection."
   [^js main-window]
+  
   ;; When app tries to quit, close the window first (which may check for unsaved)
   (.on app "before-quit"
        (fn [event]
          (when-not (.isDestroyed main-window)
            (js/console.log "App quit intercepted - closing window first")
-           ;; Prevent the quit, let window close handle it
            (.preventDefault event)
-           ;; Tag that we're quitting (not just closing window)
-           (set! (.-isQuitting main-window) true)
+           (set! (.-isQuitting main-window) true)  ; Mark that we're quitting
            (.close main-window))))
 
   ;; Window close is where we'd check for unsaved changes
   (.on main-window "close"
-       (fn [event]
-         (js/console.log (str "Window closing" (when (.-isQuitting main-window) " (app quitting)")))
-         ;; TODO: Check for unsaved changes here
-         ;; For now, just close normally
-
-         ;; If this close was triggered by app quit, quit after window closes
-         (when (.-isQuitting main-window)
-           (.on main-window "closed"
-                (fn []
-                  (js/console.log "Window closed - now quitting app")
-                  (.quit app))))))
-
+       (fn [_event]
+         (let [quitting? (.-isQuitting main-window)]
+           (js/console.log (str "Window closing" (when quitting? " (app quitting)")))
+           ;; TODO: Check for unsaved changes here
+           
+           ;; If app is quitting, quit after window closes
+           (when quitting?
+             (.once main-window "closed"
+                    (fn []
+                      (js/console.log "Window closed - now quitting app")
+                      (.quit app)))))))
+  
   main-window)
 
 (defn create-window []
