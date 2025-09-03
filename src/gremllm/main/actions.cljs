@@ -67,6 +67,9 @@
 ;; Dialog effects
 (nxr/register-effect! :dialog.effects/show-open-folder
   (fn [{:keys [dispatch]} _]
+    ;; TODO: Thinking: should we refactor `:dialog.effects/show-open-folder` to use
+    ;; `:ipc.effects/promise->reply` (or a generic version)? I'm thinking about our Design
+    ;; Principles.
     (-> (.showOpenDialog dialog
           #js {:title "Open Workspace Folder"
                :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
