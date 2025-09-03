@@ -79,19 +79,13 @@
                  (when-not (.-canceled result)
                    ;; Even with single selection, filePaths is still an array
                    (let [folder-path (first (.-filePaths result))]
-                     ;; TODO:
-                     (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
+                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer folder-path]]))))))))
 
 ;; Workspace Actions
 ;; =================
 ;; Handle workspace folder operations from the File menu
 
-(nxr/register-action! :workspace.actions/load-folder
-  (fn [_state folder-path]
-    ;; Load topics from the selected folder and notify renderer
-    [[:workspace.effects/load-and-send folder-path]]))
-
-(nxr/register-effect! :workspace.effects/load-and-send
+(nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
   (fn [_ _ folder-path]
     (let [topics-dir (io/path-join folder-path "topics")
           topics (topic-effects/load-all topics-dir)]
