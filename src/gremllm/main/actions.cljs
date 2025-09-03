@@ -78,16 +78,16 @@
         (.then (fn [^js result]
                  (when-not (.-canceled result)
                    ;; Even with single selection, filePaths is still an array
-                   (let [folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer folder-path]]))))))))
+                   (let [workspace-folder-path (first (.-filePaths result))]
+                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer workspace-folder-path]]))))))))
 
 ;; Workspace Actions
 ;; =================
 ;; Handle workspace folder operations from the File menu
 
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
-  (fn [_ _ folder-path]
-    (let [topics-dir (io/topics-dir-path folder-path)
+  (fn [_ _ workspace-folder-path]
+    (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)]
       ;; Send the loaded topics to the renderer for state update
       (ipc-effects/send-to-renderer "workspace:topics-loaded" (clj->js topics)))))
