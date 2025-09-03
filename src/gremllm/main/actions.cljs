@@ -42,6 +42,10 @@
   (fn [_state]
     [[:menu.effects/send-command :show-settings]]))
 
+(nxr/register-action! :menu.actions/open-folder
+  (fn [_state]
+    [[:dialog.effects/show-open-folder]]))
+
 ;; IPC Effects Registration
 ;; ========================
 ;; All IPC boundary effects are implemented in main.effects.ipc
