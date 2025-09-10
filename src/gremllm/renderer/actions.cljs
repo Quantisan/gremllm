@@ -62,6 +62,7 @@
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
 (nxr/register-action! :workspace.actions/populate-topics workspace/populate-topics)
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
+(nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 
 ;; Topic
 

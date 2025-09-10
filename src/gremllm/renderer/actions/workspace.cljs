@@ -17,6 +17,11 @@
      ;; TODO: save last active topic id so that user can continue where they left off
      :active-id (first (keys topics))}))
 
+(defn mark-loaded 
+  "Mark the workspace as successfully loaded and ready for use."
+  [_state]
+  [[:effects/save workspace-state/loaded-path true]])
+
 (defn populate-topics [_state workspace-topics-js]
   (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
@@ -24,11 +29,10 @@
     (if (seq topics)
       [[:effects/save topic-state/topics-path topics]
        [:effects/save topic-state/active-topic-id-path active-id]
-       ;; TODO: refactor this out as a domain action
-       [:effects/save workspace-state/loaded-path true]]
+       [:workspace.actions/mark-loaded]]
 
       [[:topic.actions/start-new]
-       [:effects/save workspace-state/loaded-path true]])))
+       [:workspace.actions/mark-loaded]])))
 
 (defn load-error [_state error]
   (js/console.error "workspace load failed:" error)
