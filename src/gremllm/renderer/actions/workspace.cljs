@@ -1,6 +1,7 @@
 (ns gremllm.renderer.actions.workspace
   (:require [nexus.registry :as nxr]
             [gremllm.schema :as schema]
+            [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn bootstrap [_state]
@@ -22,9 +23,12 @@
 
     (if (seq topics)
       [[:effects/save topic-state/topics-path topics]
-       [:effects/save topic-state/active-topic-id-path active-id]]
+       [:effects/save topic-state/active-topic-id-path active-id]
+       ;; TODO: refactor this out as a domain action
+       [:effects/save workspace-state/loaded-path true]]
 
-      [[:topic.actions/start-new]])))
+      [[:topic.actions/start-new]
+       [:effects/save workspace-state/loaded-path true]])))
 
 (defn load-error [_state error]
   (js/console.error "workspace load failed:" error)
