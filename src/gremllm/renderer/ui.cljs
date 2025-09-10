@@ -5,13 +5,15 @@
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.state.sensitive :as sensitive-state]
+            [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
+            [gremllm.renderer.ui.welcome :as welcome-ui]
             [gremllm.renderer.ui.elements :as e]))
 
 
-(defn render-app [state]
+(defn- render-workspace [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
         workspace-name        "Kaitenzushi Corp Acquisition"
         workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
@@ -43,3 +45,9 @@
         :encryption-available? (system-state/encryption-available? state)
         :api-key-input (sensitive-state/get-api-key-input state)
         :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]]))
+
+(defn render-app [state]
+  (if (workspace-state/loaded? state)
+    (render-workspace state)
+    (welcome-ui/render-welcome)))
+
