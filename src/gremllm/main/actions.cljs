@@ -45,7 +45,7 @@
 
 (nxr/register-action! :menu.actions/open-folder
   (fn [_state]
-    [[:dialog.effects/show-open-folder]]))
+    [[:workspace.effects/pick-and-load-folder]]))
 
 ;; IPC Effects Registration
 ;; ========================
@@ -66,11 +66,12 @@
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
 ;; Dialog effects
-(nxr/register-effect! :dialog.effects/show-open-folder
+(nxr/register-effect! :workspace.effects/pick-and-load-folder
   (fn [{:keys [dispatch]} _]
-    ;; TODO: Thinking: should we refactor `:dialog.effects/show-open-folder` to use
+    ;; TODO: Thinking: should we refactor `:workspace.effects/pick-and-load-folder` to use
     ;; `:ipc.effects/promise->reply` (or a generic version)? I'm thinking about our Design
-    ;; Principles.
+    ;; Principles. Probably yes, but that means we should move `promise->reply` helper up from
+    ;; ipc.effects ns
     (-> (.showOpenDialog dialog
           #js {:title "Open Workspace Folder"
                :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
