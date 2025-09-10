@@ -60,7 +60,9 @@
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
-(nxr/register-action! :workspace.actions/populate-topics workspace/populate-topics)
+(nxr/register-action! :workspace.actions/opened workspace/opened)
+(nxr/register-action! :workspace.actions/restore-with-topics workspace/restore-with-topics)
+(nxr/register-action! :workspace.actions/initialize-empty workspace/initialize-empty)
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 

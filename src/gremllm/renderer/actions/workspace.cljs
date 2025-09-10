@@ -5,7 +5,7 @@
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn bootstrap [_state]
-  [[:workspace.effects/load-folder {:on-success [[:workspace.actions/populate-topics]]
+  [[:workspace.effects/load-folder {:on-success [[:workspace.actions/opened]]
                                     :on-error   [[:workspace.actions/load-error]]}]])
 
 (defn import-workspace-topics
@@ -22,17 +22,28 @@
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
 
-(defn populate-topics [_state workspace-topics-js]
+(defn opened
+  "A workspace folder has been opened/loaded from disk."
+  [_state workspace-topics-js]
   (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
-
+    
     (if (seq topics)
-      [[:effects/save topic-state/topics-path topics]
-       [:effects/save topic-state/active-topic-id-path active-id]
-       [:workspace.actions/mark-loaded]]
+      [[:workspace.actions/restore-with-topics topics active-id]]
+      [[:workspace.actions/initialize-empty]])))
 
-      [[:topic.actions/start-new]
-       [:workspace.actions/mark-loaded]])))
+(defn restore-with-topics
+  "Restore a workspace that has existing topics."
+  [_state topics active-id]
+  [[:effects/save topic-state/topics-path topics]
+   [:effects/save topic-state/active-topic-id-path active-id]
+   [:workspace.actions/mark-loaded]])
+
+(defn initialize-empty
+  "Initialize an empty workspace with its first topic."
+  [_state]
+  [[:topic.actions/start-new]
+   [:workspace.actions/mark-loaded]])
 
 (defn load-error [_state error]
   (js/console.error "workspace load failed:" error)

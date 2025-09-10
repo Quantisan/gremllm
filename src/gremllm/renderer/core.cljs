@@ -42,7 +42,7 @@
     ;; Handle workspace sync from main process
     (.onMenuCommand js/window.electronAPI "workspace:sync"
                     (fn [_ topics-data]
-                      (nxr/dispatch store {} [[:workspace.actions/populate-topics topics-data]])))
+                      (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
 
     ;; Render on every change
     (add-watch store ::render-topic
