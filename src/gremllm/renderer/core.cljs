@@ -36,6 +36,14 @@
                         :show-settings (nxr/dispatch store {} [[:ui.actions/show-settings]])
                         nil)))
 
+    ;; TODO: 'workspace:sync' isn't a menu command, we're over-stretching this abstraction...
+    ;; refactor
+
+    ;; Handle workspace sync from main process
+    (.onMenuCommand js/window.electronAPI "workspace:sync"
+                    (fn [_ topics-data]
+                      (nxr/dispatch store {} [[:workspace.actions/populate-topics topics-data]])))
+
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]

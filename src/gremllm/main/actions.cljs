@@ -3,6 +3,7 @@
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]
             ["electron/main" :refer [app dialog]]))
 
@@ -44,7 +45,7 @@
 
 (nxr/register-action! :menu.actions/open-folder
   (fn [_state]
-    [[:dialog.effects/show-open-folder]]))
+    [[:workspace.effects/pick-and-load-folder]]))
 
 ;; IPC Effects Registration
 ;; ========================
@@ -65,11 +66,12 @@
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
 ;; Dialog effects
-(nxr/register-effect! :dialog.effects/show-open-folder
+(nxr/register-effect! :workspace.effects/pick-and-load-folder
   (fn [{:keys [dispatch]} _]
-    ;; TODO: Thinking: should we refactor `:dialog.effects/show-open-folder` to use
+    ;; TODO: Thinking: should we refactor `:workspace.effects/pick-and-load-folder` to use
     ;; `:ipc.effects/promise->reply` (or a generic version)? I'm thinking about our Design
-    ;; Principles.
+    ;; Principles. Probably yes, but that means we should move `promise->reply` helper up from
+    ;; ipc.effects ns
     (-> (.showOpenDialog dialog
           #js {:title "Open Workspace Folder"
                :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
@@ -77,7 +79,17 @@
         (.then (fn [^js result]
                  (when-not (.-canceled result)
                    ;; Even with single selection, filePaths is still an array
-                   (let [folder-path (first (.-filePaths result))]
-                     ;; TODO:
-                     (dispatch [[:workspace.actions/load-folder folder-path]]))))))))
+                   (let [workspace-folder-path (first (.-filePaths result))]
+                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer workspace-folder-path]]))))))))
+
+;; Workspace Actions
+;; =================
+;; Handle workspace folder operations from the File menu
+
+(nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
+  (fn [_ _ workspace-folder-path]
+    (let [topics-dir (io/topics-dir-path workspace-folder-path)
+          topics (topic-effects/load-all topics-dir)]
+      ;; For now, workspace is just topics. Later might include settings, etc.
+      (ipc-effects/send-to-renderer "workspace:sync" (clj->js topics)))))
 
