@@ -14,7 +14,9 @@
 
 
 (defn render-app [state]
-  (if (workspace-state/loaded? state)
+  (if-not (workspace-state/loaded? state)
+    (welcome-ui/render-welcome)
+
     (let [has-api-key?          (system-state/has-anthropic-api-key? state)
           workspace-name        "Kaitenzushi Corp Acquisition"
           workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
@@ -45,5 +47,5 @@
          {:open? (ui-state/showing-settings? state)
           :encryption-available? (system-state/encryption-available? state)
           :api-key-input (sensitive-state/get-api-key-input state)
-          :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]])
-    (welcome-ui/render-welcome)))
+          :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]])))
+
