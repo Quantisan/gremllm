@@ -28,24 +28,22 @@
   (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
     
-    [[:workspace.actions/import-topics topics]
-     [:workspace.actions/select-starting-topic topics active-id]]))
+    (if (seq topics)
+      [[:workspace.actions/restore-with-topics topics active-id]]
+      [[:workspace.actions/initialize-empty]])))
 
-(defn import-topics
-  "Import the loaded topics into application state."
-  [_state topics]
-  (if (seq topics)
-    [[:effects/save topic-state/topics-path topics]]
-    []))
-
-(defn select-starting-topic
-  "Select which topic the user should start with when opening a workspace."
+(defn restore-with-topics
+  "Restore a workspace that has existing topics."
   [_state topics active-id]
-  (if (seq topics)
-    [[:effects/save topic-state/active-topic-id-path active-id]
-     [:workspace.actions/mark-loaded]]
-    [[:topic.actions/start-new]
-     [:workspace.actions/mark-loaded]]))
+  [[:effects/save topic-state/topics-path topics]
+   [:effects/save topic-state/active-topic-id-path active-id]
+   [:workspace.actions/mark-loaded]])
+
+(defn initialize-empty
+  "Initialize an empty workspace with its first topic."
+  [_state]
+  [[:topic.actions/start-new]
+   [:workspace.actions/mark-loaded]])
 
 (defn load-error [_state error]
   (js/console.error "workspace load failed:" error)
