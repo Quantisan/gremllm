@@ -6,7 +6,7 @@
                       :margin-top "20vh"}}
     [:header
      [:h1 "Welcome to Gremllm"]
-     [:p "Open a workspace folder to begin organizing your conversations"]]
+     [:p "Open a workspace folder to begin your conversations"]]
     [:button {:on {:click [[:workspace.actions/open-folder]]}}
      "Open Workspace Folder"]
     [:footer
