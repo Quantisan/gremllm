@@ -60,29 +60,16 @@ treats workspaces as fundamental; now the UI will too.
      - `:workspace.actions/mark-loaded` - Explicitly marks workspace as loaded
    - All paths through workspace loading now call `mark-loaded`
 
-## TODO
-
 3. **Create src/gremllm/renderer/ui/welcome.cljs**
    ```clojure
-   (ns gremllm.renderer.ui.welcome)
-
-   (defn render-welcome []
-     [:div {:class "flex flex-col items-center justify-center h-screen bg-gray-50"}
-      [:div {:class "text-center space-y-6 p-8 max-w-md"}
-       [:h1 {:class "text-4xl font-bold text-gray-800"} "Welcome to Gremllm"]
-       [:p {:class "text-lg text-gray-600"}
-        "Open a workspace folder to begin organizing your conversations"]
-       [:button {:class "px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700
-                         transition-colors font-medium text-lg"
-                 :on {:click [[:workspace.actions/open-folder]]}}
-        "Open Workspace Folder"]
-       [:p {:class "text-sm text-gray-500 mt-4"}
-        "A workspace is like a project folder that contains all your related topics and conversations"]]])
+   (defn render-welcome [])
 
 4. Modify src/gremllm/renderer/ui.cljs
   • Add conditional rendering based on workspace-state/loaded?
   • Show welcome screen when no workspace loaded
   • Show existing chat UI when workspace is loaded
+
+## TODO
 
 5. Modify src/gremllm/renderer/actions/workspace.cljs
   • Update bootstrap to not auto-load:
