@@ -85,14 +85,10 @@
 ;; =================
 ;; Handle workspace folder operations from the File menu
 
-(nxr/register-effect! :workspace.effects/sync-with-renderer
-  (fn [_ _ workspace-data]
-    (ipc-effects/send-to-renderer "workspace:sync" (clj->js workspace-data))))
-
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
-  (fn [{:keys [dispatch]} _ workspace-folder-path]
+  (fn [_ _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)]
       ;; For now, workspace is just topics. Later might include settings, etc.
-      (dispatch [[:workspace.effects/sync-with-renderer topics]]))))
+      (ipc-effects/send-to-renderer "workspace:sync" (clj->js topics)))))
 
