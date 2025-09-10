@@ -13,39 +13,41 @@
             [gremllm.renderer.ui.elements :as e]))
 
 
+(defn- render-workspace [state]
+  (let [has-api-key?          (system-state/has-anthropic-api-key? state)
+        workspace-name        "Kaitenzushi Corp Acquisition"
+        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
+        active-topic-id       (topic-state/get-active-topic-id state)
+        topics-map            (topic-state/get-topics-map state)]
+    [e/app-layout
+     [e/left-panel
+      (topics-ui/render-left-panel-content
+        {:workspace-name        workspace-name
+         :workspace-description workspace-description
+         :active-topic-id       active-topic-id
+         :topics-map            topics-map})]
+
+     [e/main-panel
+      [e/top-bar
+       (when-not has-api-key?
+         (settings-ui/render-api-key-warning))]
+
+      (chat-ui/render-chat-area (topic-state/get-messages state)
+                                (loading-state/get-loading state)
+                                (loading-state/get-assistant-errors state))
+
+      (chat-ui/render-input-form (form-state/get-user-input state)
+                                 (loading-state/loading? state)
+                                 has-api-key?)
+
+      (settings-ui/render-settings-modal
+       {:open? (ui-state/showing-settings? state)
+        :encryption-available? (system-state/encryption-available? state)
+        :api-key-input (sensitive-state/get-api-key-input state)
+        :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]]))
+
 (defn render-app [state]
-  (if-not (workspace-state/loaded? state)
-    (welcome-ui/render-welcome)
-
-    (let [has-api-key?          (system-state/has-anthropic-api-key? state)
-          workspace-name        "Kaitenzushi Corp Acquisition"
-          workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
-          active-topic-id       (topic-state/get-active-topic-id state)
-          topics-map            (topic-state/get-topics-map state)]
-      [e/app-layout
-       [e/left-panel
-        (topics-ui/render-left-panel-content
-          {:workspace-name        workspace-name
-           :workspace-description workspace-description
-           :active-topic-id       active-topic-id
-           :topics-map            topics-map})]
-
-       [e/main-panel
-        [e/top-bar
-         (when-not has-api-key?
-           (settings-ui/render-api-key-warning))]
-
-        (chat-ui/render-chat-area (topic-state/get-messages state)
-                                  (loading-state/get-loading state)
-                                  (loading-state/get-assistant-errors state))
-
-        (chat-ui/render-input-form (form-state/get-user-input state)
-                                   (loading-state/loading? state)
-                                   has-api-key?)
-
-        (settings-ui/render-settings-modal
-         {:open? (ui-state/showing-settings? state)
-          :encryption-available? (system-state/encryption-available? state)
-          :api-key-input (sensitive-state/get-api-key-input state)
-          :redacted-api-key (system-state/get-redacted-anthropic-api-key state)})]])))
+  (if (workspace-state/loaded? state)
+    (render-workspace state)
+    (welcome-ui/render-welcome)))
 
