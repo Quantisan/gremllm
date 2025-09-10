@@ -29,7 +29,7 @@
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
     
     [[:workspace.actions/import-topics topics]
-     [:workspace.actions/activate-initial-topic topics active-id]]))
+     [:workspace.actions/select-starting-topic topics active-id]]))
 
 (defn import-topics
   "Import the loaded topics into application state."
@@ -38,8 +38,8 @@
     [[:effects/save topic-state/topics-path topics]]
     []))
 
-(defn activate-initial-topic
-  "Activate the initial topic after workspace load - either existing or new."
+(defn select-starting-topic
+  "Select which topic the user should start with when opening a workspace."
   [_state topics active-id]
   (if (seq topics)
     [[:effects/save topic-state/active-topic-id-path active-id]

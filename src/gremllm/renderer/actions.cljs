@@ -62,7 +62,7 @@
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
 (nxr/register-action! :workspace.actions/opened workspace/opened)
 (nxr/register-action! :workspace.actions/import-topics workspace/import-topics)
-(nxr/register-action! :workspace.actions/activate-initial-topic workspace/activate-initial-topic)
+(nxr/register-action! :workspace.actions/select-starting-topic workspace/select-starting-topic)
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 
