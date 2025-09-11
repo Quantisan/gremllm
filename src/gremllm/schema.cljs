@@ -45,7 +45,7 @@
    Used when loading a workspace folder from disk."
   [:map
    [:path :string]
-   [:topics WorkspaceTopics]])
+   [:topics {:default {}} WorkspaceTopics]])
 
 ;; Coercion helpers for boundaries
 (def topic-from-ipc

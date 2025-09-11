@@ -5,23 +5,24 @@
             [malli.core :as m]
             [malli.transform :as mt]))
 
-(defn create-workspace-data
+(defn create-workspace-data-js
   "Create workspace data with Malli defaults, optionally overriding fields"
   [& [overrides]]
-  (-> (m/decode schema/WorkspaceSyncData {} mt/default-value-transformer)
+  (-> (m/decode schema/WorkspaceSyncData
+                {:path "/test/path"}  ; Provide required path
+                mt/default-value-transformer)
       (merge overrides)
       clj->js))
 
 (deftest opened-test
   (testing "Empty workspace initializes new"
-    (let [workspace-data-js (create-workspace-data {:path "/path" :topics {}})
+    (let [workspace-data-js (create-workspace-data-js)  ; Now just uses defaults
           result (workspace/opened {} workspace-data-js)]
       (is (= [[:workspace.actions/initialize-empty]] result))))
 
   (testing "Workspace with topics restores them"
     (let [topic (schema/create-topic)
-          workspace-data-js (create-workspace-data {:path "/path"
-                                                    :topics {"tid" topic}})
+          workspace-data-js (create-workspace-data-js {:topics {"tid" topic}})
           result (workspace/opened {} workspace-data-js)
           [[action-type topics active-id]] result]
       (is (= :workspace.actions/restore-with-topics action-type))
