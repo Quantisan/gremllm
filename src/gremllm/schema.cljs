@@ -59,7 +59,7 @@
   (m/decoder WorkspaceTopics mt/json-transformer))
 
 (def workspace-sync-from-ipc
-  "Transforms workspace sync data received via IPC into internal schema."
+  "Validates and transforms workspace sync data from IPC. Throws if invalid."
   (m/coercer WorkspaceSyncData mt/json-transformer))
 
 (def workspace-sync-for-ipc
