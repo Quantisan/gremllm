@@ -49,6 +49,7 @@
       (if-let [topic-id (:id active-topic)]
         (dispatch
          [[:effects/promise
+           ;; TODO: pass workspace-path to .saveTopic
            {:promise    (.saveTopic js/window.electronAPI (clj->js active-topic))
             :on-success [[:topic.actions/save-success topic-id]]
             :on-error   [[:topic.actions/save-error topic-id]]}]])

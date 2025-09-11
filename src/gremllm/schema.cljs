@@ -34,11 +34,18 @@
   (m/decode Topic {} mt/default-value-transformer))
 
 (def WorkspaceTopics
-  "Schema for workspace topics in app state"
+  "Map of Topics keyed by Topic ID"
   [:map-of :string Topic])
 
 (defn valid-workspace-topics? [topics-map]
   (m/validate WorkspaceTopics topics-map))
+
+(def WorkspaceSyncData
+  "Schema for workspace data sent from main to renderer via IPC.
+   Used when loading a workspace folder from disk."
+  [:map
+   [:path :string]
+   [:topics WorkspaceTopics]])
 
 ;; Coercion helpers for boundaries
 (def topic-from-ipc
@@ -46,10 +53,13 @@
   Used when renderer receives topic data from main process."
   (m/decoder Topic mt/string-transformer))
 
-(def workspace-from-ipc
-  "Transforms workspace data received via IPC into internal schema.
-  Handles the topic transformation for entire workspace."
-  (m/decoder WorkspaceTopics mt/json-transformer))
+(def workspace-sync-from-ipc
+  "Validates and transforms workspace sync data from IPC. Throws if invalid."
+  (m/coercer WorkspaceSyncData mt/json-transformer))
+
+(def workspace-sync-for-ipc
+  "Strips extra keys from workspace sync data for IPC transmission."
+  (m/encoder WorkspaceSyncData mt/strip-extra-keys-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.

@@ -7,14 +7,6 @@
 ;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
 (defn bootstrap [_state])
 
-(defn import-workspace-topics
-  "Transforms IPC workspace data into normalized form.
-   Returns {:topics normalized-map :active-id first-topic-id}"
-  [workspace-topics-clj]
-  (let [topics (schema/workspace-from-ipc workspace-topics-clj)]
-    {:topics    (or topics {})
-     ;; TODO: save last active topic id so that user can continue where they left off
-     :active-id (first (keys topics))}))
 
 (defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
@@ -23,13 +15,17 @@
 
 (defn opened
   "A workspace folder has been opened/loaded from disk."
-  [_state workspace-topics-js]
-  (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
-        {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
+  [_state workspace-data-js]
+  (let [{_path  :path
+         topics :topics} (-> workspace-data-js
+                             (js->clj :keywordize-keys true)
+                             (schema/workspace-sync-from-ipc))
+        ;; TODO: save last active topic id so that user can continue where they left off
+        active-topic-id (first (keys topics))]
 
-    (if (seq topics)
-      [[:workspace.actions/restore-with-topics topics active-id]]
-      [[:workspace.actions/initialize-empty]])))
+    (if (empty? topics)
+      [[:workspace.actions/initialize-empty]]
+      [[:workspace.actions/restore-with-topics topics active-topic-id]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
