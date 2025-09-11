@@ -1,5 +1,6 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
+            [gremllm.schema :as schema]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
@@ -89,9 +90,12 @@
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
   (fn [_ _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
-          topics (topic-effects/load-all topics-dir)]
-      ;; Send complete workspace representation: path + content
+          topics (topic-effects/load-all topics-dir)
+          ;; Validate/coerce the data structure before sending
+          workspace-data (schema/workspace-sync-for-ipc
+                          {:path workspace-folder-path
+                           :topics topics})]
+      ;; Send validated workspace representation
       (ipc-effects/send-to-renderer "workspace:sync" 
-        (clj->js {:path workspace-folder-path
-                  :topics topics})))))
+        (clj->js workspace-data)))))
 
