@@ -24,7 +24,10 @@
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{:keys [path topics]} (js->clj workspace-data-js :keywordize-keys true)
+  (let [workspace-data (-> workspace-data-js
+                           (js->clj :keywordize-keys true)
+                           (schema/workspace-sync-from-ipc))
+        {:keys [path topics]}      workspace-data
         {:keys [topics active-id]} (import-workspace-topics topics)]
 
     (if (seq topics)

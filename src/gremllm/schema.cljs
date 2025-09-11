@@ -40,6 +40,13 @@
 (defn valid-workspace-topics? [topics-map]
   (m/validate WorkspaceTopics topics-map))
 
+(def WorkspaceSyncData
+  "Schema for workspace data sent from main to renderer via IPC.
+   Used when loading a workspace folder from disk."
+  [:map
+   [:path :string]  ;; The workspace folder path
+   [:topics [:sequential PersistedTopic]]])  ;; Array of topics from disk
+
 ;; Coercion helpers for boundaries
 (def topic-from-ipc
   "Transforms topic data received via IPC into internal Topic schema.
@@ -50,6 +57,10 @@
   "Transforms workspace data received via IPC into internal schema.
   Handles the topic transformation for entire workspace."
   (m/decoder WorkspaceTopics mt/json-transformer))
+
+(def workspace-sync-from-ipc
+  "Transforms workspace sync data received via IPC into internal schema."
+  (m/decoder WorkspaceSyncData mt/json-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.
