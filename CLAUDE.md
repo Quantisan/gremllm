@@ -4,7 +4,7 @@ Guidance for Claude Code when working with the Gremllm codebase.
 
 ## Overview
 
-Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Shadow-CLJS (build tool).
+Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Shadow-CLJS (build tool), PicoCSS (styling).
 
 ## Architecture
 
@@ -188,6 +188,11 @@ Following FCIS principles, all state changes flow through Nexus:
 - Small, focused functions that do one thing well
 - Descriptive names that make code self-documenting
 - Let bindings for intermediate values that clarify intent
+
+### UI Approach
+- **PicoCSS only** - Use semantic HTML and PicoCSS defaults. No custom styling unless essential for functionality (e.g., chat bubbles)
+- **No polish** - MVP means functional, not fancy. Resist the urge to beautify
+- **Minimal custom CSS** - The few custom styles in index.html are enough. Don't add more
 
 ### Working with the Codebase
 1. Study existing patterns before implementing
