@@ -4,9 +4,8 @@
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
-(defn bootstrap [_state]
-  [[:workspace.effects/load-folder {:on-success [[:workspace.actions/opened]]
-                                    :on-error   [[:workspace.actions/load-error]]}]])
+;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
+(defn bootstrap [_state])
 
 (defn import-workspace-topics
   "Transforms IPC workspace data into normalized form.
@@ -17,7 +16,7 @@
      ;; TODO: save last active topic id so that user can continue where they left off
      :active-id (first (keys topics))}))
 
-(defn mark-loaded 
+(defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
@@ -27,7 +26,7 @@
   [_state workspace-topics-js]
   (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
         {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
-    
+
     (if (seq topics)
       [[:workspace.actions/restore-with-topics topics active-id]]
       [[:workspace.actions/initialize-empty]])))
