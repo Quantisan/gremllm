@@ -60,7 +60,7 @@
 
 (def workspace-sync-from-ipc
   "Transforms workspace sync data received via IPC into internal schema."
-  (m/decoder WorkspaceSyncData mt/json-transformer))
+  (m/coercer WorkspaceSyncData mt/json-transformer))
 
 (def workspace-sync-for-ipc
   "Strips extra keys from workspace sync data for IPC transmission."
