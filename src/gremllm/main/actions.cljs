@@ -90,6 +90,8 @@
   (fn [_ _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)]
-      ;; For now, workspace is just topics. Later might include settings, etc.
-      (ipc-effects/send-to-renderer "workspace:sync" (clj->js topics)))))
+      ;; Send complete workspace representation: path + content
+      (ipc-effects/send-to-renderer "workspace:sync" 
+        (clj->js {:path workspace-folder-path
+                  :topics topics})))))
 
