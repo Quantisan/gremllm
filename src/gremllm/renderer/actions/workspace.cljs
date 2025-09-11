@@ -24,15 +24,16 @@
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [workspace-data (-> workspace-data-js
-                           (js->clj :keywordize-keys true)
-                           (schema/workspace-sync-from-ipc))
-        {:keys [path topics]}      workspace-data
-        {:keys [topics active-id]} (import-workspace-topics topics)]
+  (let [{_path  :path
+         topics :topics} (-> workspace-data-js
+                             (js->clj :keywordize-keys true)
+                             (schema/workspace-sync-from-ipc))
+        {normalized-topics :topics
+         active-topic-id   :active-id} (import-workspace-topics topics)]
 
-    (if (seq topics)
-      [[:workspace.actions/restore-with-topics topics active-id]]
-      [[:workspace.actions/initialize-empty]])))
+    (if (empty? normalized-topics)
+      [[:workspace.actions/initialize-empty]]
+      [[:workspace.actions/restore-with-topics normalized-topics active-topic-id]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
