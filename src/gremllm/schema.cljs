@@ -53,11 +53,6 @@
   Used when renderer receives topic data from main process."
   (m/decoder Topic mt/string-transformer))
 
-(def workspace-from-ipc
-  "Transforms workspace data received via IPC into internal schema.
-  Handles the topic transformation for entire workspace."
-  (m/decoder WorkspaceTopics mt/json-transformer))
-
 (def workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
   (m/coercer WorkspaceSyncData mt/json-transformer))

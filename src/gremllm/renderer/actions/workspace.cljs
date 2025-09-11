@@ -7,14 +7,6 @@
 ;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
 (defn bootstrap [_state])
 
-(defn import-workspace-topics
-  "Transforms IPC workspace data into normalized form.
-   Returns {:topics normalized-map :active-id first-topic-id}"
-  [workspace-topics-clj]
-  (let [topics (schema/workspace-from-ipc workspace-topics-clj)]
-    {:topics    (or topics {})
-     ;; TODO: save last active topic id so that user can continue where they left off
-     :active-id (first (keys topics))}))
 
 (defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
@@ -28,12 +20,12 @@
          topics :topics} (-> workspace-data-js
                              (js->clj :keywordize-keys true)
                              (schema/workspace-sync-from-ipc))
-        {normalized-topics :topics
-         active-topic-id   :active-id} (import-workspace-topics topics)]
+        ;; TODO: save last active topic id so that user can continue where they left off
+        active-topic-id (first (keys topics))]
 
-    (if (empty? normalized-topics)
+    (if (empty? topics)
       [[:workspace.actions/initialize-empty]]
-      [[:workspace.actions/restore-with-topics normalized-topics active-topic-id]])))
+      [[:workspace.actions/restore-with-topics topics active-topic-id]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
