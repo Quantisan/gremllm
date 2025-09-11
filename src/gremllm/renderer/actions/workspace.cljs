@@ -23,9 +23,9 @@
 
 (defn opened
   "A workspace folder has been opened/loaded from disk."
-  [_state workspace-topics-js]
-  (let [workspace-topics-clj (js->clj workspace-topics-js :keywordize-keys true)
-        {:keys [topics active-id]} (import-workspace-topics workspace-topics-clj)]
+  [_state workspace-data-js]
+  (let [{:keys [path topics]} (js->clj workspace-data-js :keywordize-keys true)
+        {:keys [topics active-id]} (import-workspace-topics topics)]
 
     (if (seq topics)
       [[:workspace.actions/restore-with-topics topics active-id]]
