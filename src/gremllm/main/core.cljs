@@ -14,6 +14,7 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
+;; TODO: need to remove requiring workspace-dir, as we might not have that info during bootstrap.
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations:
    - Chat: LLM message exchange
@@ -40,6 +41,9 @@
               (fn [_event topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
                     (schema/topic-from-disk)
+                    ;; WARN: this is a bug. We can't hardcode topics-dir here because when we switch
+                    ;; workspace, this topics-dir wouldn't change with it. We need to pass a
+                    ;; topics-dir at runtime.
                     (topic-actions/topic->save-plan topics-dir)
                     (topic-effects/save))))
 

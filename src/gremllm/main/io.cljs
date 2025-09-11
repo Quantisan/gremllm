@@ -5,6 +5,7 @@
 
 (def ^:private user-subdir "User")
 (def ^:private workspaces-subdir "workspaces")
+;; TODO: remove default-workspace
 (def ^:private default-workspace "default")
 (def ^:private topics-subdir "topics")
 
