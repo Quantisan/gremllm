@@ -65,7 +65,7 @@
 (def workspace-sync-for-ipc
   "Validates and prepares workspace sync data for IPC transmission.
    Ensures data conforms to WorkspaceSyncData schema before sending."
-  (m/encoder WorkspaceSyncData mt/json-transformer))
+  (m/encoder WorkspaceSyncData mt/strip-extra-keys-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.

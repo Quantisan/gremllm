@@ -91,11 +91,9 @@
   (fn [_ _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)
-          ;; Validate/coerce the data structure before sending
           workspace-data (schema/workspace-sync-for-ipc
                           {:path workspace-folder-path
                            :topics topics})]
-      ;; Send validated workspace representation
-      (ipc-effects/send-to-renderer "workspace:sync" 
+      (ipc-effects/send-to-renderer "workspace:sync"
         (clj->js workspace-data)))))
 
