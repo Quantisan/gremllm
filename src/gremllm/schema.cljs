@@ -34,7 +34,7 @@
   (m/decode Topic {} mt/default-value-transformer))
 
 (def WorkspaceTopics
-  "Schema for workspace topics in app state"
+  "Map of Topics keyed by Topic ID"
   [:map-of :string Topic])
 
 (defn valid-workspace-topics? [topics-map]
@@ -44,8 +44,8 @@
   "Schema for workspace data sent from main to renderer via IPC.
    Used when loading a workspace folder from disk."
   [:map
-   [:path :string]  ;; The workspace folder path
-   [:topics [:sequential PersistedTopic]]])  ;; Array of topics from disk
+   [:path :string]
+   [:topics WorkspaceTopics]])
 
 ;; Coercion helpers for boundaries
 (def topic-from-ipc
