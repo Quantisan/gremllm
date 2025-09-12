@@ -7,16 +7,20 @@
 ;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
 (defn bootstrap [_state])
 
-
 (defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
 
+(defn set-path
+  "Set the workspace filesystem path."
+  [_state path]
+  [[:effects/save workspace-state/workspace-path-path path]])
+
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{_path  :path
+  (let [{path   :path
          topics :topics} (-> workspace-data-js
                              (js->clj :keywordize-keys true)
                              (schema/workspace-sync-from-ipc))
@@ -25,13 +29,17 @@
 
     (if (empty? topics)
       [[:workspace.actions/initialize-empty]]
-      [[:workspace.actions/restore-with-topics topics active-topic-id]])))
+      [[:workspace.actions/restore-with-topics
+        {:topics          topics
+         :active-topic-id active-topic-id
+         :workspace-path  path}]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
-  [_state topics active-id]
+  [_state {:keys [topics active-topic-id workspace-path]}]
   [[:effects/save topic-state/topics-path topics]
-   [:effects/save topic-state/active-topic-id-path active-id]
+   [:effects/save topic-state/active-topic-id-path active-topic-id]
+   [:workspace.actions/set-path workspace-path]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
