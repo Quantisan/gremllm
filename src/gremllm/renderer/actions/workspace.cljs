@@ -7,7 +7,6 @@
 ;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
 (defn bootstrap [_state])
 
-
 (defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
   [_state]
@@ -30,14 +29,17 @@
 
     (if (empty? topics)
       [[:workspace.actions/initialize-empty]]
-      [[:workspace.actions/restore-with-topics topics active-topic-id path]])))
+      [[:workspace.actions/restore-with-topics
+        {:topics          topics
+         :active-topic-id active-topic-id
+         :workspace-path  path}]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
-  [_state topics active-id path]
+  [_state {:keys [topics active-topic-id workspace-path]}]
   [[:effects/save topic-state/topics-path topics]
-   [:effects/save topic-state/active-topic-id-path active-id]
-   [:workspace.actions/set-path path]
+   [:effects/save topic-state/active-topic-id-path active-topic-id]
+   [:workspace.actions/set-path workspace-path]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
