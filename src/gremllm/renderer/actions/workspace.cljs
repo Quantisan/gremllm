@@ -13,6 +13,11 @@
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
 
+(defn set-path
+  "Set the workspace filesystem path."
+  [_state path]
+  [[:effects/save workspace-state/workspace-path-path path]])
+
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
@@ -32,7 +37,7 @@
   [_state topics active-id path]
   [[:effects/save topic-state/topics-path topics]
    [:effects/save topic-state/active-topic-id-path active-id]
-   [:effects/save workspace-state/workspace-path-path path]
+   [:workspace.actions/set-path path]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
