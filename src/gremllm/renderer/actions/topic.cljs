@@ -1,6 +1,7 @@
 (ns gremllm.renderer.actions.topic
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.schema :as schema]))
 
 (defn set-topic [_state topic-js]
@@ -45,12 +46,12 @@
 
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
-    (let [active-topic (topic-state/get-active-topic @store)]
+    (let [active-topic   (topic-state/get-active-topic @store)
+          workspace-path (workspace-state/get-workspace-path @store)]
       (if-let [topic-id (:id active-topic)]
         (dispatch
          [[:effects/promise
-           ;; TODO: pass workspace-path to .saveTopic
-           {:promise    (.saveTopic js/window.electronAPI (clj->js active-topic))
+           {:promise    (.saveTopic js/window.electronAPI workspace-path (clj->js active-topic))
             :on-success [[:topic.actions/save-success topic-id]]
             :on-error   [[:topic.actions/save-error topic-id]]}]])
         (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]])))))
