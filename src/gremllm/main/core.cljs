@@ -31,21 +31,18 @@
                                 :channel "chat/send-message"}
                          [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
 
+  (.handle ipcMain "topic/save"
+              (fn [_event workspace-dir topic-data]
+                (-> (js->clj topic-data :keywordize-keys true)
+                    (schema/topic-from-disk)
+                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
+                    (topic-effects/save))))
+
   (let [topics-dir (io/topics-dir-path workspace-dir)]
     (.handle ipcMain "workspace/load-folder"
              (fn [_event]
                (-> (topic-effects/load-all topics-dir)
                    (clj->js))))
-
-    (.handle ipcMain "topic/save"
-              (fn [_event topic-data]
-                (-> (js->clj topic-data :keywordize-keys true)
-                    (schema/topic-from-disk)
-                    ;; WARN: this is a bug. We can't hardcode topics-dir here because when we switch
-                    ;; workspace, this topics-dir wouldn't change with it. We need to pass a
-                    ;; topics-dir at runtime.
-                    (topic-actions/topic->save-plan topics-dir)
-                    (topic-effects/save))))
 
     (.handle ipcMain "topic/load-latest"
               (fn [_event]
