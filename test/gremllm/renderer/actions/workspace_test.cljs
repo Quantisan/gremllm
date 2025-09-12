@@ -24,8 +24,8 @@
     (let [topic (schema/create-topic)
           workspace-data-js (create-workspace-data-js {:topics {"tid" topic}})
           result (workspace/opened {} workspace-data-js)
-          [[action-type topics active-id]] result]
+          [[action-type params]] result]
       (is (= :workspace.actions/restore-with-topics action-type))
-      (is (= "tid" active-id))
-      (is (contains? topics "tid")))))
+      (is (= "tid" (:active-topic-id params)))
+      (is (contains? (:topics params) "tid")))))
 
