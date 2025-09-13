@@ -14,7 +14,6 @@
   {:encryption-available? encryption-available?
    :secrets               (secrets/redact-all-string-values secrets)})
 
-;; TODO: need to remove requiring workspace-dir, as we might not have that info during bootstrap.
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations:
    - Chat: LLM message exchange
@@ -22,7 +21,7 @@
    - Workspace: Bulk topic operations
    - Secrets: Secure configuration storage
    - System: Runtime capability detection"
-  [store workspace-dir secrets-filepath]
+  [store secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
@@ -32,24 +31,30 @@
                          [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
 
   (.handle ipcMain "topic/save"
-              (fn [_event workspace-dir topic-data]
-                (-> (js->clj topic-data :keywordize-keys true)
-                    (schema/topic-from-ipc)
-                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
-                    (topic-effects/save))))
+           (fn [_event topic-data]
+             (let [workspace-dir (:workspace-dir @store)]
+               (-> (js->clj topic-data :keywordize-keys true)
+                   (schema/topic-from-ipc)
+                   (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
+                   (topic-effects/save)))))
 
-  (let [topics-dir (io/topics-dir-path workspace-dir)]
-    (.handle ipcMain "workspace/load-folder"
-             (fn [_event]
+  (.handle ipcMain "workspace/load-folder"
+           (fn [_event]
+             (let [workspace-dir (:workspace-dir @store)
+                   topics-dir (io/topics-dir-path workspace-dir)]
                (-> (topic-effects/load-all topics-dir)
-                   (clj->js))))
+                   (clj->js)))))
 
-    (.handle ipcMain "topic/load-latest"
-              (fn [_event]
-                (topic-effects/load-latest topics-dir)))
+  (.handle ipcMain "topic/load-latest"
+            (fn [_event]
+              (let [workspace-dir (:workspace-dir @store)
+                    topics-dir (io/topics-dir-path workspace-dir)]
+                (topic-effects/load-latest topics-dir))))
 
-    (.handle ipcMain "topic/list"
-              (fn [_event]
+  (.handle ipcMain "topic/list"
+            (fn [_event]
+              (let [workspace-dir (:workspace-dir @store)
+                    topics-dir (io/topics-dir-path workspace-dir)]
                 (-> (topic-effects/enumerate topics-dir)
                     (clj->js)))))
 
@@ -73,7 +78,10 @@
   (let [user-data-dir   (.getPath app "userData")
         workspace-dir   (io/workspace-dir-path user-data-dir)
         secrets-filepath (io/secrets-file-path user-data-dir)]
-    (register-domain-handlers store workspace-dir secrets-filepath)
+    ;; Initialize workspace-dir in store
+    (nxr/dispatch store {} [[:store.effects/save [:workspace-dir] workspace-dir]])
+
+    (register-domain-handlers store secrets-filepath)
     (menu/create-menu store)))
 
 (defn- initialize-app [store]

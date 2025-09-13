@@ -48,10 +48,22 @@
   (fn [_state]
     [[:workspace.effects/pick-and-load-folder]]))
 
+;; Store Effects
+;; =============
+;; General store mutation effect following FCIS principles
+
+(nxr/register-effect! :store.effects/save
+  (fn [_ store path value]
+    (swap! store assoc-in path value)))
+
 ;; IPC Effects Registration
 ;; ========================
 ;; All IPC boundary effects are implemented in main.effects.ipc
 ;; to maintain clear FCIS separation.
+
+(nxr/register-effect! :ipc.effects/send-to-renderer
+  (fn [_ _ channel data]
+    (ipc-effects/send-to-renderer channel data)))
 
 (nxr/register-effect! :menu.effects/send-command
   (fn [_ _ command]
@@ -88,12 +100,12 @@
 ;; Handle workspace folder operations from the File menu
 
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
-  (fn [_ _ workspace-folder-path]
+  (fn [{:keys [dispatch]} _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)
           workspace-data (schema/workspace-sync-for-ipc
-                          {:path workspace-folder-path
-                           :topics topics})]
-      (ipc-effects/send-to-renderer "workspace:sync"
-        (clj->js workspace-data)))))
+                          {:topics topics})]
+      (dispatch [[:store.effects/save [:workspace-dir] workspace-folder-path]
+                 [:ipc.effects/send-to-renderer "workspace:sync" 
+                  (clj->js workspace-data)]]))))
 
