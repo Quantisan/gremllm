@@ -16,12 +16,22 @@
    :secrets               (secrets/redact-all-string-values secrets)})
 
 (defn register-domain-handlers
-  "Register IPC handlers for core domain operations:
-   - Chat: LLM message exchange
-   - Topics: Save/load/list conversation threads
-   - Workspace: Bulk topic operations
-   - Secrets: Secure configuration storage
-   - System: Runtime capability detection"
+  "Register IPC handlers for core domain operations.
+
+   ARCHITECTURE: IPC handlers ARE the imperative shell
+   ====================================================
+   These handlers don't use Nexus dispatch because they must return
+   values synchronously to Electron's IPC. They're boundary adapters,
+   not business logic. Each follows FCIS internally:
+   - Extract context (workspace-dir from store)
+   - Transform with pure functions (topic-actions/topic->save-plan)
+   - Execute effects (topic-effects/save)
+   - Return result
+
+   This is the correct pattern for synchronous system boundaries.
+
+   Domains: Chat (LLM), Topics (save/load), Workspace (bulk ops),
+            Secrets (config), System (capabilities)"
   [store secrets-filepath]
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages]
