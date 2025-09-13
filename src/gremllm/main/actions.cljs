@@ -64,7 +64,7 @@
 
 (nxr/register-effect! :ipc.effects/send-to-renderer
   (fn [_ _ channel data]
-    (ipc-effects/send-to-renderer channel data)))
+    (ipc-effects/send-to-renderer channel (clj->js data))))
 
 (nxr/register-effect! :menu.effects/send-command
   (fn [_ _ command]
@@ -111,6 +111,5 @@
           workspace-data (schema/workspace-sync-for-ipc
                           {:topics topics})]
       (dispatch [[:workspace.actions/set-directory workspace-folder-path]
-                 [:ipc.effects/send-to-renderer "workspace:sync"
-                  (clj->js workspace-data)]]))))
+                 [:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
 
