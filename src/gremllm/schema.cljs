@@ -44,7 +44,6 @@
   "Schema for workspace data sent from main to renderer via IPC.
    Used when loading a workspace folder from disk."
   [:map
-   [:path :string]
    [:topics {:default {}} WorkspaceTopics]])
 
 ;; Coercion helpers for boundaries
