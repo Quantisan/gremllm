@@ -12,16 +12,10 @@
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
 
-(defn set-path
-  "Set the workspace filesystem path."
-  [_state path]
-  [[:effects/save workspace-state/workspace-path-path path]])
-
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{path   :path
-         topics :topics} (-> workspace-data-js
+  (let [{topics :topics} (-> workspace-data-js
                              (js->clj :keywordize-keys true)
                              (schema/workspace-sync-from-ipc))
         ;; TODO: save last active topic id so that user can continue where they left off
@@ -31,15 +25,13 @@
       [[:workspace.actions/initialize-empty]]
       [[:workspace.actions/restore-with-topics
         {:topics          topics
-         :active-topic-id active-topic-id
-         :workspace-path  path}]])))
+         :active-topic-id active-topic-id}]])))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
-  [_state {:keys [topics active-topic-id workspace-path]}]
+  [_state {:keys [topics active-topic-id]}]
   [[:effects/save topic-state/topics-path topics]
    [:effects/save topic-state/active-topic-id-path active-topic-id]
-   [:workspace.actions/set-path workspace-path]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
