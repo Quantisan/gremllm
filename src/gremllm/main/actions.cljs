@@ -99,13 +99,17 @@
 ;; =================
 ;; Handle workspace folder operations from the File menu
 
+(nxr/register-action! :workspace.actions/set-directory
+  (fn [_state dir]
+    [[:store.effects/save [:workspace-dir] dir]]))
+
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
   (fn [{:keys [dispatch]} _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)
           workspace-data (schema/workspace-sync-for-ipc
                           {:topics topics})]
-      (dispatch [[:store.effects/save [:workspace-dir] workspace-folder-path]
+      (dispatch [[:workspace.actions/set-directory workspace-folder-path]
                  [:ipc.effects/send-to-renderer "workspace:sync" 
                   (clj->js workspace-data)]]))))
 

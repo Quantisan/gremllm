@@ -79,7 +79,7 @@
         workspace-dir   (io/workspace-dir-path user-data-dir)
         secrets-filepath (io/secrets-file-path user-data-dir)]
     ;; Initialize workspace-dir in store
-    (nxr/dispatch store {} [[:store.effects/save [:workspace-dir] workspace-dir]])
+    (nxr/dispatch store {} [[:workspace.actions/set-directory workspace-dir]])
 
     (register-domain-handlers store secrets-filepath)
     (menu/create-menu store)))
