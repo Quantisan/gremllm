@@ -6,6 +6,7 @@
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
             [gremllm.main.io :as io]
+            [gremllm.main.state :as state]
             [gremllm.schema :as schema]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
@@ -32,7 +33,7 @@
 
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
-             (let [workspace-dir (:workspace-dir @store)]
+             (let [workspace-dir (state/get-workspace-dir @store)]
                (-> (js->clj topic-data :keywordize-keys true)
                    (schema/topic-from-ipc)
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
@@ -40,20 +41,20 @@
 
   (.handle ipcMain "workspace/load-folder"
            (fn [_event]
-             (let [workspace-dir (:workspace-dir @store)
+             (let [workspace-dir (state/get-workspace-dir @store)
                    topics-dir (io/topics-dir-path workspace-dir)]
                (-> (topic-effects/load-all topics-dir)
                    (clj->js)))))
 
   (.handle ipcMain "topic/load-latest"
             (fn [_event]
-              (let [workspace-dir (:workspace-dir @store)
+              (let [workspace-dir (state/get-workspace-dir @store)
                     topics-dir (io/topics-dir-path workspace-dir)]
                 (topic-effects/load-latest topics-dir))))
 
   (.handle ipcMain "topic/list"
             (fn [_event]
-              (let [workspace-dir (:workspace-dir @store)
+              (let [workspace-dir (state/get-workspace-dir @store)
                     topics-dir (io/topics-dir-path workspace-dir)]
                 (-> (topic-effects/enumerate topics-dir)
                     (clj->js)))))

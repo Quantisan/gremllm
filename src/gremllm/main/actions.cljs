@@ -5,6 +5,7 @@
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.topic :as topic-effects]
+            [gremllm.main.state :as state]
             [gremllm.main.io :as io]
             ["electron/main" :refer [app dialog]]))
 
@@ -101,7 +102,7 @@
 
 (nxr/register-action! :workspace.actions/set-directory
   (fn [_state dir]
-    [[:store.effects/save [:workspace-dir] dir]]))
+    [[:store.effects/save state/workspace-dir-path dir]]))
 
 (nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
   (fn [{:keys [dispatch]} _ workspace-folder-path]
@@ -110,6 +111,6 @@
           workspace-data (schema/workspace-sync-for-ipc
                           {:topics topics})]
       (dispatch [[:workspace.actions/set-directory workspace-folder-path]
-                 [:ipc.effects/send-to-renderer "workspace:sync" 
+                 [:ipc.effects/send-to-renderer "workspace:sync"
                   (clj->js workspace-data)]]))))
 
