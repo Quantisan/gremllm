@@ -57,17 +57,17 @@
                    (clj->js)))))
 
   (.handle ipcMain "topic/load-latest"
-            (fn [_event]
-              (let [workspace-dir (state/get-workspace-dir @store)
-                    topics-dir (io/topics-dir-path workspace-dir)]
-                (topic-effects/load-latest topics-dir))))
+           (fn [_event]
+             (let [workspace-dir (state/get-workspace-dir @store)
+                   topics-dir (io/topics-dir-path workspace-dir)]
+               (topic-effects/load-latest topics-dir))))
 
   (.handle ipcMain "topic/list"
-            (fn [_event]
-              (let [workspace-dir (state/get-workspace-dir @store)
-                    topics-dir (io/topics-dir-path workspace-dir)]
-                (-> (topic-effects/enumerate topics-dir)
-                    (clj->js)))))
+           (fn [_event]
+             (let [workspace-dir (state/get-workspace-dir @store)
+                   topics-dir (io/topics-dir-path workspace-dir)]
+               (-> (topic-effects/enumerate topics-dir)
+                   (clj->js)))))
 
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
