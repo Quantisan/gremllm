@@ -34,7 +34,7 @@
   (.handle ipcMain "topic/save"
               (fn [_event workspace-dir topic-data]
                 (-> (js->clj topic-data :keywordize-keys true)
-                    (schema/topic-from-disk)
+                    (schema/topic-from-ipc)
                     (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
                     (topic-effects/save))))
 
