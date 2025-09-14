@@ -52,9 +52,12 @@
   Used when renderer receives topic data from main process."
   (m/decoder Topic mt/string-transformer))
 
-(def workspace-sync-from-ipc
+(defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
-  (m/coercer WorkspaceSyncData mt/json-transformer))
+  [workspace-data-js]
+  (as-> workspace-data-js $
+    (js->clj $ :keywordize-keys true)
+    (m/coerce WorkspaceSyncData $ mt/json-transformer)))
 
 (defn workspace-sync-for-ipc
   "Prepares workspace sync data for IPC transmission, taking topics and creating the proper structure."
