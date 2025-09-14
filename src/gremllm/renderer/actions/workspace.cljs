@@ -43,6 +43,14 @@
   ;; Don't auto-create anything on load error - let user handle it
   [])
 
+(defn open-folder
+  "User wants to pick and open a different workspace folder."
+  [_state]
+  [[:effects/promise
+    {:promise (.pickWorkspaceFolder js/window.electronAPI)}]])
+     ;; No handlers needed - workspace data arrives via workspace:sync IPC event
+
+
 ;; Effects for workspace persistence
 (nxr/register-effect! :workspace.effects/load-folder
   (fn [{dispatch :dispatch} _store & [opts]]

@@ -56,6 +56,14 @@
                (-> (topic-effects/load-all topics-dir)
                    (clj->js)))))
 
+  (.handle ipcMain "workspace/pick-folder"
+           (fn [_event]
+             ;; Reuse the existing menu action - it already handles the full flow
+             (nxr/dispatch store {} 
+                           [[:menu.actions/open-folder]])
+             ;; Return empty - workspace data flows via workspace:sync
+             #js {}))
+
   (.handle ipcMain "topic/load-latest"
            (fn [_event]
              (let [workspace-dir (state/get-workspace-dir @store)
