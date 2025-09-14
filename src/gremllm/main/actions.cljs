@@ -1,13 +1,13 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.schema :as schema]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
+            [gremllm.main.actions.menu :as menu-actions]
+            [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.llm :as llm-effects]
-            [gremllm.main.effects.topic :as topic-effects]
-            [gremllm.main.state :as state]
+            [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [app dialog]]))
+            ["electron/main" :refer [app]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -21,8 +21,8 @@
                 (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
-;; Menu Actions & Effects
-;; ======================
+;; Menu Actions Registration
+;; =========================
 ;; Menu IPC Flow in Electron:
 ;; 1. User clicks menu item → Menu (main process) dispatches action
 ;; 2. Action returns effect to send command to renderer
@@ -35,19 +35,9 @@
 ;; - Application state lives in the renderer process (where the UI is)
 ;; - We bridge this gap with IPC, maintaining clean separation
 
-(nxr/register-action! :menu.actions/save-topic
-  (fn [_state]
-    ;; Menu wants to save topic. The topic state lives in renderer,
-    ;; so we send the command there via IPC.
-    [[:menu.effects/send-command :save-topic]]))
-
-(nxr/register-action! :menu.actions/show-settings
-  (fn [_state]
-    [[:menu.effects/send-command :show-settings]]))
-
-(nxr/register-action! :menu.actions/open-folder
-  (fn [_state]
-    [[:workspace.effects/pick-folder]]))
+(nxr/register-action! :menu.actions/save-topic menu-actions/save-topic)
+(nxr/register-action! :menu.actions/show-settings menu-actions/show-settings)
+(nxr/register-action! :menu.actions/open-folder menu-actions/open-folder)
 
 ;; Store Effects
 ;; =============
@@ -79,36 +69,10 @@
   (fn [{:keys [dispatch]} _ messages api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
-;; Dialog effects
-(nxr/register-effect! :workspace.effects/pick-folder
-  (fn [{:keys [dispatch]} _]
-    (-> (.showOpenDialog dialog
-          #js {:title "Open Workspace Folder"
-               :properties #js ["openDirectory"]
-               :buttonLabel "Open"})
-        (.then (fn [^js result]
-                 (when-not (.-canceled result)
-                   (let [workspace-folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.actions/open workspace-folder-path]]))))))))
+;; Workspace Actions/Effects Registration
+(nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
+(nxr/register-action! :workspace.actions/open workspace-actions/open)
 
-;; Workspace Actions
-;; =================
-;; Handle workspace folder operations from the File menu
-
-(nxr/register-action! :workspace.actions/set-directory
-  (fn [_state dir]
-    [[:store.effects/save state/workspace-dir-path dir]]))
-
-(nxr/register-action! :workspace.actions/open
-  (fn [_state workspace-folder-path]
-    [[:store.effects/save state/workspace-dir-path workspace-folder-path]
-     [:workspace.effects/load-and-sync workspace-folder-path]]))
-
-(nxr/register-effect! :workspace.effects/load-and-sync
-  (fn [{:keys [dispatch]} _ workspace-folder-path]
-    (let [topics-dir (io/topics-dir-path workspace-folder-path)
-          topics (topic-effects/load-all topics-dir)
-          workspace-data (schema/workspace-sync-for-ipc
-                          {:topics topics})]
-      (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
+(nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
+(nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 
