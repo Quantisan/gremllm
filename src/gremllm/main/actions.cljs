@@ -105,10 +105,10 @@
      [:workspace.effects/load-and-sync workspace-folder-path]]))
 
 (nxr/register-effect! :workspace.effects/load-and-sync
-  (fn [_ _ workspace-folder-path]
+  (fn [{:keys [dispatch]} _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)
           workspace-data (schema/workspace-sync-for-ipc
                           {:topics topics})]
-      (ipc-effects/send-to-renderer "workspace:sync" (clj->js workspace-data)))))
+      (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
 
