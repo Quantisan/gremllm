@@ -17,5 +17,5 @@
 (defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
   (let [topics-dir (io/topics-dir-path workspace-folder-path)
         topics (topic-effects/load-all topics-dir)
-        workspace-data (schema/workspace-sync-for-ipc {:topics topics})]
+        workspace-data (schema/workspace-sync-for-ipc topics)]
     (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]])))

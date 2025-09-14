@@ -56,9 +56,10 @@
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
   (m/coercer WorkspaceSyncData mt/json-transformer))
 
-(def workspace-sync-for-ipc
-  "Strips extra keys from workspace sync data for IPC transmission."
-  (m/encoder WorkspaceSyncData mt/strip-extra-keys-transformer))
+(defn workspace-sync-for-ipc
+  "Prepares workspace sync data for IPC transmission, taking topics and creating the proper structure."
+  [topics]
+  (m/encode WorkspaceSyncData {:topics topics} mt/strip-extra-keys-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.
