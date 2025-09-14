@@ -15,9 +15,7 @@
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{topics :topics} (-> workspace-data-js
-                             (js->clj :keywordize-keys true)
-                             (schema/workspace-sync-from-ipc))
+  (let [{topics :topics} (schema/workspace-sync-from-ipc workspace-data-js)
         ;; TODO: save last active topic id so that user can continue where they left off
         active-topic-id (first (keys topics))]
 

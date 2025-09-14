@@ -5,10 +5,9 @@
 
 (defn set-topic [_state topic-js]
   (when topic-js
-    (let [clj-topic (js->clj topic-js :keywordize-keys true)
-          normalized-topic (schema/topic-from-ipc clj-topic)
-          topic-id (:id normalized-topic)]
-      [[:effects/save (conj topic-state/topics-path topic-id) normalized-topic]
+    (let [topic (schema/topic-from-ipc topic-js)
+          topic-id (:id topic)]
+      [[:effects/save (conj topic-state/topics-path topic-id) topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
 (defn start-new-topic [_state]
