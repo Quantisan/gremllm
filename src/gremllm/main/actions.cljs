@@ -1,14 +1,13 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.schema :as schema]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.menu :as menu-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.llm :as llm-effects]
-            [gremllm.main.effects.topic :as topic-effects]
+            [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
-            ["electron/main" :refer [app dialog]]))
+            ["electron/main" :refer [app]]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
@@ -70,30 +69,10 @@
   (fn [{:keys [dispatch]} _ messages api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
-;; Dialog effects
-(nxr/register-effect! :workspace.effects/pick-folder
-  (fn [{:keys [dispatch]} _]
-    (-> (.showOpenDialog dialog
-          #js {:title "Open Workspace Folder"
-               :properties #js ["openDirectory"]
-               :buttonLabel "Open"})
-        (.then (fn [^js result]
-                 (when-not (.-canceled result)
-                   (let [workspace-folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.actions/open workspace-folder-path]]))))))))
-
-;; Workspace Actions Registration
-;; ==============================
-;; Handle workspace folder operations from the File menu
-
+;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
 (nxr/register-action! :workspace.actions/open workspace-actions/open)
 
-(nxr/register-effect! :workspace.effects/load-and-sync
-  (fn [{:keys [dispatch]} _ workspace-folder-path]
-    (let [topics-dir (io/topics-dir-path workspace-folder-path)
-          topics (topic-effects/load-all topics-dir)
-          workspace-data (schema/workspace-sync-for-ipc
-                          {:topics topics})]
-      (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
+(nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
+(nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 

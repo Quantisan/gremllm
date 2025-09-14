@@ -9,4 +9,4 @@
   [[:menu.effects/send-command :show-settings]])
 
 (defn open-folder [_state]
-  [[:workspace.effects/pick-folder]])
+  [[:workspace.effects/pick-folder-dialog]])
