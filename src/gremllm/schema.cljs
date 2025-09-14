@@ -47,10 +47,13 @@
    [:topics {:default {}} WorkspaceTopics]])
 
 ;; Coercion helpers for boundaries
-(def topic-from-ipc
+(defn topic-from-ipc
   "Transforms topic data received via IPC into internal Topic schema.
   Used when renderer receives topic data from main process."
-  (m/decoder Topic mt/string-transformer))
+  [topic-js]
+  (as-> topic-js $
+    (js->clj $ :keywordize-keys true)
+    (m/decode Topic $ mt/string-transformer)))
 
 (defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
