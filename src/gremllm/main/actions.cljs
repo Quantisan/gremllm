@@ -72,6 +72,7 @@
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
 (nxr/register-action! :workspace.actions/open workspace-actions/open)
+(nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
 
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
