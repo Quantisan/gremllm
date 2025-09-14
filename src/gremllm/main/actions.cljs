@@ -47,7 +47,7 @@
 
 (nxr/register-action! :menu.actions/open-folder
   (fn [_state]
-    [[:workspace.effects/pick-and-load-folder]]))
+    [[:workspace.effects/pick-folder]]))
 
 ;; Store Effects
 ;; =============
@@ -80,21 +80,16 @@
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
 
 ;; Dialog effects
-(nxr/register-effect! :workspace.effects/pick-and-load-folder
+(nxr/register-effect! :workspace.effects/pick-folder
   (fn [{:keys [dispatch]} _]
-    ;; TODO: Thinking: should we refactor `:workspace.effects/pick-and-load-folder` to use
-    ;; `:ipc.effects/promise->reply` (or a generic version)? I'm thinking about our Design
-    ;; Principles. Probably yes, but that means we should move `promise->reply` helper up from
-    ;; ipc.effects ns
     (-> (.showOpenDialog dialog
           #js {:title "Open Workspace Folder"
-               :properties #js ["openDirectory"]  ; Note: multiSelections is false by default
+               :properties #js ["openDirectory"]
                :buttonLabel "Open"})
         (.then (fn [^js result]
                  (when-not (.-canceled result)
-                   ;; Even with single selection, filePaths is still an array
                    (let [workspace-folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.effects/load-folder-and-send-to-renderer workspace-folder-path]]))))))))
+                     (dispatch [[:workspace.actions/open workspace-folder-path]]))))))))
 
 ;; Workspace Actions
 ;; =================
@@ -104,12 +99,16 @@
   (fn [_state dir]
     [[:store.effects/save state/workspace-dir-path dir]]))
 
-(nxr/register-effect! :workspace.effects/load-folder-and-send-to-renderer
+(nxr/register-action! :workspace.actions/open
+  (fn [_state workspace-folder-path]
+    [[:store.effects/save state/workspace-dir-path workspace-folder-path]
+     [:workspace.effects/load-and-sync workspace-folder-path]]))
+
+(nxr/register-effect! :workspace.effects/load-and-sync
   (fn [{:keys [dispatch]} _ workspace-folder-path]
     (let [topics-dir (io/topics-dir-path workspace-folder-path)
           topics (topic-effects/load-all topics-dir)
           workspace-data (schema/workspace-sync-for-ipc
                           {:topics topics})]
-      (dispatch [[:workspace.actions/set-directory workspace-folder-path]
-                 [:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
+      (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]]))))
 
