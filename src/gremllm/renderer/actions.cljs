@@ -65,6 +65,7 @@
 (nxr/register-action! :workspace.actions/initialize-empty workspace/initialize-empty)
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
+(nxr/register-action! :workspace.actions/pick-folder workspace/pick-folder)
 
 ;; Topic
 

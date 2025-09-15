@@ -2,7 +2,6 @@
   (:require [nexus.registry :as nxr]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
-            [gremllm.main.actions.menu :as menu-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
@@ -35,9 +34,9 @@
 ;; - Application state lives in the renderer process (where the UI is)
 ;; - We bridge this gap with IPC, maintaining clean separation
 
-(nxr/register-action! :menu.actions/save-topic menu-actions/save-topic)
-(nxr/register-action! :menu.actions/show-settings menu-actions/show-settings)
-(nxr/register-action! :menu.actions/open-folder menu-actions/open-folder)
+(nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
+(nxr/register-action! :menu.actions/show-settings (fn [_state] [[:menu.effects/send-command :show-settings]]))
+(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/pick-folder]]))
 
 ;; Store Effects
 ;; =============
@@ -71,7 +70,8 @@
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
-(nxr/register-action! :workspace.actions/open workspace-actions/open)
+(nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
+(nxr/register-action! :workspace.actions/pick-folder workspace-actions/pick-folder)
 
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)

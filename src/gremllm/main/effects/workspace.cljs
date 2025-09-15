@@ -12,7 +12,7 @@
       (.then (fn [^js result]
                (when-not (.-canceled result)
                  (let [workspace-folder-path (first (.-filePaths result))]
-                   (dispatch [[:workspace.actions/open workspace-folder-path]])))))))
+                   (dispatch [[:workspace.actions/open-folder workspace-folder-path]])))))))
 
 (defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
   (let [topics-dir (io/topics-dir-path workspace-folder-path)
