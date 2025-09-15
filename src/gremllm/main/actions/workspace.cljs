@@ -4,7 +4,7 @@
 (defn set-directory [_state dir]
   [[:store.effects/save state/workspace-dir-path dir]])
 
-(defn open [_state workspace-folder-path]
+(defn open-folder [_state workspace-folder-path]
   [[:store.effects/save state/workspace-dir-path workspace-folder-path]
    [:workspace.effects/load-and-sync workspace-folder-path]])
 
