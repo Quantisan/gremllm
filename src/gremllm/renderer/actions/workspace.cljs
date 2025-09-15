@@ -1,6 +1,5 @@
 (ns gremllm.renderer.actions.workspace
-  (:require [nexus.registry :as nxr]
-            [gremllm.schema :as schema]
+  (:require [gremllm.schema :as schema]
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
@@ -50,12 +49,3 @@
     {:promise (.pickWorkspaceFolder js/window.electronAPI)}]])
      ;; No handlers needed - workspace data arrives via workspace:sync IPC event
 
-
-;; Effects for workspace persistence
-(nxr/register-effect! :workspace.effects/load-folder
-  (fn [{dispatch :dispatch} _store & [opts]]
-    (dispatch
-      [[:effects/promise
-        {:promise    (.loadWorkspaceFolder js/window.electronAPI)
-         :on-success (:on-success opts)
-         :on-error   (:on-error opts)}]])))
