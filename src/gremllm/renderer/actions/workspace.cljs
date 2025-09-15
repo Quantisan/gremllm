@@ -43,7 +43,7 @@
   ;; Don't auto-create anything on load error - let user handle it
   [])
 
-(defn open-folder
+(defn pick-folder
   "User wants to pick and open a different workspace folder."
   [_state]
   [[:effects/promise

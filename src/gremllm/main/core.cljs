@@ -59,8 +59,8 @@
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]
              ;; Reuse the existing workspace action - it already handles the full flow
-             (nxr/dispatch store {} 
-                           [[:workspace.actions/open-folder]])
+             (nxr/dispatch store {}
+                           [[:workspace.actions/pick-folder]])
              ;; Return empty - workspace data flows via workspace:sync
              #js {}))
 

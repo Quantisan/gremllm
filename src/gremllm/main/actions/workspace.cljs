@@ -8,5 +8,5 @@
   [[:store.effects/save state/workspace-dir-path workspace-folder-path]
    [:workspace.effects/load-and-sync workspace-folder-path]])
 
-(defn open-folder [_state]
+(defn pick-folder [_state]
   [[:workspace.effects/pick-folder-dialog]])

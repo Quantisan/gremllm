@@ -36,7 +36,7 @@
 
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
 (nxr/register-action! :menu.actions/show-settings (fn [_state] [[:menu.effects/send-command :show-settings]]))
-(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/open-folder]]))
+(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/pick-folder]]))
 
 ;; Store Effects
 ;; =============
@@ -71,7 +71,7 @@
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
 (nxr/register-action! :workspace.actions/open workspace-actions/open)
-(nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
+(nxr/register-action! :workspace.actions/pick-folder workspace-actions/pick-folder)
 
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
