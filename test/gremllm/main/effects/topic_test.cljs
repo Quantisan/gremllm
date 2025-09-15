@@ -18,14 +18,14 @@
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
-                        :messages [{:id 1754952440824 :type "user" :text "Hello"}]}
+                        :messages [{:id 1754952440824 :type :user :text "Hello"}]}
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (topic/save {:dir temp-dir
                                        :filepath filepath
                                        :content (pr-str topic)})
-              loaded-js (topic/load-latest temp-dir)
-              loaded    (js->clj loaded-js :keywordize-keys true)]
+              all-topics (topic/load-all temp-dir)
+              loaded (get all-topics (:id topic))]
           (is (= topic loaded)))))))
 
 (deftest test-enumerate-topics
