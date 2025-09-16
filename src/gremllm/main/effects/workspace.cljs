@@ -7,12 +7,8 @@
             [clojure.edn :as edn]
             [gremllm.schema :as schema]))
 
-(defn save-topic
-  "Performs file I/O to save a topic"
-  [{:keys [dir filepath content]}]
-  (io/ensure-dir dir)
-  (io/write-file filepath content)
-  filepath)
+;;; ---------------------------------------------------------------------------
+;;; Private Helpers
 
 (defn- topic-filename?
   "Check if a filename represents a topic file"
@@ -40,6 +36,19 @@
             :filepath filepath}
            (io/file-timestamps filepath))))
 
+;;; ---------------------------------------------------------------------------
+;;; Topic File Operations
+
+(defn save-topic
+  "Performs file I/O to save a topic"
+  [{:keys [dir filepath content]}]
+  (io/ensure-dir dir)
+  (io/write-file filepath content)
+  filepath)
+
+;;; ---------------------------------------------------------------------------
+;;; Topic Collection Operations
+
 (defn enumerate
   "List all topic files in directory with metadata.
    Returns vector of {:filename :filepath :created-at :last-accessed-at}
@@ -66,6 +75,9 @@
           {}
           (enumerate topics-dir)))
 
+;;; ---------------------------------------------------------------------------
+;;; Dialog Operations
+
 (defn- get-dialog []
   (when (exists? js/require)
     (try
@@ -82,6 +94,9 @@
                  (when-not (.-canceled result)
                    (let [workspace-folder-path (first (.-filePaths result))]
                      (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
+
+;;; ---------------------------------------------------------------------------
+;;; Workspace Sync Operations
 
 (defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
   (let [topics-dir (io/topics-dir-path workspace-folder-path)
