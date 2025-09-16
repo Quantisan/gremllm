@@ -21,9 +21,9 @@
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]}
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
-              _saved-path (workspace/save {:dir temp-dir
-                                           :filepath filepath
-                                           :content (pr-str topic)})
+              _saved-path (workspace/save-topic {:dir temp-dir
+                                                 :filepath filepath
+                                                 :content (pr-str topic)})
               all-topics (workspace/load-all temp-dir)
               loaded (get all-topics (:id topic))]
           (is (= topic loaded)))))))

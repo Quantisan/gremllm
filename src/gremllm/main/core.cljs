@@ -47,7 +47,7 @@
                (-> (js->clj topic-data :keywordize-keys true)
                    (schema/topic-from-ipc)
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
-                   (workspace-effects/save)))))
+                   (workspace-effects/save-topic)))))
 
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]

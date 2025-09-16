@@ -7,7 +7,7 @@
             [clojure.edn :as edn]
             [gremllm.schema :as schema]))
 
-(defn save
+(defn save-topic
   "Performs file I/O to save a topic"
   [{:keys [dir filepath content]}]
   (io/ensure-dir dir)
