@@ -1,5 +1,8 @@
 (ns gremllm.main.effects.topic
   "Topic persistence side effects and file I/O operations"
+
+  ;; Runtime dependency: electron/main dialog
+  ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
             [clojure.edn :as edn]
             [gremllm.schema :as schema]))
@@ -17,7 +20,7 @@
   (.endsWith filename ".edn"))
 
 (defn- parse-topic-content
-  "Parse and validate topic content from EDN string. 
+  "Parse and validate topic content from EDN string.
    Returns topic or nil on parse error."
   [content filename]
   (try
@@ -29,7 +32,7 @@
       nil)))
 
 (defn- read-topic-file-info
-  "Read file metadata for a topic file. Returns map with filename, 
+  "Read file metadata for a topic file. Returns map with filename,
    filepath, and timestamps."
   [topics-dir filename]
   (let [filepath (io/path-join topics-dir filename)]
@@ -62,3 +65,26 @@
               topics))
           {}
           (enumerate topics-dir)))
+
+(defn- get-dialog []
+  (when (exists? js/require)
+    (try
+      (.-dialog (js/require "electron/main"))
+      (catch :default _ nil))))
+
+(defn pick-folder-dialog [{:keys [dispatch]} _]
+  (when-let [dialog (get-dialog)]
+    (-> (.showOpenDialog dialog
+                         #js {:title "Open Workspace Folder"
+                              :properties #js ["openDirectory"]
+                              :buttonLabel "Open"})
+        (.then (fn [^js result]
+                 (when-not (.-canceled result)
+                   (let [workspace-folder-path (first (.-filePaths result))]
+                     (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
+
+(defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
+  (let [topics-dir (io/topics-dir-path workspace-folder-path)
+        topics (load-all topics-dir)
+        workspace-data (schema/workspace-sync-for-ipc topics)]
+    (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]])))
