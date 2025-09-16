@@ -11,38 +11,53 @@
   (io/write-file filepath content)
   filepath)
 
-(defn- file->topic-entry [topics-dir filename]
-  (when (.endsWith filename ".edn")
-    (let [filepath (io/path-join topics-dir filename)]
-      (merge {:filename filename
-              :filepath filepath}
-             (io/file-timestamps filepath)))))
+(defn- topic-filename?
+  "Check if a filename represents a topic file"
+  [filename]
+  (.endsWith filename ".edn"))
+
+(defn- parse-topic-content
+  "Parse and validate topic content from EDN string. 
+   Returns topic or nil on parse error."
+  [content filename]
+  (try
+    (-> content
+        edn/read-string
+        schema/topic-from-disk)
+    (catch :default e
+      (js/console.error "Invalid topic file" filename (ex-message e))
+      nil)))
+
+(defn- read-topic-file-info
+  "Read file metadata for a topic file. Returns map with filename, 
+   filepath, and timestamps."
+  [topics-dir filename]
+  (let [filepath (io/path-join topics-dir filename)]
+    (merge {:filename filename
+            :filepath filepath}
+           (io/file-timestamps filepath))))
 
 (defn enumerate
-  "Enumerate all .edn files in topics-dir. Returns a vector of maps
-  {:filename string :filepath string :created-at :last-accessed-at}
-  sorted by filename. Returns [] if topics-dir does not exist."
+  "List all topic files in directory with metadata.
+   Returns vector of {:filename :filepath :created-at :last-accessed-at}
+   sorted by filename. Returns [] if directory doesn't exist."
   [topics-dir]
   (if-not (io/file-exists? topics-dir)
     []
     (->> (io/read-dir topics-dir)
-         (keep (partial file->topic-entry topics-dir))
+         (filter topic-filename?)
+         (map (partial read-topic-file-info topics-dir))
          (sort-by :filename)
          vec)))
 
 (defn load-all
-  "Load all topics from the filesystem into a map of {<topic-id> Topic}.
-  Returns an empty map if topics-dir doesn't exist or contains no topics."
+  "Load all topics from directory into map of {topic-id => topic}.
+   Skips corrupt/invalid files with error logging.
+   Returns empty map if directory doesn't exist."
   [topics-dir]
-  (reduce (fn [acc {:keys [filename filepath]}]
-            (try
-              (let [topic-content (-> (io/read-file filepath)
-                                      edn/read-string
-                                      schema/topic-from-disk)]
-                (assoc acc (:id topic-content) topic-content))
-              (catch :default e
-                ;; Log error but continue loading other topics
-                (js/console.error "Invalid topic file" filename (ex-message e))
-                acc)))
+  (reduce (fn [topics {:keys [filepath]}]
+            (when-let [topic (-> (io/read-file filepath)
+                                 (parse-topic-content filepath))]
+              (assoc topics (:id topic) topic)))
           {}
           (enumerate topics-dir)))
