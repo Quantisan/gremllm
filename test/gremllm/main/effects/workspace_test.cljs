@@ -24,7 +24,7 @@
               _saved-path (workspace/save-topic {:dir temp-dir
                                                  :filepath filepath
                                                  :content (pr-str topic)})
-              all-topics (workspace/load-all temp-dir)
+              all-topics (workspace/load-topics temp-dir)
               loaded (get all-topics (:id topic))]
           (is (= topic loaded)))))))
 
@@ -44,9 +44,9 @@
             (is (every? number? (map :created-at entries)))
             (is (every? number? (map :last-accessed-at entries)))))))))
 
-(deftest test-load-all
-  (testing "load-all returns map of all topics keyed by ID"
-    (with-temp-dir "load-all"
+(deftest test-load-topics
+  (testing "load-topics returns map of all topics keyed by ID"
+    (with-temp-dir "load-topics"
       (fn [dir]
         ;; Simple test topics with just the essentials
         (let [topic-1 {:id "topic-1-a" :name "First" :messages []}
@@ -62,10 +62,10 @@
           ;; Verify we get both topics back as a map
           (is (= {"topic-1-a" topic-1
                   "topic-2-b" topic-2}
-                 (workspace/load-all dir)))))))
+                 (workspace/load-topics dir)))))))
 
   (testing "returns empty map for non-existent directory"
-    (is (= {} (workspace/load-all "/does/not/exist"))))
+    (is (= {} (workspace/load-topics "/does/not/exist"))))
 
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
@@ -79,7 +79,7 @@
           (let [original-error js/console.error]
             ;; Temporarily suppress console.error
             (set! js/console.error (constantly nil))
-            (let [result (workspace/load-all dir)]
+            (let [result (workspace/load-topics dir)]
               ;; Restore original console.error
               (set! js/console.error original-error)
               (is (= {(:id good-topic) good-topic} result)))))))))

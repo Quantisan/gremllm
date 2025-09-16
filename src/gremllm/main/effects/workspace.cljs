@@ -53,7 +53,7 @@
          (sort-by :filename)
          vec)))
 
-(defn load-all
+(defn load-topics
   "Load all topics from directory into map of {topic-id => topic}.
    Skips corrupt/invalid files with error logging.
    Returns empty map if directory doesn't exist."
@@ -85,6 +85,6 @@
 
 (defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
   (let [topics-dir (io/topics-dir-path workspace-folder-path)
-        topics (load-all topics-dir)
+        topics (load-topics topics-dir)
         workspace-data (schema/workspace-sync-for-ipc topics)]
     (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]])))
