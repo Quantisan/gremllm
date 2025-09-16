@@ -5,8 +5,6 @@
 
 (def ^:private user-subdir "User")
 (def ^:private workspaces-subdir "workspaces")
-;; TODO: remove default-workspace
-(def ^:private default-workspace "default")
 (def ^:private topics-subdir "topics")
 
 ;; Clojure-friendly wrappers around Node's `path` API
@@ -27,13 +25,9 @@
   (apply path-join user-data-dir user-subdir segments))
 
 (defn workspace-dir-path
-  "Path to a workspace directory.
-   1-arity: <userData>/User/workspaces/default
-   2-arity: <userData>/User/workspaces/<workspace-id>"
-  ([user-data-dir]
-   (workspace-dir-path user-data-dir default-workspace))
-  ([user-data-dir workspace-id]
-   (user-dir-path user-data-dir workspaces-subdir workspace-id)))
+  "Path to a workspace directory: <userData>/User/workspaces/<workspace-id>"
+  [user-data-dir workspace-id]
+  (user-dir-path user-data-dir workspaces-subdir workspace-id))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
