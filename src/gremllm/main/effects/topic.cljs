@@ -56,8 +56,9 @@
    Returns empty map if directory doesn't exist."
   [topics-dir]
   (reduce (fn [topics {:keys [filepath]}]
-            (when-let [topic (-> (io/read-file filepath)
-                                 (parse-topic-content filepath))]
-              (assoc topics (:id topic) topic)))
+            (if-let [topic (-> (io/read-file filepath)
+                               (parse-topic-content filepath))]
+              (assoc topics (:id topic) topic)
+              topics))
           {}
           (enumerate topics-dir)))
