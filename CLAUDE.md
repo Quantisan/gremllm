@@ -147,7 +147,7 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **IPC Channels:**
 - `chat/send-message` - LLM API calls
-- `topic/save`, `topic/list`, `topic/load-all` - Topic operations
+- `topic/save`, `topic/load-all` - Topic operations
 - `workspace/load-folder` - Load all topics
 - `secrets/*` - Secure storage ops
 - `system/get-info` - System capabilities

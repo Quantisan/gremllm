@@ -57,13 +57,6 @@
              ;; Return empty - workspace data flows via workspace:sync
              #js {}))
 
-  (.handle ipcMain "topic/list"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir (io/topics-dir-path workspace-dir)]
-               (-> (topic-effects/enumerate topics-dir)
-                   (clj->js)))))
-
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
