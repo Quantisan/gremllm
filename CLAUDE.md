@@ -155,16 +155,18 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **Data Storage:**
 ```
-<userData>/
-└── User/
-    ├── secrets.edn
-    └── workspaces/
-        └── <workspace-id>/
-            └── topics/
-                └── topic-<topic-id>.edn
+<userData>/User/             # System data (Electron userData)
+├── secrets.edn              # Encrypted API keys
+
+<workspace-folder>/          # User-selected folder (anywhere)
+└── topics/                  # Topic files (.edn)
 ```
-- Topics: EDN files validated by schema
-- Secrets: Encrypted via Electron's safeStorage
+
+- **Workspaces:** Portable folders, like git repos - can live anywhere
+- **Topics:** Individual EDN files in `topics/` subdirectory
+- **Secrets:** Encrypted via Electron's safeStorage
+- **Schemas:** See `schema.cljs` for data structures
+- **File I/O:** See `main/io.cljs` for paths and operations
 
 ## Entry Points
 
