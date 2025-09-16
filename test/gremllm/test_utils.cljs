@@ -8,8 +8,8 @@
   [suffix f]
   (let [dir (io/path-join (os/tmpdir)
                           (str "gremllm-test-" (random-uuid) "-" suffix))]
-    (io/ensure-dir dir)
     (try
+      (io/ensure-dir dir)
       (f dir)
       (finally
         (when (io/file-exists? dir)

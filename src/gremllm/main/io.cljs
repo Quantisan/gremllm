@@ -4,9 +4,6 @@
             [cljs.reader :as edn]))
 
 (def ^:private user-subdir "User")
-(def ^:private workspaces-subdir "workspaces")
-;; TODO: remove default-workspace
-(def ^:private default-workspace "default")
 (def ^:private topics-subdir "topics")
 
 ;; Clojure-friendly wrappers around Node's `path` API
@@ -25,15 +22,6 @@
   "Build a path under the app's user scope directory (User)."
   [user-data-dir & segments]
   (apply path-join user-data-dir user-subdir segments))
-
-(defn workspace-dir-path
-  "Path to a workspace directory.
-   1-arity: <userData>/User/workspaces/default
-   2-arity: <userData>/User/workspaces/<workspace-id>"
-  ([user-data-dir]
-   (workspace-dir-path user-data-dir default-workspace))
-  ([user-data-dir workspace-id]
-   (user-dir-path user-data-dir workspaces-subdir workspace-id)))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -71,17 +59,6 @@
   "Return a seq of entries in dir."
   [dir]
   (array-seq (.readdirSync fs dir)))
-
-
-(defn delete-file
-  "Delete a file at filepath."
-  [filepath]
-  (.unlinkSync fs filepath))
-
-(defn remove-dir
-  "Remove an empty directory."
-  [dir]
-  (.rmdirSync fs dir))
 
 (defn secrets-file-path [user-data-dir]
   (user-dir-path user-data-dir "secrets.edn"))
