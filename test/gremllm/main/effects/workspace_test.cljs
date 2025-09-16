@@ -83,3 +83,26 @@
               ;; Restore original console.error
               (set! js/console.error original-error)
               (is (= {(:id good-topic) good-topic} result)))))))))
+
+(deftest test-load-and-sync
+  (testing "loads topics and dispatches sync event"
+    (with-temp-dir "load-sync"
+      (fn [temp-dir]
+        (let [topics-dir (io/topics-dir-path temp-dir)
+              topic {:id "topic-123" :name "Test" :messages []}
+              _ (io/ensure-dir topics-dir)
+              _ (write-topic-file topics-dir topic)
+
+              ;; Capture dispatched actions
+              dispatched (atom [])
+              mock-ctx {:dispatch (fn [actions] (swap! dispatched conj actions))}]
+
+          (workspace/load-and-sync mock-ctx nil temp-dir)
+
+          ;; Verify correct IPC effect was dispatched
+          (let [[[effect-key channel data]] (first @dispatched)]
+            (is (= :ipc.effects/send-to-renderer effect-key))
+            (is (= "workspace:sync" channel))
+            ;; Verify data structure matches schema/workspace-sync-for-ipc
+            (is (map? data))
+            (is (contains? data :topics))))))))
