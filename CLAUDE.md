@@ -147,24 +147,26 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **IPC Channels:**
 - `chat/send-message` - LLM API calls
-- `topic/save`, `topic/load-all` - Topic operations
-- `workspace/load-folder` - Load all topics
-- `secrets/*` - Secure storage ops
+- `topic/save` - Save topic to disk
+- `workspace/pick-folder` - Folder picker dialog
 - `system/get-info` - System capabilities
-- `menu:command` - Menu commands
+- `secrets/save`, `secrets/delete` - Secure storage
+- Menu commands via `onMenuCommand`
 
 **Data Storage:**
 ```
-<userData>/
-└── User/
-    ├── secrets.edn
-    └── workspaces/
-        └── <workspace-id>/
-            └── topics/
-                └── topic-<topic-id>.edn
+<userData>/User/             # System data (Electron userData)
+├── secrets.edn              # Encrypted API keys
+
+<workspace-folder>/          # User-selected folder (anywhere)
+└── topics/                  # Topic files (.edn)
 ```
-- Topics: EDN files validated by schema
-- Secrets: Encrypted via Electron's safeStorage
+
+- **Workspaces:** Portable folders, like git repos - can live anywhere
+- **Topics:** Individual EDN files in `topics/` subdirectory
+- **Secrets:** Encrypted via Electron's safeStorage
+- **Schemas:** See `schema.cljs` for data structures
+- **File I/O:** See `main/io.cljs` for paths and operations
 
 ## Entry Points
 
