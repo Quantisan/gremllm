@@ -60,17 +60,6 @@
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-
-(defn delete-file
-  "Delete a file at filepath."
-  [filepath]
-  (.unlinkSync fs filepath))
-
-(defn remove-dir
-  "Remove an empty directory."
-  [dir]
-  (.rmdirSync fs dir))
-
 (defn secrets-file-path [user-data-dir]
   (user-dir-path user-data-dir "secrets.edn"))
 
