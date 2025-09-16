@@ -34,14 +34,6 @@
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
-(nxr/register-effect! :topic.effects/list
-  (fn [{dispatch :dispatch} _store & [opts]]
-   (dispatch
-     [[:effects/promise
-       {:promise    (.listTopics js/window.electronAPI)
-        :on-success (:on-success opts)
-        :on-error   (:on-error opts)}]])))
-
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
     (let [active-topic   (topic-state/get-active-topic @store)]

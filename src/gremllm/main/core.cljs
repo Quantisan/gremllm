@@ -49,13 +49,6 @@
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
                    (topic-effects/save)))))
 
-  (.handle ipcMain "workspace/load-folder"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir (io/topics-dir-path workspace-dir)]
-               (-> (topic-effects/load-all topics-dir)
-                   (clj->js)))))
-
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]
              ;; Reuse the existing workspace action - it already handles the full flow
@@ -63,19 +56,6 @@
                            [[:workspace.actions/pick-folder]])
              ;; Return empty - workspace data flows via workspace:sync
              #js {}))
-
-  (.handle ipcMain "topic/load-latest"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir (io/topics-dir-path workspace-dir)]
-               (topic-effects/load-latest topics-dir))))
-
-  (.handle ipcMain "topic/list"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir (io/topics-dir-path workspace-dir)]
-               (-> (topic-effects/enumerate topics-dir)
-                   (clj->js)))))
 
   ;; Secrets handlers - call functions directly at the boundary
   (.handle ipcMain "secrets/save"

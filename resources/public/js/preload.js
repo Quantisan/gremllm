@@ -39,9 +39,7 @@ const createIPCBoundary = (channel) => {
 contextBridge.exposeInMainWorld("electronAPI", {
 	sendMessage: createIPCBoundary("chat/send-message"),
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
-	loadWorkspaceFolder: () => ipcRenderer.invoke("workspace/load-folder"),
 	pickWorkspaceFolder: () => ipcRenderer.invoke("workspace/pick-folder"),
-	listTopics: () => ipcRenderer.invoke("topic/list"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
 	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),
 	// Secrets API
