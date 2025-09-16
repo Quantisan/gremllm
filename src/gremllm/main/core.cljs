@@ -2,7 +2,7 @@
   (:require [gremllm.main.actions]
             [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.actions.topic :as topic-actions]
-            [gremllm.main.effects.topic :as topic-effects]
+            [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
             [gremllm.main.io :as io]
@@ -25,7 +25,7 @@
    not business logic. Each follows FCIS internally:
    - Extract context (workspace-dir from store)
    - Transform with pure functions (topic-actions/topic->save-plan)
-   - Execute effects (topic-effects/save)
+   - Execute effects (workspace-effects/save)
    - Return result
 
    This is the correct pattern for synchronous system boundaries.
@@ -47,7 +47,7 @@
                (-> (js->clj topic-data :keywordize-keys true)
                    (schema/topic-from-ipc)
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
-                   (topic-effects/save)))))
+                   (workspace-effects/save)))))
 
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]

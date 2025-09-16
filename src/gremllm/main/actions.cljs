@@ -4,7 +4,7 @@
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.llm :as llm-effects]
-            [gremllm.main.effects.topic :as topic-effects]
+            [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
             ["electron/main" :refer [app]]))
 
@@ -73,6 +73,6 @@
 (nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
 (nxr/register-action! :workspace.actions/pick-folder workspace-actions/pick-folder)
 
-(nxr/register-effect! :workspace.effects/pick-folder-dialog topic-effects/pick-folder-dialog)
-(nxr/register-effect! :workspace.effects/load-and-sync topic-effects/load-and-sync)
+(nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
+(nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 

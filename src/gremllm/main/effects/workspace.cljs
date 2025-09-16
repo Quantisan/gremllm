@@ -1,4 +1,4 @@
-(ns gremllm.main.effects.topic
+(ns gremllm.main.effects.workspace
   "Topic persistence side effects and file I/O operations"
 
   ;; Runtime dependency: electron/main dialog
