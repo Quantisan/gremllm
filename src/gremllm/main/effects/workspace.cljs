@@ -1,18 +1,24 @@
 (ns gremllm.main.effects.workspace
   (:require [gremllm.schema :as schema]
             [gremllm.main.effects.topic :as topic-effects]
-            [gremllm.main.io :as io]
-            ["electron/main" :refer [dialog]]))
+            [gremllm.main.io :as io]))
+
+(defn- get-dialog []
+  (when (exists? js/require)
+    (try
+      (.-dialog (js/require "electron/main"))
+      (catch :default _ nil))))
 
 (defn pick-folder-dialog [{:keys [dispatch]} _]
-  (-> (.showOpenDialog dialog
-                       #js {:title "Open Workspace Folder"
-                            :properties #js ["openDirectory"]
-                            :buttonLabel "Open"})
-      (.then (fn [^js result]
-               (when-not (.-canceled result)
-                 (let [workspace-folder-path (first (.-filePaths result))]
-                   (dispatch [[:workspace.actions/open-folder workspace-folder-path]])))))))
+  (when-let [dialog (get-dialog)]
+    (-> (.showOpenDialog dialog
+                         #js {:title "Open Workspace Folder"
+                              :properties #js ["openDirectory"]
+                              :buttonLabel "Open"})
+        (.then (fn [^js result]
+                 (when-not (.-canceled result)
+                   (let [workspace-folder-path (first (.-filePaths result))]
+                     (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
 
 (defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
   (let [topics-dir (io/topics-dir-path workspace-folder-path)
