@@ -147,11 +147,11 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **IPC Channels:**
 - `chat/send-message` - LLM API calls
-- `workspace/save-topic`, `workspace/load-topics` - Workspace operations
-- `workspace/load-folder` - Load all topics
-- `secrets/*` - Secure storage ops
+- `topic/save` - Save topic to disk
+- `workspace/pick-folder` - Folder picker dialog
 - `system/get-info` - System capabilities
-- `menu:command` - Menu commands
+- `secrets/save`, `secrets/delete` - Secure storage
+- Menu commands via `onMenuCommand`
 
 **Data Storage:**
 ```
