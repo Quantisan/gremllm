@@ -36,7 +36,7 @@
 
 (deftest test-promise->actions-indirectly-nested-uses-inner-success
   (async done
-    ;; Effect that dispatches promise (mimics topic.effects/load-latest-topic)
+    ;; Effect that dispatches promise (mimics topic.effects/load-all)
     (nxr/register-effect! :test.effects/level-2
       (fn [{:keys [dispatch]} _ & [opts]]
         (dispatch

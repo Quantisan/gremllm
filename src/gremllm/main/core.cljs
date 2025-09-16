@@ -57,12 +57,6 @@
              ;; Return empty - workspace data flows via workspace:sync
              #js {}))
 
-  (.handle ipcMain "topic/load-latest"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir (io/topics-dir-path workspace-dir)]
-               (topic-effects/load-latest topics-dir))))
-
   (.handle ipcMain "topic/list"
            (fn [_event]
              (let [workspace-dir (state/get-workspace-dir @store)

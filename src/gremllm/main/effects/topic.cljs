@@ -30,15 +30,6 @@
          (sort-by :filename)
          vec)))
 
-(defn load-latest
-  "Loads the latest topic from the file system."
-  [topics-dir]
-  ;; TODO: output of `enumerate` isn't sorted by last-accesssed, thus last is not latest
-  (when-let [{:keys [filepath]} (last (enumerate topics-dir))]
-    (-> (io/read-file filepath)
-        edn/read-string
-        (clj->js :keywordize-keys false))))
-
 (defn load-all
   "Load all topics from the filesystem into a map of {<topic-id> Topic}.
   Returns an empty map if topics-dir doesn't exist or contains no topics."
