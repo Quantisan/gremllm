@@ -1,4 +1,6 @@
 (ns gremllm.main.effects.workspace
+  ;; Runtime dependency: electron/main dialog
+  ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.schema :as schema]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]))
