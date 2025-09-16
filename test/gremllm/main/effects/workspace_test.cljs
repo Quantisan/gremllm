@@ -12,6 +12,28 @@
 (defn- write-file [dir filename content]
   (io/write-file (io/path-join dir filename) content))
 
+(deftest test-parse-topic-content
+  (testing "parses valid topic content"
+    (let [topic {:id "topic-123" :name "Test" :messages []}
+          content (pr-str topic)
+          result (#'workspace/parse-topic-content content "test.edn")]
+      (is (= topic result))))
+
+  (testing "returns nil for invalid EDN"
+    ;; Suppress console.error for this test
+    (let [original-error js/console.error]
+      (set! js/console.error (constantly nil))
+      (is (nil? (#'workspace/parse-topic-content "{:broken" "bad.edn")))
+      (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))
+      (set! js/console.error original-error)))
+
+  (testing "applies schema coercion"
+    (let [topic-without-unsaved {:id "topic-123" :name "Test" :messages []}
+          content (pr-str topic-without-unsaved)
+          result (#'workspace/parse-topic-content content "test.edn")]
+      ;; schema/topic-from-disk should not add :unsaved? key
+      (is (nil? (:unsaved? result))))))
+
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data"
     (with-temp-dir "topic-save-load"
@@ -91,17 +113,17 @@
         (let [topics-dir (io/topics-dir-path temp-dir)
               topic {:id "topic-123" :name "Test" :messages []}
               dispatched (atom nil)]
-          
+
           ;; Setup: write a topic file
           (io/ensure-dir topics-dir)
           (write-topic-file topics-dir topic)
-          
+
           ;; Execute with mock context
-          (workspace/load-and-sync 
+          (workspace/load-and-sync
             {:dispatch #(reset! dispatched %)}
-            nil 
+            nil
             temp-dir)
-          
+
           ;; Verify IPC effect
           (let [[[effect-key channel data]] @dispatched]
             (is (= :ipc.effects/send-to-renderer effect-key))
