@@ -45,6 +45,9 @@
             (is (every? number? (map :last-accessed-at entries)))))))))
 
 (deftest test-load-topics
+  (testing "returns empty map for non-existent directory"
+    (is (= {} (workspace/load-topics "/does/not/exist"))))
+
   (testing "load-topics returns map of all topics keyed by ID"
     (with-temp-dir "load-topics"
       (fn [dir]
@@ -63,9 +66,6 @@
           (is (= {"topic-1-a" topic-1
                   "topic-2-b" topic-2}
                  (workspace/load-topics dir)))))))
-
-  (testing "returns empty map for non-existent directory"
-    (is (= {} (workspace/load-topics "/does/not/exist"))))
 
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
