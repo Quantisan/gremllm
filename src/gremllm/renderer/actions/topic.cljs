@@ -34,6 +34,10 @@
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
+(defn rename [_state _topic-id]
+  ;; TODO: implement rename flow (prompt input, update state, persist)
+  [])
+
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
     (let [active-topic   (topic-state/get-active-topic @store)]
