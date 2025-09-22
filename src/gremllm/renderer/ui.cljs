@@ -26,7 +26,8 @@
         {:workspace-name        workspace-name
          :workspace-description workspace-description
          :active-topic-id       active-topic-id
-         :topics-map            topics-map})]
+         :topics-map            topics-map
+         :renaming-topic-id     renaming-topic-id})]
 
      [e/main-panel
       [e/top-bar
