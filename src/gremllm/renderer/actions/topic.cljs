@@ -1,5 +1,6 @@
 (ns gremllm.renderer.actions.topic
   (:require [nexus.registry :as nxr]
+            [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema :as schema]))
 
@@ -34,9 +35,25 @@
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
-(defn rename [_state _topic-id]
-  ;; TODO: implement rename flow (prompt input, update state, persist)
-  [])
+(defn rename [state topic-id]
+  ;; Enter inline rename mode for this topic
+  (when (get-in state (topic-state/topic-field-path topic-id :name))
+    [[:effects/save topic-state/renaming-topic-id-path topic-id]]))
+
+(defn commit-rename [state topic-id new-name]
+  (let [new-name (-> (or new-name "") str/trim)
+        current  (get-in state (topic-state/topic-field-path topic-id :name))]
+    (cond
+      (str/blank? new-name)
+      [[:effects/save topic-state/renaming-topic-id-path nil]]
+
+      (= new-name current)
+      [[:effects/save topic-state/renaming-topic-id-path nil]]
+
+      :else
+      [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]
+       [:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]
+       [:effects/save topic-state/renaming-topic-id-path nil]])))
 
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]

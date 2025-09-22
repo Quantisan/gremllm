@@ -2,7 +2,7 @@
 
 (defn render-left-panel-content
   ;; topics-map = schema/WorkspaceTopics
-  [{:keys [workspace-name workspace-description topics-map active-topic-id]}]
+  [{:keys [workspace-name workspace-description topics-map active-topic-id renaming-topic-id]}]
   [:div
    [:nav
     [:ul
@@ -19,13 +19,21 @@
     [:ul
      (for [{:keys [id name unsaved?]} (vals topics-map)]
        [:li
-        [:a {:href         "#"
-             :aria-current (when (= id active-topic-id) "page")
-             :title        "Double-click to rename topic"
-             :on           {:click    [[:effects/prevent-default]
-                                       [:topic.actions/switch-to id]]
-                            :dblclick [[:effects/prevent-default]
-                                       [:topic.actions/rename id]]}}
-         (str (if (= id active-topic-id) "✓ " "• ")
-              name
-              (when unsaved? " *"))]])]]])
+        (if (= id renaming-topic-id)
+          [:input {:type "text"
+                   :default-value name
+                   :replicant/on-mount
+                   (fn [{:replicant/keys [node]}]
+                     (.focus node)
+                     (.select node))
+                   :on {:blur [[:topic.actions/commit-rename id [:event.target/value]]]}}]
+          [:a {:href         "#"
+               :aria-current (when (= id active-topic-id) "page")
+               :title        "Double-click to rename topic"
+               :on           {:click    [[:effects/prevent-default]
+                                         [:topic.actions/switch-to id]]
+                              :dblclick [[:effects/prevent-default]
+                                         [:topic.actions/rename id]]}}
+           (str (if (= id active-topic-id) "✓ " "• ")
+                name
+                (when unsaved? " *"))])])]]])

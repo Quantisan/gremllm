@@ -18,7 +18,8 @@
         workspace-name        "Kaitenzushi Corp Acquisition"
         workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
         active-topic-id       (topic-state/get-active-topic-id state)
-        topics-map            (topic-state/get-topics-map state)]
+        topics-map            (topic-state/get-topics-map state)
+        renaming-topic-id     (topic-state/renaming-topic-id state)]
     [e/app-layout
      [e/left-panel
       (topics-ui/render-left-panel-content
