@@ -21,8 +21,11 @@
        [:li
         [:a {:href         "#"
              :aria-current (when (= id active-topic-id) "page")
-             :on           {:click [[:effects/prevent-default]
-                                    [:topic.actions/switch-to id]]}}
+             :title        "Double-click to rename topic"
+             :on           {:click    [[:effects/prevent-default]
+                                       [:topic.actions/switch-to id]]
+                            :dblclick [[:effects/prevent-default]
+                                       [:topic.actions/rename id]]}}
          (str (if (= id active-topic-id) "✓ " "• ")
               name
               (when unsaved? " *"))]])]]])
