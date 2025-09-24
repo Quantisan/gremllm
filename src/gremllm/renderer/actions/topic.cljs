@@ -19,6 +19,9 @@
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
 
+(defn mark-unsaved [_state topic-id]
+  [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]])
+
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
   (js/console.log "Topic" topic-id "saved to:" filepath)
@@ -30,7 +33,7 @@
 
 (defn mark-active-unsaved [state]
   (let [active-id (topic-state/get-active-topic-id state)]
-    [[:effects/save (topic-state/topic-field-path active-id :unsaved?) true]]))
+    [[:topic.actions/mark-unsaved active-id]]))
 
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])

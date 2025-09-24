@@ -90,6 +90,7 @@
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
     [[:ui.effects/save [:topics-ui :renaming-id] nil]]))
+(nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
