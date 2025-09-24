@@ -55,7 +55,7 @@
 
       :else
       [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]
-       [:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]
+       [:topic.actions/mark-unsaved topic-id]
        [:ui.actions/exit-topic-rename-mode topic-id]])))
 
 (nxr/register-effect! :topic.effects/save-active-topic
