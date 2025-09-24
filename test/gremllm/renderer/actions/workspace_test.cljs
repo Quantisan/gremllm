@@ -9,7 +9,7 @@
   "Create workspace data with Malli defaults, optionally overriding fields"
   [& [overrides]]
   (-> (m/decode schema/WorkspaceSyncData
-                {:path "/test/path"}  ; Provide required path
+                {:workspace {:name "Test Workspace"}}  ; Provide required workspace meta
                 mt/default-value-transformer)
       (merge overrides)
       clj->js))
