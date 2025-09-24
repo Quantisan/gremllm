@@ -15,8 +15,8 @@
 
 (defn- render-workspace [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
-        workspace-name        "Kaitenzushi Corp Acquisition"
-        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
+        workspace-name        ""
+        workspace-description ""
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)]
