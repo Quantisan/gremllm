@@ -2,6 +2,7 @@
   (:require [nexus.registry :as nxr]
             [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]))
 
 (defn set-topic [_state topic-js]
@@ -44,7 +45,7 @@
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
   (when (get-in state (topic-state/topic-field-path topic-id :name))
-    [[:effects/save topic-state/renaming-topic-id-path topic-id]]))
+    [[:effects/save ui-state/renaming-topic-id-path topic-id]]))
 
 (defn commit-rename [state topic-id new-name]
   (let [new-name (-> (or new-name "") str/trim)

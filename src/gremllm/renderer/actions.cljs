@@ -5,7 +5,8 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
-            [gremllm.renderer.actions.settings :as settings]))
+            [gremllm.renderer.actions.settings :as settings]
+            [gremllm.renderer.state.ui :as ui-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -90,7 +91,7 @@
 (nxr/register-action! :topic.actions/set-name topic/set-name)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
-    [[:ui.effects/save [:topics-ui :renaming-id] nil]]))
+    [[:ui.effects/save ui-state/renaming-topic-id-path nil]]))
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
