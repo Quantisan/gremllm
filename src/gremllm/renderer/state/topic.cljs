@@ -6,6 +6,7 @@
 (defn get-active-topic-id [state]
   (get-in state active-topic-id-path))
 
+
 (defn get-active-topic [state]
   (let [active-id (get-active-topic-id state)]
     (get-in state (conj topics-path active-id))))

@@ -5,7 +5,8 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
-            [gremllm.renderer.actions.settings :as settings]))
+            [gremllm.renderer.actions.settings :as settings]
+            [gremllm.renderer.state.ui :as ui-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -31,6 +32,18 @@
             :replicant/dom-event
             (.preventDefault))))
 
+;; TODO: refactor to be more Nexus-like
+(nxr/register-effect! :topic.effects/handle-rename-keys
+  (fn [{:keys [dispatch dispatch-data]} _ topic-id]
+    (let [e (:replicant/dom-event dispatch-data)
+          k (some-> e .-key)]
+      (case k
+        "Enter" (do (.preventDefault e)
+                    (let [v (.. e -target -value)]
+                      (dispatch [[:topic.actions/commit-rename topic-id v]])))
+        "Escape" (do (.preventDefault e)
+                     (dispatch [[:ui.actions/exit-topic-rename-mode topic-id]]))
+        nil))))
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
@@ -73,6 +86,13 @@
 (nxr/register-action! :topic.actions/set topic/set-topic)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)
+(nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
+(nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
+(nxr/register-action! :topic.actions/set-name topic/set-name)
+(nxr/register-action! :ui.actions/exit-topic-rename-mode
+  (fn [_state _topic-id]
+    [[:ui.effects/save ui-state/renaming-topic-id-path nil]]))
+(nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
