@@ -1,6 +1,8 @@
 (ns gremllm.renderer.ui.topics)
 
-(defn- focus-and-select-on-mount [{:replicant/keys [node]}]
+(defn- focus-and-select-on-mount
+  "On-mount hook for rename input; focuses and selects all text (typical rename UX)."
+  [{:replicant/keys [node]}]
   (.focus node)
   (.select node))
 
