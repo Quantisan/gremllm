@@ -31,6 +31,18 @@
             :replicant/dom-event
             (.preventDefault))))
 
+(nxr/register-effect! :topic.effects/handle-rename-keys
+  (fn [{:keys [dispatch dispatch-data]} _ topic-id]
+    (let [e (:replicant/dom-event dispatch-data)
+          k (some-> e .-key)]
+      (case k
+        "Enter" (do (.preventDefault e)
+                    (let [v (.. e -target -value)]
+                      (dispatch [[:topic.actions/commit-rename topic-id v]])))
+        "Escape" (do (.preventDefault e)
+                     (dispatch [[:ui.effects/save [:topics-ui :renaming-id] nil]]))
+        nil))))
+
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise

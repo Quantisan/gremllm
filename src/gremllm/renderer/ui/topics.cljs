@@ -17,7 +17,8 @@
      [:input {:type "text"
               :default-value name
               :replicant/on-mount focus-and-select-on-mount
-              :on {:blur [[:topic.actions/commit-rename id [:event.target/value]]]}}]
+              :on {:blur    [[:topic.actions/commit-rename id [:event.target/value]]]
+                   :keydown [[:topic.effects/handle-rename-keys id]]}}]
      (let [label (str (if (= id active-topic-id) "✓ " "• ")
                       name
                       (when unsaved? " *"))]
