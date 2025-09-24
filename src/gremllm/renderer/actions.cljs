@@ -31,6 +31,7 @@
             :replicant/dom-event
             (.preventDefault))))
 
+;; TODO: refactor to be more Nexus-like
 (nxr/register-effect! :topic.effects/handle-rename-keys
   (fn [{:keys [dispatch dispatch-data]} _ topic-id]
     (let [e (:replicant/dom-event dispatch-data)
@@ -42,7 +43,6 @@
         "Escape" (do (.preventDefault e)
                      (dispatch [[:topic.actions/cancel-rename topic-id]]))
         nil))))
-
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
