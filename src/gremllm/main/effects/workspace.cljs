@@ -102,5 +102,6 @@
   (let [workspace-name (io/path-basename workspace-folder-path)
         topics-dir     (io/topics-dir-path workspace-folder-path)
         topics         (load-topics topics-dir)
-        workspace-data (schema/workspace-sync-for-ipc topics {:name workspace-name})]
+        workspace-meta (schema/create-workspace-meta workspace-name)
+        workspace-data (schema/workspace-sync-for-ipc topics workspace-meta)]
     (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]])))

@@ -47,6 +47,11 @@
    [:workspace [:map [:name :string]]]
    [:topics {:default {}} WorkspaceTopics]])
 
+(defn create-workspace-meta
+  "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
+  [name]
+  {:name name})
+
 ;; Coercion helpers for boundaries
 (defn topic-from-ipc
   "Transforms topic data received via IPC into internal Topic schema.
