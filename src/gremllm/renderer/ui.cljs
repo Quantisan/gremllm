@@ -15,7 +15,7 @@
 
 (defn- render-workspace [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
-        workspace-name        ""
+        workspace-name        (:name (workspace-state/get-workspace state))
         workspace-description ""
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
