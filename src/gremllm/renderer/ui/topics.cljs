@@ -1,5 +1,9 @@
 (ns gremllm.renderer.ui.topics)
 
+(defn- focus-and-select-on-mount [{:replicant/keys [node]}]
+  (.focus node)
+  (.select node))
+
 (defn render-left-panel-content
   ;; topics-map = schema/WorkspaceTopics
   [{:keys [workspace-name workspace-description topics-map active-topic-id renaming-topic-id]}]
@@ -18,14 +22,11 @@
    [:nav
     [:ul
      (for [{:keys [id name unsaved?]} (vals topics-map)]
-       [:li
+       [:li {:replicant/key id}
         (if (= id renaming-topic-id)
           [:input {:type "text"
                    :default-value name
-                   :replicant/on-mount
-                   (fn [{:replicant/keys [node]}]
-                     (.focus node)
-                     (.select node))
+                   :replicant/on-mount focus-and-select-on-mount
                    :on {:blur [[:topic.actions/commit-rename id [:event.target/value]]]}}]
           [:a {:href         "#"
                :aria-current (when (= id active-topic-id) "page")
