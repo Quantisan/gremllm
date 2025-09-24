@@ -20,8 +20,11 @@
         active-topic-id (first (keys topics))]
 
     (if (empty? topics)
-      [[:workspace.actions/initialize-empty]]
-      [[:workspace.actions/restore-with-topics
+      [[:effects/save workspace-state/workspace-path workspace]
+       [:workspace.actions/initialize-empty]]
+
+      [[:effects/save workspace-state/workspace-path workspace]
+       [:workspace.actions/restore-with-topics
         {:topics          topics
          :active-topic-id active-topic-id}]])))
 
