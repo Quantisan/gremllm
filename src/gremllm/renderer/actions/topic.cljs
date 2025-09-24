@@ -22,6 +22,9 @@
 (defn mark-unsaved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]])
 
+(defn set-name [_state topic-id new-name]
+  [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]])
+
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
   (js/console.log "Topic" topic-id "saved to:" filepath)
@@ -54,7 +57,7 @@
       [[:ui.actions/exit-topic-rename-mode topic-id]]
 
       :else
-      [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]
+      [[:topic.actions/set-name topic-id new-name]
        [:topic.actions/mark-unsaved topic-id]
        [:ui.actions/exit-topic-rename-mode topic-id]])))
 
