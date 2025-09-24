@@ -35,7 +35,7 @@
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
-(defn rename [state topic-id]
+(defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
   (when (get-in state (topic-state/topic-field-path topic-id :name))
     [[:effects/save topic-state/renaming-topic-id-path topic-id]]))

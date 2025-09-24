@@ -34,7 +34,7 @@
                :on           {:click    [[:effects/prevent-default]
                                          [:topic.actions/switch-to id]]
                               :dblclick [[:effects/prevent-default]
-                                         [:topic.actions/rename id]]}}
+                                         [:topic.actions/begin-rename id]]}}
            (str (if (= id active-topic-id) "✓ " "• ")
                 name
                 (when unsaved? " *"))])])]]])
