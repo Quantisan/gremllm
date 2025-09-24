@@ -41,7 +41,7 @@
                     (let [v (.. e -target -value)]
                       (dispatch [[:topic.actions/commit-rename topic-id v]])))
         "Escape" (do (.preventDefault e)
-                     (dispatch [[:topic.actions/cancel-rename topic-id]]))
+                     (dispatch [[:ui.actions/exit-topic-rename-mode topic-id]]))
         nil))))
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
@@ -87,7 +87,7 @@
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
-(nxr/register-action! :topic.actions/cancel-rename
+(nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
     [[:ui.effects/save [:topics-ui :renaming-id] nil]]))
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)

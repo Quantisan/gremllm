@@ -17,7 +17,7 @@
      [:input {:type "text"
               :default-value name
               :replicant/on-mount focus-and-select-on-mount
-              :on {:blur    [[:topic.actions/cancel-rename id]]
+              :on {:blur    [[:ui.actions/exit-topic-rename-mode id]]
                    :keydown [[:topic.effects/handle-rename-keys id]]}}]
      (let [label (str (if (= id active-topic-id) "✓ " "• ")
                       name
