@@ -16,6 +16,11 @@
   "Return the directory name of a path using Node's path.dirname."
   [p]
   (.dirname path p))
+
+(defn path-basename
+  "Return the basename (final path segment) of a path using Node's path.basename."
+  [p]
+  (.basename path p))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn user-dir-path
