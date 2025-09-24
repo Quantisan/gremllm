@@ -45,15 +45,15 @@
         current  (get-in state (topic-state/topic-field-path topic-id :name))]
     (cond
       (str/blank? new-name)
-      [[:effects/save topic-state/renaming-topic-id-path nil]]
+      [[:topic.actions/cancel-rename topic-id]]
 
       (= new-name current)
-      [[:effects/save topic-state/renaming-topic-id-path nil]]
+      [[:topic.actions/cancel-rename topic-id]]
 
       :else
       [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]
        [:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]
-       [:effects/save topic-state/renaming-topic-id-path nil]])))
+       [:topic.actions/cancel-rename topic-id]])))
 
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
