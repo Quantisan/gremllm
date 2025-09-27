@@ -4,8 +4,7 @@
             [lookup.core :as lookup]))
 
 (deftest render-left-panel-content-test
-  (let [props {:workspace-name        "Work 1"
-               :workspace-description "Desc"
+  (let [props {:workspace             {:name "Work 1" :description "Desc"}
                :topics-map            {"topic-1" {:id "topic-1" :name "Alpha"}
                                        "topic-2" {:id "topic-2" :name "Beta"}}
                :active-topic-id       "topic-2"}

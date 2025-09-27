@@ -44,7 +44,13 @@
   "Schema for workspace data sent from main to renderer via IPC.
    Used when loading a workspace folder from disk."
   [:map
+   [:workspace [:map [:name :string]]]
    [:topics {:default {}} WorkspaceTopics]])
+
+(defn create-workspace-meta
+  "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
+  [name]
+  {:name name})
 
 ;; Coercion helpers for boundaries
 (defn topic-from-ipc
@@ -63,9 +69,12 @@
     (m/coerce WorkspaceSyncData $ mt/json-transformer)))
 
 (defn workspace-sync-for-ipc
-  "Prepares workspace sync data for IPC transmission, taking topics and creating the proper structure."
-  [topics]
-  (m/encode WorkspaceSyncData {:topics topics} mt/strip-extra-keys-transformer))
+  "Prepares workspace sync data for IPC transmission, including workspace metadata."
+  [topics workspace]
+  (m/encode WorkspaceSyncData
+            {:topics topics
+             :workspace workspace}
+            mt/strip-extra-keys-transformer))
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.

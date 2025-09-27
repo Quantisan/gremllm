@@ -6,10 +6,10 @@
   (.focus node)
   (.select node))
 
-(defn- render-workspace-header [workspace-name workspace-description]
+(defn- render-workspace-header [{:keys [name description]}]
   [:hgroup
-   [:h4 workspace-name]
-   [:p [:small workspace-description]]])
+   [:h4 (or name "")]
+   [:p [:small (or description "")]]])
 
 (defn- render-topic-item [active-topic-id renaming-topic-id {:keys [id name unsaved?]}]
   [:li {:replicant/key id}
@@ -33,7 +33,7 @@
 
 (defn render-left-panel-content
   ;; topics-map = schema/WorkspaceTopics
-  [{:keys [workspace-name workspace-description topics-map active-topic-id renaming-topic-id]}]
+  [{:keys [workspace topics-map active-topic-id renaming-topic-id]}]
   [:div
    [:nav
     [:ul
@@ -43,7 +43,7 @@
                           [:topic.actions/start-new]]}}
        "➕ New Topic"]]]]
    [:hr]
-   (render-workspace-header workspace-name workspace-description)
+   (render-workspace-header workspace)
    [:nav
     [:ul
      (for [t (vals topics-map)]

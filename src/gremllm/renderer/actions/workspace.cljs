@@ -11,16 +11,25 @@
   [_state]
   [[:effects/save workspace-state/loaded-path true]])
 
+(defn set-workspace
+  "Save workspace metadata into renderer state."
+  [_state workspace]
+  [[:effects/save workspace-state/workspace-path workspace]])
+
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{topics :topics} (schema/workspace-sync-from-ipc workspace-data-js)
+  (let [{topics    :topics
+         workspace :workspace} (schema/workspace-sync-from-ipc workspace-data-js)
         ;; TODO: save last active topic id so that user can continue where they left off
         active-topic-id (first (keys topics))]
 
     (if (empty? topics)
-      [[:workspace.actions/initialize-empty]]
-      [[:workspace.actions/restore-with-topics
+      [[:workspace.actions/set workspace]
+       [:workspace.actions/initialize-empty]]
+
+      [[:workspace.actions/set workspace]
+       [:workspace.actions/restore-with-topics
         {:topics          topics
          :active-topic-id active-topic-id}]])))
 

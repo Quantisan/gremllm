@@ -98,8 +98,11 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Workspace Sync Operations
 
-(defn load-and-sync [{:keys [dispatch]} _ workspace-folder-path]
-  (let [topics-dir (io/topics-dir-path workspace-folder-path)
-        topics (load-topics topics-dir)
-        workspace-data (schema/workspace-sync-for-ipc topics)]
-    (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" workspace-data]])))
+(defn load-and-sync
+  "Load topics and workspace metadata, then send sync payload to renderer."
+  [{:keys [dispatch]} _ workspace-path]
+  (let [workspace-name (io/path-basename workspace-path)
+        workspace-meta (schema/create-workspace-meta workspace-name)
+        topics         (-> workspace-path io/topics-dir-path load-topics)
+        sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta)]
+    (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" sync-payload]])))

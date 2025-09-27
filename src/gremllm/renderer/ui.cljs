@@ -15,16 +15,14 @@
 
 (defn- render-workspace [state]
   (let [has-api-key?          (system-state/has-anthropic-api-key? state)
-        workspace-name        "Kaitenzushi Corp Acquisition"
-        workspace-description "Analyzing Japanese conveyor belt sushi chain for potential acquisition."
+        workspace             (workspace-state/get-workspace state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)]
     [e/app-layout
      [e/left-panel
       (topics-ui/render-left-panel-content
-        {:workspace-name        workspace-name
-         :workspace-description workspace-description
+        {:workspace             workspace
          :active-topic-id       active-topic-id
          :topics-map            topics-map
          :renaming-topic-id     renaming-topic-id})]
