@@ -209,3 +209,25 @@ Following FCIS principles, all state changes flow through Nexus:
 - Secondary: Secure storage via settings UI (when encryption available)
 - Visual: Redacted display in UI
 - Fallback: Graceful degradation without encryption
+
+## Reference Documentation
+
+Framework and library documentation is available in the `context/` directory:
+
+**Core Language & Data:**
+- `context/clojure.md` - Language fundamentals and idioms
+- `context/malli.md` - Schema validation and data modeling
+- `context/lookup.md` - Data access patterns and utilities
+
+**State & UI:**
+- `context/nexus.md` - State management core concepts
+- `context/nexus_placeholder_resolve.md` - Dynamic placeholder resolution
+- `context/replicant_guide.md` - UI framework overview and patterns
+- `context/replicant_concept.md` - Conceptual model and architecture
+- `context/replicant_hiccup.md` - Hiccup syntax and component structure
+
+**Electron Integration:**
+- `context/electron_ipc.md` - Inter-process communication
+- `context/electron_dialog.md` - Native dialogs and file pickers
+- `context/electron_safestorage.md` - Secure credential storage
+- `context/electron_menu.md` - Application menu system
