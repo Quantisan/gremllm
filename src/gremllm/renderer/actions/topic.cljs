@@ -39,12 +39,14 @@
   (let [active-id (topic-state/get-active-topic-id state)]
     [[:topic.actions/mark-unsaved active-id]]))
 
-(defn auto-save [state]
-  (let [active-id (topic-state/get-active-topic-id state)
-        topic (topic-state/get-active-topic state)
-        messages (:messages topic)]
-    (when (and active-id (:unsaved? topic) (seq messages))
-      [[:topic.effects/save-active-topic]])))
+(defn auto-save
+  ([state]
+   (auto-save state (topic-state/get-active-topic-id state)))
+  ([state topic-id]
+   (when (-> (get-in state (conj topic-state/topics-path topic-id))
+             (:messages)
+             (seq))
+     [[:topic.effects/save-topic topic-id]])))
 
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
@@ -66,8 +68,8 @@
 
       :else
       [[:topic.actions/set-name topic-id new-name]
-       [:topic.actions/mark-unsaved topic-id]
-       [:ui.actions/exit-topic-rename-mode topic-id]])))
+       [:ui.actions/exit-topic-rename-mode topic-id]
+       [:topic.actions/auto-save topic-id]])))
 
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
