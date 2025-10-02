@@ -13,7 +13,7 @@
     (is (every? #(= :effects/save (first %)) result) "both should be save effects")
 
     (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
-    (is (= (conj topic-state/topics-path (:id saved-topic)) topic-path) "should save to correct topics path")
+    (is (= (topic-state/topic-path (:id saved-topic)) topic-path) "should save to correct topics path")
 
     (is (= topic-state/active-topic-id-path active-path) "should save to active topic path")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
@@ -26,7 +26,7 @@
                             :messages [{:id "m1" :type "user" :content "Hi"}])
           test-topic-js (clj->js raw-topic)
           normalized-topic (schema/topic-from-ipc raw-topic)]
-      (is (= [[:effects/save (conj topic-state/topics-path (:id raw-topic)) normalized-topic]
+      (is (= [[:effects/save (topic-state/topic-path (:id raw-topic)) normalized-topic]
               [:effects/save topic-state/active-topic-id-path (:id raw-topic)]]
              (topic/set-topic {} test-topic-js))
           "should normalize the topic, save it to the topics map, and set it as active")))

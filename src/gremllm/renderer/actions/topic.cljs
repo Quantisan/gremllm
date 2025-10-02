@@ -9,12 +9,12 @@
   (when topic-js
     (let [topic (schema/topic-from-ipc topic-js)
           topic-id (:id topic)]
-      [[:effects/save (conj topic-state/topics-path topic-id) topic]
+      [[:effects/save (topic-state/topic-path topic-id) topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
 (defn start-new-topic [_state]
   (let [new-topic (schema/create-topic)]
-    [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
+    [[:effects/save (topic-state/topic-path (:id new-topic)) new-topic]
      [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
 
 (defn mark-saved [_state topic-id]
@@ -43,7 +43,7 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (when (-> (get-in state (conj topic-state/topics-path topic-id))
+   (when (-> (get-in state (topic-state/topic-path topic-id))
              (:messages)
              (seq))
      [[:topic.effects/save-topic topic-id]])))
@@ -74,7 +74,7 @@
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
-    (if-let [topic (get-in @store (conj topic-state/topics-path topic-id))]
+    (if-let [topic (get-in @store (topic-state/topic-path topic-id))]
       (dispatch
        [[:effects/promise
          {:promise    (.saveTopic js/window.electronAPI (clj->js topic))

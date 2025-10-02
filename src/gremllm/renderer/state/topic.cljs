@@ -3,13 +3,16 @@
 (def topics-path [:topics])
 (def active-topic-id-path [:active-topic-id])
 
+(defn topic-path [topic-id]
+  (conj topics-path topic-id))
+
 (defn get-active-topic-id [state]
   (get-in state active-topic-id-path))
 
 
 (defn get-active-topic [state]
   (let [active-id (get-active-topic-id state)]
-    (get-in state (conj topics-path active-id))))
+    (get-in state (topic-path active-id))))
 
 (defn get-messages [state]
   (:messages (get-active-topic state)))
