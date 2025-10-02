@@ -44,7 +44,7 @@
         topic (topic-state/get-active-topic state)
         messages (:messages topic)]
     (when (and active-id (:unsaved? topic) (seq messages))
-      [[:topic.effects/save-active-topic]])))
+      [[:topic.effects/save-topic active-id]])))
 
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
