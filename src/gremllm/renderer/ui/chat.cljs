@@ -58,9 +58,9 @@
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
-   (render-model-selector selected-model has-messages?)
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
+    (render-model-selector selected-model has-messages?)
     [:fieldset {:role "group"}
      [:input {:type "text"
               :value input-value

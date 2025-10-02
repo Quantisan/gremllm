@@ -23,11 +23,13 @@
     (swap! store assoc-in form-state/selected-model-path value)))
 
 (defn submit-messages [state]
-  (let [text (form-state/get-user-input state)]
+  (let [text (form-state/get-user-input state)
+        model (form-state/get-selected-model state)]
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
       (let [assistant-id (.now js/Date)]
+        (js/console.log "Submitting with model:" model) ;; TODO: make use of selected model
         [[:messages.actions/add-to-chat {:id   (.now js/Date)
                                          :type :user
                                          :text text}]
