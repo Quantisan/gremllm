@@ -6,6 +6,9 @@
 (defn update-input [_state value]
   [[:form.effects/update-input value]])
 
+(defn update-model [_state value]
+  [[:form.effects/update-model value]])
+
 ;; Domain-specific effects
 (nxr/register-effect! :form.effects/update-input
   (fn [_ store value]
@@ -14,6 +17,10 @@
 (nxr/register-effect! :form.effects/clear-input
   (fn [_ store]
     (swap! store assoc-in form-state/user-input-path "")))
+
+(nxr/register-effect! :form.effects/update-model
+  (fn [_ store value]
+    (swap! store assoc-in form-state/selected-model-path value)))
 
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
