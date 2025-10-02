@@ -56,7 +56,7 @@
       [:option {:value "anthropic/claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
       [:option {:value "anthropic/claude-3-5-haiku-latest"} "Claude 3.5 Haiku"]]]))
 
-(defn render-input-form [input-value selected-model has-messages? loading? has-api-key?]
+(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
    (render-model-selector selected-model has-messages?)
    [:form {:on {:submit [[:effects/prevent-default]

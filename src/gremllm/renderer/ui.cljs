@@ -36,11 +36,12 @@
                                 (loading-state/get-loading state)
                                 (loading-state/get-assistant-errors state))
 
-      (chat-ui/render-input-form (form-state/get-user-input state)
-                                 (form-state/get-selected-model state)
-                                 (seq (topic-state/get-messages state))
-                                 (loading-state/loading? state)
-                                 has-api-key?)
+      (chat-ui/render-input-form
+        {:input-value     (form-state/get-user-input state)
+         :selected-model  (form-state/get-selected-model state)
+         :has-messages?   (seq (topic-state/get-messages state))
+         :loading?        (loading-state/loading? state)
+         :has-api-key?    has-api-key?})
 
       (settings-ui/render-settings-modal
        {:open? (ui-state/showing-settings? state)
