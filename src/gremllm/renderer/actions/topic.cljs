@@ -9,12 +9,12 @@
   (when topic-js
     (let [topic (schema/topic-from-ipc topic-js)
           topic-id (:id topic)]
-      [[:effects/save (conj topic-state/topics-path topic-id) topic]
+      [[:effects/save (topic-state/topic-path topic-id) topic]
        [:effects/save topic-state/active-topic-id-path topic-id]])))
 
 (defn start-new-topic [_state]
   (let [new-topic (schema/create-topic)]
-    [[:effects/save (conj topic-state/topics-path (:id new-topic)) new-topic]
+    [[:effects/save (topic-state/topic-path (:id new-topic)) new-topic]
      [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
 
 (defn mark-saved [_state topic-id]
@@ -43,7 +43,7 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (when (-> (get-in state (conj topic-state/topics-path topic-id))
+   (when (-> (topic-state/get-topic state topic-id)
              (:messages)
              (seq))
      [[:topic.effects/save-topic topic-id]])))
@@ -53,12 +53,12 @@
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
-  (when (get-in state (topic-state/topic-field-path topic-id :name))
+  (when (topic-state/get-topic-field state topic-id :name)
     [[:effects/save ui-state/renaming-topic-id-path topic-id]]))
 
 (defn commit-rename [state topic-id new-name]
   (let [new-name (-> (or new-name "") str/trim)
-        current  (get-in state (topic-state/topic-field-path topic-id :name))]
+        current  (topic-state/get-topic-field state topic-id :name)]
     (cond
       (str/blank? new-name)
       [[:ui.actions/exit-topic-rename-mode topic-id]]
@@ -74,7 +74,7 @@
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
-    (if-let [topic (get-in @store (conj topic-state/topics-path topic-id))]
+    (if-let [topic (topic-state/get-topic @store topic-id)]
       (dispatch
        [[:effects/promise
          {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
