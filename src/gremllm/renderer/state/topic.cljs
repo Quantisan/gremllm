@@ -29,3 +29,6 @@
 (defn topic-field-path [topic-id field]
   (-> topics-path (conj topic-id field)))
 
+(defn get-topic-field [state topic-id field]
+  (get-in state (topic-field-path topic-id field)))
+

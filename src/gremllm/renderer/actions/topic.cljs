@@ -53,12 +53,12 @@
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
-  (when (get-in state (topic-state/topic-field-path topic-id :name))
+  (when (topic-state/get-topic-field state topic-id :name)
     [[:effects/save ui-state/renaming-topic-id-path topic-id]]))
 
 (defn commit-rename [state topic-id new-name]
   (let [new-name (-> (or new-name "") str/trim)
-        current  (get-in state (topic-state/topic-field-path topic-id :name))]
+        current  (topic-state/get-topic-field state topic-id :name)]
     (cond
       (str/blank? new-name)
       [[:ui.actions/exit-topic-rename-mode topic-id]]
