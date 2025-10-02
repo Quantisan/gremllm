@@ -43,10 +43,9 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (let [{unsaved? :unsaved?
-          messages :messages} (when topic-id
+   (let [{messages :messages} (when topic-id
                                 (get-in state (conj topic-state/topics-path topic-id)))]
-     (when (and topic-id unsaved? (seq messages))
+     (when (and topic-id  (seq messages))
        [[:topic.effects/save-topic topic-id]]))))
 
 (defn switch-topic [_state topic-id]
@@ -69,7 +68,6 @@
 
       :else
       [[:topic.actions/set-name topic-id new-name]
-       [:topic.actions/mark-unsaved topic-id]
        [:ui.actions/exit-topic-rename-mode topic-id]
        [:topic.actions/auto-save topic-id]])))
 
