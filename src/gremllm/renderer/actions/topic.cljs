@@ -70,7 +70,8 @@
       :else
       [[:topic.actions/set-name topic-id new-name]
        [:topic.actions/mark-unsaved topic-id]
-       [:ui.actions/exit-topic-rename-mode topic-id]])))
+       [:ui.actions/exit-topic-rename-mode topic-id]
+       [:topic.actions/auto-save topic-id]])))
 
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
