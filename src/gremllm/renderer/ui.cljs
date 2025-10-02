@@ -37,6 +37,8 @@
                                 (loading-state/get-assistant-errors state))
 
       (chat-ui/render-input-form (form-state/get-user-input state)
+                                 (form-state/get-selected-model state)
+                                 (seq (topic-state/get-messages state))
                                  (loading-state/loading? state)
                                  has-api-key?)
 

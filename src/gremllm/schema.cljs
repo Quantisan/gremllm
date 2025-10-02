@@ -21,6 +21,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
+   [:model {:default "anthropic/claude-sonnet-4-5"} :string]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
