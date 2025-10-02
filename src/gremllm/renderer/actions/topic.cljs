@@ -43,7 +43,7 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (when (-> (get-in state (topic-state/topic-path topic-id))
+   (when (-> (topic-state/get-topic state topic-id)
              (:messages)
              (seq))
      [[:topic.effects/save-topic topic-id]])))
@@ -74,7 +74,7 @@
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
-    (if-let [topic (get-in @store (topic-state/topic-path topic-id))]
+    (if-let [topic (topic-state/get-topic @store topic-id)]
       (dispatch
        [[:effects/promise
          {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
