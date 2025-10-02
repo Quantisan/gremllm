@@ -43,10 +43,10 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (let [{messages :messages} (when topic-id
-                                (get-in state (conj topic-state/topics-path topic-id)))]
-     (when (and topic-id  (seq messages))
-       [[:topic.effects/save-topic topic-id]]))))
+   (when (-> (get-in state (conj topic-state/topics-path topic-id))
+             (:messages)
+             (seq))
+     [[:topic.effects/save-topic topic-id]])))
 
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
