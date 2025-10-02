@@ -41,9 +41,9 @@
 
 (defn auto-save [state]
   (let [active-id (topic-state/get-active-topic-id state)
-        topic (topic-state/get-active-topic state)
-        messages (:messages topic)]
-    (when (and active-id (:unsaved? topic) (seq messages))
+        {unsaved? :unsaved?
+         messages :messages} (topic-state/get-active-topic state)]
+    (when (and active-id unsaved? (seq messages))
       [[:topic.effects/save-topic active-id]])))
 
 (defn switch-topic [_state topic-id]
