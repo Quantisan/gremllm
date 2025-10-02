@@ -69,14 +69,21 @@
        [:topic.actions/mark-unsaved topic-id]
        [:ui.actions/exit-topic-rename-mode topic-id]])))
 
+;; Generic topic save effect - accepts any topic-id
+(nxr/register-effect! :topic.effects/save-topic
+  (fn [{dispatch :dispatch} store topic-id]
+    (if-let [topic (get-in @store (conj topic-state/topics-path topic-id))]
+      (dispatch
+       [[:effects/promise
+         {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
+          :on-success [[:topic.actions/save-success topic-id]]
+          :on-error   [[:topic.actions/save-error topic-id]]}]])
+      (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
+
+;; Convenience effect for saving the active topic
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
-    (let [active-topic   (topic-state/get-active-topic @store)]
-      (if-let [topic-id (:id active-topic)]
-        (dispatch
-         [[:effects/promise
-           {:promise    (.saveTopic js/window.electronAPI (clj->js active-topic))
-            :on-success [[:topic.actions/save-success topic-id]]
-            :on-error   [[:topic.actions/save-error topic-id]]}]])
-        (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]])))))
+    (if-let [topic-id (topic-state/get-active-topic-id @store)]
+      (dispatch [[:topic.effects/save-topic topic-id]])
+      (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]]))))
 
