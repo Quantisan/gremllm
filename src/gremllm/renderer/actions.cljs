@@ -97,6 +97,7 @@
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
+(nxr/register-action! :topic.actions/auto-save topic/auto-save)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 

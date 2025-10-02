@@ -39,6 +39,12 @@
   (let [active-id (topic-state/get-active-topic-id state)]
     [[:topic.actions/mark-unsaved active-id]]))
 
+(defn auto-save [state]
+  (let [active-id (topic-state/get-active-topic-id state)
+        topic (topic-state/get-active-topic state)]
+    (when (and active-id (:unsaved? topic))
+      [[:topic.effects/save-active-topic]])))
+
 (defn switch-topic [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 

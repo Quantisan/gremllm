@@ -6,7 +6,8 @@
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
    [:topic.actions/mark-active-unsaved]
-   [:effects/scroll-to-bottom "chat-messages-container"]])
+   [:effects/scroll-to-bottom "chat-messages-container"]
+   [:topic.actions/auto-save]])
 
 (defn append-to-state [state message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
