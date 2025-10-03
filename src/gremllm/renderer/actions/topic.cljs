@@ -5,17 +5,12 @@
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]))
 
-(defn set-topic [_state topic-js]
-  (when topic-js
-    (let [topic (schema/topic-from-ipc topic-js)
-          topic-id (:id topic)]
-      [[:effects/save (topic-state/topic-path topic-id) topic]
-       [:effects/save topic-state/active-topic-id-path topic-id]])))
-
 (defn start-new-topic [_state]
-  (let [new-topic (schema/create-topic)]
-    [[:effects/save (topic-state/topic-path (:id new-topic)) new-topic]
-     [:effects/save topic-state/active-topic-id-path (:id new-topic)]]))
+  (let [new-topic     (schema/create-topic)
+        topic-id      (:id new-topic)
+        default-model (:model new-topic)]
+    [[:effects/save (topic-state/topic-path topic-id) new-topic]
+     [:topic.actions/set-active topic-id default-model]]))
 
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
@@ -48,8 +43,17 @@
              (seq))
      [[:topic.effects/save-topic topic-id]])))
 
+(defn set-active
+  "Set the active topic. Optionally accepts model to avoid reading from state."
+  ([state topic-id]
+   (set-active state topic-id (topic-state/get-topic-field state topic-id :model)))
+  ([_state topic-id model]
+   [[:effects/save topic-state/active-topic-id-path topic-id]
+    [:form.effects/update-model model]]))
+
+;; TODO: we can probably remove this and use set-active directly
 (defn switch-topic [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]])
+  [[:topic.actions/set-active topic-id]])
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic

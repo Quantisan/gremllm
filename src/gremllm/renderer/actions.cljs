@@ -6,7 +6,8 @@
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
-            [gremllm.renderer.state.ui :as ui-state]))
+            [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.topic :as topic-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -85,9 +86,9 @@
 ;; Topic
 
 ;; Register all topic actions
-(nxr/register-action! :topic.actions/set topic/set-topic)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/switch-to topic/switch-topic)
+(nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
 (nxr/register-action! :topic.actions/set-name topic/set-name)

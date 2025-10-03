@@ -34,12 +34,12 @@
             Secrets (config), System (capabilities)"
   [store secrets-filepath]
   (.on ipcMain "chat/send-message"
-       (fn [event request-id messages]
+       (fn [event request-id messages model]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
            (nxr/dispatch store {:ipc-event event
                                 :request-id request-id
                                 :channel "chat/send-message"}
-                         [[:chat.effects/send-message messages-clj [:env/anthropic-api-key]]]))))
+                         [[:chat.effects/send-message messages-clj model [:env/anthropic-api-key]]]))))
 
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]

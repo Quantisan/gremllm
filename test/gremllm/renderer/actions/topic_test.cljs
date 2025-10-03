@@ -7,33 +7,18 @@
 
 (deftest start-new-topic-test
   (let [result (topic/start-new-topic {})
-        [[_ topic-path saved-topic] [_ active-path active-id]] result]
+        [[_ topic-path saved-topic] [action-name active-id]] result]
 
     (is (= 2 (count result)) "should return exactly two effects")
-    (is (every? #(= :effects/save (first %)) result) "both should be save effects")
 
+    (is (= :effects/save (first (first result))) "first should be save effect")
     (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
     (is (= (topic-state/topic-path (:id saved-topic)) topic-path) "should save to correct topics path")
 
-    (is (= topic-state/active-topic-id-path active-path) "should save to active topic path")
+    (is (= :topic.actions/set-active action-name) "second should be set-active action")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
 (def ^:private expected-new-topic (schema/create-topic))
-
-(deftest set-topic-test
-  (testing "when a valid topic is provided"
-    (let [raw-topic  (assoc expected-new-topic
-                            :messages [{:id "m1" :type "user" :content "Hi"}])
-          test-topic-js (clj->js raw-topic)
-          normalized-topic (schema/topic-from-ipc raw-topic)]
-      (is (= [[:effects/save (topic-state/topic-path (:id raw-topic)) normalized-topic]
-              [:effects/save topic-state/active-topic-id-path (:id raw-topic)]]
-             (topic/set-topic {} test-topic-js))
-          "should normalize the topic, save it to the topics map, and set it as active")))
-
-  (testing "when input is nil"
-    (is (nil? (topic/set-topic {} nil))
-        "should return nil")))
 
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic
@@ -47,6 +32,6 @@
 
 (deftest switch-topic-test
   (testing "switching active topic"
-    (is (= [[:effects/save topic-state/active-topic-id-path "topic-2"]]
+    (is (= [[:topic.actions/set-active "topic-2"]]
            (topic/switch-topic {} "topic-2"))
-        "should dispatch an effect to update the active-topic-id")))
+        "should dispatch set-active action")))
