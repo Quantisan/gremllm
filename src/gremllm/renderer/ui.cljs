@@ -32,6 +32,8 @@
        (when-not has-api-key?
          (settings-ui/render-api-key-warning))]
 
+      ;; TODO: we have `topics-map` already. Why are we getting from state below? What's more
+      ;; readable and simple?
       (chat-ui/render-chat-area (topic-state/get-messages state)
                                 (loading-state/get-loading state)
                                 (loading-state/get-assistant-errors state))
