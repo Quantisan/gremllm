@@ -25,3 +25,23 @@
           new-message {:id 1, :text "test"}]
       (is (thrown-with-msg? js/Error #"Cannot append message: no active topic"
             (msg/append-to-state state new-message))))))
+
+(deftest test-llm-response-received
+  (testing "extracts message text from valid API response"
+    (let [assistant-id "asst-123"
+          api-response (clj->js {:content [{:text "Hello from AI"}]})]
+      (is (= [[:loading.actions/set-loading? assistant-id false]
+              [:messages.actions/add-to-chat {:id "asst-123"
+                                              :type :assistant
+                                              :text "Hello from AI"}]]
+             (msg/llm-response-received {} assistant-id api-response))
+          "Should extract text from [:content 0 :text] path")))
+  (testing "handles malformed response with missing content"
+    (let [assistant-id "asst-123"
+          api-response (clj->js {})]
+      (is (= [[:loading.actions/set-loading? assistant-id false]
+              [:messages.actions/add-to-chat {:id "asst-123"
+                                              :type :assistant
+                                              :text nil}]]
+             (msg/llm-response-received {} assistant-id api-response))
+          "Missing content should result in nil text, not throw"))))
