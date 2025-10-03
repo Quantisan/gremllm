@@ -35,10 +35,10 @@
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
-  [_state {:keys [topics active-topic-id]}]
+  [state {:keys [topics active-topic-id]}]
   [[:effects/save topic-state/topics-path topics]
    [:topic.actions/set-active active-topic-id]
-   ;; TODO: :form.effects/update-model with active topic model
+   [:form.effects/update-model (topic-state/get-topic-field state active-topic-id :model)]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
