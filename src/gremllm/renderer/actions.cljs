@@ -6,8 +6,7 @@
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
-            [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.topic :as topic-state]))
+            [gremllm.renderer.state.ui :as ui-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
