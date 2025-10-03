@@ -5,13 +5,6 @@
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]))
 
-(defn set-topic [_state topic-js]
-  (when topic-js
-    (let [topic (schema/topic-from-ipc topic-js)
-          topic-id (:id topic)]
-      [[:effects/save (topic-state/topic-path topic-id) topic]
-       [:effects/save topic-state/active-topic-id-path topic-id]])))
-
 (defn start-new-topic [_state]
   (let [new-topic (schema/create-topic)]
     [[:effects/save (topic-state/topic-path (:id new-topic)) new-topic]

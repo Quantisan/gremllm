@@ -20,21 +20,6 @@
 
 (def ^:private expected-new-topic (schema/create-topic))
 
-(deftest set-topic-test
-  (testing "when a valid topic is provided"
-    (let [raw-topic  (assoc expected-new-topic
-                            :messages [{:id "m1" :type "user" :content "Hi"}])
-          test-topic-js (clj->js raw-topic)
-          normalized-topic (schema/topic-from-ipc raw-topic)]
-      (is (= [[:effects/save (topic-state/topic-path (:id raw-topic)) normalized-topic]
-              [:effects/save topic-state/active-topic-id-path (:id raw-topic)]]
-             (topic/set-topic {} test-topic-js))
-          "should normalize the topic, save it to the topics map, and set it as active")))
-
-  (testing "when input is nil"
-    (is (nil? (topic/set-topic {} nil))
-        "should return nil")))
-
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic
                             :messages [{:id "m1" :type "user"}
