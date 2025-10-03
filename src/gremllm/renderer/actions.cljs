@@ -86,7 +86,6 @@
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
-(nxr/register-action! :topic.actions/switch-to topic/switch-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
