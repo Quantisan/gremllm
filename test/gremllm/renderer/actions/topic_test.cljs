@@ -32,8 +32,6 @@
 
 (deftest switch-topic-test
   (testing "switching active topic"
-    (let [state {:topics {"topic-2" {:id "topic-2" :model "anthropic/claude-sonnet-4-5"}}}]
-      (is (= [[:topic.actions/set-active "topic-2"]
-              [:form.effects/update-model "anthropic/claude-sonnet-4-5"]]
-             (topic/switch-topic state "topic-2"))
-          "should dispatch set-active and update-model actions"))))
+    (is (= [[:topic.actions/set-active "topic-2"]]
+           (topic/switch-topic {} "topic-2"))
+        "should dispatch set-active action")))
