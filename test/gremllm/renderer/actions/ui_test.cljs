@@ -4,10 +4,12 @@
 
 (deftest test-submit-message
   (testing "does nothing with empty input"
-    (is (nil? (ui/submit-messages {:form {:user-input ""}}))))
+    (is (nil? (ui/submit-messages {:form {:user-input ""
+                                          :selected-model "claude-3-5-haiku-latest"}}))))
 
   (testing "submits message with valid input"
-    (let [effects (ui/submit-messages {:form {:user-input "Hello"}})]
+    (let [effects (ui/submit-messages {:form {:user-input "Hello"
+                                              :selected-model "claude-3-5-haiku-latest"}})]
       (is (= 6 (count effects)))
       (is (= :messages.actions/add-to-chat (ffirst effects)))
       (is (= :form.effects/clear-input (first (second effects))))

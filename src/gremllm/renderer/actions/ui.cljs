@@ -29,7 +29,6 @@
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
       (let [assistant-id (.now js/Date)]
-        (js/console.log "Submitting with model:" model) ;; TODO: make use of selected model
         [[:messages.actions/add-to-chat {:id   (.now js/Date)
                                          :type :user
                                          :text text}]
@@ -37,7 +36,7 @@
          [:loading.effects/set-loading? assistant-id true]
          [:llm.effects/unset-all-errors]
          [:effects/scroll-to-bottom "chat-messages-container"]
-         [:llm.effects/send-llm-messages assistant-id]]))))
+         [:llm.effects/send-llm-messages assistant-id model]]))))
 
 ;; Scroll to bottom effect for chat area
 (nxr/register-effect! :effects/scroll-to-bottom

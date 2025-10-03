@@ -53,13 +53,13 @@
 
 ;; Effect for sending messages to LLM
 (nxr/register-effect! :llm.effects/send-llm-messages
-  (fn [{dispatch :dispatch} store assistant-id]
+  (fn [{dispatch :dispatch} store assistant-id model]
     (dispatch
       [[:effects/promise
         {:promise    (-> (topic-state/get-messages @store)
                          (messages->api-format)
                          (clj->js)
-                         (js/window.electronAPI.sendMessage))
+                         (js/window.electronAPI.sendMessage model))
          :on-success [[:llm.actions/response-received assistant-id]]
          :on-error   [[:llm.actions/response-error assistant-id]]}]])))
 
