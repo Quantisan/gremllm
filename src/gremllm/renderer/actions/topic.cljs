@@ -6,10 +6,11 @@
             [gremllm.schema :as schema]))
 
 (defn start-new-topic [_state]
-  (let [new-topic (schema/create-topic)]
-    [[:effects/save (topic-state/topic-path (:id new-topic)) new-topic]
-     ;; TODO: pass a default model instead of nil
-     [:topic.actions/set-active (:id new-topic) nil]]))
+  (let [new-topic     (schema/create-topic)
+        topic-id      (:id new-topic)
+        default-model (:model new-topic)]
+    [[:effects/save (topic-state/topic-path topic-id) new-topic]
+     [:topic.actions/set-active topic-id default-model]]))
 
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
