@@ -65,8 +65,8 @@
 
 ;; LLM effects
 (nxr/register-effect! :chat.effects/send-message
-  (fn [{:keys [dispatch]} _ messages api-key]
-    (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages api-key)]])))
+  (fn [{:keys [dispatch]} _ messages model api-key]
+    (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)

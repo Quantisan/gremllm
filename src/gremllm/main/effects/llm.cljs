@@ -3,8 +3,8 @@
 
 (defn query-llm-provider
   "Performs HTTP request to Anthropic API"
-  [messages api-key]
-  (let [request-body {:model "claude-3-5-haiku-latest"
+  [messages model api-key]
+  (let [request-body {:model model
                       :max_tokens 8192
                       :messages messages}
         headers {"x-api-key" api-key

@@ -26,6 +26,7 @@
   (testing "successfully parses Claude API response"
     (let [original-fetch       js/fetch
           test-messages        [{:role "user" :content "2+2"}]
+          test-model           "claude-3-5-haiku-latest"
           test-api-key         "test-key"
           mock-claude-response {:id "msg_01LaTD7HNzYujxh6ASPpTQ6T"
                                 :type "message"
@@ -42,7 +43,7 @@
 
       (set! js/fetch (mock-successful-fetch mock-claude-response))
 
-      (-> (llm/query-llm-provider test-messages test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
                    (testing "response structure"
                      (is (= (:id response) "msg_01LaTD7HNzYujxh6ASPpTQ6T"))
@@ -60,12 +61,13 @@
   (testing "API errors are propagated as rejected promises"
     (let [original-fetch js/fetch
           test-messages [{:role "user" :content "Hello"}]
+          test-model "claude-3-5-haiku-latest"
           test-api-key "test-key"
           error-message "Network error"]
 
       (set! js/fetch (mock-failed-fetch error-message))
 
-      (-> (llm/query-llm-provider test-messages test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [_]
                    (is false "Should not succeed")))
           (.catch (fn [error]
