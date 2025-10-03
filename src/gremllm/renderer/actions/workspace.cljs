@@ -37,7 +37,7 @@
   "Restore a workspace that has existing topics."
   [_state {:keys [topics active-topic-id]}]
   [[:effects/save topic-state/topics-path topics]
-   [:effects/save topic-state/active-topic-id-path active-topic-id]
+   [:topic.actions/set-active active-topic-id]
    ;; TODO: :form.effects/update-model with active topic model
    [:workspace.actions/mark-loaded]])
 
