@@ -41,9 +41,13 @@
              (seq))
      [[:topic.effects/save-topic topic-id]])))
 
-(defn set-active [state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]
-   [:form.effects/update-model (topic-state/get-topic-field state topic-id :model)]])
+(defn set-active
+  "Set the active topic. Optionally accepts model to avoid reading from state."
+  ([state topic-id]
+   (set-active state topic-id (topic-state/get-topic-field state topic-id :model)))
+  ([_state topic-id model]
+   [[:effects/save topic-state/active-topic-id-path topic-id]
+    [:form.effects/update-model model]]))
 
 ;; TODO: we can probably remove this and use set-active directly
 (defn switch-topic [_state topic-id]
