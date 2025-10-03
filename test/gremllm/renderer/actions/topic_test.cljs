@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.topic-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is]]
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema :as schema]
@@ -30,8 +30,3 @@
     (is (= expected (schema/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest switch-topic-test
-  (testing "switching active topic"
-    (is (= [[:topic.actions/set-active "topic-2"]]
-           (topic/switch-topic {} "topic-2"))
-        "should dispatch set-active action")))

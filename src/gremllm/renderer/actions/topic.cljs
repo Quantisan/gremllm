@@ -51,10 +51,6 @@
    [[:effects/save topic-state/active-topic-id-path topic-id]
     [:form.effects/update-model model]]))
 
-;; TODO: we can probably remove this and use set-active directly
-(defn switch-topic [_state topic-id]
-  [[:topic.actions/set-active topic-id]])
-
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
   (when (topic-state/get-topic-field state topic-id :name)

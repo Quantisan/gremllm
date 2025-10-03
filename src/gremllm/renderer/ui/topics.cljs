@@ -26,7 +26,7 @@
             :aria-current (when (= id active-topic-id) "page")
             :title        "Double-click to rename topic"
             :on           {:click    [[:effects/prevent-default]
-                                      [:topic.actions/switch-to id]]
+                                      [:topic.actions/set-active id]]
                            :dblclick [[:effects/prevent-default]
                                       [:topic.actions/begin-rename id]]}}
         label]))])
