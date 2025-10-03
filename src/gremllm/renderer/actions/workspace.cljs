@@ -38,6 +38,7 @@
   [_state {:keys [topics active-topic-id]}]
   [[:effects/save topic-state/topics-path topics]
    [:effects/save topic-state/active-topic-id-path active-topic-id]
+   ;; TODO: :form.effects/update-model with active topic model
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty

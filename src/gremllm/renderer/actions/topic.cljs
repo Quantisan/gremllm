@@ -49,6 +49,7 @@
      [[:topic.effects/save-topic topic-id]])))
 
 (defn switch-topic [_state topic-id]
+  ;; TODO: :form.effects/update-model with active topic model
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 (defn begin-rename [state topic-id]
