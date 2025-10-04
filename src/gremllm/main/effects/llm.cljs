@@ -1,17 +1,21 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations")
 
+(defn- log-and-throw-error [response model message-count body]
+  (let [status (.-status response)
+        status-text (.-statusText response)
+        error-msg (str "API request failed (" status " " status-text ")")]
+    (js/console.error "LLM API Error Details:"
+                      (clj->js {:status status
+                                :statusText status-text
+                                :model model
+                                :messageCount message-count
+                                :responseBody body}))
+    (throw (js/Error. (str error-msg ": " body)))))
+
 (defn- handle-error-response [response model message-count]
-  (-> (.text response)
-      (.then (fn [body]
-               (let [error-msg (str "API request failed (" (.-status response) " " (.-statusText response) ")")]
-                 (js/console.error "LLM API Error Details:"
-                                   (clj->js {:status (.-status response)
-                                             :statusText (.-statusText response)
-                                             :model model
-                                             :messageCount message-count
-                                             :responseBody body}))
-                 (throw (js/Error. (str error-msg ": " body))))))))
+  (.then (.text response)
+         #(log-and-throw-error response model message-count %)))
 
 (defn- handle-response [response model message-count]
   (if (.-ok response)
