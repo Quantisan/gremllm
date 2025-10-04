@@ -38,8 +38,15 @@
                                      :type :assistant
                                      :text (get-in clj-response [:content 0 :text])}]]))
 
-(defn llm-response-error [_state assistant-id error]
-  (js/console.error "LLM API Error:" error)
+(defn llm-response-error [state assistant-id error]
+  (js/console.error "LLM Response Error:"
+                    (clj->js {:assistantId assistant-id
+                              :errorMessage (.-message error)
+                              :errorObject error
+                              :activeTopicId (topic-state/get-active-topic-id state)
+                              :messageCount (count (topic-state/get-messages state))}))
+  (when (.-stack error)
+    (js/console.error "Error stack:" (.-stack error)))
   [[:loading.actions/set-loading? assistant-id false]
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
