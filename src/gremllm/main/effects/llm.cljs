@@ -14,5 +14,18 @@
                   (clj->js {:method "POST"
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
-        (.then #(if (.-ok %) (.json %) (throw (js/Error. "API request failed"))))
+        (.then (fn [response]
+                 (if (.-ok response)
+                   (.json response)
+                   ;; Capture detailed error info for diagnostics
+                   (-> (.text response)
+                       (.then (fn [body]
+                                (let [error-msg (str "API request failed (" (.-status response) " " (.-statusText response) ")")]
+                                  (js/console.error "LLM API Error Details:"
+                                                    (clj->js {:status (.-status response)
+                                                              :statusText (.-statusText response)
+                                                              :model model
+                                                              :messageCount (count messages)
+                                                              :responseBody body}))
+                                  (throw (js/Error. (str error-msg ": " body))))))))))
         (.then #(js->clj % :keywordize-keys true)))))
