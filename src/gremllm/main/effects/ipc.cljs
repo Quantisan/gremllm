@@ -44,4 +44,8 @@
   [{:keys [dispatch]} _ promise]
   (-> promise
       (.then #(dispatch [[:ipc.effects/reply (clj->js %)]]))
-      (.catch #(dispatch [[:ipc.effects/reply-error %]]))))
+      (.catch (fn [error]
+                (js/console.error "IPC Promise Error:" error)
+                (when (.-stack error)
+                  (js/console.error "Stack trace:" (.-stack error)))
+                (dispatch [[:ipc.effects/reply-error error]])))))
