@@ -85,14 +85,15 @@
 
 (deftest test-query-llm-provider-http-error
   (testing "HTTP error responses include status and body"
-    (with-console-silenced
-      (let [original-fetch js/fetch]
-        (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
+    (let [original-fetch js/fetch
+          restore-console (with-console-silenced)]
+      (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
 
-        (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
-            (.then #(is false "Should not succeed"))
-            (.catch (fn [error]
-                      (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
-            (.finally (fn []
-                        (set! js/fetch original-fetch))))))))
+      (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
+          (.then #(is false "Should not succeed"))
+          (.catch (fn [error]
+                    (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
+          (.finally (fn []
+                      (set! js/fetch original-fetch)
+                      (restore-console)))))))
 
