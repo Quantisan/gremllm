@@ -54,7 +54,7 @@
           effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
                                                       :active-topic-id "tid"})
           [_ _ model] (get-action effects :topic.actions/set-active)]
-      (is (= "anthropic/claude-sonnet-4-5" model)))))
+      (is (= "claude-sonnet-4-5-20250929" model)))))
 
 (deftest opened-multiple-topics-test
   (testing "Selects one topic when multiple exist"

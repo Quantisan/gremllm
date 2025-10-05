@@ -7,7 +7,7 @@
   (testing ":on-submit handler has correct structure"
     (let [hiccup (chat-ui/render-input-form
                    {:input-value    "some input"
-                    :selected-model "anthropic/claude-sonnet-4-5"
+                    :selected-model "claude-sonnet-4-5"
                     :has-messages?  false
                     :loading?       false
                     :has-api-key?   true})

@@ -14,7 +14,7 @@
 
 (deftest test-parse-topic-content
   (testing "parses valid topic content"
-    (let [topic {:id "topic-123" :name "Test" :model "anthropic/claude-sonnet-4-5" :messages []}
+    (let [topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5" :messages []}
           content (pr-str topic)
           result (#'workspace/parse-topic-content content "test.edn")]
       (is (= topic result))))
@@ -25,7 +25,7 @@
       (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))))
 
   (testing "applies schema coercion"
-    (let [topic-without-unsaved {:id "topic-123" :name "Test" :model "anthropic/claude-sonnet-4-5" :messages []}
+    (let [topic-without-unsaved {:id "topic-123" :name "Test" :model "claude-sonnet-4-5" :messages []}
           content (pr-str topic-without-unsaved)
           result (#'workspace/parse-topic-content content "test.edn")]
       ;; schema/topic-from-disk should not add :unsaved? key
@@ -37,7 +37,7 @@
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
-                        :model "anthropic/claude-sonnet-4-5"
+                        :model "claude-sonnet-4-5"
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]}
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
@@ -54,15 +54,15 @@
       (fn [dir]
         (let [files-to-create ["topic-200-bbb.edn" "notes.txt" "topic-100-aaa.edn"]
               _               (doseq [f files-to-create]
-                                (io/write-file (io/path-join dir f) "{}"))]
-          (let [entries (workspace/enumerate dir)]
-            (is (= [{:filename "topic-100-aaa.edn"
-                     :filepath (io/path-join dir "topic-100-aaa.edn")}
-                    {:filename "topic-200-bbb.edn"
-                     :filepath (io/path-join dir "topic-200-bbb.edn")}]
-                   (mapv #(select-keys % [:filename :filepath]) entries)))
-            (is (every? number? (map :created-at entries)))
-            (is (every? number? (map :last-accessed-at entries)))))))))
+                                (io/write-file (io/path-join dir f) "{}"))
+              entries         (workspace/enumerate dir)]
+          (is (= [{:filename "topic-100-aaa.edn"
+                    :filepath (io/path-join dir "topic-100-aaa.edn")}
+                  {:filename "topic-200-bbb.edn"
+                    :filepath (io/path-join dir "topic-200-bbb.edn")}]
+                 (mapv #(select-keys % [:filename :filepath]) entries)))
+          (is (every? number? (map :created-at entries)))
+          (is (every? number? (map :last-accessed-at entries))))))))
 
 (deftest test-load-topics
   (testing "returns empty map for non-existent directory"
@@ -72,8 +72,8 @@
     (with-temp-dir "load-topics"
       (fn [dir]
         ;; Simple test topics with just the essentials
-        (let [topic-1 {:id "topic-1-a" :name "First" :model "anthropic/claude-sonnet-4-5" :messages []}
-              topic-2 {:id "topic-2-b" :name "Second" :model "anthropic/claude-sonnet-4-5" :messages []}]
+        (let [topic-1 {:id "topic-1-a" :name "First" :model "claude-sonnet-4-5" :messages []}
+              topic-2 {:id "topic-2-b" :name "Second" :model "claude-sonnet-4-5" :messages []}]
 
           ;; Write valid topic files
           (write-topic-file dir topic-1)
@@ -90,7 +90,7 @@
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [good-topic {:id "topic-111-good" :name "Valid" :model "anthropic/claude-sonnet-4-5" :messages []}]
+        (let [good-topic {:id "topic-111-good" :name "Valid" :model "claude-sonnet-4-5" :messages []}]
           ;; Write one valid and one corrupt file
           (write-topic-file dir good-topic)
           (write-file dir "topic-999-bad.edn" "{:broken")
@@ -105,7 +105,7 @@
     (with-temp-dir "load-sync"
       (fn [temp-dir]
         (let [topics-dir (io/topics-dir-path temp-dir)
-              topic {:id "topic-123" :name "Test" :model "anthropic/claude-sonnet-4-5" :messages []}
+              topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5" :messages []}
               dispatched (atom nil)]
 
           ;; Setup: write a topic file
