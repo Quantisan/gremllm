@@ -52,9 +52,9 @@
      [:small "Model:"]
      [:select {:value selected-model
                :on {:change [[:form.actions/update-model [:event.target/value]]]}}
-      [:option {:value "anthropic/claude-sonnet-4-5"} "Claude 4.5 Sonnet"]
-      [:option {:value "anthropic/claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
-      [:option {:value "anthropic/claude-3-5-haiku-latest"} "Claude 3.5 Haiku"]]]))
+      [:option {:value "claude-sonnet-4-5-20250929"} "Claude 4.5 Sonnet"]
+      [:option {:value "claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
+      [:option {:value "claude-3-5-haiku-20241022"} "Claude 3.5 Haiku"]]]))
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
