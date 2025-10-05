@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.llm-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.effects.llm :as llm]))
+            [gremllm.main.effects.llm :as llm]
+            [gremllm.test-utils :refer [with-console-silenced]]))
 
 ;; Example send-message response:
 ;;
@@ -84,16 +85,14 @@
 
 (deftest test-query-llm-provider-http-error
   (testing "HTTP error responses include status and body"
-    (let [original-fetch js/fetch
-          original-console-error js/console.error]
-      (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
-      (set! js/console.error (fn [& _]))
+    (with-console-silenced
+      (let [original-fetch js/fetch]
+        (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
 
-      (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
-          (.then #(is false "Should not succeed"))
-          (.catch (fn [error]
-                    (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
-          (.finally (fn []
-                      (set! js/fetch original-fetch)
-                      (set! js/console.error original-console-error)))))))
+        (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
+            (.then #(is false "Should not succeed"))
+            (.catch (fn [error]
+                      (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
+            (.finally (fn []
+                        (set! js/fetch original-fetch))))))))
 
