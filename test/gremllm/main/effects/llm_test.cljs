@@ -74,3 +74,22 @@
                     (is (= (.-message error) error-message))))
           (.finally #(set! js/fetch original-fetch))))))
 
+(defn mock-http-error-fetch [status status-text body]
+  (fn [_url _opts]
+    (js/Promise.resolve
+     #js {:ok false
+          :status status
+          :statusText status-text
+          :text #(js/Promise.resolve body)})))
+
+(deftest test-query-llm-provider-http-error
+  (testing "HTTP error responses include status and body"
+    (let [original-fetch js/fetch]
+      (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
+
+      (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
+          (.then #(is false "Should not succeed"))
+          (.catch (fn [error]
+                    (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
+          (.finally #(set! js/fetch original-fetch))))))
+
