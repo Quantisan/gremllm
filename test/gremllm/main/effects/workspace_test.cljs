@@ -2,7 +2,7 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.workspace :as workspace]
             [gremllm.main.io :as io]
-            [gremllm.test-utils :refer [with-temp-dir]]))
+            [gremllm.test-utils :refer [with-temp-dir with-console-error-silenced]]))
 
 (defn- write-topic-file [dir topic]
   (let [filename (str (:id topic) ".edn")
@@ -20,12 +20,9 @@
       (is (= topic result))))
 
   (testing "returns nil for invalid EDN"
-    ;; Suppress console.error for this test
-    (let [original-error js/console.error]
-      (set! js/console.error (constantly nil))
+    (with-console-error-silenced
       (is (nil? (#'workspace/parse-topic-content "{:broken" "bad.edn")))
-      (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))
-      (set! js/console.error original-error)))
+      (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))))
 
   (testing "applies schema coercion"
     (let [topic-without-unsaved {:id "topic-123" :name "Test" :model "anthropic/claude-sonnet-4-5" :messages []}
@@ -99,12 +96,8 @@
           (write-file dir "topic-999-bad.edn" "{:broken")
 
           ;; Should load only the valid topic, ignoring corrupt one
-          (let [original-error js/console.error]
-            ;; Temporarily suppress console.error
-            (set! js/console.error (constantly nil))
+          (with-console-error-silenced
             (let [result (workspace/load-topics dir)]
-              ;; Restore original console.error
-              (set! js/console.error original-error)
               (is (= {(:id good-topic) good-topic} result)))))))))
 
 (deftest test-load-and-sync

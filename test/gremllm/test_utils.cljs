@@ -1,7 +1,8 @@
 (ns gremllm.test-utils
   (:require [gremllm.main.io :as io]
             ["os" :as os]
-            ["fs" :as fs]))
+            ["fs" :as fs])
+  (:require-macros [gremllm.test-utils]))
 
 (defn with-temp-dir
   "Creates a temporary directory, executes f with its path, then cleans up."

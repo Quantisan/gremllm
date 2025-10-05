@@ -7,6 +7,7 @@
   [[:messages.actions/append-to-state message]
    [:topic.actions/mark-active-unsaved]
    [:effects/scroll-to-bottom "chat-messages-container"]
+   ;; TODO: we should not save if the last message was an Error
    [:topic.actions/auto-save]])
 
 (defn append-to-state [state message]
@@ -38,8 +39,12 @@
                                      :type :assistant
                                      :text (get-in clj-response [:content 0 :text])}]]))
 
-(defn llm-response-error [_state assistant-id error]
-  (js/console.error "LLM API Error:" error)
+(defn llm-response-error [state assistant-id error]
+  (js/console.error "Renderer received LLM error:"
+                    (clj->js {:assistantId assistant-id
+                              :errorMessage (.-message error)
+                              :activeTopicId (topic-state/get-active-topic-id state)
+                              :messageCount (count (topic-state/get-messages state))}))
   [[:loading.actions/set-loading? assistant-id false]
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
