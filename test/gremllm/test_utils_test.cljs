@@ -1,13 +1,13 @@
 (ns gremllm.test-utils-test
   (:require [cljs.test :refer [deftest is]]
-            [gremllm.test-utils :refer [with-console-silenced]]))
+            [gremllm.test-utils :refer [with-console-error-silenced]]))
 
 (deftest test-with-console-silenced-sync
   (let [original js/console.error
         calls (atom 0)]
     (set! js/console.error #(swap! calls inc))
 
-    (with-console-silenced
+    (with-console-error-silenced
       (js/console.error "silenced"))
     (is (= 0 @calls))
 
@@ -20,7 +20,7 @@
         calls (atom 0)]
     (set! js/console.error #(swap! calls inc))
 
-    (let [restore (with-console-silenced)]
+    (let [restore (with-console-error-silenced)]
       (js/console.error "silenced")
       (is (= 0 @calls))
 

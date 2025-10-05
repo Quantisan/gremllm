@@ -2,7 +2,7 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.workspace :as workspace]
             [gremllm.main.io :as io]
-            [gremllm.test-utils :refer [with-temp-dir with-console-silenced]]))
+            [gremllm.test-utils :refer [with-temp-dir with-console-error-silenced]]))
 
 (defn- write-topic-file [dir topic]
   (let [filename (str (:id topic) ".edn")
@@ -20,7 +20,7 @@
       (is (= topic result))))
 
   (testing "returns nil for invalid EDN"
-    (with-console-silenced
+    (with-console-error-silenced
       (is (nil? (#'workspace/parse-topic-content "{:broken" "bad.edn")))
       (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))))
 
@@ -96,7 +96,7 @@
           (write-file dir "topic-999-bad.edn" "{:broken")
 
           ;; Should load only the valid topic, ignoring corrupt one
-          (with-console-silenced
+          (with-console-error-silenced
             (let [result (workspace/load-topics dir)]
               (is (= {(:id good-topic) good-topic} result)))))))))
 

@@ -1,7 +1,7 @@
 (ns gremllm.main.effects.llm-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.llm :as llm]
-            [gremllm.test-utils :refer [with-console-silenced]]))
+            [gremllm.test-utils :refer [with-console-error-silenced]]))
 
 ;; Example send-message response:
 ;;
@@ -86,7 +86,7 @@
 (deftest test-query-llm-provider-http-error
   (testing "HTTP error responses include status and body"
     (let [original-fetch js/fetch
-          restore-console (with-console-silenced)]
+          restore-console (with-console-error-silenced)]
       (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
 
       (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")

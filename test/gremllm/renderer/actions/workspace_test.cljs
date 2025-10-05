@@ -1,6 +1,6 @@
 (ns gremllm.renderer.actions.workspace-test
   (:require [gremllm.renderer.actions.workspace :as workspace]
-            [gremllm.test-utils :refer [with-console-silenced]]
+            [gremllm.test-utils :refer [with-console-error-silenced]]
             [gremllm.schema :as schema]
             [cljs.test :refer [deftest is testing]]
             [malli.core :as m]
@@ -70,7 +70,7 @@
 
 (deftest load-error-test
   (testing "Returns no effects on error"
-    (with-console-silenced
+    (with-console-error-silenced
       (let [effects (workspace/load-error {} (js/Error. "Test error"))]
         (is (empty? effects))))))
 

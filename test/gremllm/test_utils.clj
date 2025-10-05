@@ -1,6 +1,6 @@
 (ns gremllm.test-utils)
 
-(defmacro with-console-silenced
+(defmacro with-console-error-silenced
   "Temporarily suppresses console.error.
 
   Zero-arity (async): Returns a restore function to call later.
