@@ -1,6 +1,6 @@
-# CLAUDE.md
+# CLAUDE.md (Gremllm Project)
 
-Guidance for Claude Code when working with the Gremllm codebase.
+Gremllm-specific guidance for Claude Code.
 
 ## Overview
 
@@ -32,25 +32,6 @@ npm run build      # Production build
 npm run test       # Run tests
 npm run repl       # ClojureScript REPL
 ```
-
-## LLM Interaction Guidelines
-
-Follow these directives. They are rules, not suggestions.
-
-### 1. Be Direct
-- **No Pleasantries:** Omit praise like "good" or "great."
-- **Answer First:** Deliver the solution before the explanation.
-
-### 2. Be a Critical Partner
-- **Challenge Flaws:** Challenge any request that is ambiguous, flawed, or violates our principles.
-- **Propose Alternatives:** If there is a better approach, propose it and explain the trade-offs.
-- **Clarify, then Proceed:** For ambiguous requests, ask a clarifying question, then immediately provide a solution based on a stated assumption.
-
-### 3. Master Our Principles
-- **Strict Adherence:** All solutions must align with this document's principles (FCIS, Modelarity).
-- **Justify with Principles:** Cite our principles to justify your logic. For example:
-    - *"To maintain **Strict FCIS**, this effect should be..."*
-    - *"Per our **File Management Philosophy**, this logic belongs in..."*
 
 ## Design Philosophy
 
@@ -88,9 +69,6 @@ This principle ensures that the solution space (the code) directly corresponds t
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
-### Minimal Complexity, Maximum Clarity
-We resist adding abstractions until they prove their worth. Every line of code should have a clear purpose. We prefer explicit over clever, simple over sophisticated. The codebase should be approachable for someone familiar with Clojure basics.
-
 ### Vision: An IDE for Thought
 
 Gremllm is not a chat app; it is an **Idea Development Environment (IDE)**—a structured workspace for complex cognitive tasks like strategic planning, analysis, and creative exploration. Our entire architecture is modeled directly on the familiar and powerful metaphor of a code repository.
@@ -100,23 +78,6 @@ Gremllm is not a chat app; it is an **Idea Development Environment (IDE)**—a s
 -   **Topic as Source File:** A Topic is an individual file within that repository. It is a container for a specific line of inquiry, a single analysis, or a focused creative thread. It inherits context from its parent but allows for the isolated "development" of an idea.
 
 This structure creates a **topic tree** where context flows from the workspace down through parent topics to children. This hierarchy supports both broad, high-level context and deep, specific exploration without cross-contamination. Every feature we build must serve this model of structured, hierarchical, and context-aware thinking.
-
-## Development Approach
-
-### Test-First Development
-1. **Write tests first** - Define the behavior before implementation
-2. **Build to pass tests** - Implement the minimal code to make tests green
-3. **Validate it works** - Manual testing in `npm run dev` to ensure real-world behavior
-4. **Refactor excessively** - Once working, refactor until the code is clean and obvious
-5. **Apply Boy Scout Rule** - Leave code better than you found it, every time
-
-### Continuous Architecture Evolution
-- **Weekly refactoring sessions** - Dedicated time for larger architectural improvements
-- **Early attention to code quality** - Don't let technical debt accumulate
-- **Least-surprise principle** - Code should do what it looks like it does
-- **Conscious architecture** - Every decision should improve long-term maintainability
-
-This isn't about perfection—it's about building a codebase that's a joy to work in. Clean code is faster to understand, easier to modify, and less likely to harbor bugs.
 
 ## State Management with Nexus
 
@@ -176,32 +137,10 @@ Following FCIS principles, all state changes flow through Nexus:
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
 - `src/gremllm/schema.cljs` - Data models and validation
 
-## Code Style & Conventions
-
-### File Management Philosophy
-- **ALWAYS prefer editing existing files over creating new ones**
-- New files only when introducing a new domain or feature area
-- Before creating a file, ask: "Can this logic live in an existing namespace?"
-- File creation is a design decision, not a convenience
-
-### Clojure Style
-- Threading macros (`->`, `->>`) for clarity in transformation pipelines
-- Destructuring to make data shapes explicit at function boundaries
-- Small, focused functions that do one thing well
-- Descriptive names that make code self-documenting
-- Let bindings for intermediate values that clarify intent
-
-### UI Approach
+## UI Approach
 - **PicoCSS only** - Use semantic HTML and PicoCSS defaults. No custom styling unless essential for functionality (e.g., chat bubbles)
 - **No polish** - MVP means functional, not fancy. Resist the urge to beautify
 - **Minimal custom CSS** - The few custom styles in index.html are enough. Don't add more
-
-### Working with the Codebase
-1. Study existing patterns before implementing
-2. Check dependencies (`deps.edn`) before assuming libraries exist
-3. Follow established namespace conventions
-4. Run tests (`npm run test`) throughout development
-5. Manual testing with `npm run dev` before considering complete
 
 ## API Key Management
 
@@ -231,3 +170,4 @@ Framework and library documentation is available in the `context/` directory:
 - `context/electron_dialog.md` - Native dialogs and file pickers
 - `context/electron_safestorage.md` - Secure credential storage
 - `context/electron_menu.md` - Application menu system
+
