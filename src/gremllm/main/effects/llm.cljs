@@ -23,7 +23,11 @@
     (handle-error-response response model message-count)))
 
 (defn query-llm-provider
-  "Performs HTTP request to Anthropic API"
+  "Performs HTTP request to Anthropic API.
+
+  Uses direct fetch instead of Anthropic SDK for simplicity—our use case is
+  straightforward message exchange. Resist adding features (error handling,
+  retries, streaming, etc.). Upgrade to SDK when requirements outgrow this."
   [messages model api-key]
   (let [request-body {:model model
                       :max_tokens 8192
