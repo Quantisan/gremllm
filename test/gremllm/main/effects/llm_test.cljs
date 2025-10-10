@@ -16,7 +16,7 @@
 ;; Content: 4
 
 (defn mock-successful-fetch [response-data]
-  (fn [url opts]
+  (fn [_url _opts]
     (js/Promise.resolve
      #js {:ok true
           :json (fn []
@@ -24,7 +24,7 @@
                    (clj->js response-data)))})))
 
 (defn mock-failed-fetch [error-message]
-  (fn [url opts]
+  (fn [_url _opts]
     (js/Promise.reject (js/Error. error-message))))
 
 (defn mock-http-error-fetch [status status-text body]
@@ -51,6 +51,8 @@
    :usage {:input_tokens 16
            :cache_creation_input_tokens 0
            :cache_read_input_tokens 0
+           :cache_creation {:ephemeral_5m_input_tokens 0
+                            :ephemeral_1h_input_tokens 0}
            :output_tokens 5
            :service_tier "standard"}})
 
@@ -98,7 +100,7 @@
 
   ;; Usage should have same keys as mock
   (is (= (set (keys (:usage actual))) (set (keys (:usage mock))))
-      (str "usage keys should match mock")))
+      "usage keys should match mock"))
 
 ;; Integration Tests
 ;; These call real APIs to validate our mocks match actual responses.
