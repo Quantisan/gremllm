@@ -97,32 +97,49 @@ The transformation refactors `query-llm-provider` from a single function into a 
 
 **Validation:** `npm run test` passes, manual smoke test with Claude model still works.
 
-### Phase 2: Implement OpenAI Provider
-**Goal:** Add OpenAI GPT model support.
+### Phase 2: Generalize API Key Resolution ✅ COMPLETED
+**Goal:** Make API key selection dynamic based on model using parameterized placeholders.
+
+**Files modified:**
+- `src/gremllm/main/effects/llm.cljs` - Added provider mapping helpers
+- `src/gremllm/main/actions.cljs` - Registered parameterized and provider-specific placeholders
+- `src/gremllm/main/core.cljs` - Updated effect to use `:env/api-key-for-model`
+- `test/gremllm/main/effects/llm_test.cljs` - Added tests for helper functions
+- `.env.example` - Documented `OPENAI_API_KEY` and `GEMINI_API_KEY`
+
+**Completed actions:**
+1. Added `provider->api-key-keyword` helper mapping provider keywords to safeStorage keys
+2. Added `provider->env-var-name` helper mapping provider keywords to environment variable names
+3. Registered `:env/openai-api-key` and `:env/google-api-key` placeholders (mirror Anthropic pattern)
+4. Registered `:env/api-key-for-model` parameterized placeholder using `model->provider` + helpers
+5. Updated `main/core.cljs:42` to use `[:env/api-key-for-model model]` instead of hardcoded Anthropic key
+6. Added tests validating provider->api-key-keyword and provider->env-var-name for all three providers
+7. Committed: "feat: add parameterized API key resolution"
+
+**Result:** Effect signature stays clean with explicit api-key argument. Placeholder system handles dynamic resolution. Infrastructure ready for multiple providers.
+
+### Phase 3a: Implement OpenAI Provider
+**Goal:** Add OpenAI GPT model support with actual API integration.
 
 **Files to modify:**
-- `src/gremllm/main/effects/llm.cljs` - Add `:openai` method
-- `src/gremllm/main/actions.cljs` - Register `:env/openai-api-key` placeholder
-- `test/gremllm/main/effects/llm_test.cljs` - Add OpenAI-specific tests
-- `.env.example` - Document `OPENAI_API_KEY`
+- `src/gremllm/main/effects/llm.cljs` - Add `:openai` method implementation
+- `test/gremllm/main/effects/llm_test.cljs` - Add OpenAI request/response tests
 
 **Actions:**
-1. Register `:env/openai-api-key` placeholder in `main/actions.cljs` (mirror Anthropic pattern)
-2. Implement `(defmethod query-llm-provider :openai ...)` using OpenAI Chat Completions API:
+1. Implement `(defmethod query-llm-provider :openai ...)` using OpenAI Chat Completions API:
    - Endpoint: `https://api.openai.com/v1/chat/completions`
    - Headers: `Authorization: Bearer {api-key}`, `Content-Type: application/json`
    - Request body: `{model, messages, max_tokens: 8192}`
    - Response parsing: Extract from `.choices[0].message`
-3. Add test with mock fetch validating request structure and response parsing
-4. Update `:chat.effects/send-message` in `main/actions.cljs` to pass dynamic API key based on provider
-5. Manual test: Create topic with `gpt-4o-mini`, verify end-to-end flow
-6. Commit: "feat: add OpenAI provider support"
+2. Add test with mock fetch validating OpenAI-specific request structure and response parsing
+3. Manual test: Create topic with `gpt-5-mini`, verify end-to-end flow
+4. Commit: "feat: add OpenAI provider support"
 
 **Validation:** Tests pass, can successfully chat with GPT models when `OPENAI_API_KEY` is set.
 
 **Key decision:** OpenAI's response format differs from Anthropic's. We'll need to normalize the response structure or handle differences at the boundary. Start by just returning the raw response and see if downstream code needs changes.
 
-### Phase 3: Implement Google Gemini Provider
+### Phase 3b: Implement Google Gemini Provider
 **Goal:** Add Gemini model support.
 
 **Files to modify:**
@@ -139,7 +156,7 @@ The transformation refactors `query-llm-provider` from a single function into a 
    - Request body: Gemini's content format (parts/role structure)
    - Response parsing: Extract from `.candidates[0].content`
 3. Add tests for request/response handling
-4. Manual test with `gemini-2.0-flash-exp`
+4. Manual test with `gemini-2.5-flash-exp`
 5. Commit: "feat: add Google Gemini provider support"
 
 **Validation:** Can successfully chat with Gemini models when `GEMINI_API_KEY` is set.
