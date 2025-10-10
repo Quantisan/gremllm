@@ -1,5 +1,5 @@
 (ns gremllm.main.effects.llm-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.llm :as llm]
             [gremllm.test-utils :refer [with-console-error-silenced]]))
 
@@ -73,56 +73,70 @@
 ;; Run with: ANTHROPIC_API_KEY=... OPENAI_API_KEY=... npm run test
 
 (deftest ^:integration test-query-llm-provider-anthropic-integration
-  (testing "INTEGRATION: validate mock-claude-response against real API"
-    (let [api-key (.-ANTHROPIC_API_KEY (.-env js/process))]
-      (if-not api-key
-        (js/console.warn "Skipping Anthropic integration test - ANTHROPIC_API_KEY not set")
-        (let [test-messages [{:role "user" :content "2+2"}]]
-          (-> (llm/query-llm-provider test-messages "claude-3-5-haiku-latest" api-key)
-              (.then (fn [response]
-                       (js/console.log "\n=== ANTHROPIC API RESPONSE ===")
-                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+  (async done
+    (testing "INTEGRATION: validate mock-claude-response against real API"
+      (let [api-key (.-ANTHROPIC_API_KEY (.-env js/process))]
+        (if-not api-key
+          (do (js/console.warn "Skipping Anthropic integration test - ANTHROPIC_API_KEY not set")
+              (done))
+          (let [test-messages [{:role "user" :content "2+2"}]]
+            (-> (llm/query-llm-provider test-messages "claude-3-5-haiku-latest" api-key)
+                (.then (fn [response]
+                         (js/console.log "\n=== ANTHROPIC API RESPONSE ===")
+                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                       (testing "response has expected keys"
-                         (let [expected-keys #{:id :type :role :model :content :stop_reason :usage}
-                               actual-keys (set (keys response))]
-                           (is (every? actual-keys expected-keys)
-                               (str "Missing keys: " (remove actual-keys expected-keys)))))
+                         (testing "response has expected keys"
+                           (let [expected-keys #{:id :type :role :model :content :stop_reason :usage}
+                                 actual-keys (set (keys response))]
+                             (is (every? actual-keys expected-keys)
+                                 (str "Missing keys: " (remove actual-keys expected-keys)))))
 
-                       (testing "usage has expected structure"
-                         (let [expected-usage-keys #{:input_tokens :output_tokens}
-                               actual-usage-keys (set (keys (:usage response)))]
-                           (is (every? actual-usage-keys expected-usage-keys)
-                               (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
+                         (testing "usage has expected structure"
+                           (let [expected-usage-keys #{:input_tokens :output_tokens}
+                                 actual-usage-keys (set (keys (:usage response)))]
+                             (is (every? actual-usage-keys expected-usage-keys)
+                                 (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
 
-                       (testing "content is a vector"
-                         (is (vector? (:content response))))))))))))
+                         (testing "content is a vector"
+                           (is (vector? (:content response))))
+
+                         (done)))
+                (.catch (fn [error]
+                          (is false (str "API call failed: " (.-message error)))
+                          (done))))))))))
 
 (deftest ^:integration test-query-llm-provider-openai-integration
-  (testing "INTEGRATION: validate mock-openai-response against real API"
-    (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
-      (if-not api-key
-        (js/console.warn "Skipping OpenAI integration test - OPENAI_API_KEY not set")
-        (let [test-messages [{:role "user" :content "2+2"}]]
-          (-> (llm/query-llm-provider test-messages "gpt-4o-mini" api-key)
-              (.then (fn [response]
-                       (js/console.log "\n=== OPENAI API RESPONSE ===")
-                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+  (async done
+    (testing "INTEGRATION: validate mock-openai-response against real API"
+      (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
+        (if-not api-key
+          (do (js/console.warn "Skipping OpenAI integration test - OPENAI_API_KEY not set")
+              (done))
+          (let [test-messages [{:role "user" :content "2+2"}]]
+            (-> (llm/query-llm-provider test-messages "gpt-4o-mini" api-key)
+                (.then (fn [response]
+                         (js/console.log "\n=== OPENAI API RESPONSE ===")
+                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                       (testing "response has expected keys"
-                         (let [expected-keys #{:id :object :created :model :choices :usage}
-                               actual-keys (set (keys response))]
-                           (is (every? actual-keys expected-keys)
-                               (str "Missing keys: " (remove actual-keys expected-keys)))))
+                         (testing "response has expected keys"
+                           (let [expected-keys #{:id :object :created :model :choices :usage}
+                                 actual-keys (set (keys response))]
+                             (is (every? actual-keys expected-keys)
+                                 (str "Missing keys: " (remove actual-keys expected-keys)))))
 
-                       (testing "usage has expected structure"
-                         (let [expected-usage-keys #{:prompt_tokens :completion_tokens :total_tokens}
-                               actual-usage-keys (set (keys (:usage response)))]
-                           (is (every? actual-usage-keys expected-usage-keys)
-                               (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
+                         (testing "usage has expected structure"
+                           (let [expected-usage-keys #{:prompt_tokens :completion_tokens :total_tokens}
+                                 actual-usage-keys (set (keys (:usage response)))]
+                             (is (every? actual-usage-keys expected-usage-keys)
+                                 (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
 
-                       (testing "choices is a vector"
-                         (is (vector? (:choices response))))))))))))
+                         (testing "choices is a vector"
+                           (is (vector? (:choices response))))
+
+                         (done)))
+                (.catch (fn [error]
+                          (is false (str "API call failed: " (.-message error)))
+                          (done))))))))))
 
 ;; Unit Tests
 
