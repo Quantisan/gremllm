@@ -16,5 +16,15 @@
 
   :test {:target :node-test
          :output-to "target/test.js"
-         :ns-regexp "-test$"
-         :autorun true}}}
+         :ns-regexp "(?<!integration)-test$"
+         :autorun true}
+
+  :test-all {:target :node-test
+             :output-to "target/test-all.js"
+             :ns-regexp "(test|integration-test)$"
+             :autorun true}
+
+  :test-integration {:target :node-test
+                     :output-to "target/test-integration.js"
+                     :ns-regexp "-integration-test$"
+                     :autorun true}}}

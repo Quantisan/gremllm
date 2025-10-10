@@ -1,6 +1,6 @@
 (ns gremllm.main.dev
   (:require [gremllm.main.core :as core]
-            [gremllm.main.integration-test :as integration-test]))
+            [gremllm.main.electron-runtime-test :as electron-runtime-test]))
 
 (defn main []
   ;; Development-specific setup
@@ -13,7 +13,7 @@
   ;; Load .env file
   (.config (js/require "@dotenvx/dotenvx") #js {:override true})
 
-  (integration-test/test-safe-storage)
+  (electron-runtime-test/test-safe-storage)
 
   ;; Delegate to the main entry point
   (core/main))
