@@ -39,7 +39,7 @@
            (nxr/dispatch store {:ipc-event event
                                 :request-id request-id
                                 :channel "chat/send-message"}
-                         [[:chat.effects/send-message messages-clj model [:env/anthropic-api-key]]]))))
+                         [[:chat.effects/send-message messages-clj model [:env/api-key-for-model model]]]))))
 
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
