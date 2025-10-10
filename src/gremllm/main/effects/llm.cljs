@@ -27,6 +27,16 @@
     :openai    "OPENAI_API_KEY"
     :google    "GEMINI_API_KEY"))
 
+(defn messages->gemini-contents
+  "Transform OpenAI/Anthropic message format to Gemini contents format.
+  Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
+  Pure function for easy testing."
+  [messages]
+  (mapv (fn [{:keys [role content]}]
+          {:role (if (= role "assistant") "model" role)
+           :parts [{:text content}]})
+        messages))
+
 (defn- log-and-throw-error [response model message-count body]
   (let [status (.-status response)
         status-text (.-statusText response)
@@ -79,6 +89,20 @@
         headers {"Authorization" (str "Bearer " api-key)
                  "Content-Type" "application/json"}]
     (-> (js/fetch "https://api.openai.com/v1/chat/completions"
+                  (clj->js {:method "POST"
+                            :headers headers
+                            :body (js/JSON.stringify (clj->js request-body))}))
+        (.then #(handle-response % model (count messages)))
+        (.then #(js->clj % :keywordize-keys true)))))
+
+(defmethod query-llm-provider :google
+  [messages model api-key]
+  (let [request-body {:contents (messages->gemini-contents messages)
+                      :generationConfig {:maxOutputTokens 8192}}
+        headers {"Content-Type" "application/json"}
+        url (str "https://generativelanguage.googleapis.com/v1beta/models/"
+                 model ":generateContent?key=" api-key)]
+    (-> (js/fetch url
                   (clj->js {:method "POST"
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))

@@ -76,6 +76,17 @@
                                        :accepted_prediction_tokens 0
                                        :rejected_prediction_tokens 0}}})
 
+(def mock-gemini-response
+  "Google Gemini API response structure. Validated via test-query-llm-provider-gemini-integration."
+  {:candidates [{:content {:parts [{:text "4"}]
+                           :role "model"}
+                 :finishReason "STOP"
+                 :index 0}]
+   :usageMetadata {:promptTokenCount 9
+                   :candidatesTokenCount 1
+                   :totalTokenCount 10}
+   :modelVersion "gemini-2.0-flash"})
+
 ;; Shared test utilities (used by llm-integration-test)
 
 (defn assert-matches-structure
@@ -141,6 +152,24 @@
 
   (testing "maps Google to GEMINI_API_KEY"
     (is (= "GEMINI_API_KEY" (llm/provider->env-var-name :google)))))
+
+(deftest test-messages->gemini-contents
+  (testing "transforms user messages"
+    (is (= [{:role "user" :parts [{:text "Hello"}]}]
+           (llm/messages->gemini-contents [{:role "user" :content "Hello"}]))))
+
+  (testing "transforms assistant messages to model role"
+    (is (= [{:role "model" :parts [{:text "Hi there"}]}]
+           (llm/messages->gemini-contents [{:role "assistant" :content "Hi there"}]))))
+
+  (testing "transforms multi-turn conversation"
+    (is (= [{:role "user" :parts [{:text "2+2"}]}
+            {:role "model" :parts [{:text "4"}]}
+            {:role "user" :parts [{:text "Thanks"}]}]
+           (llm/messages->gemini-contents
+            [{:role "user" :content "2+2"}
+             {:role "assistant" :content "4"}
+             {:role "user" :content "Thanks"}])))))
 
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses Claude API response"
@@ -209,4 +238,23 @@
 
                    (testing "content extraction"
                      (is (= (-> response :choices first :message :content) "4")))))
+          (.finally #(set! js/fetch original-fetch))))))
+
+(deftest test-query-llm-provider-gemini
+  (testing "successfully parses Gemini API response"
+    (let [original-fetch js/fetch
+          test-messages  [{:role "user" :content "2+2"}]
+          test-model     "gemini-2.0-flash"
+          test-api-key   "test-key"]
+
+      (set! js/fetch (mock-successful-fetch mock-gemini-response))
+
+      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+          (.then (fn [response]
+                   (testing "response structure"
+                     (is (= (:modelVersion response) "gemini-2.0-flash"))
+                     (is (= (-> response :candidates first :finishReason) "STOP")))
+
+                   (testing "content extraction"
+                     (is (= (-> response :candidates first :content :parts first :text) "4")))))
           (.finally #(set! js/fetch original-fetch))))))
