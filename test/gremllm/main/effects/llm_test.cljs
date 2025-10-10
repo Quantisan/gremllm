@@ -76,6 +76,21 @@
                                        :accepted_prediction_tokens 0
                                        :rejected_prediction_tokens 0}}})
 
+(def mock-gemini-response
+  "Google Gemini API response structure. Validated via test-query-llm-provider-gemini-integration."
+  {:candidates [{:content {:parts [{:text "4"}]
+                           :role "model"}
+                 :finishReason "STOP"
+                 :index 0}]
+   :usageMetadata {:promptTokenCount 4
+                   :candidatesTokenCount 1
+                   :totalTokenCount 24
+                   :promptTokensDetails [{:modality "TEXT"
+                                          :tokenCount 4}]
+                   :thoughtsTokenCount 19}
+   :modelVersion "gemini-2.5-flash"
+   :responseId "tpboaMabLejN1e8PzMOD0Ak"})
+
 ;; Shared test utilities (used by llm-integration-test)
 
 (defn assert-matches-structure
@@ -98,9 +113,14 @@
     (is (contains? actual field)
         (str field " should exist in response")))
 
-  ;; Usage should have same keys as mock
-  (is (= (set (keys (:usage actual))) (set (keys (:usage mock))))
-      "usage keys should match mock"))
+  ;; Usage should have same keys as mock (handle both :usage and :usageMetadata)
+  (let [usage-key (cond
+                    (contains? actual :usage) :usage
+                    (contains? actual :usageMetadata) :usageMetadata
+                    :else nil)]
+    (when usage-key
+      (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
+          (str usage-key " keys should match mock")))))
 
 ;; Unit Tests
 
@@ -141,6 +161,24 @@
 
   (testing "maps Google to GEMINI_API_KEY"
     (is (= "GEMINI_API_KEY" (llm/provider->env-var-name :google)))))
+
+(deftest test-messages->gemini-contents
+  (testing "transforms user messages"
+    (is (= [{:role "user" :parts [{:text "Hello"}]}]
+           (llm/messages->gemini-contents [{:role "user" :content "Hello"}]))))
+
+  (testing "transforms assistant messages to model role"
+    (is (= [{:role "model" :parts [{:text "Hi there"}]}]
+           (llm/messages->gemini-contents [{:role "assistant" :content "Hi there"}]))))
+
+  (testing "transforms multi-turn conversation"
+    (is (= [{:role "user" :parts [{:text "2+2"}]}
+            {:role "model" :parts [{:text "4"}]}
+            {:role "user" :parts [{:text "Thanks"}]}]
+           (llm/messages->gemini-contents
+            [{:role "user" :content "2+2"}
+             {:role "assistant" :content "4"}
+             {:role "user" :content "Thanks"}])))))
 
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses Claude API response"
@@ -209,4 +247,23 @@
 
                    (testing "content extraction"
                      (is (= (-> response :choices first :message :content) "4")))))
+          (.finally #(set! js/fetch original-fetch))))))
+
+(deftest test-query-llm-provider-gemini
+  (testing "successfully parses Gemini API response"
+    (let [original-fetch js/fetch
+          test-messages  [{:role "user" :content "2+2"}]
+          test-model     "gemini-2.5-flash"
+          test-api-key   "test-key"]
+
+      (set! js/fetch (mock-successful-fetch mock-gemini-response))
+
+      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+          (.then (fn [response]
+                   (testing "response structure"
+                     (is (= (:modelVersion response) "gemini-2.5-flash"))
+                     (is (= (-> response :candidates first :finishReason) "STOP")))
+
+                   (testing "content extraction"
+                     (is (= (-> response :candidates first :content :parts first :text) "4")))))
           (.finally #(set! js/fetch original-fetch))))))

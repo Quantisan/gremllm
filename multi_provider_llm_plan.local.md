@@ -144,14 +144,14 @@ The transformation refactors `query-llm-provider` from a single function into a 
 
 **Files to modify:**
 - `src/gremllm/main/effects/llm.cljs` - Add `:google` method
-- `src/gremllm/main/actions.cljs` - Register `:env/gemini-api-key` placeholder
 - `test/gremllm/main/effects/llm_test.cljs` - Add Gemini-specific tests
 - `.env.example` - Document `GEMINI_API_KEY`
 
 **Actions:**
-1. Register `:env/gemini-api-key` placeholder
+1. Ensure `:env/google-api-key` placeholder
+2. Lookup and review latest Google Gemini API docs
 2. Implement `(defmethod query-llm-provider :google ...)` using Gemini API:
-   - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api-key}`
+   - Endpoint: probably, but to confirm `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api-key}`
    - Headers: `Content-Type: application/json`
    - Request body: Gemini's content format (parts/role structure)
    - Response parsing: Extract from `.candidates[0].content`
