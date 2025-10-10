@@ -27,7 +27,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
     "@electron-forge/plugin-fuses": "^7.8.1",
     "@electron-forge/publisher-github": "^7.8.1",
-    "@electron/fuses": "^2.0.0",
+    "@electron/fuses": "^1.8.0",
     "concurrently": "^9.2.0",
     "electron": "^38.2.2",
     "electron-reload": "^2.0.0-alpha.1",
