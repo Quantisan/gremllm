@@ -85,7 +85,7 @@
    :usageMetadata {:promptTokenCount 9
                    :candidatesTokenCount 1
                    :totalTokenCount 10}
-   :modelVersion "gemini-2.0-flash"})
+   :modelVersion "gemini-2.5-flash"})
 
 ;; Shared test utilities (used by llm-integration-test)
 
