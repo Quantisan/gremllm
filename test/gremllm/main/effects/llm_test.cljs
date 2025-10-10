@@ -82,10 +82,14 @@
                            :role "model"}
                  :finishReason "STOP"
                  :index 0}]
-   :usageMetadata {:promptTokenCount 9
+   :usageMetadata {:promptTokenCount 4
                    :candidatesTokenCount 1
-                   :totalTokenCount 10}
-   :modelVersion "gemini-2.5-flash"})
+                   :totalTokenCount 24
+                   :promptTokensDetails [{:modality "TEXT"
+                                          :tokenCount 4}]
+                   :thoughtsTokenCount 19}
+   :modelVersion "gemini-2.5-flash"
+   :responseId "tpboaMabLejN1e8PzMOD0Ak"})
 
 ;; Shared test utilities (used by llm-integration-test)
 
@@ -109,9 +113,14 @@
     (is (contains? actual field)
         (str field " should exist in response")))
 
-  ;; Usage should have same keys as mock
-  (is (= (set (keys (:usage actual))) (set (keys (:usage mock))))
-      "usage keys should match mock"))
+  ;; Usage should have same keys as mock (handle both :usage and :usageMetadata)
+  (let [usage-key (cond
+                    (contains? actual :usage) :usage
+                    (contains? actual :usageMetadata) :usageMetadata
+                    :else nil)]
+    (when usage-key
+      (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
+          (str usage-key " keys should match mock")))))
 
 ;; Unit Tests
 
@@ -244,7 +253,7 @@
   (testing "successfully parses Gemini API response"
     (let [original-fetch js/fetch
           test-messages  [{:role "user" :content "2+2"}]
-          test-model     "gemini-2.0-flash"
+          test-model     "gemini-2.5-flash"
           test-api-key   "test-key"]
 
       (set! js/fetch (mock-successful-fetch mock-gemini-response))
@@ -252,7 +261,7 @@
       (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
                    (testing "response structure"
-                     (is (= (:modelVersion response) "gemini-2.0-flash"))
+                     (is (= (:modelVersion response) "gemini-2.5-flash"))
                      (is (= (-> response :candidates first :finishReason) "STOP")))
 
                    (testing "content extraction"

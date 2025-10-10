@@ -83,7 +83,7 @@
                            (assert-matches-structure response
                                                      mock-gemini-response
                                                      []
-                                                     [:modelVersion])
+                                                     [:modelVersion :responseId])
                            ;; Gemini-specific structure checks
                            (is (vector? (:candidates response)) "candidates should be a vector")
                            (is (every? #(contains? % :content) (:candidates response))
