@@ -20,6 +20,33 @@
                 (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
+(nxr/register-placeholder! :env/openai-api-key
+  (fn [_]
+    (or (.-OPENAI_API_KEY (.-env js/process))
+        (some-> (.getPath app "userData")
+                (io/secrets-file-path)
+                (secrets-actions/load :openai-api-key)
+                :ok))))
+
+(nxr/register-placeholder! :env/google-api-key
+  (fn [_]
+    (or (.-GEMINI_API_KEY (.-env js/process))
+        (some-> (.getPath app "userData")
+                (io/secrets-file-path)
+                (secrets-actions/load :gemini-api-key)
+                :ok))))
+
+(nxr/register-placeholder! :env/api-key-for-model
+  (fn [model]
+    (let [provider (llm-effects/model->provider model)
+          env-var-name (llm-effects/provider->env-var-name provider)
+          storage-key (llm-effects/provider->api-key-keyword provider)]
+      (or (aget (.-env js/process) env-var-name)
+          (some-> (.getPath app "userData")
+                  (io/secrets-file-path)
+                  (secrets-actions/load storage-key)
+                  :ok)))))
+
 ;; Menu Actions Registration
 ;; =========================
 ;; Menu IPC Flow in Electron:
