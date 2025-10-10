@@ -66,7 +66,39 @@
               :finish_reason "stop"}]
    :usage {:prompt_tokens 9
            :completion_tokens 1
-           :total_tokens 10}})
+           :total_tokens 10
+           :prompt_tokens_details {:cached_tokens 0
+                                   :audio_tokens 0}
+           :completion_tokens_details {:reasoning_tokens 0
+                                       :audio_tokens 0
+                                       :accepted_prediction_tokens 0
+                                       :rejected_prediction_tokens 0}}})
+
+;; Test Helpers
+
+(defn assert-matches-structure
+  "Validates actual response matches mock structure, ignoring dynamic field values.
+  - Static fields must match exactly
+  - Dynamic fields are checked for existence only
+  - Usage keys must match (but values can differ)"
+  [actual mock static-fields dynamic-fields]
+  ;; All mock keys should be present in actual
+  (is (every? (set (keys actual)) (keys mock))
+      (str "Missing keys: " (remove (set (keys actual)) (keys mock))))
+
+  ;; Static fields must match exactly
+  (doseq [field static-fields]
+    (is (= (field actual) (field mock))
+        (str field " should match: expected " (field mock) ", got " (field actual))))
+
+  ;; Dynamic fields should exist (type checks left to caller if needed)
+  (doseq [field dynamic-fields]
+    (is (contains? actual field)
+        (str field " should exist in response")))
+
+  ;; Usage should have same keys as mock
+  (is (= (set (keys (:usage actual))) (set (keys (:usage mock))))
+      (str "usage keys should match mock")))
 
 ;; Integration Tests
 ;; These call real APIs to validate our mocks match actual responses.
@@ -85,20 +117,15 @@
                          (js/console.log "\n=== ANTHROPIC API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         (testing "response has expected keys"
-                           (let [expected-keys #{:id :type :role :model :content :stop_reason :usage}
-                                 actual-keys (set (keys response))]
-                             (is (every? actual-keys expected-keys)
-                                 (str "Missing keys: " (remove actual-keys expected-keys)))))
-
-                         (testing "usage has expected structure"
-                           (let [expected-usage-keys #{:input_tokens :output_tokens}
-                                 actual-usage-keys (set (keys (:usage response)))]
-                             (is (every? actual-usage-keys expected-usage-keys)
-                                 (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
-
-                         (testing "content is a vector"
-                           (is (vector? (:content response))))
+                         (testing "response matches mock-claude-response structure"
+                           (assert-matches-structure response
+                                                     mock-claude-response
+                                                     [:type :role :stop_reason :stop_sequence]
+                                                     [:id :model])
+                           ;; Anthropic-specific structure checks
+                           (is (vector? (:content response)) "content should be a vector")
+                           (is (every? #(contains? % :type) (:content response))
+                               "content items should have :type key"))
 
                          (done)))
                 (.catch (fn [error]
@@ -118,20 +145,15 @@
                          (js/console.log "\n=== OPENAI API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         (testing "response has expected keys"
-                           (let [expected-keys #{:id :object :created :model :choices :usage}
-                                 actual-keys (set (keys response))]
-                             (is (every? actual-keys expected-keys)
-                                 (str "Missing keys: " (remove actual-keys expected-keys)))))
-
-                         (testing "usage has expected structure"
-                           (let [expected-usage-keys #{:prompt_tokens :completion_tokens :total_tokens}
-                                 actual-usage-keys (set (keys (:usage response)))]
-                             (is (every? actual-usage-keys expected-usage-keys)
-                                 (str "Missing usage keys: " (remove actual-usage-keys expected-usage-keys)))))
-
-                         (testing "choices is a vector"
-                           (is (vector? (:choices response))))
+                         (testing "response matches mock-openai-response structure"
+                           (assert-matches-structure response
+                                                     mock-openai-response
+                                                     [:object]
+                                                     [:id :created :model])
+                           ;; OpenAI-specific structure checks
+                           (is (vector? (:choices response)) "choices should be a vector")
+                           (is (every? #(contains? % :message) (:choices response))
+                               "choices items should have :message key"))
 
                          (done)))
                 (.catch (fn [error]
