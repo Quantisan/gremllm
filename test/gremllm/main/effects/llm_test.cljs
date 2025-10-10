@@ -61,7 +61,7 @@
   (testing "maps Google to GEMINI_API_KEY"
     (is (= "GEMINI_API_KEY" (llm/provider->env-var-name :google)))))
 
-(deftest test-query-llm-provider
+(deftest test-query-llm-provider-anthropic
   (testing "successfully parses Claude API response"
     (let [original-fetch       js/fetch
           test-messages        [{:role "user" :content "2+2"}]
@@ -134,4 +134,34 @@
           (.finally (fn []
                       (set! js/fetch original-fetch)
                       (restore-console)))))))
+
+(deftest test-query-llm-provider-openai
+  (testing "successfully parses OpenAI API response"
+    (let [original-fetch js/fetch
+          test-messages [{:role "user" :content "2+2"}]
+          test-model "gpt-4o-mini"
+          test-api-key "test-key"
+          mock-openai-response {:id "chatcmpl-123"
+                                :object "chat.completion"
+                                :created 1677652288
+                                :model "gpt-4o-mini"
+                                :choices [{:index 0
+                                           :message {:role "assistant"
+                                                     :content "4"}
+                                           :finish_reason "stop"}]
+                                :usage {:prompt_tokens 9
+                                        :completion_tokens 1
+                                        :total_tokens 10}}]
+
+      (set! js/fetch (mock-successful-fetch mock-openai-response))
+
+      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+          (.then (fn [response]
+                   (testing "response structure"
+                     (is (= (:id response) "chatcmpl-123"))
+                     (is (= (:object response) "chat.completion")))
+
+                   (testing "content extraction"
+                     (is (= (-> response :choices first :message :content) "4")))))
+          (.finally #(set! js/fetch original-fetch))))))
 

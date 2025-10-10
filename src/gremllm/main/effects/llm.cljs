@@ -70,3 +70,17 @@
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
         (.then #(js->clj % :keywordize-keys true)))))
+
+(defmethod query-llm-provider :openai
+  [messages model api-key]
+  (let [request-body {:model model
+                      :max_tokens 8192
+                      :messages messages}
+        headers {"Authorization" (str "Bearer " api-key)
+                 "Content-Type" "application/json"}]
+    (-> (js/fetch "https://api.openai.com/v1/chat/completions"
+                  (clj->js {:method "POST"
+                            :headers headers
+                            :body (js/JSON.stringify (clj->js request-body))}))
+        (.then #(handle-response % model (count messages)))
+        (.then #(js->clj % :keywordize-keys true)))))
