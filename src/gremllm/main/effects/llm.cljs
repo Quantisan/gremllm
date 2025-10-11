@@ -46,9 +46,8 @@
                      :total-tokens (+ (get-in response [:usage :input_tokens])
                                       (get-in response [:usage :output_tokens]))}}))
 
-(defmulti query-llm-provider
+(defmulti ^LLMResponse query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
-  Returns LLMResponse schema. Throws if provider returns invalid data.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
