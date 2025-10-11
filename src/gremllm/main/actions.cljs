@@ -11,14 +11,20 @@
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
 
-;; Placeholder for environment variables
+;; Environment Variable Placeholders
+;; ==================================
+;; PRAGMATIC FCIS EXCEPTION: These placeholders perform synchronous file I/O
+;; to support safeStorage fallback. This is the only exception to strict FCIS
+;; in the codebase. Acceptable because: (1) reading env state is conceptually
+;; like process.env access, (2) synchronous/deterministic, (3) isolated to API
+;; key resolution only.
+
 (nxr/register-placeholder! :env/anthropic-api-key
   (fn [_]
     (or (.-ANTHROPIC_API_KEY (.-env js/process))
-        ;; Placeholders should be pure functions or return effect descriptions, not perform I/O.
-        (some-> (.getPath app "userData")                 ; side effect
+        (some-> (.getPath app "userData")
                 (io/secrets-file-path)
-                (secrets-actions/load :anthropic-api-key) ; file I/O
+                (secrets-actions/load :anthropic-api-key)
                 :ok))))
 
 (nxr/register-placeholder! :env/openai-api-key
