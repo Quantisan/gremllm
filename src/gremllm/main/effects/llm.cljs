@@ -1,6 +1,8 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [gremllm.main.llm :as llm]))
+  (:require [gremllm.main.llm :as llm]
+            [gremllm.schema :as schema]
+            [malli.core :as m]))
 
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
@@ -34,16 +36,19 @@
     (handle-error-response response model message-count)))
 
 (defn- normalize-anthropic-response
-  "Transforms Anthropic API response to LLMResponse schema."
+  "Transforms Anthropic API response to LLMResponse schema.
+  Validates the result, throwing if Anthropic returns unexpected shape."
   [response]
-  {:text (get-in response [:content 0 :text])
-   :usage {:input-tokens (get-in response [:usage :input_tokens])
-           :output-tokens (get-in response [:usage :output_tokens])
-           :total-tokens (+ (get-in response [:usage :input_tokens])
-                            (get-in response [:usage :output_tokens]))}})
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:content 0 :text])
+             :usage {:input-tokens (get-in response [:usage :input_tokens])
+                     :output-tokens (get-in response [:usage :output_tokens])
+                     :total-tokens (+ (get-in response [:usage :input_tokens])
+                                      (get-in response [:usage :output_tokens]))}}))
 
 (defmulti query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
+  Returns LLMResponse schema. Throws if provider returns invalid data.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
