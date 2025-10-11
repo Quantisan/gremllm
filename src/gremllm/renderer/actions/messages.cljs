@@ -37,6 +37,8 @@
     [[:loading.actions/set-loading? assistant-id false]
      [:messages.actions/add-to-chat {:id   assistant-id
                                      :type :assistant
+                                     ;; TODO: This is hardcoded to Anthropic's response format. OpenAI and Gemini will fail silently.
+                                     ;; The trust boundary between main and renderer processes isn't handling the data transformation.
                                      :text (get-in clj-response [:content 0 :text])}]]))
 
 (defn llm-response-error [state assistant-id error]

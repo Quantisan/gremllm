@@ -1,33 +1,8 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [clojure.string :as str]))
+  (:require [gremllm.main.llm :as llm]))
 
-(defn model->provider
-  "Infers provider from model string. Pure function for easy testing."
-  [model]
-  (cond
-    (str/starts-with? model "claude-") :anthropic
-    (str/starts-with? model "gpt-")    :openai
-    (str/starts-with? model "gemini-") :google
-    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
-
-(defn provider->api-key-keyword
-  "Maps provider to safeStorage lookup key. Pure function for easy testing."
-  [provider]
-  (case provider
-    :anthropic :anthropic-api-key
-    :openai    :openai-api-key
-    :google    :gemini-api-key))
-
-(defn provider->env-var-name
-  "Maps provider to environment variable name. Pure function for easy testing."
-  [provider]
-  (case provider
-    :anthropic "ANTHROPIC_API_KEY"
-    :openai    "OPENAI_API_KEY"
-    :google    "GEMINI_API_KEY"))
-
-(defn messages->gemini-contents
+(defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
   Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
   Pure function for easy testing."
@@ -64,7 +39,7 @@
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
   retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
-  (fn [_messages model _api-key] (model->provider model)))
+  (fn [_messages model _api-key] (llm/model->provider model)))
 
 (defmethod query-llm-provider :anthropic
   [messages model api-key]
@@ -97,7 +72,7 @@
 
 (defmethod query-llm-provider :google
   [messages model api-key]
-  (let [request-body {:contents (messages->gemini-contents messages)
+  (let [request-body {:contents (messages->gemini-format messages)
                       :generationConfig {:maxOutputTokens 8192}}
         headers {"Content-Type" "application/json"}
         url (str "https://generativelanguage.googleapis.com/v1beta/models/"

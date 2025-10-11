@@ -3,6 +3,7 @@
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
+            [gremllm.main.llm :as llm]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
@@ -11,36 +12,19 @@
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
 
-;; Placeholder for environment variables
-(nxr/register-placeholder! :env/anthropic-api-key
-  (fn [_]
-    (or (.-ANTHROPIC_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :anthropic-api-key)
-                :ok))))
-
-(nxr/register-placeholder! :env/openai-api-key
-  (fn [_]
-    (or (.-OPENAI_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :openai-api-key)
-                :ok))))
-
-(nxr/register-placeholder! :env/google-api-key
-  (fn [_]
-    (or (.-GEMINI_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :gemini-api-key)
-                :ok))))
+;; Environment Variable Placeholders
+;; ==================================
+;; PRAGMATIC FCIS EXCEPTION: This placeholder performs synchronous file I/O
+;; to support safeStorage fallback. This is the only exception to strict FCIS
+;; in the codebase. Acceptable because: (1) reading env state is conceptually
+;; like process.env access, (2) synchronous/deterministic, (3) isolated to API
+;; key resolution only.
 
 (nxr/register-placeholder! :env/api-key-for-model
   (fn [model]
-    (let [provider (llm-effects/model->provider model)
-          env-var-name (llm-effects/provider->env-var-name provider)
-          storage-key (llm-effects/provider->api-key-keyword provider)]
+    (let [provider (llm/model->provider model)
+          env-var-name (llm/provider->env-var-name provider)
+          storage-key (llm/provider->api-key-keyword provider)]
       (or (aget (.-env js/process) env-var-name)
           (some-> (.getPath app "userData")
                   (io/secrets-file-path)
