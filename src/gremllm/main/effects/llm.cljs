@@ -1,32 +1,6 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [clojure.string :as str]))
-
-;; TODO: move these pure helper fns to actions ns, where they're actually used
-(defn model->provider
-  "Infers provider from model string. Pure function for easy testing."
-  [model]
-  (cond
-    (str/starts-with? model "claude-") :anthropic
-    (str/starts-with? model "gpt-")    :openai
-    (str/starts-with? model "gemini-") :google
-    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
-
-(defn provider->api-key-keyword
-  "Maps provider to safeStorage lookup key. Pure function for easy testing."
-  [provider]
-  (case provider
-    :anthropic :anthropic-api-key
-    :openai    :openai-api-key
-    :google    :gemini-api-key))
-
-(defn provider->env-var-name
-  "Maps provider to environment variable name. Pure function for easy testing."
-  [provider]
-  (case provider
-    :anthropic "ANTHROPIC_API_KEY"
-    :openai    "OPENAI_API_KEY"
-    :google    "GEMINI_API_KEY"))
+  (:require [gremllm.main.llm :as llm]))
 
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
@@ -65,7 +39,7 @@
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
   retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
-  (fn [_messages model _api-key] (model->provider model)))
+  (fn [_messages model _api-key] (llm/model->provider model)))
 
 (defmethod query-llm-provider :anthropic
   [messages model api-key]

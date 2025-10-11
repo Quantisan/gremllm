@@ -3,6 +3,7 @@
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
+            [gremllm.main.llm :as llm]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
@@ -21,9 +22,9 @@
 
 (nxr/register-placeholder! :env/api-key-for-model
   (fn [model]
-    (let [provider (llm-effects/model->provider model)
-          env-var-name (llm-effects/provider->env-var-name provider)
-          storage-key (llm-effects/provider->api-key-keyword provider)]
+    (let [provider (llm/model->provider model)
+          env-var-name (llm/provider->env-var-name provider)
+          storage-key (llm/provider->api-key-keyword provider)]
       (or (aget (.-env js/process) env-var-name)
           (some-> (.getPath app "userData")
                   (io/secrets-file-path)
