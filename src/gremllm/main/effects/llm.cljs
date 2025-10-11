@@ -2,6 +2,7 @@
   "LLM provider side effects and HTTP operations"
   (:require [clojure.string :as str]))
 
+;; TODO: move these pure helper fns to actions ns, where they're actually used
 (defn model->provider
   "Infers provider from model string. Pure function for easy testing."
   [model]

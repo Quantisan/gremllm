@@ -15,9 +15,10 @@
 (nxr/register-placeholder! :env/anthropic-api-key
   (fn [_]
     (or (.-ANTHROPIC_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
+        ;; Placeholders should be pure functions or return effect descriptions, not perform I/O.
+        (some-> (.getPath app "userData")                 ; side effect
                 (io/secrets-file-path)
-                (secrets-actions/load :anthropic-api-key)
+                (secrets-actions/load :anthropic-api-key) ; file I/O
                 :ok))))
 
 (nxr/register-placeholder! :env/openai-api-key
