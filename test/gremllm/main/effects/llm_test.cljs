@@ -162,20 +162,20 @@
   (testing "maps Google to GEMINI_API_KEY"
     (is (= "GEMINI_API_KEY" (llm/provider->env-var-name :google)))))
 
-(deftest test-messages->gemini-contents
+(deftest test-messages->gemini-format
   (testing "transforms user messages"
     (is (= [{:role "user" :parts [{:text "Hello"}]}]
-           (llm/messages->gemini-contents [{:role "user" :content "Hello"}]))))
+           (llm/messages->gemini-format [{:role "user" :content "Hello"}]))))
 
   (testing "transforms assistant messages to model role"
     (is (= [{:role "model" :parts [{:text "Hi there"}]}]
-           (llm/messages->gemini-contents [{:role "assistant" :content "Hi there"}]))))
+           (llm/messages->gemini-format [{:role "assistant" :content "Hi there"}]))))
 
   (testing "transforms multi-turn conversation"
     (is (= [{:role "user" :parts [{:text "2+2"}]}
             {:role "model" :parts [{:text "4"}]}
             {:role "user" :parts [{:text "Thanks"}]}]
-           (llm/messages->gemini-contents
+           (llm/messages->gemini-format
             [{:role "user" :content "2+2"}
              {:role "assistant" :content "4"}
              {:role "user" :content "Thanks"}])))))

@@ -28,7 +28,7 @@
     :openai    "OPENAI_API_KEY"
     :google    "GEMINI_API_KEY"))
 
-(defn messages->gemini-contents
+(defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
   Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
   Pure function for easy testing."
@@ -98,7 +98,7 @@
 
 (defmethod query-llm-provider :google
   [messages model api-key]
-  (let [request-body {:contents (messages->gemini-contents messages)
+  (let [request-body {:contents (messages->gemini-format messages)
                       :generationConfig {:maxOutputTokens 8192}}
         headers {"Content-Type" "application/json"}
         url (str "https://generativelanguage.googleapis.com/v1beta/models/"
