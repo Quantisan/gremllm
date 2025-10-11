@@ -13,35 +13,11 @@
 
 ;; Environment Variable Placeholders
 ;; ==================================
-;; PRAGMATIC FCIS EXCEPTION: These placeholders perform synchronous file I/O
+;; PRAGMATIC FCIS EXCEPTION: This placeholder performs synchronous file I/O
 ;; to support safeStorage fallback. This is the only exception to strict FCIS
 ;; in the codebase. Acceptable because: (1) reading env state is conceptually
 ;; like process.env access, (2) synchronous/deterministic, (3) isolated to API
 ;; key resolution only.
-
-(nxr/register-placeholder! :env/anthropic-api-key
-  (fn [_]
-    (or (.-ANTHROPIC_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :anthropic-api-key)
-                :ok))))
-
-(nxr/register-placeholder! :env/openai-api-key
-  (fn [_]
-    (or (.-OPENAI_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :openai-api-key)
-                :ok))))
-
-(nxr/register-placeholder! :env/google-api-key
-  (fn [_]
-    (or (.-GEMINI_API_KEY (.-env js/process))
-        (some-> (.getPath app "userData")
-                (io/secrets-file-path)
-                (secrets-actions/load :gemini-api-key)
-                :ok))))
 
 (nxr/register-placeholder! :env/api-key-for-model
   (fn [model]
