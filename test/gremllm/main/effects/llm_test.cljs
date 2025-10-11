@@ -143,7 +143,7 @@
              {:role "user" :content "Thanks"}])))))
 
 (deftest test-query-llm-provider-anthropic
-  (testing "successfully parses Claude API response"
+  (testing "successfully parses and normalizes Claude API response"
     (let [original-fetch js/fetch
           test-messages  [{:role "user" :content "2+2"}]
           test-model     "claude-3-5-haiku-latest"
@@ -153,12 +153,11 @@
 
       (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
-                   (testing "response structure"
-                     (is (= (:id response) "msg_01LaTD7HNzYujxh6ASPpTQ6T"))
-                     (is (= (:role response) "assistant")))
-
-                   (testing "content extraction"
-                     (is (= (-> response :content first :text) "4")))))
+                   (testing "normalized response structure"
+                     (is (= (:text response) "4"))
+                     (is (= (get-in response [:usage :input-tokens]) 16))
+                     (is (= (get-in response [:usage :output-tokens]) 5))
+                     (is (= (get-in response [:usage :total-tokens]) 21)))))
           (.finally #(set! js/fetch original-fetch))))))
 
 (deftest test-query-llm-provider-error

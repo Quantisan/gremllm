@@ -33,6 +33,15 @@
     (.json response)
     (handle-error-response response model message-count)))
 
+(defn- normalize-anthropic-response
+  "Transforms Anthropic API response to LLMResponse schema."
+  [response]
+  {:text (get-in response [:content 0 :text])
+   :usage {:input-tokens (get-in response [:usage :input_tokens])
+           :output-tokens (get-in response [:usage :output_tokens])
+           :total-tokens (+ (get-in response [:usage :input_tokens])
+                            (get-in response [:usage :output_tokens]))}})
+
 (defmulti query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
 
@@ -54,7 +63,8 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-anthropic-response))))
 
 (defmethod query-llm-provider :openai
   [messages model api-key]

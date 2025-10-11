@@ -16,6 +16,16 @@
    [:type [:enum :user :assistant]]
    [:text :string]])
 
+(def LLMResponse
+  "Normalized LLM response shape, independent of provider.
+   Main process transforms provider responses to this format before IPC."
+  [:map
+   [:text :string]
+   [:usage [:map
+            [:input-tokens :int]
+            [:output-tokens :int]
+            [:total-tokens :int]]]])
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
