@@ -51,13 +51,15 @@ The transformation adds a normalization step at the trust boundary between exter
 ```clojure
 ;; In main/effects/llm.cljs
 (defn- normalize-anthropic-response
-  "Transforms Anthropic API response to LLMResponse schema."
+  "Transforms Anthropic API response to LLMResponse schema.
+  Validates the result, throwing if Anthropic returns unexpected shape."
   [response]
-  {:text (get-in response [:content 0 :text])
-   :usage {:input-tokens (get-in response [:usage :input_tokens])
-           :output-tokens (get-in response [:usage :output_tokens])
-           :total-tokens (+ (get-in response [:usage :input_tokens])
-                            (get-in response [:usage :output_tokens]))}})
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:content 0 :text])
+             :usage {:input-tokens (get-in response [:usage :input_tokens])
+                     :output-tokens (get-in response [:usage :output_tokens])
+                     :total-tokens (+ (get-in response [:usage :input_tokens])
+                                      (get-in response [:usage :output_tokens]))}}))
 
 (defmethod query-llm-provider :anthropic
   [messages model api-key]
@@ -65,10 +67,10 @@ The transformation adds a normalization step at the trust boundary between exter
   (-> (js/fetch "https://api.anthropic.com/v1/messages" ...)
       (.then #(handle-response % model (count messages)))
       (.then #(js->clj % :keywordize-keys true))
-      (.then normalize-anthropic-response))) ; <-- Add normalization step
+      (.then normalize-anthropic-response))) ; <-- Add normalization + validation
 ```
 
-**Why this matters:** This shows the minimal change to existing code—just add a normalization step at the end of the promise chain. The function is pure and easily testable. OpenAI and Gemini follow the same pattern with different field paths.
+**Why this matters:** This shows the minimal change to existing code—just add a normalization step at the end of the promise chain. The function is pure and easily testable. **`m/coerce` validates the output matches `LLMResponse` schema, throwing on invalid data** for fail-fast behavior at the trust boundary. OpenAI and Gemini follow the same pattern with different field paths.
 
 ### 3. Renderer Consumption (Simplified)
 
@@ -86,25 +88,41 @@ The transformation adds a normalization step at the trust boundary between exter
 
 ## Implementation Path
 
-### Phase 1: Add Schema & Anthropic Normalization
+### Phase 1: Add Schema & Anthropic Normalization ✅ COMPLETE
 **Goal:** Define the contract and normalize the existing working provider first.
 
-**Files to modify:**
-- `src/gremllm/schema.cljs` - Add `LLMResponse` schema
-- `src/gremllm/main/effects/llm.cljs` - Add `normalize-anthropic-response` and wire into `:anthropic` method
-- `test/gremllm/main/effects/llm_test.cljs` - Add unit tests for `normalize-anthropic-response`
+**Files modified:**
+- `src/gremllm/schema.cljs` - Added `LLMResponse` schema
+- `src/gremllm/main/effects/llm.cljs` - Added `normalize-anthropic-response` with `m/coerce` validation
+- `test/gremllm/main/effects/llm_test.cljs` - Updated tests to verify normalized output
 
-**Actions:**
-1. Define `LLMResponse` schema using existing `Message` as pattern
-2. Write `normalize-anthropic-response` function (pure, testable)
-3. Write tests using `mock-claude-response` fixture—verify output matches schema
-4. Update `:anthropic` defmethod to chain normalization after `js->clj`
-5. Run tests—existing Anthropic tests should still pass (same data, new shape)
-6. Commit: "feat: add LLMResponse schema and Anthropic normalization"
+**Actions completed:**
+1. ✅ Defined `LLMResponse` schema using existing `Message` as pattern
+2. ✅ Wrote `normalize-anthropic-response` function (pure, testable)
+3. ✅ **Added Malli validation using `m/coerce`** - throws on invalid provider responses
+4. ✅ Updated `:anthropic` defmethod to chain normalization after `js->clj`
+5. ✅ Updated tests to verify normalized shape matches `LLMResponse` schema
+6. ✅ Committed: "feat: validate Anthropic responses with Malli at provider boundary"
 
-**Validation:** `npm run test` passes, Anthropic responses still work in manual testing.
+**Validation:** ✅ All 51 tests pass. Anthropic normalization validates at trust boundary.
 
-### Phase 2: Normalize OpenAI & Gemini Responses
+### Phase 2: Update Renderer to Use Normalized Response ✅ COMPLETE
+**Goal:** Simplify renderer code and remove provider-specific logic. Complete Anthropic path end-to-end.
+
+**Files modified:**
+- `src/gremllm/renderer/actions/messages.cljs` - Updated `llm-response-received`
+- `test/gremllm/renderer/actions/messages_test.cljs` - Updated tests to use normalized shape
+
+**Actions completed:**
+1. ✅ Changed `llm-response-received` from `(get-in [:content 0 :text])` to `(:text response)`
+2. ✅ Removed the TODO comment about Anthropic hardcoding
+3. ✅ Updated renderer tests to expect `{:text "..." :usage {...}}` instead of provider-specific shapes
+4. ✅ Ran full test suite - all 51 tests pass
+5. ✅ Included in same commit as Phase 1: "feat: validate Anthropic responses with Malli at provider boundary"
+
+**Validation:** ✅ Anthropic chat works end-to-end with validated, normalized responses.
+
+### Phase 3: Normalize OpenAI & Gemini Responses
 **Goal:** Implement normalization for remaining providers.
 
 **Files to modify:**
@@ -115,32 +133,17 @@ The transformation adds a normalization step at the trust boundary between exter
 1. Implement `normalize-openai-response`:
    - Text from: `[:choices 0 :message :content]`
    - Usage: `{:input-tokens :prompt_tokens, :output-tokens :completion_tokens, :total-tokens :total_tokens}`
+   - Wrap with `m/coerce` for validation
 2. Implement `normalize-gemini-response`:
    - Text from: `[:candidates 0 :content :parts 0 :text]`
    - Usage: `{:input-tokens :promptTokenCount, :output-tokens :candidatesTokenCount, :total-tokens (+ prompt candidates)}`
+   - Wrap with `m/coerce` for validation
 3. Add unit tests for each using `mock-openai-response` and `mock-gemini-response` fixtures
 4. Wire normalization into `:openai` and `:google` defmethods
 5. Run full test suite
 6. Commit: "feat: normalize OpenAI and Gemini responses to LLMResponse"
 
-**Validation:** All unit tests pass, including integration tests if API keys are set.
-
-### Phase 3: Update Renderer to Use Normalized Response
-**Goal:** Simplify renderer code and remove provider-specific logic.
-
-**Files to modify:**
-- `src/gremllm/renderer/actions/messages.cljs` - Update `llm-response-received`
-- `test/gremllm/renderer/actions/messages_test.cljs` - Update tests to use normalized shape
-
-**Actions:**
-1. Change `llm-response-received` from `(get-in [:content 0 :text])` to `(:text response)`
-2. Remove the TODO comment about Anthropic hardcoding
-3. Update renderer tests to expect `{:text "..." :usage {...}}` instead of provider-specific shapes
-4. Run full test suite (unit + integration if possible)
-5. Manual smoke test: Send messages using Claude, then switch to GPT model, verify both work
-6. Commit: "refactor: use normalized LLMResponse in renderer"
-
-**Validation:** Can successfully chat with all three providers (Claude, GPT, Gemini) end-to-end.
+**Validation:** All unit tests pass, including integration tests if API keys are set. Can successfully chat with all three providers end-to-end.
 
 ### Phase 4: Consider Usage Display (Optional Polish)
 **Goal:** Decide if token usage should be visible in UI.
@@ -170,11 +173,12 @@ Before starting implementation:
 
 ## Acceptance Criteria
 
-- [ ] `LLMResponse` schema defined in `schema.cljs`
-- [ ] All three providers normalize responses to `LLMResponse` shape
-- [ ] Renderer uses `(:text response)` instead of provider-specific paths
-- [ ] TODO comment removed from `llm-response-received`
-- [ ] All existing tests pass
-- [ ] New tests cover normalization for all three providers
-- [ ] Can successfully chat with Claude, GPT, and Gemini models end-to-end
-- [ ] Token usage data is preserved and accessible (even if not yet displayed)
+- [x] `LLMResponse` schema defined in `schema.cljs`
+- [ ] All three providers normalize responses to `LLMResponse` shape (Anthropic ✅, OpenAI pending, Gemini pending)
+- [x] Renderer uses `(:text response)` instead of provider-specific paths
+- [x] TODO comment removed from `llm-response-received`
+- [x] All existing tests pass
+- [ ] New tests cover normalization for all three providers (Anthropic ✅, OpenAI pending, Gemini pending)
+- [ ] Can successfully chat with Claude, GPT, and Gemini models end-to-end (Claude ✅, GPT pending, Gemini pending)
+- [x] Token usage data is preserved and accessible (even if not yet displayed)
+- [x] **Malli validation at trust boundary** - `m/coerce` throws on invalid provider responses
