@@ -4,6 +4,11 @@
             [gremllm.renderer.state.loading :as loading-state]))
 
 (defn add-message [_state message]
+  (js/console.log "Adding message to chat:"
+                  (clj->js {:messageId (:id message)
+                            :messageType (:type message)
+                            :textLength (count (:text message))
+                            :hasText (some? (:text message))}))
   [[:messages.actions/append-to-state message]
    [:topic.actions/mark-active-unsaved]
    [:effects/scroll-to-bottom "chat-messages-container"]
@@ -34,6 +39,13 @@
 
 (defn llm-response-received [_state assistant-id response]
   (let [clj-response (js->clj response :keywordize-keys true)]
+    (js/console.log "Renderer received LLM response:"
+                    (clj->js {:assistantId assistant-id
+                              :rawResponse response
+                              :parsedKeys (keys clj-response)
+                              :hasText (contains? clj-response :text)
+                              :textValue (:text clj-response)
+                              :hasUsage (contains? clj-response :usage)}))
     [[:loading.actions/set-loading? assistant-id false]
      [:messages.actions/add-to-chat {:id   assistant-id
                                      :type :assistant

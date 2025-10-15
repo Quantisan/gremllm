@@ -2,7 +2,8 @@
   "LLM provider side effects and HTTP operations"
   (:require [gremllm.main.llm :as llm]
             [gremllm.schema :as schema]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.transform :as mt]))
 
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
@@ -39,12 +40,30 @@
   "Transforms Anthropic API response to LLMResponse schema.
   Validates the result, throwing if Anthropic returns unexpected shape."
   [response]
-  (m/coerce schema/LLMResponse
-            {:text (get-in response [:content 0 :text])
-             :usage {:input-tokens (get-in response [:usage :input_tokens])
-                     :output-tokens (get-in response [:usage :output_tokens])
-                     :total-tokens (+ (get-in response [:usage :input_tokens])
-                                      (get-in response [:usage :output_tokens]))}}))
+  (js/console.log "Normalizing Anthropic response:"
+                  (clj->js {:hasContent (contains? response :content)
+                            :hasUsage (contains? response :usage)
+                            :contentLength (count (:content response))
+                            :inputTokens (get-in response [:usage :input_tokens])
+                            :outputTokens (get-in response [:usage :output_tokens])}))
+  (let [normalized {:text (get-in response [:content 0 :text])
+                    :usage {:input-tokens (get-in response [:usage :input_tokens])
+                            :output-tokens (get-in response [:usage :output_tokens])
+                            :total-tokens (+ (get-in response [:usage :input_tokens])
+                                             (get-in response [:usage :output_tokens]))}}
+        result (m/coerce schema/LLMResponse normalized mt/default-value-transformer)]
+    (when-not (m/validate schema/LLMResponse result)
+      (let [explanation (m/explain schema/LLMResponse result)]
+        (js/console.error "LLMResponse validation failed:"
+                          (clj->js {:normalized normalized
+                                    :result result
+                                    :errors explanation}))
+        (throw (js/Error. (str "Invalid LLMResponse shape: " (pr-str explanation))))))
+    (js/console.log "Normalized response valid:"
+                    (clj->js {:text (:text result)
+                              :inputTokens (get-in result [:usage :input-tokens])
+                              :outputTokens (get-in result [:usage :output-tokens])}))
+    result))
 
 (defmulti ^LLMResponse query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
