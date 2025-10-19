@@ -123,25 +123,48 @@ The transformation adds a normalization step at the trust boundary between exter
 **Validation:** ✅ Anthropic chat works end-to-end with validated, normalized responses.
 
 ### Phase 3: Normalize OpenAI & Gemini Responses
-**Goal:** Implement normalization for remaining providers.
+**Goal:** Implement normalization for remaining providers using existing mock fixtures as reference.
 
 **Files to modify:**
 - `src/gremllm/main/effects/llm.cljs` - Add `normalize-openai-response` and `normalize-gemini-response`
-- `test/gremllm/main/effects/llm_test.cljs` - Add normalization tests for both providers
+- `test/gremllm/main/effects/llm_test.cljs` - Add normalization tests for all three providers
+
+**DRY Principle:** Reference the existing `mock-claude-response`, `mock-openai-response`, and `mock-gemini-response` fixtures already defined in `llm_test.cljs`. These mocks are validated against real API responses by `llm_integration_test.cljs`, making them the source of truth for provider response structures.
 
 **Actions:**
-1. Implement `normalize-openai-response`:
+1. **Study existing mock fixtures:**
+   - Review `mock-claude-response` structure in `llm_test.cljs`
+   - Review `mock-openai-response` structure in `llm_test.cljs`
+   - Review `mock-gemini-response` structure in `llm_test.cljs`
+   - Note how `llm_integration_test.cljs` validates these mocks match real API responses
+
+2. **Add missing unit test for Anthropic (establishes pattern):**
+   - Add `test-normalize-anthropic-response` using existing `mock-claude-response` fixture
+   - Verify it returns `{:text "..." :usage {:input-tokens N :output-tokens M :total-tokens T}}`
+   - This test serves as the pattern for OpenAI and Gemini tests
+
+3. **Implement `normalize-openai-response`:**
+   - Reference `mock-openai-response` for field paths
    - Text from: `[:choices 0 :message :content]`
    - Usage: `{:input-tokens :prompt_tokens, :output-tokens :completion_tokens, :total-tokens :total_tokens}`
    - Wrap with `m/coerce` for validation
-2. Implement `normalize-gemini-response`:
+
+4. **Implement `normalize-gemini-response`:**
+   - Reference `mock-gemini-response` for field paths
    - Text from: `[:candidates 0 :content :parts 0 :text]`
    - Usage: `{:input-tokens :promptTokenCount, :output-tokens :candidatesTokenCount, :total-tokens (+ prompt candidates)}`
    - Wrap with `m/coerce` for validation
-3. Add unit tests for each using `mock-openai-response` and `mock-gemini-response` fixtures
-4. Wire normalization into `:openai` and `:google` defmethods
-5. Run full test suite
-6. Commit: "feat: normalize OpenAI and Gemini responses to LLMResponse"
+
+5. **Add unit tests:**
+   - Test `normalize-openai-response` using existing `mock-openai-response` fixture
+   - Test `normalize-gemini-response` using existing `mock-gemini-response` fixture
+   - Follow same pattern as Anthropic test from step 2
+
+6. Wire normalization into `:openai` and `:google` defmethods (add `.then normalize-*` to promise chain)
+
+7. Run full test suite
+
+8. Commit: "feat: normalize OpenAI and Gemini responses to LLMResponse"
 
 **Validation:** All unit tests pass, including integration tests if API keys are set. Can successfully chat with all three providers end-to-end.
 
