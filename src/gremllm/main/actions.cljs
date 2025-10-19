@@ -21,15 +21,19 @@
 ;; key resolution only.
 
 (nxr/register-placeholder! :env/api-key-for-model
-  (fn [model]
-    (let [provider (llm/model->provider model)
-          env-var-name (llm/provider->env-var-name provider)
-          storage-key (llm/provider->api-key-keyword provider)]
-      (or (aget (.-env js/process) env-var-name)
-          (some-> (.getPath app "userData")
-                  (io/secrets-file-path)
-                  (secrets-actions/load storage-key)
-                  :ok)))))
+  (fn [_dispatch-data model]
+    (try
+      (let [provider (llm/model->provider model)
+            env-var-name (llm/provider->env-var-name provider)
+            storage-key (llm/provider->api-key-keyword provider)]
+        (or (aget (.-env js/process) env-var-name)
+            (some-> (.getPath app "userData")
+                    (io/secrets-file-path)
+                    (secrets-actions/load storage-key)
+                    :ok)))
+      (catch :default e
+        (js/console.error "Error resolving API key for model" model ":" e)
+        (throw e)))))
 
 ;; Menu Actions Registration
 ;; =========================

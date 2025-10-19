@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.ipc-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.effects.ipc :as ipc]))
+            [gremllm.main.effects.ipc :as ipc]
+            [gremllm.test-utils :refer [with-console-error-silenced]]))
 
 ;; Mock Electron's event.sender.send to capture what gets sent
 (defn mock-event [send-fn]
@@ -32,30 +33,32 @@
 (deftest test-reply-error
   (testing "constructs correct error channel"
     ;; Errors use a different channel pattern so the renderer can handle them separately
-    (let [sent (atom nil)
-          ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
-                               :request-id "456"
-                               :channel "topic/save"}}]
+    (with-console-error-silenced
+      (let [sent (atom nil)
+            ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
+                                 :request-id "456"
+                                 :channel "topic/save"}}]
 
-      (ipc/reply-error ctx nil (js/Error. "Save failed"))
+        (ipc/reply-error ctx nil (js/Error. "Save failed"))
 
-      (is (= ["topic/save-error-456" "Save failed"] @sent))))
+        (is (= ["topic/save-error-456" "Save failed"] @sent)))))
 
   (testing "handles non-Error objects"
     ;; Errors come in many forms (Error objects, strings, maps).
     ;; Convert them all to strings so the renderer gets something useful.
-    (let [sent (atom nil)
-          ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
-                               :request-id "789"
-                               :channel "topic/load"}}]
+    (with-console-error-silenced
+      (let [sent (atom nil)
+            ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
+                                 :request-id "789"
+                                 :channel "topic/load"}}]
 
-      ;; String error
-      (ipc/reply-error ctx nil "String error")
-      (is (= "String error" (second @sent)))
+        ;; String error
+        (ipc/reply-error ctx nil "String error")
+        (is (= "String error" (second @sent)))
 
-      ;; ClojureScript map - stringify it instead of sending [object Object]
-      (ipc/reply-error ctx nil {:type "custom"})
-      (is (= "{:type \"custom\"}" (second @sent))))))
+        ;; ClojureScript map - stringify it instead of sending [object Object]
+        (ipc/reply-error ctx nil {:type "custom"})
+        (is (= "{:type \"custom\"}" (second @sent)))))))
 
 (deftest test-promise->reply
   (testing "dispatches reply on success"
