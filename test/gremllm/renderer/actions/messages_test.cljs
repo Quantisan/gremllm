@@ -27,16 +27,19 @@
             (msg/append-to-state state new-message))))))
 
 (deftest test-llm-response-received
-  (testing "extracts message text from valid API response"
+  (testing "extracts message text from normalized LLMResponse"
     (let [assistant-id "asst-123"
-          api-response (clj->js {:content [{:text "Hello from AI"}]})]
+          llm-response (clj->js {:text "Hello from AI"
+                                 :usage {:input-tokens 10
+                                         :output-tokens 5
+                                         :total-tokens 15}})]
       (is (= [[:loading.actions/set-loading? assistant-id false]
               [:messages.actions/add-to-chat {:id "asst-123"
                                               :type :assistant
                                               :text "Hello from AI"}]]
-             (msg/llm-response-received {} assistant-id api-response))
-          "Should extract text from [:content 0 :text] path")))
-  (testing "handles malformed response with missing content"
+             (msg/llm-response-received {} assistant-id llm-response))
+          "Should extract text from :text field of normalized LLMResponse")))
+  (testing "handles malformed response with missing text"
     (let [assistant-id "asst-123"
           api-response (clj->js {})]
       (is (= [[:loading.actions/set-loading? assistant-id false]
@@ -44,4 +47,4 @@
                                               :type :assistant
                                               :text nil}]]
              (msg/llm-response-received {} assistant-id api-response))
-          "Missing content should result in nil text, not throw"))))
+          "Missing text should result in nil text, not throw"))))

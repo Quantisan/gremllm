@@ -1,6 +1,8 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [gremllm.main.llm :as llm]))
+  (:require [gremllm.main.llm :as llm]
+            [gremllm.schema :as schema]
+            [malli.core :as m]))
 
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
@@ -33,7 +35,38 @@
     (.json response)
     (handle-error-response response model message-count)))
 
-(defmulti query-llm-provider
+(defn normalize-anthropic-response
+  "Transforms Anthropic API response to LLMResponse schema.
+  Validates the result, throwing if Anthropic returns unexpected shape."
+  [response]
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:content 0 :text])
+             :usage {:input-tokens (get-in response [:usage :input_tokens])
+                     :output-tokens (get-in response [:usage :output_tokens])
+                     :total-tokens (+ (get-in response [:usage :input_tokens])
+                                      (get-in response [:usage :output_tokens]))}}))
+
+(defn normalize-openai-response
+  "Transforms OpenAI API response to LLMResponse schema.
+  Validates the result, throwing if OpenAI returns unexpected shape."
+  [response]
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:choices 0 :message :content])
+             :usage {:input-tokens (get-in response [:usage :prompt_tokens])
+                     :output-tokens (get-in response [:usage :completion_tokens])
+                     :total-tokens (get-in response [:usage :total_tokens])}}))
+
+(defn normalize-gemini-response
+  "Transforms Gemini API response to LLMResponse schema.
+  Validates the result, throwing if Gemini returns unexpected shape."
+  [response]
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:candidates 0 :content :parts 0 :text])
+             :usage {:input-tokens (get-in response [:usageMetadata :promptTokenCount])
+                     :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
+                     :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
+
+(defmulti ^LLMResponse query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
@@ -54,7 +87,8 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-anthropic-response))))
 
 (defmethod query-llm-provider :openai
   [messages model api-key]
@@ -68,7 +102,8 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-openai-response))))
 
 (defmethod query-llm-provider :google
   [messages model api-key]
@@ -82,4 +117,5 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-gemini-response))))

@@ -171,6 +171,7 @@ The transformation refactors `query-llm-provider` from a single function into a 
 **Files to modify:**
 - `src/gremllm/main/effects/llm.cljs` - Add response normalization per provider
 - `src/gremllm/schema.cljs` - Potentially add `LLMResponse` schema if normalization is needed
+- `src/gremllm/renderer/actions/messages`, Potentially refactor `llm-response-received` to use `LLMResponnse`
 
 **Actions:**
 1. Define what fields downstream code actually needs (text content, role, usage tokens, etc.)
