@@ -40,10 +40,17 @@
                           (clj->js {:requestId request-id
                                     :model model
                                     :messageCount (count messages-clj)}))
-           (nxr/dispatch store {:ipc-event event
-                                :request-id request-id
-                                :channel "chat/send-message"}
-                         [[:chat.effects/send-message messages-clj model [:env/api-key-for-model model]]]))))
+           (try
+             (let [dispatch-result (nxr/dispatch store {:ipc-event event
+                                                        :request-id request-id
+                                                        :channel "chat/send-message"}
+                                                 [[:chat.effects/send-message messages-clj model [:env/api-key-for-model model]]])]
+               (js/console.log "[Main IPC] Dispatch completed:"
+                              (clj->js {:dispatchResult dispatch-result
+                                        :resultType (type dispatch-result)})))
+             (catch :default e
+               (js/console.error "[Main IPC] Dispatch error:" e)
+               (throw e))))))
 
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]

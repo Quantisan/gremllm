@@ -9,8 +9,11 @@
             [gremllm.main.io :as io]
             ["electron/main" :refer [app]]))
 
+(js/console.log "[Main Actions] Namespace loading...")
+
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
+(js/console.log "[Main Actions] Registered system->state")
 
 ;; Environment Variable Placeholders
 ;; ==================================
@@ -22,14 +25,28 @@
 
 (nxr/register-placeholder! :env/api-key-for-model
   (fn [model]
-    (let [provider (llm/model->provider model)
-          env-var-name (llm/provider->env-var-name provider)
-          storage-key (llm/provider->api-key-keyword provider)]
-      (or (aget (.-env js/process) env-var-name)
-          (some-> (.getPath app "userData")
-                  (io/secrets-file-path)
-                  (secrets-actions/load storage-key)
-                  :ok)))))
+    (try
+      (js/console.log "[Placeholder] Resolving :env/api-key-for-model for model:" model)
+      (let [provider (llm/model->provider model)
+            env-var-name (llm/provider->env-var-name provider)
+            storage-key (llm/provider->api-key-keyword provider)
+            env-key (aget (.-env js/process) env-var-name)
+            storage-result (when-not env-key
+                            (some-> (.getPath app "userData")
+                                    (io/secrets-file-path)
+                                    (secrets-actions/load storage-key)))
+            api-key (or env-key (:ok storage-result))]
+        (js/console.log "[Placeholder] Resolved API key:"
+                        (clj->js {:provider provider
+                                  :envVarName env-var-name
+                                  :hasEnvKey (some? env-key)
+                                  :hasStorageKey (some? (:ok storage-result))
+                                  :finalKeyPrefix (when api-key (subs api-key 0 (min 8 (count api-key))))}))
+        api-key)
+      (catch :default e
+        (js/console.error "[Placeholder] Error resolving API key:" e)
+        (throw e)))))
+(js/console.log "[Main Actions] Registered :env/api-key-for-model placeholder")
 
 ;; Menu Actions Registration
 ;; =========================
@@ -82,6 +99,7 @@
                               :messageCount (count messages)
                               :hasApiKey (some? api-key)}))
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
+(js/console.log "[Main Actions] Registered :chat.effects/send-message")
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
