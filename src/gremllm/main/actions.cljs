@@ -24,7 +24,7 @@
 ;; key resolution only.
 
 (nxr/register-placeholder! :env/api-key-for-model
-  (fn [model]
+  (fn [_dispatch-data model]
     (try
       (js/console.log "[Placeholder] Resolving :env/api-key-for-model for model:" model)
       (let [provider (llm/model->provider model)
