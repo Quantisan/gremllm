@@ -150,6 +150,22 @@
       (is (= (get-in normalized [:usage :output-tokens]) 5))
       (is (= (get-in normalized [:usage :total-tokens]) 21)))))
 
+(deftest test-normalize-openai-response
+  (testing "transforms OpenAI response to normalized LLMResponse schema"
+    (let [normalized (llm/normalize-openai-response mock-openai-response)]
+      (is (= (:text normalized) "4"))
+      (is (= (get-in normalized [:usage :input-tokens]) 9))
+      (is (= (get-in normalized [:usage :output-tokens]) 1))
+      (is (= (get-in normalized [:usage :total-tokens]) 10)))))
+
+(deftest test-normalize-gemini-response
+  (testing "transforms Gemini response to normalized LLMResponse schema"
+    (let [normalized (llm/normalize-gemini-response mock-gemini-response)]
+      (is (= (:text normalized) "4"))
+      (is (= (get-in normalized [:usage :input-tokens]) 4))
+      (is (= (get-in normalized [:usage :output-tokens]) 1))
+      (is (= (get-in normalized [:usage :total-tokens]) 24)))))
+
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses and normalizes Claude API response"
     (let [original-fetch js/fetch

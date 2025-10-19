@@ -46,6 +46,26 @@
                      :total-tokens (+ (get-in response [:usage :input_tokens])
                                       (get-in response [:usage :output_tokens]))}}))
 
+(defn normalize-openai-response
+  "Transforms OpenAI API response to LLMResponse schema.
+  Validates the result, throwing if OpenAI returns unexpected shape."
+  [response]
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:choices 0 :message :content])
+             :usage {:input-tokens (get-in response [:usage :prompt_tokens])
+                     :output-tokens (get-in response [:usage :completion_tokens])
+                     :total-tokens (get-in response [:usage :total_tokens])}}))
+
+(defn normalize-gemini-response
+  "Transforms Gemini API response to LLMResponse schema.
+  Validates the result, throwing if Gemini returns unexpected shape."
+  [response]
+  (m/coerce schema/LLMResponse
+            {:text (get-in response [:candidates 0 :content :parts 0 :text])
+             :usage {:input-tokens (get-in response [:usageMetadata :promptTokenCount])
+                     :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
+                     :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
+
 (defmulti ^LLMResponse query-llm-provider
   "Dispatches to provider-specific implementation based on model string.
 
