@@ -102,7 +102,8 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-openai-response))))
 
 (defmethod query-llm-provider :google
   [messages model api-key]
@@ -116,4 +117,5 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true)))))
+        (.then #(js->clj % :keywordize-keys true))
+        (.then normalize-gemini-response))))

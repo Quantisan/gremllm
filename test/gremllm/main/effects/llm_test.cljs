@@ -178,10 +178,11 @@
       (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
                    (testing "normalized response structure"
-                     (is (= (:text response) "4"))
-                     (is (= (get-in response [:usage :input-tokens]) 16))
-                     (is (= (get-in response [:usage :output-tokens]) 5))
-                     (is (= (get-in response [:usage :total-tokens]) 21)))))
+                     (is (= {:text "4"
+                             :usage {:input-tokens 16
+                                     :output-tokens 5
+                                     :total-tokens 21}}
+                            response)))))
           (.finally #(set! js/fetch original-fetch))))))
 
 (deftest test-query-llm-provider-error
@@ -216,7 +217,7 @@
                       (restore-console)))))))
 
 (deftest test-query-llm-provider-openai
-  (testing "successfully parses OpenAI API response"
+  (testing "successfully parses and normalizes OpenAI API response"
     (let [original-fetch js/fetch
           test-messages  [{:role "user" :content "2+2"}]
           test-model     "gpt-4o-mini"
@@ -226,16 +227,16 @@
 
       (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
-                   (testing "response structure"
-                     (is (= (:id response) "chatcmpl-123"))
-                     (is (= (:object response) "chat.completion")))
-
-                   (testing "content extraction"
-                     (is (= (-> response :choices first :message :content) "4")))))
+                   (testing "normalized response structure"
+                     (is (= {:text "4"
+                             :usage {:input-tokens 9
+                                     :output-tokens 1
+                                     :total-tokens 10}}
+                            response)))))
           (.finally #(set! js/fetch original-fetch))))))
 
 (deftest test-query-llm-provider-gemini
-  (testing "successfully parses Gemini API response"
+  (testing "successfully parses and normalizes Gemini API response"
     (let [original-fetch js/fetch
           test-messages  [{:role "user" :content "2+2"}]
           test-model     "gemini-2.5-flash"
@@ -245,10 +246,10 @@
 
       (-> (llm/query-llm-provider test-messages test-model test-api-key)
           (.then (fn [response]
-                   (testing "response structure"
-                     (is (= (:modelVersion response) "gemini-2.5-flash"))
-                     (is (= (-> response :candidates first :finishReason) "STOP")))
-
-                   (testing "content extraction"
-                     (is (= (-> response :candidates first :content :parts first :text) "4")))))
+                   (testing "normalized response structure"
+                     (is (= {:text "4"
+                             :usage {:input-tokens 4
+                                     :output-tokens 1
+                                     :total-tokens 24}}
+                            response)))))
           (.finally #(set! js/fetch original-fetch))))))
