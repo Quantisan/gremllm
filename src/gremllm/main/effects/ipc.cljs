@@ -35,9 +35,13 @@
   [{:keys [dispatch-data]} _ error]
   (when-let [event (:ipc-event dispatch-data)]
     (let [request-id (:request-id dispatch-data)
-          channel (:channel dispatch-data)]
-      (.send (.-sender event) (str channel "-error-" request-id)
-             (or (.-message error) (str error))))))
+          channel (:channel dispatch-data)
+          error-msg (or (.-message error) (str error))]
+      (js/console.error "IPC request failed:"
+                        (clj->js {:channel channel
+                                  :requestId request-id
+                                  :error error-msg}))
+      (.send (.-sender event) (str channel "-error-" request-id) error-msg))))
 
 (defn promise->reply
   "Convert promise result to IPC reply"
