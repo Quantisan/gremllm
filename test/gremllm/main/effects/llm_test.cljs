@@ -142,6 +142,14 @@
              {:role "assistant" :content "4"}
              {:role "user" :content "Thanks"}])))))
 
+(deftest test-normalize-anthropic-response
+  (testing "transforms Anthropic response to normalized LLMResponse schema"
+    (let [normalized (llm/normalize-anthropic-response mock-claude-response)]
+      (is (= (:text normalized) "4"))
+      (is (= (get-in normalized [:usage :input-tokens]) 16))
+      (is (= (get-in normalized [:usage :output-tokens]) 5))
+      (is (= (get-in normalized [:usage :total-tokens]) 21)))))
+
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses and normalizes Claude API response"
     (let [original-fetch js/fetch

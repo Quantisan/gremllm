@@ -35,7 +35,7 @@
     (.json response)
     (handle-error-response response model message-count)))
 
-(defn- normalize-anthropic-response
+(defn normalize-anthropic-response
   "Transforms Anthropic API response to LLMResponse schema.
   Validates the result, throwing if Anthropic returns unexpected shape."
   [response]
