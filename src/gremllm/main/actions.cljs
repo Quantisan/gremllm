@@ -77,6 +77,10 @@
 ;; LLM effects
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages model api-key]
+    (js/console.log "[Main Effect] chat.effects/send-message firing:"
+                    (clj->js {:model model
+                              :messageCount (count messages)
+                              :hasApiKey (some? api-key)}))
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
 
 ;; Workspace Actions/Effects Registration

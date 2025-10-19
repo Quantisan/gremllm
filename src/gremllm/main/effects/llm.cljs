@@ -81,13 +81,38 @@
         headers {"x-api-key" api-key
                  "anthropic-version" "2023-06-01"
                  "content-type" "application/json"}]
+    (js/console.log "[LLM Provider] Starting Anthropic request:"
+                    (clj->js {:model model
+                              :messageCount (count messages)
+                              :hasApiKey (some? api-key)
+                              :apiKeyPrefix (when api-key (subs api-key 0 (min 8 (count api-key))))}))
     (-> (js/fetch "https://api.anthropic.com/v1/messages"
                   (clj->js {:method "POST"
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
+        (.then (fn [response]
+                 (js/console.log "[LLM Provider] Received raw response:"
+                                 (clj->js {:status (.-status response)
+                                           :ok (.-ok response)
+                                           :statusText (.-statusText response)}))
+                 response))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true))
-        (.then normalize-anthropic-response))))
+        (.then (fn [json]
+                 (js/console.log "[LLM Provider] JSON parsed successfully")
+                 json))
+        (.then (fn [json]
+                 (let [clj-data (js->clj json :keywordize-keys true)]
+                   (js/console.log "[LLM Provider] Converted to Clojure:"
+                                   (clj->js {:keys (keys clj-data)
+                                             :hasContent (contains? clj-data :content)
+                                             :hasUsage (contains? clj-data :usage)}))
+                   clj-data)))
+        (.then normalize-anthropic-response)
+        (.catch (fn [error]
+                  (js/console.error "[LLM Provider] Promise chain error:"
+                                    (clj->js {:message (.-message error)
+                                              :stack (.-stack error)}))
+                  (throw error))))))
 
 (defmethod query-llm-provider :openai
   [messages model api-key]

@@ -27,21 +27,41 @@
   [{:keys [dispatch-data]} _ result]
   (when-let [event (:ipc-event dispatch-data)]
     (let [request-id (:request-id dispatch-data)
-          channel (:channel dispatch-data)]
-      (.send (.-sender event) (str channel "-success-" request-id) result))))
+          channel (:channel dispatch-data)
+          success-channel (str channel "-success-" request-id)]
+      (js/console.log "[IPC Reply] Sending success response:"
+                      (clj->js {:channel success-channel
+                                :requestId request-id
+                                :resultType (type result)}))
+      (.send (.-sender event) success-channel result))))
 
 (defn reply-error
   "Reply to an IPC request with error"
   [{:keys [dispatch-data]} _ error]
   (when-let [event (:ipc-event dispatch-data)]
     (let [request-id (:request-id dispatch-data)
-          channel (:channel dispatch-data)]
-      (.send (.-sender event) (str channel "-error-" request-id)
-             (or (.-message error) (str error))))))
+          channel (:channel dispatch-data)
+          error-channel (str channel "-error-" request-id)
+          error-message (or (.-message error) (str error))]
+      (js/console.error "[IPC Reply] Sending error response:"
+                        (clj->js {:channel error-channel
+                                  :requestId request-id
+                                  :errorMessage error-message
+                                  :errorType (type error)}))
+      (.send (.-sender event) error-channel error-message))))
 
 (defn promise->reply
   "Convert promise result to IPC reply"
   [{:keys [dispatch]} _ promise]
+  (js/console.log "[IPC Promise] Waiting for promise resolution...")
   (-> promise
-      (.then #(dispatch [[:ipc.effects/reply (clj->js %)]]))
-      (.catch #(dispatch [[:ipc.effects/reply-error %]]))))
+      (.then (fn [result]
+               (js/console.log "[IPC Promise] Promise resolved successfully:"
+                               (clj->js {:resultKeys (when (object? result) (js/Object.keys result))
+                                         :resultType (type result)}))
+               (dispatch [[:ipc.effects/reply (clj->js result)]])))
+      (.catch (fn [error]
+                (js/console.error "[IPC Promise] Promise rejected:"
+                                  (clj->js {:errorMessage (.-message error)
+                                            :errorStack (.-stack error)}))
+                (dispatch [[:ipc.effects/reply-error error]])))))
