@@ -43,8 +43,11 @@
 
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
-             (let [workspace-dir (state/get-workspace-dir @store)]
-               (-> (js->clj topic-data :keywordize-keys true)
+             (js/console.log "[DIAGNOSTIC] Main process received topic/save | raw topic-data:" topic-data)
+             (let [workspace-dir (state/get-workspace-dir @store)
+                   topic-clj (js->clj topic-data :keywordize-keys true)]
+               (js/console.log "[DIAGNOSTIC] Main process topic/save | after js->clj:" (clj->js topic-clj))
+               (-> topic-clj
                    (schema/topic-from-ipc)
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
                    (workspace-effects/save-topic)))))

@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.form :as form-state]
             [gremllm.schema :as schema]))
 
 (defn start-new-topic [_state]
@@ -38,10 +39,14 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (when (-> (topic-state/get-topic state topic-id)
-             (:messages)
-             (seq))
-     [[:topic.effects/save-topic topic-id]])))
+   (let [topic (topic-state/get-topic state topic-id)
+         selected-model (form-state/get-selected-model state)]
+     (js/console.log "[DIAGNOSTIC] auto-save called for topic-id:" topic-id
+                     "| topic model:" (:model topic)
+                     "| form selected model:" selected-model
+                     "| topic data:" (clj->js topic))
+     (when (-> topic (:messages) (seq))
+       [[:topic.effects/save-topic topic-id]]))))
 
 (defn set-active
   "Set the active topic. Optionally accepts model to avoid reading from state."
@@ -75,11 +80,13 @@
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
     (if-let [topic (topic-state/get-topic @store topic-id)]
-      (dispatch
-       [[:effects/promise
-         {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
-          :on-success [[:topic.actions/save-success topic-id]]
-          :on-error   [[:topic.actions/save-error topic-id]]}]])
+      (let [topic-js (clj->js topic)]
+        (js/console.log "[DIAGNOSTIC] :topic.effects/save-topic - sending to IPC | topic-id:" topic-id "| topic data:" topic-js)
+        (dispatch
+         [[:effects/promise
+           {:promise    (.saveTopic js/window.electronAPI topic-js)
+            :on-success [[:topic.actions/save-success topic-id]]
+            :on-error   [[:topic.actions/save-error topic-id]]}]]))
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
 
 ;; Convenience effect for saving the active topic

@@ -7,6 +7,7 @@
   [[:form.effects/update-input value]])
 
 (defn update-model [_state value]
+  (js/console.log "[DIAGNOSTIC] update-model called with value:" value)
   [[:form.effects/update-model value]])
 
 ;; Domain-specific effects
@@ -25,6 +26,7 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)
         model (form-state/get-selected-model state)]
+    (js/console.log "[DIAGNOSTIC] submit-messages - user input:" text "| selected model:" model)
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
