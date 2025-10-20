@@ -55,8 +55,9 @@
                :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
       (for [[provider-name model-ids] (schema/models-by-provider)]
         [:optgroup {:label provider-name}
-         (for [model-id model-ids]
-           [:option {:value model-id} (get schema/supported-models model-id)])])]]))
+         (for [model-id model-ids
+               :let [display-name (get schema/supported-models model-id)]]
+           [:option {:value model-id} display-name])])]]))
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
