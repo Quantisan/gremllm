@@ -36,11 +36,9 @@
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
   [_state {:keys [topics active-topic-id]}]
-  (let [active-topic (get topics active-topic-id)
-        model        (:model active-topic)]
-    [[:effects/save topic-state/topics-path topics]
-     [:topic.actions/set-active active-topic-id model]
-     [:workspace.actions/mark-loaded]]))
+  [[:effects/save topic-state/topics-path topics]
+   [:topic.actions/set-active active-topic-id]
+   [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
   "Initialize an empty workspace with its first topic."

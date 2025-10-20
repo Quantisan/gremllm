@@ -6,11 +6,10 @@
             [gremllm.schema :as schema]))
 
 (defn start-new-topic [_state]
-  (let [new-topic     (schema/create-topic)
-        topic-id      (:id new-topic)
-        default-model (:model new-topic)]
+  (let [new-topic (schema/create-topic)
+        topic-id  (:id new-topic)]
     [[:effects/save (topic-state/topic-path topic-id) new-topic]
-     [:topic.actions/set-active topic-id default-model]]))
+     [:topic.actions/set-active topic-id]]))
 
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
@@ -20,6 +19,10 @@
 
 (defn set-name [_state topic-id new-name]
   [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]])
+
+(defn update-model [state model]
+  (let [active-id (topic-state/get-active-topic-id state)]
+    [[:effects/save (topic-state/topic-field-path active-id :model) model]]))
 
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
@@ -44,12 +47,9 @@
      [[:topic.effects/save-topic topic-id]])))
 
 (defn set-active
-  "Set the active topic. Optionally accepts model to avoid reading from state."
-  ([state topic-id]
-   (set-active state topic-id (topic-state/get-topic-field state topic-id :model)))
-  ([_state topic-id model]
-   [[:effects/save topic-state/active-topic-id-path topic-id]
-    [:form.effects/update-model model]]))
+  "Set the active topic."
+  [_state topic-id]
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
