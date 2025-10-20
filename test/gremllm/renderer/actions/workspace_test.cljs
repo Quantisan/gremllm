@@ -41,20 +41,22 @@
       (is (contains? (:topics restore-params) "tid")))))
 
 (deftest restore-with-topics-test
-  (testing "Passes model from active topic to set-active"
+  (testing "Sets active topic without model param"
     (let [topic (assoc (schema/create-topic) :model "claude-3-5-sonnet-20241022")
           effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
                                                       :active-topic-id "tid"})
-          [_ topic-id model] (get-action effects :topic.actions/set-active)]
+          [_ topic-id] (get-action effects :topic.actions/set-active)]
       (is (= "tid" topic-id))
-      (is (= "claude-3-5-sonnet-20241022" model))))
+      (is (= 2 (count (get-action effects :topic.actions/set-active)))
+          "should only pass topic-id, not model")))
 
-  (testing "Uses default model from schema when topic created"
+  (testing "Restores all topics to state"
     (let [topic (schema/create-topic)
           effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
                                                       :active-topic-id "tid"})
-          [_ _ model] (get-action effects :topic.actions/set-active)]
-      (is (= "claude-sonnet-4-5-20250929" model)))))
+          [_ topics-path saved-topics] (get-action effects :effects/save)]
+      (is (= [:topics] topics-path))
+      (is (contains? saved-topics "tid")))))
 
 (deftest opened-multiple-topics-test
   (testing "Selects one topic when multiple exist"
