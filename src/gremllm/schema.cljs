@@ -26,12 +26,22 @@
             [:output-tokens :int]
             [:total-tokens :int]]]])
 
+(def supported-models
+  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
+  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
+   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
+   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
+   "gpt-5"                      "GPT-5"
+   "gpt-5-mini"                 "GPT-5 Mini"
+   "gemini-2.5-flash"           "Gemini 2.5 Flash"
+   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "claude-sonnet-4-5-20250929"} :string]
+   [:model {:default "claude-sonnet-4-5-20250929"} (into [:enum] (keys supported-models))]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
