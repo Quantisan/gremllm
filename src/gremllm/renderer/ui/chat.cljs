@@ -51,7 +51,7 @@
                      :margin-bottom "0.5rem"}}
      [:small "Model:"]
      [:select {:value selected-model
-               :on {:change [[:form.actions/update-model [:event.target/value]]]}}
+               :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
       [:optgroup {:label "Anthropic"}
        [:option {:value "claude-sonnet-4-5-20250929"} "Claude 4.5 Sonnet"]
        [:option {:value "claude-opus-4-1-20250805"} "Claude 4.1 Opus"]

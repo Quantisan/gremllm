@@ -3,15 +3,13 @@
             [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.form :as form-state]
             [gremllm.schema :as schema]))
 
 (defn start-new-topic [_state]
-  (let [new-topic     (schema/create-topic)
-        topic-id      (:id new-topic)
-        default-model (:model new-topic)]
+  (let [new-topic (schema/create-topic)
+        topic-id  (:id new-topic)]
     [[:effects/save (topic-state/topic-path topic-id) new-topic]
-     [:topic.actions/set-active topic-id default-model]]))
+     [:topic.actions/set-active topic-id]]))
 
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
@@ -21,6 +19,10 @@
 
 (defn set-name [_state topic-id new-name]
   [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]])
+
+(defn update-model [state model]
+  (let [active-id (topic-state/get-active-topic-id state)]
+    [[:effects/save (topic-state/topic-field-path active-id :model) model]]))
 
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
@@ -39,22 +41,15 @@
   ([state]
    (auto-save state (topic-state/get-active-topic-id state)))
   ([state topic-id]
-   (let [topic (topic-state/get-topic state topic-id)
-         selected-model (form-state/get-selected-model state)]
-     (js/console.log "[DIAGNOSTIC] auto-save called for topic-id:" topic-id
-                     "| topic model:" (:model topic)
-                     "| form selected model:" selected-model
-                     "| topic data:" (clj->js topic))
-     (when (-> topic (:messages) (seq))
-       [[:topic.effects/save-topic topic-id]]))))
+   (when (-> (topic-state/get-topic state topic-id)
+             (:messages)
+             (seq))
+     [[:topic.effects/save-topic topic-id]])))
 
 (defn set-active
-  "Set the active topic. Optionally accepts model to avoid reading from state."
-  ([state topic-id]
-   (set-active state topic-id (topic-state/get-topic-field state topic-id :model)))
-  ([_state topic-id model]
-   [[:effects/save topic-state/active-topic-id-path topic-id]
-    [:form.effects/update-model model]]))
+  "Set the active topic."
+  [_state topic-id]
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic
@@ -80,13 +75,11 @@
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
     (if-let [topic (topic-state/get-topic @store topic-id)]
-      (let [topic-js (clj->js topic)]
-        (js/console.log "[DIAGNOSTIC] :topic.effects/save-topic - sending to IPC | topic-id:" topic-id "| topic data:" topic-js)
-        (dispatch
-         [[:effects/promise
-           {:promise    (.saveTopic js/window.electronAPI topic-js)
-            :on-success [[:topic.actions/save-success topic-id]]
-            :on-error   [[:topic.actions/save-error topic-id]]}]]))
+      (dispatch
+       [[:effects/promise
+         {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
+          :on-success [[:topic.actions/save-success topic-id]]
+          :on-error   [[:topic.actions/save-error topic-id]]}]])
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
 
 ;; Convenience effect for saving the active topic

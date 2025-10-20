@@ -1,14 +1,11 @@
 (ns gremllm.renderer.actions.ui
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.form :as form-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
 (defn update-input [_state value]
   [[:form.effects/update-input value]])
-
-(defn update-model [_state value]
-  (js/console.log "[DIAGNOSTIC] update-model called with value:" value)
-  [[:form.effects/update-model value]])
 
 ;; Domain-specific effects
 (nxr/register-effect! :form.effects/update-input
@@ -19,14 +16,9 @@
   (fn [_ store]
     (swap! store assoc-in form-state/user-input-path "")))
 
-(nxr/register-effect! :form.effects/update-model
-  (fn [_ store value]
-    (swap! store assoc-in form-state/selected-model-path value)))
-
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)
-        model (form-state/get-selected-model state)]
-    (js/console.log "[DIAGNOSTIC] submit-messages - user input:" text "| selected model:" model)
+        model (:model (topic-state/get-active-topic state))]
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.

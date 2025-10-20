@@ -62,7 +62,6 @@
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
-(nxr/register-action! :form.actions/update-model ui/update-model)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
@@ -90,6 +89,7 @@
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
 (nxr/register-action! :topic.actions/set-name topic/set-name)
+(nxr/register-action! :topic.actions/update-model topic/update-model)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
     [[:ui.effects/save ui-state/renaming-topic-id-path nil]]))
