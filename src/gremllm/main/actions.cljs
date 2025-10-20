@@ -7,6 +7,7 @@
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
+            [gremllm.schema :as schema]
             ["electron/main" :refer [app]]))
 
 ;; Register how to extract state from the system
@@ -23,7 +24,7 @@
 (nxr/register-placeholder! :env/api-key-for-model
   (fn [_dispatch-data model]
     (try
-      (let [provider (llm/model->provider model)
+      (let [provider (schema/model->provider model)
             env-var-name (llm/provider->env-var-name provider)
             storage-key (llm/provider->api-key-keyword provider)]
         (or (aget (.-env js/process) env-var-name)

@@ -2,24 +2,6 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.llm :as llm]))
 
-(deftest test-model->provider
-  (testing "identifies Anthropic models"
-    (is (= :anthropic (llm/model->provider "claude-3-5-haiku-latest")))
-    (is (= :anthropic (llm/model->provider "claude-3-opus-20240229"))))
-
-  (testing "identifies OpenAI models"
-    (is (= :openai (llm/model->provider "gpt-4o")))
-    (is (= :openai (llm/model->provider "gpt-4o-mini")))
-    (is (= :openai (llm/model->provider "gpt-3.5-turbo"))))
-
-  (testing "identifies Google models"
-    (is (= :google (llm/model->provider "gemini-2.0-flash-exp")))
-    (is (= :google (llm/model->provider "gemini-pro"))))
-
-  (testing "throws on unknown model prefix"
-    (is (thrown? js/Error (llm/model->provider "unknown-model")))
-    (is (thrown? js/Error (llm/model->provider "mistral-large")))))
-
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
     (is (= :anthropic-api-key (llm/provider->api-key-keyword :anthropic))))

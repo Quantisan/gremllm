@@ -1,15 +1,5 @@
 (ns gremllm.main.llm
-  "LLM domain utilities - provider and model mappings"
-  (:require [clojure.string :as str]))
-
-(defn model->provider
-  "Infers provider from model string. Pure function for easy testing."
-  [model]
-  (cond
-    (str/starts-with? model "claude-") :anthropic
-    (str/starts-with? model "gpt-")    :openai
-    (str/starts-with? model "gemini-") :google
-    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
+  "LLM provider utilities - API key and environment variable mappings")
 
 (defn provider->api-key-keyword
   "Maps provider to safeStorage lookup key. Pure function for easy testing."

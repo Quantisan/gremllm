@@ -72,7 +72,7 @@
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
   retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
-  (fn [_messages model _api-key] (llm/model->provider model)))
+  (fn [_messages model _api-key] (schema/model->provider model)))
 
 (defmethod query-llm-provider :anthropic
   [messages model api-key]

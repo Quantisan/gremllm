@@ -1,6 +1,7 @@
 (ns gremllm.renderer.ui.chat
   (:require [clojure.string :as str]
-            [gremllm.renderer.ui.elements :as e]))
+            [gremllm.renderer.ui.elements :as e]
+            [gremllm.schema :as schema]))
 
 (defn- render-user-message [message]
   [e/user-message
@@ -44,7 +45,7 @@
     [:small {:style {:color "#666"
                      :display "block"
                      :margin-bottom "0.5rem"}}
-     selected-model]
+     (get schema/supported-models selected-model selected-model)]
 
     ;; Editable: show model selector dropdown
     [:label {:style {:display "block"
@@ -52,16 +53,11 @@
      [:small "Model:"]
      [:select {:value selected-model
                :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
-      [:optgroup {:label "Anthropic"}
-       [:option {:value "claude-sonnet-4-5-20250929"} "Claude 4.5 Sonnet"]
-       [:option {:value "claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
-       [:option {:value "claude-haiku-4-5-20251001"} "Claude 4.5 Haiku"]]
-      [:optgroup {:label "OpenAI"}
-       [:option {:value "gpt-5"} "GPT-5"]
-       [:option {:value "gpt-5-mini"} "GPT-5 Mini"]]
-      [:optgroup {:label "Google"}
-       [:option {:value "gemini-2.5-flash"} "Gemini 2.5 Flash"]
-       [:option {:value "gemini-2.5-pro"} "Gemini 2.5 Pro"]]]]))
+      (for [[provider-name model-ids] (schema/models-by-provider)]
+        [:optgroup {:label provider-name}
+         (for [model-id model-ids
+               :let [display-name (get schema/supported-models model-id)]]
+           [:option {:value model-id} display-name])])]]))
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer

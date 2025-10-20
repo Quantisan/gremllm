@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [malli.core :as m]
+  (:require [clojure.string :as str]
+            [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
 
@@ -26,12 +27,49 @@
             [:output-tokens :int]
             [:total-tokens :int]]]])
 
+(def supported-models
+  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
+  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
+   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
+   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
+   "gpt-5"                      "GPT-5"
+   "gpt-5-mini"                 "GPT-5 Mini"
+   "gemini-2.5-flash"           "Gemini 2.5 Flash"
+   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+
+(defn model->provider
+  "Infers provider from model string. Pure function for easy testing."
+  [model]
+  (cond
+    (str/starts-with? model "claude-") :anthropic
+    (str/starts-with? model "gpt-")    :openai
+    (str/starts-with? model "gemini-") :google
+    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
+
+(defn provider-display-name
+  "Returns human-readable display name for provider keyword."
+  [provider]
+  (case provider
+    :anthropic "Anthropic"
+    :openai    "OpenAI"
+    :google    "Google"))
+
+(defn models-by-provider
+  "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
+  []
+  (->> supported-models
+       keys
+       (group-by model->provider)
+       (map (fn [[provider models]]
+              [(provider-display-name provider) (vec models)]))
+       (into (sorted-map))))
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "claude-sonnet-4-5-20250929"} :string]
+   [:model {:default "claude-sonnet-4-5-20250929"} (into [:enum] (keys supported-models))]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
