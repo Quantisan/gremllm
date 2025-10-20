@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [malli.core :as m]
+  (:require [clojure.string :as str]
+            [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
 
@@ -35,6 +36,33 @@
    "gpt-5-mini"                 "GPT-5 Mini"
    "gemini-2.5-flash"           "Gemini 2.5 Flash"
    "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+
+(defn model->provider
+  "Infers provider from model string. Pure function for easy testing."
+  [model]
+  (cond
+    (str/starts-with? model "claude-") :anthropic
+    (str/starts-with? model "gpt-")    :openai
+    (str/starts-with? model "gemini-") :google
+    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
+
+(defn provider-display-name
+  "Returns human-readable display name for provider keyword."
+  [provider]
+  (case provider
+    :anthropic "Anthropic"
+    :openai    "OpenAI"
+    :google    "Google"))
+
+(defn models-by-provider
+  "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
+  []
+  (->> supported-models
+       keys
+       (group-by model->provider)
+       (map (fn [[provider models]]
+              [(provider-display-name provider) (vec models)]))
+       (into (sorted-map))))
 
 (def PersistedTopic
   "Schema for topics as saved to disk"

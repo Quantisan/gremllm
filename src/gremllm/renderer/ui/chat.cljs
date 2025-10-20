@@ -48,22 +48,15 @@
      (get schema/supported-models selected-model selected-model)]
 
     ;; Editable: show model selector dropdown
-    (let [provider-groups {"Anthropic" ["claude-sonnet-4-5-20250929"
-                                        "claude-opus-4-1-20250805"
-                                        "claude-haiku-4-5-20251001"]
-                           "OpenAI"    ["gpt-5"
-                                        "gpt-5-mini"]
-                           "Google"    ["gemini-2.5-flash"
-                                        "gemini-2.5-pro"]}]
-      [:label {:style {:display "block"
-                       :margin-bottom "0.5rem"}}
-       [:small "Model:"]
-       [:select {:value selected-model
-                 :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
-        (for [[provider-name model-ids] provider-groups]
-          [:optgroup {:label provider-name}
-           (for [model-id model-ids]
-             [:option {:value model-id} (get schema/supported-models model-id)])])]])))
+    [:label {:style {:display "block"
+                     :margin-bottom "0.5rem"}}
+     [:small "Model:"]
+     [:select {:value selected-model
+               :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
+      (for [[provider-name model-ids] (schema/models-by-provider)]
+        [:optgroup {:label provider-name}
+         (for [model-id model-ids]
+           [:option {:value model-id} (get schema/supported-models model-id)])])]]))
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
