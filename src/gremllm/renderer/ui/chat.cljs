@@ -52,9 +52,16 @@
      [:small "Model:"]
      [:select {:value selected-model
                :on {:change [[:form.actions/update-model [:event.target/value]]]}}
-      [:option {:value "claude-sonnet-4-5-20250929"} "Claude 4.5 Sonnet"]
-      [:option {:value "claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
-      [:option {:value "claude-3-5-haiku-20241022"} "Claude 3.5 Haiku"]]]))
+      [:optgroup {:label "Anthropic"}
+       [:option {:value "claude-sonnet-4-5-20250929"} "Claude 4.5 Sonnet"]
+       [:option {:value "claude-opus-4-1-20250805"} "Claude 4.1 Opus"]
+       [:option {:value "claude-haiku-4-5-20251001"} "Claude 4.5 Haiku"]]
+      [:optgroup {:label "OpenAI"}
+       [:option {:value "gpt-5"} "GPT-5"]
+       [:option {:value "gpt-5-mini"} "GPT-5 Mini"]]
+      [:optgroup {:label "Google"}
+       [:option {:value "gemini-2.5-flash"} "Gemini 2.5 Flash"]
+       [:option {:value "gemini-2.5-pro"} "Gemini 2.5 Pro"]]]]))
 
 (defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
   [:footer
