@@ -27,6 +27,29 @@
             [:output-tokens :int]
             [:total-tokens :int]]]])
 
+;; API Key & Secrets Schemas
+
+(def APIKeysMap
+  "Nested map of provider keywords to redacted API key strings.
+   Used in renderer state at [:system :secrets :api-keys]"
+  [:map-of
+   [:enum :anthropic :openai :google]
+   [:maybe :string]])
+
+(def NestedSecrets
+  "Secrets structure used in renderer state after transformation.
+   Contains nested :api-keys map plus any other secret entries."
+  [:map
+   [:api-keys {:optional true} APIKeysMap]])
+
+(def FlatSecrets
+  "Secrets structure as received from IPC (main process).
+   Flat map with provider-specific key names."
+  [:map
+   [:anthropic-api-key {:optional true} [:maybe :string]]
+   [:openai-api-key {:optional true} [:maybe :string]]
+   [:gemini-api-key {:optional true} [:maybe :string]]])
+
 (def supported-models
   "Canonical map of supported LLM models. Keys are model IDs, values are display names."
   {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
@@ -53,6 +76,26 @@
     :anthropic "Anthropic"
     :openai    "OpenAI"
     :google    "Google"))
+
+(defn provider->api-key-keyword
+  "Maps provider to safeStorage lookup key. Pure function for easy testing."
+  [provider]
+  (case provider
+    :anthropic :anthropic-api-key
+    :openai    :openai-api-key
+    :google    :gemini-api-key))
+
+(defn keyword-to-provider
+  "Inverse of provider->api-key-keyword. Maps storage keyword to provider.
+   :anthropic-api-key → :anthropic
+   :openai-api-key → :openai
+   :gemini-api-key → :google"
+  [storage-keyword]
+  (case storage-keyword
+    :anthropic-api-key :anthropic
+    :openai-api-key    :openai
+    :gemini-api-key    :google
+    (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
 
 (defn models-by-provider
   "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
