@@ -3,8 +3,10 @@
    This data should be cleared immediately after use.")
 
 ;; Path constants for sensitive transient data
-(def api-key-input-path [:sensitive :api-key-input])
+(def api-key-inputs-path [:sensitive :api-key-inputs])
 
 ;; State accessor functions
-(defn get-api-key-input [state]
-  (get-in state api-key-input-path ""))
+(defn get-api-key-input
+  "Retrieves API key input for specified provider. Returns empty string if not found."
+  [state provider]
+  (get-in state (conj api-key-inputs-path provider) ""))
