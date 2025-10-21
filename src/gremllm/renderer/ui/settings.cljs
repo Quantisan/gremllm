@@ -2,7 +2,7 @@
   (:require [gremllm.renderer.ui.elements :as e]
             [gremllm.schema :as schema]))
 
-(defn- render-encryption-warning [{:keys [encryption-available?]}]
+(defn- maybe-render-encryption-warning [{:keys [encryption-available?]}]
   (when-not encryption-available?
     [e/alert
      [:h4 "⚠️ Security Notice"]
@@ -59,7 +59,7 @@
 
 (defn render-settings [props]
   [:div
-   (render-encryption-warning props)
+   (maybe-render-encryption-warning props)
 
    ;; Render a section for each provider
    (for [provider schema/supported-providers]
