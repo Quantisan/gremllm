@@ -1,5 +1,7 @@
 (ns gremllm.renderer.state.system)
 
+;; TODO: we should create some path vars for DRY. Also, some of these maybe should be in the state.sensitive ns instead...
+
 (def system-info-path [:system])
 (def redacted-anthropic-api-key-path (conj system-info-path :secrets :api-keys :anthropic))
 
