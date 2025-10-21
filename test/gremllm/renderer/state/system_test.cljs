@@ -5,46 +5,46 @@
             [gremllm.schema :as schema]
             [malli.core :as m]))
 
-(deftest test-transform-secrets-for-state
+(deftest test-secrets-from-ipc
   (testing "transforms flat IPC secrets to nested structure"
     (is (= {:api-keys {:anthropic "sk-ant-1234"}}
-           (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"}))))
+           (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"}))))
 
   (testing "handles all three providers"
     (is (= {:api-keys {:anthropic "sk-ant-1234"
                        :openai    "sk-proj-5678"
                        :google    "AIza9012"}}
-           (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"
-                                                :openai-api-key    "sk-proj-5678"
-                                                :gemini-api-key    "AIza9012"}))))
+           (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
+                                     :openai-api-key    "sk-proj-5678"
+                                     :gemini-api-key    "AIza9012"}))))
 
   (testing "preserves non-API-key entries"
     (is (= {:api-keys   {:anthropic "sk-ant-1234"}
             :other-key  "value"
             :more-stuff 42}
-           (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"
-                                                :other-key         "value"
-                                                :more-stuff        42}))))
+           (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
+                                     :other-key         "value"
+                                     :more-stuff        42}))))
 
   (testing "handles missing keys"
     (is (= {:api-keys {}}
-           (system/transform-secrets-for-state {})))
+           (schema/secrets-from-ipc {})))
     (is (= {:api-keys   {:anthropic "sk-ant-1234"}
             :other-key  "value"}
-           (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"
-                                                :other-key         "value"}))))
+           (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
+                                     :other-key         "value"}))))
 
   (testing "handles nil values"
     (is (= {:api-keys {:anthropic nil}}
-           (system/transform-secrets-for-state {:anthropic-api-key nil})))
+           (schema/secrets-from-ipc {:anthropic-api-key nil})))
     (is (= {:api-keys {:anthropic "sk-ant-1234"
                        :openai    nil}}
-           (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"
-                                                :openai-api-key    nil}))))
+           (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
+                                     :openai-api-key    nil}))))
 
   (testing "output validates against NestedSecrets schema"
-    (let [result (system/transform-secrets-for-state {:anthropic-api-key "sk-ant-1234"
-                                                      :openai-api-key    "sk-proj-5678"})]
+    (let [result (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
+                                           :openai-api-key    "sk-proj-5678"})]
       (is (m/validate schema/NestedSecrets result)))))
 
 (deftest test-get-redacted-api-key

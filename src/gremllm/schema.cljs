@@ -97,6 +97,28 @@
     :gemini-api-key    :google
     (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
 
+(def supported-providers
+  "Canonical list of supported LLM providers."
+  [:anthropic :openai :google])
+
+(defn secrets-from-ipc
+  "Transforms flat IPC secrets to nested api-keys structure.
+   {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}
+
+   Driven by supported-providers list for single source of truth."
+  [secrets-map]
+  (let [api-keys (into {}
+                   (keep (fn [provider]
+                           (let [storage-key (provider->api-key-keyword provider)
+                                 value (get secrets-map storage-key)]
+                             (when (contains? secrets-map storage-key)
+                               [provider value])))
+                         supported-providers))
+        flat-keys (map provider->api-key-keyword supported-providers)]
+    (as-> secrets-map m
+      (apply dissoc m flat-keys)
+      (assoc m :api-keys api-keys))))
+
 (defn models-by-provider
   "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
   []
