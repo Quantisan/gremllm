@@ -16,7 +16,7 @@
       [[:effects/promise
         {:promise    (.saveSecret js/window.electronAPI storage-key-name api-key)
          :on-success [[:settings.actions/save-success provider]]
-         :on-error   [[:settings.actions/save-error]]}]])))
+         :on-error   [[:settings.actions/save-error provider]]}]])))
 
 (defn remove-key [_state provider]
   (let [storage-key-name (-> (schema/provider->api-key-keyword provider)
@@ -24,7 +24,7 @@
     [[:effects/promise
       {:promise    (.deleteSecret js/window.electronAPI storage-key-name)
        :on-success [[:settings.actions/remove-success provider]]
-       :on-error   [[:settings.actions/remove-error]]}]]))
+       :on-error   [[:settings.actions/remove-error provider]]}]]))
 
 ;; Success/error handlers
 (defn save-success [_state _result provider]
@@ -33,8 +33,8 @@
    [:system.actions/request-info]
    [:ui.actions/hide-settings]])
 
-(defn save-error [_state error]
-  (println "Failed to save API key:" error)
+(defn save-error [_state error provider]
+  (println "Failed to save" (schema/provider-display-name provider) "API key:" error)
   []) ; TODO: Show error to user
 
 (defn remove-success [_state _result _provider]
@@ -42,6 +42,6 @@
   [[:system.actions/request-info]
    [:ui.actions/hide-settings]])
 
-(defn remove-error [_state error]
-  (println "Failed to remove API key:" error)
+(defn remove-error [_state error provider]
+  (println "Failed to remove" (schema/provider-display-name provider) "API key:" error)
   []) ; TODO: Show error to user
