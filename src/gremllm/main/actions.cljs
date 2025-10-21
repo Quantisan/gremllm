@@ -26,7 +26,7 @@
     (try
       (let [provider (schema/model->provider model)
             env-var-name (llm/provider->env-var-name provider)
-            storage-key (llm/provider->api-key-keyword provider)]
+            storage-key (schema/provider->api-key-keyword provider)]
         (or (aget (.-env js/process) env-var-name)
             (some-> (.getPath app "userData")
                     (io/secrets-file-path)

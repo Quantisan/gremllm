@@ -9,6 +9,3 @@
     :anthropic "ANTHROPIC_API_KEY"
     :openai    "OPENAI_API_KEY"
     :google    "GEMINI_API_KEY"))
-
-;; Re-export from schema for convenience in main process
-(def provider->api-key-keyword schema/provider->api-key-keyword)

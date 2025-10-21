@@ -2,6 +2,16 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.schema :as schema]))
 
+(deftest test-provider->api-key-keyword
+  (testing "maps Anthropic to anthropic-api-key"
+    (is (= :anthropic-api-key (schema/provider->api-key-keyword :anthropic))))
+
+  (testing "maps OpenAI to openai-api-key"
+    (is (= :openai-api-key (schema/provider->api-key-keyword :openai))))
+
+  (testing "maps Google to gemini-api-key"
+    (is (= :gemini-api-key (schema/provider->api-key-keyword :google)))))
+
 (deftest test-model->provider
   (testing "identifies Anthropic models"
     (is (= :anthropic (schema/model->provider "claude-3-5-haiku-latest")))
