@@ -57,21 +57,21 @@
       (when redacted-key
         (render-remove-button props))]]))
 
+(defn- provider-section-props
+  "Extracts provider-specific props from global state."
+  [props provider]
+  {:encryption-available? (:encryption-available? props)
+   :provider provider
+   :provider-name (schema/provider-display-name provider)
+   :redacted-key (get-in props [:api-keys provider])
+   :input-value (get-in props [:api-key-inputs provider])})
+
 (defn render-settings [props]
   [:div
    (maybe-render-encryption-warning props)
-
-   ;; Render a section for each provider
    (for [provider schema/supported-providers]
      ^{:key provider}
-     (render-provider-section
-       (merge props
-              {:provider provider
-               :provider-name (schema/provider-display-name provider)
-               :redacted-key (get-in props [:api-keys provider])
-               :input-value (get-in props [:api-key-inputs provider])})))
-
-   ;; Close button
+     (render-provider-section (provider-section-props props provider)))
    [:button {:type "button"
              :class "contrast"
              :on {:click [[:ui.actions/hide-settings]]}}
