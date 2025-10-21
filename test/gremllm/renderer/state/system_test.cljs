@@ -91,12 +91,12 @@
       (is (= "sk-proj-new456" (sensitive/get-api-key-input state :openai)))
       (is (= "AIza-new789" (sensitive/get-api-key-input state :google)))))
 
-  (testing "returns empty string when provider input missing"
+  (testing "returns nil when provider input missing"
     (let [state {:sensitive {:api-key-inputs {:anthropic "sk-ant-new123"}}}]
-      (is (= "" (sensitive/get-api-key-input state :openai)))
-      (is (= "" (sensitive/get-api-key-input state :google)))))
+      (is (nil? (sensitive/get-api-key-input state :openai)))
+      (is (nil? (sensitive/get-api-key-input state :google)))))
 
-  (testing "returns empty string when no inputs exist"
-    (is (= "" (sensitive/get-api-key-input {} :anthropic)))
-    (is (= "" (sensitive/get-api-key-input {:sensitive {}} :anthropic)))
-    (is (= "" (sensitive/get-api-key-input {:sensitive {:api-key-inputs {}}} :anthropic)))))
+  (testing "returns nil when no inputs exist"
+    (is (nil? (sensitive/get-api-key-input {} :anthropic)))
+    (is (nil? (sensitive/get-api-key-input {:sensitive {}} :anthropic)))
+    (is (nil? (sensitive/get-api-key-input {:sensitive {:api-key-inputs {}}} :anthropic)))))

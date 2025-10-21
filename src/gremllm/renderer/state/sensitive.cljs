@@ -7,6 +7,6 @@
 
 ;; State accessor functions
 (defn get-api-key-input
-  "Retrieves API key input for specified provider. Returns empty string if not found."
+  "Retrieves API key input for specified provider. Returns nil if not found."
   [state provider]
-  (get-in state (conj api-key-inputs-path provider) ""))
+  (get-in state (conj api-key-inputs-path provider)))
