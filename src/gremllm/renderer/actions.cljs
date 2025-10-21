@@ -105,7 +105,7 @@
 (nxr/register-action! :system.actions/request-error system/request-error)
 
 ;; Settings
-(nxr/register-action! :settings.actions/update-api-key-input settings/update-api-key-input)
+(nxr/register-action! :settings.actions/update-input settings/update-input)
 (nxr/register-action! :settings.actions/save-key settings/save-key)
 (nxr/register-action! :settings.actions/remove-key settings/remove-key)
 (nxr/register-action! :settings.actions/save-success settings/save-success)

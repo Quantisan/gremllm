@@ -1,42 +1,46 @@
 (ns gremllm.renderer.actions.settings
-  (:require [gremllm.renderer.state.sensitive :as sensitive-state]))
-
-;; Constants
-(def api-key-name "anthropic-api-key")
+  (:require [gremllm.renderer.state.sensitive :as sensitive-state]
+            [gremllm.schema :as schema]))
 
 ;; Actions for API key management
 
-(defn update-api-key-input [_state value]
-  [[:effects/save sensitive-state/api-key-input-path value]])
+(defn update-input [_state provider value]
+  [[:effects/save (conj sensitive-state/api-key-inputs-path provider) value]])
 
-(defn save-key [state]
-  (let [api-key (sensitive-state/get-api-key-input state)]
+(defn save-key [state provider]
+  (let [api-key (sensitive-state/get-api-key-input state provider)
+        storage-key-name (-> (schema/provider->api-key-keyword provider)
+                             name)]
     (if (empty? api-key)
       [] ; No-op if empty
       [[:effects/promise
-        {:promise    (.saveSecret js/window.electronAPI api-key-name api-key)
-         :on-success [[:settings.actions/save-success]]
+        {:promise    (.saveSecret js/window.electronAPI storage-key-name api-key)
+         :on-success [[:settings.actions/save-success provider]]
          :on-error   [[:settings.actions/save-error]]}]])))
 
-(defn remove-key [_state]
-  [[:effects/promise
-    {:promise    (.deleteSecret js/window.electronAPI api-key-name)
-     :on-success [[:settings.actions/remove-success]]
-     :on-error   [[:settings.actions/remove-error]]}]])
+(defn remove-key [_state provider]
+  (let [storage-key-name (-> (schema/provider->api-key-keyword provider)
+                             name)]
+    [[:effects/promise
+      {:promise    (.deleteSecret js/window.electronAPI storage-key-name)
+       :on-success [[:settings.actions/remove-success provider]]
+       :on-error   [[:settings.actions/remove-error]]}]]))
 
 ;; Success/error handlers
-(defn save-success [_state _result]
+(defn save-success [_state _result provider]
   (println "API key saved successfully!")
-  [[:effects/save sensitive-state/api-key-input-path ""] ;; clears cached api key
+  [[:effects/save (conj sensitive-state/api-key-inputs-path provider) ""]
+   [:system.actions/request-info]
    [:ui.actions/hide-settings]])
 
 (defn save-error [_state error]
   (println "Failed to save API key:" error)
   []) ; TODO: Show error to user
 
-(defn remove-success [_state _result]
+(defn remove-success [_state _result _provider]
   (println "API key removed successfully!")
-  [[:ui.actions/hide-settings]])
+  [[:system.actions/request-info]
+   [:ui.actions/hide-settings]])
 
 (defn remove-error [_state error]
   (println "Failed to remove API key:" error)
