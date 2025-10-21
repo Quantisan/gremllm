@@ -49,10 +49,8 @@
       (settings-ui/render-settings-modal
        {:open? (ui-state/showing-settings? state)
         :encryption-available? (system-state/encryption-available? state)
-        :api-key-inputs (into {} (map (fn [p] [p (sensitive-state/get-api-key-input state p)])
-                                      schema/supported-providers))
-        :api-keys (into {} (map (fn [p] [p (system-state/get-redacted-api-key state p)])
-                                schema/supported-providers))})]]))
+        :api-key-inputs (sensitive-state/get-all-api-key-inputs state)
+        :api-keys (system-state/get-all-redacted-api-keys state)})]]))
 
 (defn render-app [state]
   (if (workspace-state/loaded? state)
