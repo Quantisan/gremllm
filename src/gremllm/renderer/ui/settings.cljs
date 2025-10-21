@@ -66,7 +66,7 @@
    :redacted-key (get-in props [:api-keys provider])
    :input-value (get-in props [:api-key-inputs provider])})
 
-(defn render-settings [props]
+(defn render-settings [{:keys [_encryption-available? _api-keys _api-key-inputs] :as props}]
   [:div
    (maybe-render-encryption-warning props)
    (for [provider schema/supported-providers]
@@ -77,7 +77,7 @@
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [{:keys [open?] :as props}]
+(defn render-settings-modal [{:keys [open? _encryption-available? _api-keys _api-key-inputs] :as props}]
   [e/modal {:open? open?
             :on-close [[:ui.actions/hide-settings]]}
    (render-settings props)])
