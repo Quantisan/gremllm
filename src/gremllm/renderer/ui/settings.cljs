@@ -29,21 +29,20 @@
              :value (or input-value "")
              :on {:input [[:settings.actions/update-input provider [:event.target/value]]]}}]))
 
-(defn- render-api-key-actions [{:keys [encryption-available? redacted-key provider]}]
-  [:div {:class "grid"}
-   [:button {:type "button"
-             :disabled (not encryption-available?)
-             :on {:click [[:effects/prevent-default]
-                          [:settings.actions/save-key provider]]}}
-    "Save Key"]
+(defn- render-save-button [{:keys [encryption-available? provider]}]
+  [:button {:type "button"
+            :disabled (not encryption-available?)
+            :on {:click [[:effects/prevent-default]
+                         [:settings.actions/save-key provider]]}}
+   "Save Key"])
 
-   (when redacted-key
-     [:button {:type "button"
-               :class ["secondary" "outline"]
-               :disabled (not encryption-available?)
-               :on {:click [[:effects/prevent-default]
-                            [:settings.actions/remove-key provider]]}}
-      "Remove Key"])])
+(defn- render-remove-button [{:keys [encryption-available? provider]}]
+  [:button {:type "button"
+            :class ["secondary" "outline"]
+            :disabled (not encryption-available?)
+            :on {:click [[:effects/prevent-default]
+                         [:settings.actions/remove-key provider]]}}
+   "Remove Key"])
 
 (defn- render-provider-section [props]
   (let [{:keys [provider-name redacted-key]} props]
@@ -52,8 +51,11 @@
      (when redacted-key
        [:kbd {:class "pico-color-green"} "✓ Configured"])
      [:form
-      (render-api-key-input props)
-      (render-api-key-actions props)]]))
+      [:div {:class "grid" :style {:grid-template-columns "1fr auto"}}
+       (render-api-key-input props)
+       (render-save-button props)]
+      (when redacted-key
+        (render-remove-button props))]]))
 
 (defn render-settings [props]
   [:div
