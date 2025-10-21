@@ -20,8 +20,7 @@
              [p (get-api-key-input state p)])))
 
 (defn settings-view-props
-  "Aggregates all data needed by settings UI from state.
-   Single point of truth for settings UI data shape."
+  "Returns map with :encryption-available?, :api-keys, :api-key-inputs."
   [state]
   {:encryption-available? (system/encryption-available? state)
    :api-keys (system/get-all-redacted-api-keys state)
