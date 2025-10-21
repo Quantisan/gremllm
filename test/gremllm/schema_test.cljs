@@ -12,6 +12,20 @@
   (testing "maps Google to gemini-api-key"
     (is (= :gemini-api-key (schema/provider->api-key-keyword :google)))))
 
+(deftest test-keyword-to-provider
+  (testing "maps anthropic-api-key to :anthropic"
+    (is (= :anthropic (schema/keyword-to-provider :anthropic-api-key))))
+
+  (testing "maps openai-api-key to :openai"
+    (is (= :openai (schema/keyword-to-provider :openai-api-key))))
+
+  (testing "maps gemini-api-key to :google"
+    (is (= :google (schema/keyword-to-provider :gemini-api-key))))
+
+  (testing "throws on unknown storage keyword"
+    (is (thrown? js/Error (schema/keyword-to-provider :unknown-api-key)))
+    (is (thrown? js/Error (schema/keyword-to-provider :mistral-api-key)))))
+
 (deftest test-model->provider
   (testing "identifies Anthropic models"
     (is (= :anthropic (schema/model->provider "claude-3-5-haiku-latest")))
