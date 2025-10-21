@@ -10,8 +10,7 @@
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.welcome :as welcome-ui]
-            [gremllm.renderer.ui.elements :as e]
-            [gremllm.schema :as schema]))
+            [gremllm.renderer.ui.elements :as e]))
 
 
 (defn- render-workspace [state]
@@ -47,10 +46,8 @@
          :has-api-key?    has-api-key?})
 
       (settings-ui/render-settings-modal
-       {:open? (ui-state/showing-settings? state)
-        :encryption-available? (system-state/encryption-available? state)
-        :api-key-inputs (sensitive-state/get-all-api-key-inputs state)
-        :api-keys (system-state/get-all-redacted-api-keys state)})]]))
+       (merge (sensitive-state/settings-view-props state)
+              {:open? (ui-state/showing-settings? state)}))]]))
 
 (defn render-app [state]
   (if (workspace-state/loaded? state)
