@@ -16,7 +16,7 @@
     :openai    "sk-proj-..."
     :google    "AIza..."))
 
-(defn- render-api-key-input [{:keys [encryption-available? input-value redacted-key provider provider-name]}]
+(defn- render-api-key-input [{:keys [encryption-available? input-value redacted-key provider _provider-name]}]
   (let [placeholder (if redacted-key
                       (str "Current: •••••••" redacted-key)
                       (provider-placeholder provider))
