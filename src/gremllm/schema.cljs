@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
@@ -29,11 +30,23 @@
 
 ;; API Key & Secrets Schemas
 
+(def provider-storage-key-map
+  "Canonical mapping of provider keywords to their storage key names.
+   Single source of truth for provider-to-storage-key relationships."
+  {:anthropic :anthropic-api-key
+   :openai    :openai-api-key
+   :google    :gemini-api-key})
+
+(def supported-providers
+  "Canonical list of supported LLM providers.
+   Derived from provider-storage-key-map for single source of truth."
+  (vec (keys provider-storage-key-map)))
+
 (def APIKeysMap
   "Nested map of provider keywords to redacted API key strings.
    Used in renderer state at [:system :secrets :api-keys]"
   [:map-of
-   [:enum :anthropic :openai :google]
+   (into [:enum] supported-providers)
    [:maybe :string]])
 
 (def NestedSecrets
@@ -44,11 +57,12 @@
 
 (def FlatSecrets
   "Secrets structure as received from IPC (main process).
-   Flat map with provider-specific key names."
-  [:map
-   [:anthropic-api-key {:optional true} [:maybe :string]]
-   [:openai-api-key {:optional true} [:maybe :string]]
-   [:gemini-api-key {:optional true} [:maybe :string]]])
+   Flat map with provider-specific key names.
+   Derived from provider-storage-key-map."
+  (into [:map]
+        (map (fn [[_provider storage-key]]
+               [storage-key {:optional true} [:maybe :string]])
+             provider-storage-key-map)))
 
 (def supported-models
   "Canonical map of supported LLM models. Keys are model IDs, values are display names."
@@ -80,10 +94,7 @@
 (defn provider->api-key-keyword
   "Maps provider to safeStorage lookup key. Pure function for easy testing."
   [provider]
-  (case provider
-    :anthropic :anthropic-api-key
-    :openai    :openai-api-key
-    :google    :gemini-api-key))
+  (get provider-storage-key-map provider))
 
 (defn keyword-to-provider
   "Inverse of provider->api-key-keyword. Maps storage keyword to provider.
@@ -91,15 +102,8 @@
    :openai-api-key → :openai
    :gemini-api-key → :google"
   [storage-keyword]
-  (case storage-keyword
-    :anthropic-api-key :anthropic
-    :openai-api-key    :openai
-    :gemini-api-key    :google
-    (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
-
-(def supported-providers
-  "Canonical list of supported LLM providers."
-  [:anthropic :openai :google])
+  (or (get (set/map-invert provider-storage-key-map) storage-keyword)
+      (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
 
 (defn secrets-from-ipc
   "Transforms flat IPC secrets to nested api-keys structure.
