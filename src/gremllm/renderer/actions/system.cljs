@@ -1,8 +1,9 @@
 (ns gremllm.renderer.actions.system
-  (:require [gremllm.renderer.state.system :as system-state]))
+  (:require [gremllm.renderer.state.system :as system-state]
+            [gremllm.schema :as schema]))
 
 (defn set-info [_state system-info]
-  [[:effects/save system-state/system-info-path (js->clj system-info :keywordize-keys true)]])
+  [[:effects/save system-state/system-info-path (schema/system-info-from-ipc system-info)]])
 
 (defn request-info [_state]
   [[:effects/promise
