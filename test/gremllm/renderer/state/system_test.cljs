@@ -24,24 +24,14 @@
                                    :openai "sk-proj-5678"}}}
              result)))))
 
-(deftest test-has-api-key?
-  (testing "returns true when provider has a key"
+(deftest test-has-any-api-key?
+  (testing "returns true when at least one provider has a key"
     (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
-                                                :openai "sk-proj-5678"
-                                                :google nil}}}}]
-      (is (true? (system/has-api-key? state :anthropic)))
-      (is (true? (system/has-api-key? state :openai)))))
+                                               :openai nil}}}}]
+      (is (true? (system/has-any-api-key? state)))))
 
-  (testing "returns false when key is nil or missing"
-    (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
-                                                :openai nil}}}}]
-      (is (false? (system/has-api-key? state :google)))
-      (is (false? (system/has-api-key? state :openai)))))
-
-  (testing "works for all supported providers"
-    (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
-                                                :openai "sk-proj-5678"
-                                                :google "AIza9012"}}}}]
-      (doseq [provider schema/supported-providers]
-        (is (true? (system/has-api-key? state provider)))))))
+  (testing "returns false when no providers have keys"
+    (let [state {:system {:secrets {:api-keys {:anthropic nil
+                                               :openai nil}}}}]
+      (is (false? (system/has-any-api-key? state))))))
 
