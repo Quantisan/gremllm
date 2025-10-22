@@ -37,6 +37,13 @@
                                         :openai "sk-proj-5678"})}
              result)))))
 
+(deftest test-system-info-to-ipc
+  (let [flat-data {:encryption-available? true
+                   :secrets {:anthropic-api-key "ngAA"}}]
+    (is (= {:encryption-available? true
+            :secrets {:anthropic-api-key "ngAA"}}
+           (schema/system-info-to-ipc flat-data)))))
+
 (deftest test-has-any-api-key?
   (testing "returns true when at least one provider has a key"
     (let [state {:system {:secrets (create-secrets {:anthropic "sk-ant-1234"
