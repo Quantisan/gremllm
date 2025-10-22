@@ -13,14 +13,10 @@
   [state provider]
   (get-in state (conj system-info-path :secrets :api-keys provider) nil))
 
-(defn has-anthropic-api-key? [state]
-  (some? (get-redacted-api-key state :anthropic)))
-
-(defn has-api-key?
-  "Returns true if the specified provider has an API key configured.
-   Generic version of has-anthropic-api-key? that works for any provider."
-  [state provider]
-  (some? (get-redacted-api-key state provider)))
+(defn has-any-api-key?
+  "Returns true if any provider has an API key configured."
+  [state]
+  (boolean (some some? (vals (get-in state (conj system-info-path :secrets :api-keys))))))
 
 (defn get-all-redacted-api-keys
   "Retrieves a map of all providers to their redacted API keys."

@@ -59,7 +59,7 @@
                :let [display-name (get schema/supported-models model-id)]]
            [:option {:value model-id} display-name])])]]))
 
-(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-api-key?]}]
+(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-any-api-key?]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
@@ -67,12 +67,12 @@
     [:fieldset {:role "group"}
      [:input {:type "text"
               :value input-value
-              :placeholder (if has-api-key?
+              :placeholder (if has-any-api-key?
                              "Type a message..."
                              "Add API key to start chatting...")
               :on {:input [[:form.actions/update-input [:event.target/value]]]}
               :autofocus true}]
 
      [:button {:type "submit"
-               :disabled (or loading? (not has-api-key?) (str/blank? input-value))}
+               :disabled (or loading? (not has-any-api-key?) (str/blank? input-value))}
       "Send"]]]])

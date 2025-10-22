@@ -44,7 +44,7 @@
    [:ui.effects/save ui-state/showing-settings-path true]])
 
 (defn hide-settings [_state]
-  ;; Refresh system info to ensure has-api-key? is up-to-date
+  ;; Refresh system info to ensure has-any-api-key? is up-to-date
   [[:system.actions/request-info]
    [:ui.effects/save ui-state/showing-settings-path false]])
 
