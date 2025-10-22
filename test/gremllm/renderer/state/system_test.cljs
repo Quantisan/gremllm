@@ -1,10 +1,7 @@
 (ns gremllm.renderer.state.system-test
   (:require [cljs.test :refer [deftest testing is]]
             [gremllm.renderer.state.system :as system]
-            [gremllm.schema :as schema]
-            [malli.core :as m]))
-
-;; TODO: too many non-critical tests, let's trim this down
+            [gremllm.schema :as schema]))
 
 (deftest test-secrets-from-ipc
   (testing "transforms flat IPC secrets to nested structure"
@@ -13,21 +10,8 @@
                        :google    "AIza9012"}}
            (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"
                                      :openai-api-key    "sk-proj-5678"
-                                     :gemini-api-key    "AIza9012"}))))
+                                     :gemini-api-key    "AIza9012"})))))
 
-  (testing "output validates against NestedSecrets schema"
-    (let [result (schema/secrets-from-ipc {:anthropic-api-key "sk-ant-1234"})]
-      (is (m/validate schema/NestedSecrets result)))))
-
-(deftest test-has-anthropic-api-key?
-  (testing "returns true when anthropic key exists"
-    (is (true? (system/has-anthropic-api-key?
-                {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"}}}}))))
-
-  (testing "returns false when key is nil or missing"
-    (is (false? (system/has-anthropic-api-key? {:system {:secrets {:api-keys {}}}})))
-    (is (false? (system/has-anthropic-api-key?
-                 {:system {:secrets {:api-keys {:anthropic nil}}}})))))
 
 (deftest test-system-info-from-ipc
   (testing "transforms flat IPC secrets to nested structure"
@@ -38,12 +22,7 @@
       (is (= {:encryption-available? true
               :secrets {:api-keys {:anthropic "sk-ant-1234"
                                    :openai "sk-proj-5678"}}}
-             result))))
-
-  (testing "handles missing secrets gracefully"
-    (let [ipc-data #js {:encryption-available? true}
-          result (schema/system-info-from-ipc ipc-data)]
-      (is (= true (:encryption-available? result))))))
+             result)))))
 
 (deftest test-has-api-key?
   (testing "returns true when provider has a key"
