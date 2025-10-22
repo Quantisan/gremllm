@@ -126,10 +126,10 @@
    [:secrets {:optional true} FlatSecrets]])
 
 (defn secrets-from-ipc
-  "Transforms flat IPC secrets to nested api-keys structure.
+  "Transforms flat IPC secrets to nested api-keys structure. Throws if invalid.
    {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}"
   [flat-secrets]
-  (m/decode NestedSecrets
+  (m/coerce NestedSecrets
     {:api-keys (into {}
                  (keep (fn [provider]
                          (when-let [value (get flat-secrets (provider->api-key-keyword provider))]
@@ -138,14 +138,14 @@
     mt/json-transformer))
 
 (defn system-info-from-ipc
-  "Applies domain model at IPC boundary: external data → validated SystemInfo."
+  "Validates system info from IPC and transforms secrets. Throws if invalid."
   [system-info-js]
   (as-> system-info-js $
     (js->clj $ :keywordize-keys true)
     (if (:secrets $)
       (update $ :secrets secrets-from-ipc)
       $)
-    (m/decode SystemInfo $ mt/json-transformer)))
+    (m/coerce SystemInfo $ mt/json-transformer)))
 
 
 ;; ========================================
@@ -197,12 +197,11 @@
   {:name name})
 
 (defn topic-from-ipc
-  "Transforms topic data received via IPC into internal Topic schema.
-  Used when renderer receives topic data from main process."
+  "Transforms topic data from IPC into internal Topic schema. Throws if invalid."
   [topic-js]
   (as-> topic-js $
     (js->clj $ :keywordize-keys true)
-    (m/decode Topic $ mt/json-transformer)))
+    (m/coerce Topic $ mt/json-transformer)))
 
 (defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
@@ -212,9 +211,9 @@
     (m/coerce WorkspaceSyncData $ mt/json-transformer)))
 
 (defn workspace-sync-for-ipc
-  "Prepares workspace sync data for IPC transmission, including workspace metadata."
+  "Validates and prepares workspace sync data for IPC transmission. Throws if invalid."
   [topics workspace]
-  (m/encode WorkspaceSyncData
+  (m/coerce WorkspaceSyncData
             {:topics topics
              :workspace workspace}
             mt/strip-extra-keys-transformer))
@@ -225,5 +224,5 @@
   (m/coercer Topic mt/json-transformer))
 
 (def topic-for-disk
-  "Prepares a topic for disk persistence, stripping transient fields."
-  (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
+  "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
+  (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
