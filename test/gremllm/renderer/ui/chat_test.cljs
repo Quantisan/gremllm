@@ -10,7 +10,7 @@
                     :selected-model "claude-sonnet-4-5"
                     :has-messages?  false
                     :loading?       false
-                    :has-api-key?   true})
+                    :has-any-api-key?   true})
           form   (lookup/select-one 'form hiccup)]
       (is (some? form) "A :form element should be rendered.")
       (is (= [[:effects/prevent-default] [:form.actions/submit]]

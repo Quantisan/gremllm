@@ -14,7 +14,7 @@
 
 
 (defn- render-workspace [state]
-  (let [has-api-key?          (system-state/has-any-api-key? state)
+  (let [has-any-api-key?          (system-state/has-any-api-key? state)
         workspace             (workspace-state/get-workspace state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
@@ -29,7 +29,7 @@
 
      [e/main-panel
       [e/top-bar
-       (when-not has-api-key?
+       (when-not has-any-api-key?
          (settings-ui/render-api-key-warning))]
 
       ;; TODO: we have `topics-map` already. Why are we getting from state below? What's more
@@ -43,7 +43,7 @@
          :selected-model  (:model (topic-state/get-active-topic state))
          :has-messages?   (seq (topic-state/get-messages state))
          :loading?        (loading-state/loading? state)
-         :has-api-key?    has-api-key?})
+         :has-any-api-key?    has-any-api-key?})
 
       (settings-ui/render-settings-modal
        (merge (sensitive-state/settings-view-props state)
