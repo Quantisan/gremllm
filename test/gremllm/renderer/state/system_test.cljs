@@ -4,6 +4,8 @@
             [gremllm.schema :as schema]
             [malli.core :as m]))
 
+;; TODO: too many non-critical tests, let's trim this down
+
 (deftest test-secrets-from-ipc
   (testing "transforms flat IPC secrets to nested structure"
     (is (= {:api-keys {:anthropic "sk-ant-1234"
