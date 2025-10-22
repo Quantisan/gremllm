@@ -144,10 +144,17 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ## API Key Management
 
-- Primary: `ANTHROPIC_API_KEY` environment variable
-- Secondary: Secure storage via settings UI (when encryption available)
-- Visual: Redacted display in UI
-- Fallback: Graceful degradation without encryption
+Gremllm supports multiple LLM providers: Anthropic (Claude), OpenAI (GPT), and Google (Gemini).
+
+**Production (End Users):**
+- Settings UI with secure storage (encrypted via Electron's safeStorage)
+- Per-provider configuration - users can configure any combination of providers
+- Redacted display shows which providers are configured
+- Graceful degradation when encryption unavailable (session-only storage)
+
+**Development:**
+- Environment variables override secure storage: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`
+- Useful for testing without configuring through UI
 
 ## Reference Documentation
 
