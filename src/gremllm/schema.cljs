@@ -143,24 +143,12 @@
       (apply dissoc m flat-keys)
       (assoc m :api-keys api-keys))))
 
-(defn- camel->kebab
-  "Converts camelCase keyword to kebab-case."
-  [k]
-  (if (keyword? k)
-    (-> (name k)
-        (str/replace #"([a-z])([A-Z])" "$1-$2")
-        (str/lower-case)
-        (keyword))
-    k))
-
 (defn system-info-from-ipc
-  "Transforms system info received via IPC into internal state structure.
-   Converts camelCase keys to kebab-case and applies secrets-from-ipc transformation.
-   Used at trust boundary when renderer receives system info from main process."
+  "Applies domain model at IPC boundary: external data → validated SystemInfo."
   [system-info-js]
   (as-> system-info-js $
     (js->clj $ :keywordize-keys true)
-    (m/decode SystemInfo $ (mt/key-transformer {:decode camel->kebab}))
+    (m/decode SystemInfo $ mt/default-value-transformer)
     (if (:secrets $)
       (update $ :secrets secrets-from-ipc)
       $)))
