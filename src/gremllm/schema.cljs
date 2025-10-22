@@ -148,7 +148,7 @@
   [system-info-js]
   (as-> system-info-js $
     (js->clj $ :keywordize-keys true)
-    (m/decode SystemInfo $ mt/default-value-transformer)
+    (m/decode SystemInfo $ mt/json-transformer)
     (if (:secrets $)
       (update $ :secrets secrets-from-ipc)
       $)))
@@ -207,7 +207,7 @@
   [topic-js]
   (as-> topic-js $
     (js->clj $ :keywordize-keys true)
-    (m/decode Topic $ mt/string-transformer)))
+    (m/decode Topic $ mt/json-transformer)))
 
 (defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
