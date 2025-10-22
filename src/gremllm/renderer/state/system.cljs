@@ -16,6 +16,12 @@
 (defn has-anthropic-api-key? [state]
   (some? (get-redacted-api-key state :anthropic)))
 
+(defn has-api-key?
+  "Returns true if the specified provider has an API key configured.
+   Generic version of has-anthropic-api-key? that works for any provider."
+  [state provider]
+  (some? (get-redacted-api-key state provider)))
+
 (defn get-all-redacted-api-keys
   "Retrieves a map of all providers to their redacted API keys."
   [state]

@@ -27,3 +27,48 @@
     (is (false? (system/has-anthropic-api-key?
                  {:system {:secrets {:api-keys {:anthropic nil}}}})))))
 
+(deftest test-system-info-from-ipc
+  (testing "transforms flat IPC secrets to nested structure"
+    (let [ipc-data #js {:encryptionAvailable true
+                        :secrets #js {:anthropic-api-key "sk-ant-1234"
+                                      :openai-api-key "sk-proj-5678"}}
+          result (schema/system-info-from-ipc ipc-data)]
+      (is (= {:encryption-available true
+              :secrets {:api-keys {:anthropic "sk-ant-1234"
+                                   :openai "sk-proj-5678"}}}
+             result))))
+
+  (testing "converts camelCase to kebab-case"
+    (let [ipc-data #js {:encryptionAvailable false
+                        :secrets #js {}
+                        :otherField "value"}
+          result (schema/system-info-from-ipc ipc-data)]
+      (is (= false (:encryption-available result)))
+      (is (= "value" (:other-field result)))))
+
+  (testing "handles missing secrets gracefully"
+    (let [ipc-data #js {:encryptionAvailable true}
+          result (schema/system-info-from-ipc ipc-data)]
+      (is (= true (:encryption-available result))))))
+
+(deftest test-has-api-key?
+  (testing "returns true when provider has a key"
+    (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
+                                                :openai "sk-proj-5678"
+                                                :google nil}}}}]
+      (is (true? (system/has-api-key? state :anthropic)))
+      (is (true? (system/has-api-key? state :openai)))))
+
+  (testing "returns false when key is nil or missing"
+    (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
+                                                :openai nil}}}}]
+      (is (false? (system/has-api-key? state :google)))
+      (is (false? (system/has-api-key? state :openai)))))
+
+  (testing "works for all supported providers"
+    (let [state {:system {:secrets {:api-keys {:anthropic "sk-ant-1234"
+                                                :openai "sk-proj-5678"
+                                                :google "AIza9012"}}}}]
+      (doseq [provider schema/supported-providers]
+        (is (true? (system/has-api-key? state provider)))))))
+
