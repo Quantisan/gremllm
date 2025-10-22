@@ -1,7 +1,6 @@
 (ns gremllm.schema
   (:require [clojure.set :as set]
             [clojure.string :as str]
-            [clojure.walk :as walk]
             [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
@@ -119,6 +118,13 @@
                [storage-key {:optional true} [:maybe :string]])
              provider-storage-key-map)))
 
+(def SystemInfo
+  "System info structure as received from main process.
+   Contains platform capabilities and secrets."
+  [:map
+   [:encryption-available? :boolean]
+   [:secrets {:optional true} FlatSecrets]])
+
 (defn secrets-from-ipc
   "Transforms flat IPC secrets to nested api-keys structure.
    {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}
@@ -154,10 +160,10 @@
   [system-info-js]
   (as-> system-info-js $
     (js->clj $ :keywordize-keys true)
-    (if-let [secrets (:secrets $)]
+    (m/decode SystemInfo $ (mt/key-transformer {:decode camel->kebab}))
+    (if (:secrets $)
       (update $ :secrets secrets-from-ipc)
-      $)
-    (walk/postwalk camel->kebab $)))
+      $)))
 
 ;; ========================================
 ;; Topics & Workspaces
