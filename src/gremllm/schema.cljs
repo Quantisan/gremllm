@@ -147,6 +147,11 @@
       $)
     (m/coerce SystemInfo $ mt/json-transformer)))
 
+(defn system-info-to-ipc
+  "Validates and prepares system info for IPC transmission. Throws if invalid."
+  [system-info]
+  (m/coerce SystemInfo system-info mt/strip-extra-keys-transformer))
+
 
 ;; ========================================
 ;; Topics & Workspaces
