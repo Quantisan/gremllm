@@ -71,6 +71,7 @@
              (-> (system-info
                    (secrets/load-all secrets-filepath)
                    (secrets/check-availability))
+                 (schema/system-info-to-ipc)
                  (clj->js)))))
 
 (defn- setup-system-resources [store]

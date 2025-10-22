@@ -1,16 +1,28 @@
-(ns gremllm.renderer.state.system)
+(ns gremllm.renderer.state.system
+  (:require [gremllm.schema :as schema]))
+
+;; TODO: we should create some path vars for DRY. Also, some of these maybe should be in the state.sensitive ns instead...
 
 (def system-info-path [:system])
-(def redacted-anthropic-api-key-path (conj system-info-path :secrets :anthropic-api-key))
 
 (defn encryption-available? [state]
   (get-in state (conj system-info-path :encryption-available?) false))
 
-(defn get-redacted-anthropic-api-key [state]
-  (get-in state redacted-anthropic-api-key-path nil))
+(defn get-redacted-api-key
+  "Retrieves redacted API key for specified provider from state."
+  [state provider]
+  (get-in state (conj system-info-path :secrets :api-keys provider) nil))
 
-(defn has-anthropic-api-key? [state]
-  (some? (get-redacted-anthropic-api-key state)))
+(defn has-any-api-key?
+  "Returns true if any provider has an API key configured."
+  [state]
+  (boolean (some some? (vals (get-in state (conj system-info-path :secrets :api-keys))))))
+
+(defn get-all-redacted-api-keys
+  "Retrieves a map of all providers to their redacted API keys."
+  [state]
+  (into {} (for [p schema/supported-providers]
+             [p (get-redacted-api-key state p)])))
 
 
 

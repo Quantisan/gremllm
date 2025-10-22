@@ -23,11 +23,11 @@
 
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic
-                            :messages [{:id "m1" :type "user"}
-                                       {:id "m2" :type "assistant"}])
+                            :messages [{:id 1 :type "user" :text "test"}
+                                       {:id 2 :type "assistant" :text "response"}])
         expected     (assoc expected-new-topic
-                            :messages [{:id "m1" :type :user}
-                                       {:id "m2" :type :assistant}])]
+                            :messages [{:id 1 :type :user :text "test"}
+                                       {:id 2 :type :assistant :text "response"}])]
     (is (= expected (schema/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 

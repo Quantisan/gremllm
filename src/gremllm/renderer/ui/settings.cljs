@@ -1,61 +1,83 @@
 (ns gremllm.renderer.ui.settings
-  (:require [gremllm.renderer.ui.elements :as e]))
+  (:require [gremllm.renderer.ui.elements :as e]
+            [gremllm.schema :as schema]))
 
-(defn- render-encryption-warning [{:keys [encryption-available?]}]
+(defn- maybe-render-encryption-warning [{:keys [encryption-available?]}]
   (when-not encryption-available?
     [e/alert
      [:h4 "⚠️ Security Notice"]
      [:p "Secret encryption is not available on this system. API keys entered will only be used for this current session."]]))
 
-(defn- render-api-key-input [{:keys [encryption-available? api-key-input redacted-api-key]}]
-  (let [placeholder (if redacted-api-key
-                      (str "Current: •••••••" redacted-api-key)
-                      "sk-ant-api03-...")]
-    [:input {:id "anthropic-api-key"
-             :name "anthropic-api-key"
+(defn- provider-placeholder
+  "Returns example API key format for each provider."
+  [provider]
+  (case provider
+    :anthropic "sk-ant-api03-..."
+    :openai    "sk-proj-..."
+    :google    "AIza..."))
+
+(defn- render-api-key-input [{:keys [encryption-available? input-value redacted-key provider _provider-name]}]
+  (let [placeholder (if redacted-key
+                      (str "Current: •••••••" redacted-key)
+                      (provider-placeholder provider))
+        input-id (str (name provider) "-api-key")]
+    [:input {:id input-id
+             :name input-id
              :type "password"
              :placeholder placeholder
              :disabled (not encryption-available?)
-             :value api-key-input
-             :on {:input [[:settings.actions/update-api-key-input [:event.target/value]]]}}]))
+             :value (or input-value "")
+             :on {:input [[:settings.actions/update-input provider [:event.target/value]]]}}]))
 
-(defn- render-api-key-actions [{:keys [encryption-available? redacted-api-key]}]
-  [:div {:class "grid"}
-   [:button {:type "button"
-             :disabled (not encryption-available?)
-             :on {:click [[:effects/prevent-default]
-                          [:settings.actions/save-key]]}}
-    "Save Key"]
+(defn- render-save-button [{:keys [encryption-available? provider]}]
+  [:button {:type "button"
+            :disabled (not encryption-available?)
+            :on {:click [[:effects/prevent-default]
+                         [:settings.actions/save-key provider]]}}
+   "Save Key"])
 
-   (when redacted-api-key
-     [:button {:type "button"
-               :class ["secondary" "outline"]
-               :disabled (not encryption-available?)
-               :on {:click [[:effects/prevent-default]
-                            [:settings.actions/remove-key]]}}
-      "Remove Key"])])
+(defn- render-remove-button [{:keys [encryption-available? provider]}]
+  [:button {:type "button"
+            :class ["secondary" "outline"]
+            :disabled (not encryption-available?)
+            :on {:click [[:effects/prevent-default]
+                         [:settings.actions/remove-key provider]]}}
+   "Remove Key"])
 
-(defn- render-api-key-section [props]
-  [:article
-   [:h3 "Anthropic API Key"]
-   (when (:redacted-api-key props)
-     [:kbd {:class "pico-color-green"} "✓ Configured"])
-   [:form
-    (render-api-key-input props)
-    (render-api-key-actions props)]])
+(defn- render-provider-section [props]
+  (let [{:keys [provider-name redacted-key]} props]
+    [:article
+     [:h3 (str provider-name " API Key")]
+     (when redacted-key
+       [:kbd {:class "pico-color-green"} "✓ Configured"])
+     [:form
+      [:div {:class "grid" :style {:grid-template-columns "1fr auto"}}
+       (render-api-key-input props)
+       (render-save-button props)]
+      (when redacted-key
+        (render-remove-button props))]]))
 
-(defn render-settings [props]
+(defn- provider-section-props
+  "Extracts provider-specific props from global state."
+  [props provider]
+  {:encryption-available? (:encryption-available? props)
+   :provider provider
+   :provider-name (schema/provider-display-name provider)
+   :redacted-key (get-in props [:api-keys provider])
+   :input-value (get-in props [:api-key-inputs provider])})
+
+(defn render-settings [{:keys [_encryption-available? _api-keys _api-key-inputs] :as props}]
   [:div
-   (render-encryption-warning props)
-   (render-api-key-section props)
-
-   ;; Close button
+   (maybe-render-encryption-warning props)
+   (for [provider schema/supported-providers]
+     ^{:key provider}
+     (render-provider-section (provider-section-props props provider)))
    [:button {:type "button"
              :class "contrast"
              :on {:click [[:ui.actions/hide-settings]]}}
     "Close"]])
 
-(defn render-settings-modal [{:keys [open?] :as props}]
+(defn render-settings-modal [{:keys [open? _encryption-available? _api-keys _api-key-inputs] :as props}]
   [e/modal {:open? open?
             :on-close [[:ui.actions/hide-settings]]}
    (render-settings props)])

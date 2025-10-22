@@ -1,15 +1,13 @@
 (ns gremllm.schema
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
 
-(defn generate-topic-id []
-  ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
-  ;; as argument would complicate the call stack for a benign, testable effect.
-  (let [timestamp (js/Date.now)
-        random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
-    (str "topic-" timestamp "-" random-suffix)))
+;; ========================================
+;; Messages
+;; ========================================
 
 (def Message
   [:map
@@ -26,6 +24,22 @@
             [:input-tokens :int]
             [:output-tokens :int]
             [:total-tokens :int]]]])
+
+;; ========================================
+;; Providers
+;; ========================================
+
+(def provider-storage-key-map
+  "Canonical mapping of provider keywords to their storage key names.
+   Single source of truth for provider-to-storage-key relationships."
+  {:anthropic :anthropic-api-key
+   :openai    :openai-api-key
+   :google    :gemini-api-key})
+
+(def supported-providers
+  "Canonical list of supported LLM providers.
+   Derived from provider-storage-key-map for single source of truth."
+  (vec (keys provider-storage-key-map)))
 
 (def supported-models
   "Canonical map of supported LLM models. Keys are model IDs, values are display names."
@@ -54,6 +68,20 @@
     :openai    "OpenAI"
     :google    "Google"))
 
+(defn provider->api-key-keyword
+  "Maps provider to safeStorage lookup key. Pure function for easy testing."
+  [provider]
+  (get provider-storage-key-map provider))
+
+(defn keyword-to-provider
+  "Inverse of provider->api-key-keyword. Maps storage keyword to provider.
+   :anthropic-api-key → :anthropic
+   :openai-api-key → :openai
+   :gemini-api-key → :google"
+  [storage-keyword]
+  (or (get (set/map-invert provider-storage-key-map) storage-keyword)
+      (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
+
 (defn models-by-provider
   "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
   []
@@ -63,6 +91,78 @@
        (map (fn [[provider models]]
               [(provider-display-name provider) (vec models)]))
        (into (sorted-map))))
+
+;; ========================================
+;; Secrets
+;; ========================================
+
+(def APIKeysMap
+  "Nested map of provider keywords to redacted API key strings.
+   Used in renderer state at [:system :secrets :api-keys]"
+  [:map-of
+   (into [:enum] supported-providers)
+   [:maybe :string]])
+
+(def NestedSecrets
+  "Secrets structure used in renderer state after transformation.
+   Contains nested :api-keys map plus any other secret entries."
+  [:map
+   [:api-keys {:optional true} APIKeysMap]])
+
+(def FlatSecrets
+  "Secrets structure as received from IPC (main process).
+   Flat map with provider-specific key names.
+   Derived from provider-storage-key-map."
+  (into [:map]
+        (map (fn [[_provider storage-key]]
+               [storage-key {:optional true} [:maybe :string]])
+             provider-storage-key-map)))
+
+(def SystemInfo
+  "System info structure as received from main process.
+   Contains platform capabilities and secrets."
+  [:map
+   [:encryption-available? :boolean]
+   [:secrets {:optional true} FlatSecrets]])
+
+(defn secrets-from-ipc
+  "Transforms flat IPC secrets to nested api-keys structure. Throws if invalid.
+   {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}"
+  [flat-secrets]
+  (m/coerce NestedSecrets
+    {:api-keys (into {}
+                 (keep (fn [provider]
+                         (when-let [value (get flat-secrets (provider->api-key-keyword provider))]
+                           [provider value]))
+                       supported-providers))}
+    mt/json-transformer))
+
+(defn system-info-from-ipc
+  "Validates system info from IPC and transforms secrets. Throws if invalid."
+  [system-info-js]
+  (as-> system-info-js $
+    (js->clj $ :keywordize-keys true)
+    (if (:secrets $)
+      (update $ :secrets secrets-from-ipc)
+      $)
+    (m/coerce SystemInfo $ mt/json-transformer)))
+
+(defn system-info-to-ipc
+  "Validates and prepares system info for IPC transmission. Throws if invalid."
+  [system-info]
+  (m/coerce SystemInfo system-info mt/strip-extra-keys-transformer))
+
+
+;; ========================================
+;; Topics & Workspaces
+;; ========================================
+
+(defn generate-topic-id []
+  ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
+  ;; as argument would complicate the call stack for a benign, testable effect.
+  (let [timestamp (js/Date.now)
+        random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
+    (str "topic-" timestamp "-" random-suffix)))
 
 (def PersistedTopic
   "Schema for topics as saved to disk"
@@ -101,14 +201,12 @@
   [name]
   {:name name})
 
-;; Coercion helpers for boundaries
 (defn topic-from-ipc
-  "Transforms topic data received via IPC into internal Topic schema.
-  Used when renderer receives topic data from main process."
+  "Transforms topic data from IPC into internal Topic schema. Throws if invalid."
   [topic-js]
   (as-> topic-js $
     (js->clj $ :keywordize-keys true)
-    (m/decode Topic $ mt/string-transformer)))
+    (m/coerce Topic $ mt/json-transformer)))
 
 (defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
@@ -118,9 +216,9 @@
     (m/coerce WorkspaceSyncData $ mt/json-transformer)))
 
 (defn workspace-sync-for-ipc
-  "Prepares workspace sync data for IPC transmission, including workspace metadata."
+  "Validates and prepares workspace sync data for IPC transmission. Throws if invalid."
   [topics workspace]
-  (m/encode WorkspaceSyncData
+  (m/coerce WorkspaceSyncData
             {:topics topics
              :workspace workspace}
             mt/strip-extra-keys-transformer))
@@ -131,5 +229,5 @@
   (m/coercer Topic mt/json-transformer))
 
 (def topic-for-disk
-  "Prepares a topic for disk persistence, stripping transient fields."
-  (m/encoder PersistedTopic mt/strip-extra-keys-transformer))
+  "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
+  (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
