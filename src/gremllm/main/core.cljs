@@ -68,14 +68,11 @@
 
   (.handle ipcMain "system/get-info"
            (fn [_event]
-             (let [clj-data (system-info
-                              (secrets/load-all secrets-filepath)
-                              (secrets/check-availability))
-                   js-data (clj->js clj-data)]
-               (println "[MAIN] system-info (CLJ):" clj-data)
-               (println "[MAIN] system-info (JS):" js-data)
-               ;; TODO: add (system-info-to-ipc) boundary trust fn
-               js-data))))
+             (-> (system-info
+                   (secrets/load-all secrets-filepath)
+                   (secrets/check-availability))
+                 ;; TODO: add (system-info-to-ipc) boundary trust fn
+                 (clj->js)))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")

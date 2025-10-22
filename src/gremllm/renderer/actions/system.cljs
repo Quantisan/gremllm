@@ -3,10 +3,7 @@
             [gremllm.schema :as schema]))
 
 (defn set-info [_state system-info]
-  (println "[RENDERER] system-info (raw from IPC):" system-info)
-  (let [transformed (schema/system-info-from-ipc system-info)]
-    (println "[RENDERER] system-info (after transform):" transformed)
-    [[:effects/save system-state/system-info-path transformed]]))
+  [[:effects/save system-state/system-info-path (schema/system-info-from-ipc system-info)]])
 
 (defn request-info [_state]
   [[:effects/promise
