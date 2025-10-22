@@ -31,27 +31,19 @@
 
 (deftest test-system-info-from-ipc
   (testing "transforms flat IPC secrets to nested structure"
-    (let [ipc-data #js {:encryptionAvailable true
+    (let [ipc-data #js {:encryption-available? true
                         :secrets #js {:anthropic-api-key "sk-ant-1234"
                                       :openai-api-key "sk-proj-5678"}}
           result (schema/system-info-from-ipc ipc-data)]
-      (is (= {:encryption-available true
+      (is (= {:encryption-available? true
               :secrets {:api-keys {:anthropic "sk-ant-1234"
                                    :openai "sk-proj-5678"}}}
              result))))
 
-  (testing "converts camelCase to kebab-case"
-    (let [ipc-data #js {:encryptionAvailable false
-                        :secrets #js {}
-                        :otherField "value"}
-          result (schema/system-info-from-ipc ipc-data)]
-      (is (= false (:encryption-available result)))
-      (is (= "value" (:other-field result)))))
-
   (testing "handles missing secrets gracefully"
-    (let [ipc-data #js {:encryptionAvailable true}
+    (let [ipc-data #js {:encryption-available? true}
           result (schema/system-info-from-ipc ipc-data)]
-      (is (= true (:encryption-available result))))))
+      (is (= true (:encryption-available? result))))))
 
 (deftest test-has-api-key?
   (testing "returns true when provider has a key"
