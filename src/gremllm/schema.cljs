@@ -129,11 +129,13 @@
   "Transforms flat IPC secrets to nested api-keys structure.
    {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}"
   [flat-secrets]
-  {:api-keys (into {}
-               (keep (fn [provider]
-                       (when-let [value (get flat-secrets (provider->api-key-keyword provider))]
-                         [provider value]))
-                     supported-providers))})
+  (m/decode NestedSecrets
+    {:api-keys (into {}
+                 (keep (fn [provider]
+                         (when-let [value (get flat-secrets (provider->api-key-keyword provider))]
+                           [provider value]))
+                       supported-providers))}
+    mt/json-transformer))
 
 (defn system-info-from-ipc
   "Applies domain model at IPC boundary: external data → validated SystemInfo."
