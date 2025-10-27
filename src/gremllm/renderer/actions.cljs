@@ -25,22 +25,18 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+;; Register placeholder for keyboard events
+(nxr/register-placeholder! :event/key-pressed
+  (fn [{:replicant/keys [dom-event]}]
+    {:key (.-key dom-event)
+     :shift? (.-shiftKey dom-event)}))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
     (some-> dispatch-data
             :replicant/dom-event
             (.preventDefault))))
-
-;; Handle Enter/Shift+Enter in textarea for form submission
-(nxr/register-effect! :form.effects/handle-submit-keys
-  (fn [{:keys [dispatch dispatch-data]} _]
-    (let [e (:replicant/dom-event dispatch-data)
-          key (.-key e)
-          shift? (.-shiftKey e)]
-      (when (and (= key "Enter") (not shift?))
-        (.preventDefault e)
-        (dispatch [[:form.actions/submit]])))))
 
 ;; TODO: refactor to be more Nexus-like
 (nxr/register-effect! :topic.effects/handle-rename-keys
@@ -72,6 +68,7 @@
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
+(nxr/register-action! :form.actions/handle-submit-keys ui/handle-submit-keys)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)

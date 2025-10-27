@@ -72,7 +72,7 @@
                                 "Type a message... (Shift+Enter for new line)"
                                 "Add API key to start chatting...")
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
-                      :keydown [[:form.effects/handle-submit-keys]]}
+                      :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]}
                  :autofocus true}]
 
      [:button {:type "submit"
