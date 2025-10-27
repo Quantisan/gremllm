@@ -71,6 +71,14 @@
        [:ui.actions/exit-topic-rename-mode topic-id]
        [:topic.actions/auto-save topic-id]])))
 
+(defn handle-rename-keys [_state topic-id {:keys [key]} value]
+  (case key
+    "Enter"  [[:effects/prevent-default]
+              [:topic.actions/commit-rename topic-id value]]
+    "Escape" [[:effects/prevent-default]
+              [:ui.actions/exit-topic-rename-mode topic-id]]
+    nil))
+
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic
   (fn [{dispatch :dispatch} store topic-id]
