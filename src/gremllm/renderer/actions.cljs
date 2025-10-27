@@ -25,25 +25,18 @@
   (fn [{:replicant/keys [dom-event]}]
     (some-> dom-event .-target .-value)))
 
+;; Register placeholder for keyboard events
+(nxr/register-placeholder! :event/key-pressed
+  (fn [{:replicant/keys [dom-event]}]
+    {:key (.-key dom-event)
+     :shift? (.-shiftKey dom-event)}))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
     (some-> dispatch-data
             :replicant/dom-event
             (.preventDefault))))
-
-;; TODO: refactor to be more Nexus-like
-(nxr/register-effect! :topic.effects/handle-rename-keys
-  (fn [{:keys [dispatch dispatch-data]} _ topic-id]
-    (let [e (:replicant/dom-event dispatch-data)
-          k (some-> e .-key)]
-      (case k
-        "Enter" (do (.preventDefault e)
-                    (let [v (.. e -target -value)]
-                      (dispatch [[:topic.actions/commit-rename topic-id v]])))
-        "Escape" (do (.preventDefault e)
-                     (dispatch [[:ui.actions/exit-topic-rename-mode topic-id]]))
-        nil))))
 
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
@@ -62,6 +55,7 @@
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
+(nxr/register-action! :form.actions/handle-submit-keys ui/handle-submit-keys)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
@@ -88,6 +82,7 @@
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
+(nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
 (nxr/register-action! :topic.actions/set-name topic/set-name)
 (nxr/register-action! :topic.actions/update-model topic/update-model)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode

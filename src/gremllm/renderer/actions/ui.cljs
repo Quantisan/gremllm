@@ -7,6 +7,11 @@
 (defn update-input [_state value]
   [[:form.effects/update-input value]])
 
+(defn handle-submit-keys [_state {:keys [key shift?]}]
+  (when (and (= key "Enter") (not shift?))
+    [[:effects/prevent-default]
+     [:form.actions/submit]]))
+
 ;; Domain-specific effects
 (nxr/register-effect! :form.effects/update-input
   (fn [_ store value]

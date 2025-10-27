@@ -18,7 +18,7 @@
               :default-value name
               :replicant/on-mount focus-and-select-on-mount
               :on {:blur    [[:ui.actions/exit-topic-rename-mode id]]
-                   :keydown [[:topic.effects/handle-rename-keys id]]}}]
+                   :keydown [[:topic.actions/handle-rename-keys id [:event/key-pressed] [:event.target/value]]]}}]
      (let [label (str (if (= id active-topic-id) "✓ " "• ")
                       name
                       (when unsaved? " *"))]
