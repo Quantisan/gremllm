@@ -16,3 +16,12 @@
       (is (= :messages.actions/add-to-chat (ffirst effects)))
       (is (= :form.effects/clear-input (first (second effects))))
       (is (= :llm.effects/send-llm-messages (first (last effects)))))))
+
+(deftest test-handle-submit-keys
+  (testing "Enter without Shift returns prevent-default and submit effects"
+    (is (= [[:effects/prevent-default]
+            [:form.actions/submit]]
+           (ui/handle-submit-keys {} {:key "Enter" :shift? false}))))
+
+  (testing "Shift+Enter returns nil to allow newline"
+    (is (nil? (ui/handle-submit-keys {} {:key "Enter" :shift? true})))))
