@@ -32,6 +32,16 @@
             :replicant/dom-event
             (.preventDefault))))
 
+;; Handle Enter/Shift+Enter in textarea for form submission
+(nxr/register-effect! :form.effects/handle-submit-keys
+  (fn [{:keys [dispatch dispatch-data]} _]
+    (let [e (:replicant/dom-event dispatch-data)
+          key (.-key e)
+          shift? (.-shiftKey e)]
+      (when (and (= key "Enter") (not shift?))
+        (.preventDefault e)
+        (dispatch [[:form.actions/submit]])))))
+
 ;; TODO: refactor to be more Nexus-like
 (nxr/register-effect! :topic.effects/handle-rename-keys
   (fn [{:keys [dispatch dispatch-data]} _ topic-id]
