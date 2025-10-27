@@ -65,13 +65,15 @@
                          [:form.actions/submit]]}}
     (render-model-selector selected-model has-messages?)
     [:fieldset {:role "group"}
-     [:input {:type "text"
-              :value input-value
-              :placeholder (if has-any-api-key?
-                             "Type a message..."
-                             "Add API key to start chatting...")
-              :on {:input [[:form.actions/update-input [:event.target/value]]]}
-              :autofocus true}]
+     [:textarea {:class "chat-input"
+                 :rows 2
+                 :value input-value
+                 :placeholder (if has-any-api-key?
+                                "Type a message... (Shift+Enter for new line)"
+                                "Add API key to start chatting...")
+                 :on {:input [[:form.actions/update-input [:event.target/value]]]
+                      :keydown [[:form.effects/handle-submit-keys]]}
+                 :autofocus true}]
 
      [:button {:type "submit"
                :disabled (or loading? (not has-any-api-key?) (str/blank? input-value))}
