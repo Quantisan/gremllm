@@ -32,8 +32,8 @@
                                          :type :user
                                          :text text}]
          [:form.effects/clear-input]
-         [:loading.effects/set-loading? assistant-id true]
-         [:llm.effects/unset-all-errors]
+         [:loading.actions/set-loading? assistant-id true]
+         [:llm.actions/unset-all-errors]
          [:effects/scroll-to-bottom "chat-messages-container"]
          [:llm.effects/send-llm-messages assistant-id model]]))))
 

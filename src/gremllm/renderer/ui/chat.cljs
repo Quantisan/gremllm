@@ -35,7 +35,11 @@
   [e/assistant-message
     [:p {:style {:color "#666"
                  :font-style "italic"}}
-     "Thinking..."]])
+     [:span {:style {:display "inline-block"
+                     :animation "spin 1s linear infinite"
+                     :margin-right "0.5rem"}}
+      "⠿"]
+     "Computing..."]])
 
 (defn- render-error-message [errors]
   (when-let [error (first (vals errors))]
