@@ -32,6 +32,7 @@
                                          :type :user
                                          :text text}]
          [:form.effects/clear-input]
+         [:effects/focus ".chat-input"]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:effects/scroll-to-bottom "chat-messages-container"]
@@ -42,6 +43,12 @@
   (fn [_ _ element-id]
     (when-let [element (js/document.getElementById element-id)]
       (set! (.-scrollTop element) (.-scrollHeight element)))))
+
+;; Focus element by selector
+(nxr/register-effect! :effects/focus
+  (fn [_ _ selector]
+    (when-let [element (js/document.querySelector selector)]
+      (.focus element))))
 
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status
