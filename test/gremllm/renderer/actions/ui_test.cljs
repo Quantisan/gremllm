@@ -12,7 +12,7 @@
     (let [effects (ui/submit-messages {:form            {:user-input "Hello"}
                                        :active-topic-id "t1"
                                        :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})]
-      (is (= 6 (count effects)))
+      (is (= 7 (count effects)))
       (is (= :messages.actions/add-to-chat (ffirst effects)))
       (is (= :form.effects/clear-input (first (second effects))))
       (is (= :llm.effects/send-llm-messages (first (last effects)))))))
