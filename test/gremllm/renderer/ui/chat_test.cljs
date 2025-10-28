@@ -20,24 +20,24 @@
 
 (deftest markdown->html-test
   (testing "renders basic markdown"
-    (let [result (#'chat-ui/markdown->html "**bold** and `code`")]
+    (let [result (chat-ui/markdown->html "**bold** and `code`")]
       (is (str/includes? result "<strong>bold</strong>"))
       (is (str/includes? result "<code>code</code>"))))
 
   (testing "sanitizes script tags"
-    (let [result (#'chat-ui/markdown->html "<script>alert('xss')</script>")]
+    (let [result (chat-ui/markdown->html "<script>alert('xss')</script>")]
       (is (not (str/includes? result "<script")))
       (is (not (str/includes? result "alert")))))
 
   (testing "sanitizes javascript: URLs"
-    (let [result (#'chat-ui/markdown->html "[bad link](javascript:alert('xss'))")]
+    (let [result (chat-ui/markdown->html "[bad link](javascript:alert('xss'))")]
       (is (not (str/includes? result "javascript:")))
       (is (not (str/includes? result "alert")))))
 
   (testing "sanitizes event handlers"
-    (let [result (#'chat-ui/markdown->html "<a onclick=\"alert('xss')\">click</a>")]
+    (let [result (chat-ui/markdown->html "<a onclick=\"alert('xss')\">click</a>")]
       (is (not (str/includes? result "onclick")))))
 
   (testing "allows safe links"
-    (let [result (#'chat-ui/markdown->html "[safe](https://example.com)")]
+    (let [result (chat-ui/markdown->html "[safe](https://example.com)")]
       (is (str/includes? result "https://example.com")))))

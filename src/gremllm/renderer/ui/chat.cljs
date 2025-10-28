@@ -5,7 +5,7 @@
             ["snarkdown" :as snarkdown]
             ["sanitize-html" :as sanitize-html]))
 
-(defn- markdown->html [text]
+(defn markdown->html [text]
   (-> text
       snarkdown
       (sanitize-html #js {:allowedTags #js ["h1" "h2" "h3" "h4" "h5" "h6"
