@@ -35,14 +35,31 @@
          [:effects/focus ".chat-input"]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
-         [:effects/scroll-to-bottom "chat-messages-container"]
+         [:ui.actions/scroll-to-bottom]
          [:llm.effects/send-llm-messages assistant-id model]]))))
 
-;; Scroll to bottom effect for chat area
-(nxr/register-effect! :effects/scroll-to-bottom
-  (fn [_ _ element-id]
-    (when-let [element (js/document.getElementById element-id)]
-      (set! (.-scrollTop element) (.-scrollHeight element)))))
+;; Reusable DOM placeholders
+(nxr/register-placeholder! :dom/element-by-id
+  (fn [_ id]
+    (js/document.getElementById id)))
+
+(nxr/register-placeholder! :dom.element/property
+  (fn [_ element prop]
+    (when element (aget element prop))))
+
+;; Generic DOM effect
+(nxr/register-effect! :effects/set-element-property
+  (fn [_ _ element property value]
+    (when (and element value)
+      (aset element property value))))
+
+;; Pure action for scrolling chat to bottom
+(defn scroll-chat-to-bottom [_state]
+  (let [element-id "chat-messages-container"]
+    [[:effects/set-element-property
+      [:dom/element-by-id element-id]
+      "scrollTop"
+      [:dom.element/property [:dom/element-by-id element-id] "scrollHeight"]]]))
 
 ;; Focus element by selector
 (nxr/register-effect! :effects/focus

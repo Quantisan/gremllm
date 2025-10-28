@@ -59,6 +59,7 @@
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
+(nxr/register-action! :ui.actions/scroll-to-bottom ui/scroll-chat-to-bottom)
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
