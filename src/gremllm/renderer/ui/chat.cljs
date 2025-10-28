@@ -1,7 +1,20 @@
 (ns gremllm.renderer.ui.chat
   (:require [clojure.string :as str]
             [gremllm.renderer.ui.elements :as e]
-            [gremllm.schema :as schema]))
+            [gremllm.schema :as schema]
+            ["snarkdown" :as snarkdown]
+            ["sanitize-html" :as sanitize-html]))
+
+(defn- markdown->html [text]
+  (-> text
+      snarkdown
+      (sanitize-html #js {:allowedTags #js ["h1" "h2" "h3" "h4" "h5" "h6"
+                                            "p" "ul" "ol" "li"
+                                            "code" "pre" "em" "strong" "a" "br"
+                                            "blockquote" "hr"]
+                          :allowedAttributes #js {:a #js ["href" "title"]
+                                                  :code #js ["class"]}
+                          :allowedSchemes #js ["http" "https" "mailto"]})))
 
 (defn- render-user-message [message]
   [e/user-message
@@ -9,7 +22,7 @@
 
 (defn- render-assistant-message [message]
   [e/assistant-message
-    [:p (:text message)]])
+    [:div {:innerHTML (markdown->html (:text message))}]])
 
 (defn- render-message [message]
   (case (:type message)
