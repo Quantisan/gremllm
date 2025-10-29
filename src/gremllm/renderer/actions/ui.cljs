@@ -49,17 +49,17 @@
 
 ;; Generic DOM effect
 (nxr/register-effect! :effects/set-element-property
-  (fn [_ _ element property value]
-    (when (and element value)
-      (aset element property value))))
+  (fn [_ _ {:keys [on-element set-property to-value]}]
+    (when (and on-element to-value)
+      (aset on-element set-property to-value))))
 
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]
   (let [element-id "chat-messages-container"]
     [[:effects/set-element-property
-      [:dom/element-by-id element-id]
-      "scrollTop"
-      [:dom.element/property [:dom/element-by-id element-id] "scrollHeight"]]]))
+      {:on-element   [:dom/element-by-id element-id]
+       :set-property "scrollTop"
+       :to-value     [:dom.element/property [:dom/element-by-id element-id] "scrollHeight"]}]]))
 
 ;; Focus element by selector
 (nxr/register-effect! :effects/focus
