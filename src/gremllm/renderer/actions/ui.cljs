@@ -1,21 +1,18 @@
 (ns gremllm.renderer.actions.ui
-  (:require [nexus.registry :as nxr]
-            [gremllm.renderer.state.form :as form-state]
+  (:require [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
 (defn update-input [_state value]
   [[:effects/save form-state/user-input-path value]])
 
+(defn clear-input [_state]
+  [[:effects/save form-state/user-input-path ""]])
+
 (defn handle-submit-keys [_state {:keys [key shift?]}]
   (when (and (= key "Enter") (not shift?))
     [[:effects/prevent-default]
      [:form.actions/submit]]))
-
-;; Domain-specific effects
-(nxr/register-effect! :form.effects/clear-input
-  (fn [_ store]
-    (swap! store assoc-in form-state/user-input-path "")))
 
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)
@@ -27,7 +24,7 @@
         [[:messages.actions/add-to-chat {:id   (.now js/Date)
                                          :type :user
                                          :text text}]
-         [:effects/save form-state/user-input-path ""] ;; TODO: this should be :form.actions/clear-input
+         [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]

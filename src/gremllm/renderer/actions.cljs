@@ -75,6 +75,7 @@
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
+(nxr/register-action! :form.actions/clear-input ui/clear-input)
 (nxr/register-action! :form.actions/handle-submit-keys ui/handle-submit-keys)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
