@@ -37,6 +37,9 @@
 (defn read-file [filepath]
   (.readFileSync fs filepath "utf8"))
 
+(defn delete-file [filepath]
+  (.unlinkSync fs filepath))
+
 (defn file-exists?
   "Return true if a file or directory exists at path."
   [p]
