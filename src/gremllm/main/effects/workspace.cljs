@@ -36,6 +36,26 @@
             :filepath filepath}
            (io/file-timestamps filepath))))
 
+(defn- topic-filepath
+  "Build filepath for a topic file."
+  [workspace-dir topic-id]
+  (io/path-join
+    (io/topics-dir-path workspace-dir)
+    (str topic-id ".edn")))
+
+(defn- user-confirmed-deletion?
+  "Check if user confirmed deletion in dialog result."
+  [result]
+  (= 1 (.-response result)))
+
+(defn- attempt-delete
+  "Delete topic file, logging errors on failure."
+  [filepath]
+  (try
+    (io/delete-file filepath)
+    (catch :default e
+      (js/console.error "Failed to delete topic file" filepath (ex-message e)))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; Topic File Operations
 
@@ -111,14 +131,8 @@
                               :defaultId 0
                               :cancelId 0})
         (.then (fn [result]
-                 (when (= 1 (.-response result))
-                   (let [filepath (io/path-join
-                                   (io/topics-dir-path workspace-dir)
-                                   (str topic-id ".edn"))]
-                     (try
-                       (io/delete-file filepath)
-                       (catch :default e
-                         (js/console.error "Failed to delete topic file" filepath (ex-message e)))))))))
+                 (when (user-confirmed-deletion? result)
+                   (attempt-delete (topic-filepath workspace-dir topic-id))))))
     (js/Promise.resolve nil)))
 
 ;;; ---------------------------------------------------------------------------
