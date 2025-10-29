@@ -96,6 +96,32 @@
                      (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
 
 ;;; ---------------------------------------------------------------------------
+;;; Topic Delete Operations
+
+(defn delete-topic-with-confirmation
+  "Show confirmation dialog and delete topic file if confirmed.
+   Returns promise that resolves when complete (or user cancels)."
+  [workspace-dir topic-id]
+  (if-let [dialog (get-dialog)]
+    (-> (.showMessageBox dialog
+                         #js {:type "warning"
+                              :message "Delete topic?"
+                              :detail "This action cannot be undone."
+                              :buttons #js ["Cancel" "Delete"]
+                              :defaultId 0
+                              :cancelId 0})
+        (.then (fn [result]
+                 (when (= 1 (.-response result))
+                   (let [filepath (io/path-join
+                                   (io/topics-dir-path workspace-dir)
+                                   (str topic-id ".edn"))]
+                     (try
+                       (io/delete-file filepath)
+                       (catch :default e
+                         (js/console.error "Failed to delete topic file" filepath (ex-message e)))))))))
+    (js/Promise.resolve nil)))
+
+;;; ---------------------------------------------------------------------------
 ;;; Workspace Sync Operations
 
 (defn load-and-sync

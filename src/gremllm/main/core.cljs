@@ -49,6 +49,11 @@
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
                    (workspace-effects/save-topic)))))
 
+  (.handle ipcMain "topic/delete"
+           (fn [_event topic-id]
+             (let [workspace-dir (state/get-workspace-dir @store)]
+               (workspace-effects/delete-topic-with-confirmation workspace-dir topic-id))))
+
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]
              ;; Reuse the existing workspace action - it already handles the full flow
