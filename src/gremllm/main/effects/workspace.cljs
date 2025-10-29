@@ -4,6 +4,7 @@
   ;; Runtime dependency: electron/main dialog
   ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
+            [gremllm.main.actions.topic :as topic-actions]
             [clojure.edn :as edn]
             [gremllm.schema :as schema]))
 
@@ -35,13 +36,6 @@
     (merge {:filename filename
             :filepath filepath}
            (io/file-timestamps filepath))))
-
-(defn- topic-filepath
-  "Build filepath for a topic file."
-  [workspace-dir topic-id]
-  (io/path-join
-    (io/topics-dir-path workspace-dir)
-    (str topic-id ".edn")))
 
 (defn- user-confirmed-deletion?
   "Check if user confirmed deletion in dialog result."
@@ -123,16 +117,18 @@
    Returns promise that resolves when complete (or user cancels)."
   [workspace-dir topic-id]
   (if-let [dialog (get-dialog)]
-    (-> (.showMessageBox dialog
-                         #js {:type "warning"
-                              :message "Delete topic?"
-                              :detail "This action cannot be undone."
-                              :buttons #js ["Cancel" "Delete"]
-                              :defaultId 0
-                              :cancelId 0})
-        (.then (fn [result]
-                 (when (user-confirmed-deletion? result)
-                   (attempt-delete (topic-filepath workspace-dir topic-id))))))
+    (let [topics-dir (io/topics-dir-path workspace-dir)
+          filepath (topic-actions/topic-filepath topics-dir topic-id)]
+      (-> (.showMessageBox dialog
+                           #js {:type "warning"
+                                :message "Delete topic?"
+                                :detail "This action cannot be undone."
+                                :buttons #js ["Cancel" "Delete"]
+                                :defaultId 0
+                                :cancelId 0})
+          (.then (fn [result]
+                   (when (user-confirmed-deletion? result)
+                     (attempt-delete filepath))))))
     (js/Promise.resolve nil)))
 
 ;;; ---------------------------------------------------------------------------
