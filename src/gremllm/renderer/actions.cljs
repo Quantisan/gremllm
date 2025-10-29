@@ -48,6 +48,26 @@
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
+; DOM placeholders
+(nxr/register-placeholder! :dom/element-by-id
+  (fn [_ id]
+    (js/document.getElementById id)))
+
+(nxr/register-placeholder! :dom.element/property
+  (fn [_ element prop]
+    (when element (aget element prop))))
+
+; Generic DOM effects
+(nxr/register-effect! :effects/set-element-property
+  (fn [_ _ {:keys [on-element set-property to-value]}]
+    (when (and on-element to-value)
+      (aset on-element set-property to-value))))
+
+(nxr/register-effect! :effects/focus
+  (fn [_ _ selector]
+    (when-let [element (js/document.querySelector selector)]
+      (.focus element))))
+
 ;; Console error effect
 (nxr/register-effect! :ui.effects/console-error
   (fn [_ _ & args]
@@ -55,11 +75,13 @@
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
+(nxr/register-action! :form.actions/clear-input ui/clear-input)
 (nxr/register-action! :form.actions/handle-submit-keys ui/handle-submit-keys)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
+(nxr/register-action! :ui.actions/focus-chat-input ui/focus-chat-input)
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
@@ -88,7 +110,7 @@
 (nxr/register-action! :topic.actions/update-model topic/update-model)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
-    [[:ui.effects/save ui-state/renaming-topic-id-path nil]]))
+    [[:effects/save ui-state/renaming-topic-id-path nil]]))
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
