@@ -14,7 +14,7 @@
                                        :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})]
       (is (= 7 (count effects)))
       (is (= :messages.actions/add-to-chat (ffirst effects)))
-      (is (= :form.effects/clear-input (first (second effects))))
+      (is (= :form.actions/clear-input (first (second effects))))
       (is (= :llm.effects/send-llm-messages (first (last effects)))))))
 
 (deftest test-handle-submit-keys
