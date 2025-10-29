@@ -35,7 +35,7 @@
          [:effects/focus ".chat-input"]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
-         [:ui.actions/scroll-to-bottom]
+         [:ui.actions/scroll-chat-to-bottom]
          [:llm.effects/send-llm-messages assistant-id model]]))))
 
 ;; Reusable DOM placeholders
