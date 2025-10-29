@@ -5,7 +5,7 @@
             [gremllm.renderer.state.ui :as ui-state]))
 
 (defn update-input [_state value]
-  [[:form.effects/update-input value]])
+  [[:effects/save form-state/user-input-path value]])
 
 (defn handle-submit-keys [_state {:keys [key shift?]}]
   (when (and (= key "Enter") (not shift?))
@@ -31,7 +31,7 @@
         [[:messages.actions/add-to-chat {:id   (.now js/Date)
                                          :type :user
                                          :text text}]
-         [:form.effects/clear-input]
+         [:effects/save form-state/user-input-path ""] ;; TODO: this should be :form.actions/clear-input
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
@@ -74,12 +74,12 @@
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status
   [[:system.actions/request-info]
-   [:ui.effects/save ui-state/showing-settings-path true]])
+   [:effects/save ui-state/showing-settings-path true]])
 
 (defn hide-settings [_state]
   ;; Refresh system info to ensure has-any-api-key? is up-to-date
   [[:system.actions/request-info]
-   [:ui.effects/save ui-state/showing-settings-path false]])
+   [:effects/save ui-state/showing-settings-path false]])
 
 ;; Register UI effect
 (nxr/register-effect! :ui.effects/save
