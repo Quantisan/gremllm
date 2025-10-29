@@ -32,7 +32,7 @@
                                          :type :user
                                          :text text}]
          [:form.effects/clear-input]
-         [:effects/focus ".chat-input"]
+         [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
@@ -60,6 +60,10 @@
       {:on-element   [:dom/element-by-id element-id]
        :set-property "scrollTop"
        :to-value     [:dom.element/property [:dom/element-by-id element-id] "scrollHeight"]}]]))
+
+;; Pure action for focusing chat input
+(defn focus-chat-input [_state]
+  [[:effects/focus ".chat-input"]])
 
 ;; Focus element by selector
 (nxr/register-effect! :effects/focus
