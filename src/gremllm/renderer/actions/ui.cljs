@@ -38,21 +38,6 @@
          [:ui.actions/scroll-chat-to-bottom]
          [:llm.effects/send-llm-messages assistant-id model]]))))
 
-;; Reusable DOM placeholders
-(nxr/register-placeholder! :dom/element-by-id
-  (fn [_ id]
-    (js/document.getElementById id)))
-
-(nxr/register-placeholder! :dom.element/property
-  (fn [_ element prop]
-    (when element (aget element prop))))
-
-;; Generic DOM effect
-(nxr/register-effect! :effects/set-element-property
-  (fn [_ _ {:keys [on-element set-property to-value]}]
-    (when (and on-element to-value)
-      (aset on-element set-property to-value))))
-
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]
   (let [element-id "chat-messages-container"]
@@ -65,12 +50,6 @@
 (defn focus-chat-input [_state]
   [[:effects/focus ".chat-input"]])
 
-;; Focus element by selector
-(nxr/register-effect! :effects/focus
-  (fn [_ _ selector]
-    (when-let [element (js/document.querySelector selector)]
-      (.focus element))))
-
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status
   [[:system.actions/request-info]
@@ -80,9 +59,4 @@
   ;; Refresh system info to ensure has-any-api-key? is up-to-date
   [[:system.actions/request-info]
    [:effects/save ui-state/showing-settings-path false]])
-
-;; Register UI effect
-(nxr/register-effect! :ui.effects/save
-  (fn [_ store path value]
-    (swap! store assoc-in path value)))
 
