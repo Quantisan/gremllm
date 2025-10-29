@@ -6,7 +6,7 @@
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
    [:topic.actions/mark-active-unsaved]
-   [:effects/scroll-to-bottom "chat-messages-container"]
+   [:ui.actions/scroll-chat-to-bottom]
    ;; TODO: we should not save if the last message was an Error
    [:topic.actions/auto-save]])
 
