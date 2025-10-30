@@ -179,6 +179,7 @@
     [:map
      [:unsaved? {:optional true} :boolean]]))
 
+;; TODO: refactor with (generate-topic-id)
 (def TopicId
   "Schema for topic identifiers shared across IPC boundaries."
   [:string {:min 1}])
