@@ -51,8 +51,12 @@
 
   (.handle ipcMain "topic/delete"
            (fn [_event topic-id]
-             (let [workspace-dir (state/get-workspace-dir @store)]
-               (workspace-effects/delete-topic-with-confirmation workspace-dir topic-id))))
+             (let [workspace-dir (state/get-workspace-dir @store)
+                   topics-dir    (io/topics-dir-path workspace-dir)]
+               (-> topic-id
+                   (schema/topic-id-from-ipc)
+                   (topic-actions/topic->delete-plan topics-dir)
+                   (workspace-effects/delete-topic-with-confirmation)))))
 
   (.handle ipcMain "workspace/reload"
            (fn [_event]
@@ -114,4 +118,3 @@
     (.on app "ready" #(initialize-app store))
     (.on app "activate" #(handle-app-activate store))
     (.on app "window-all-closed" handle-window-all-closed)))
-

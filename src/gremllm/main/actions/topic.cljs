@@ -21,3 +21,10 @@
      :filepath (topic-filepath topics-dir (:id persisted-topic))
      :content  (pr-str persisted-topic)}))
 
+(defn topic->delete-plan
+  "Create delete plan for removing a topic from disk."
+  [topic-id topics-dir]
+  {:topic-id               topic-id
+   :filepath               (topic-filepath topics-dir topic-id)
+   :confirmation-message   "Delete topic?"
+   :confirmation-detail    "This action cannot be undone."})

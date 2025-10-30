@@ -4,7 +4,6 @@
   ;; Runtime dependency: electron/main dialog
   ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
-            [gremllm.main.actions.topic :as topic-actions]
             [clojure.edn :as edn]
             [gremllm.schema :as schema]))
 
@@ -36,19 +35,6 @@
     (merge {:filename filename
             :filepath filepath}
            (io/file-timestamps filepath))))
-
-(defn- user-confirmed-deletion?
-  "Check if user confirmed deletion in dialog result."
-  [result]
-  (= 1 (.-response result)))
-
-(defn- attempt-delete
-  "Delete topic file, logging errors on failure."
-  [filepath]
-  (try
-    (io/delete-file filepath)
-    (catch :default e
-      (js/console.error "Failed to delete topic file" filepath (ex-message e)))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Topic File Operations
@@ -112,23 +98,33 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Topic Delete Operations
 
+(defn- user-confirmed-deletion?
+  "Check if user confirmed deletion in dialog result."
+  [result]
+  (= 1 (.-response result)))
+
+(defn- attempt-delete
+  "Delete topic file, logging errors on failure."
+  [filepath]
+  (try
+    (io/delete-file filepath)
+    (catch :default e
+      (js/console.error "Failed to delete topic file" filepath (ex-message e)))))
+
 (defn delete-topic-with-confirmation
-  "Show confirmation dialog and delete topic file if confirmed.
-   Returns promise that resolves when complete (or user cancels)."
-  [workspace-dir topic-id]
+  "Execute topic deletion plan: optionally confirm, then delete from disk."
+  [{:keys [filepath confirmation-message confirmation-detail]}]
   (if-let [dialog (get-dialog)]
-    (let [topics-dir (io/topics-dir-path workspace-dir)
-          filepath (topic-actions/topic-filepath topics-dir topic-id)]
-      (-> (.showMessageBox dialog
-                           #js {:type "warning"
-                                :message "Delete topic?"
-                                :detail "This action cannot be undone."
-                                :buttons #js ["Cancel" "Delete"]
-                                :defaultId 0
-                                :cancelId 0})
-          (.then (fn [result]
-                   (when (user-confirmed-deletion? result)
-                     (attempt-delete filepath))))))
+    (-> (.showMessageBox dialog
+                         #js {:type "warning"
+                              :message confirmation-message
+                              :detail confirmation-detail
+                              :buttons #js ["Cancel" "Delete"]
+                              :defaultId 0
+                              :cancelId 0})
+        (.then (fn [result]
+                (when (user-confirmed-deletion? result)
+                  (attempt-delete filepath)))))
     (js/Promise.resolve nil)))
 
 ;;; ---------------------------------------------------------------------------
