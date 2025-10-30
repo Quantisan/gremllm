@@ -33,6 +33,14 @@
   (js/console.error "save-topic (topic-id: " topic-id ") failed:" error)
   [])
 
+(defn delete-topic-success [_state _topic-id]
+  ;; Reload workspace from disk to sync state
+  [[:workspace.effects/reload]])
+
+(defn delete-topic-error [_state topic-id error]
+  (js/console.error "delete-topic (topic-id: " topic-id ") failed:" error)
+  [])
+
 (defn mark-active-unsaved [state]
   (let [active-id (topic-state/get-active-topic-id state)]
     [[:topic.actions/mark-unsaved active-id]]))
@@ -96,4 +104,13 @@
     (if-let [topic-id (topic-state/get-active-topic-id @store)]
       (dispatch [[:topic.effects/save-topic topic-id]])
       (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]]))))
+
+;; Delete topic effect - shows confirmation dialog and deletes file
+(nxr/register-effect! :topic.effects/delete-topic
+  (fn [{dispatch :dispatch} _store topic-id]
+    (dispatch
+     [[:effects/promise
+       {:promise    (.deleteTopic js/window.electronAPI topic-id)
+        :on-success [[:topic.actions/delete-success topic-id]]
+        :on-error   [[:topic.actions/delete-error topic-id]]}]])))
 
