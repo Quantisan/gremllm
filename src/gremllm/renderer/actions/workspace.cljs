@@ -56,5 +56,5 @@
   [_state]
   [[:effects/promise
     {:promise (.pickWorkspaceFolder js/window.electronAPI)}]])
-     ;; No handlers needed - workspace data arrives via workspace:sync IPC event
+     ;; No handlers needed - workspace data arrives via workspace:opened IPC event
 

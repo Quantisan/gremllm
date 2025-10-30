@@ -65,7 +65,7 @@
              ;; Reuse the existing workspace action - it already handles the full flow
              (nxr/dispatch store {}
                            [[:workspace.actions/pick-folder]])
-             ;; Return empty - workspace data flows via workspace:sync
+             ;; Return empty - workspace data flows via workspace:opened
              #js {}))
 
   ;; Secrets handlers - call functions directly at the boundary

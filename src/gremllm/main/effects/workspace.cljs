@@ -141,4 +141,4 @@
         workspace-meta (schema/create-workspace-meta workspace-name)
         topics         (-> workspace-path io/topics-dir-path load-topics)
         sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta)]
-    (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" sync-payload]])))
+    (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))
