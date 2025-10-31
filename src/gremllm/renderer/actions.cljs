@@ -73,6 +73,11 @@
   (fn [_ _ & args]
     (apply js/console.error args)))
 
+;; Workspace reload effect
+(nxr/register-effect! :workspace.effects/reload
+  (fn [_ _]
+    (.reloadWorkspace js/window.electronAPI)))
+
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
 (nxr/register-action! :form.actions/clear-input ui/clear-input)
@@ -117,6 +122,8 @@
 (nxr/register-action! :topic.actions/auto-save topic/auto-save)
 (nxr/register-action! :topic.actions/save-success topic/save-topic-success)
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
+(nxr/register-action! :topic.actions/delete-success topic/delete-topic-success)
+(nxr/register-action! :topic.actions/delete-error topic/delete-topic-error)
 
 (nxr/register-action! :system.actions/request-info system/request-info)
 (nxr/register-action! :system.actions/set-info system/set-info)
