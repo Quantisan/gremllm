@@ -26,5 +26,5 @@
   [topic-id topics-dir]
   {:topic-id               topic-id
    :filepath               (topic-filepath topics-dir topic-id)
-   :confirmation-message   "Delete topic?"
+   :confirmation-message   "Delete topic?" ;; TODO: include topic-name
    :confirmation-detail    "This action cannot be undone."})
