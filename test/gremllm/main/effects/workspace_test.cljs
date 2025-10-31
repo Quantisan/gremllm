@@ -121,5 +121,5 @@
           ;; Verify IPC effect
           (let [[[effect-key channel data]] @dispatched]
             (is (= :ipc.effects/send-to-renderer effect-key))
-            (is (= "workspace:sync" channel))
+            (is (= "workspace:opened" channel))
             (is (contains? data :topics))))))))

@@ -179,6 +179,16 @@
     [:map
      [:unsaved? {:optional true} :boolean]]))
 
+;; TODO: refactor with (generate-topic-id)
+(def TopicId
+  "Schema for topic identifiers shared across IPC boundaries."
+  [:string {:min 1}])
+
+(defn topic-id-from-ipc
+  "Validates topic identifier received via IPC. Throws if invalid."
+  [topic-id]
+  (m/coerce TopicId (js->clj topic-id) mt/json-transformer))
+
 (defn create-topic []
   (m/decode Topic {} mt/default-value-transformer))
 
