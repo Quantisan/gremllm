@@ -38,6 +38,26 @@
             resize: none;
         }
 
+        .topic-item {
+            /* Keep topic link and delete control on one line */
+            display: flex;
+            align-items: center;
+            gap: calc(var(--pico-spacing) / 4);
+        }
+
+        .topic-item > a {
+            /* Let link take remaining row space */
+            flex: 1 1 auto;
+        }
+
+        .topic-item > button {
+            /* Tighten button spacing inside list */
+            margin: 0;
+            /* Lean on Pico palette but fall back to subtle gray */
+            border-color: var(--pico-color-muted-border, rgba(0, 0, 0, 0.12));
+            color: var(--pico-color-muted-border, rgba(0, 0, 0, 0.12));
+        }
+
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
