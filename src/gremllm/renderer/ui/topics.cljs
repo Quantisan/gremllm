@@ -22,14 +22,22 @@
      (let [label (str (if (= id active-topic-id) "✓ " "• ")
                       name
                       (when unsaved? " *"))]
-       [:a {:href         "#"
-            :aria-current (when (= id active-topic-id) "page")
-            :title        "Double-click to rename topic"
-            :on           {:click    [[:effects/prevent-default]
-                                      [:topic.actions/set-active id]]
-                           :dblclick [[:effects/prevent-default]
-                                      [:topic.actions/begin-rename id]]}}
-        label]))])
+       [:div {:class "topic-item"}
+        [:a {:href         "#"
+             :aria-current (when (= id active-topic-id) "page")
+             :title        "Double-click to rename topic"
+             :on           {:click    [[:effects/prevent-default]
+                                       [:topic.actions/set-active id]]
+                            :dblclick [[:effects/prevent-default]
+                                       [:topic.actions/begin-rename id]]}}
+         label]
+        [:button {:type       "button"
+                  :class      "secondary outline"
+                  :aria-label "Delete topic"
+                  :title      "Delete topic"
+                  :on         {:click [[:effects/prevent-default]
+                                       [:topic.effects/delete-topic id]]}}
+         "×"]]))])
 
 (defn render-left-panel-content
   ;; topics-map = schema/WorkspaceTopics

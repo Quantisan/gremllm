@@ -4,7 +4,8 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
-            [malli.core :as m]))
+            [malli.core :as m])
+  (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
 (deftest start-new-topic-test
   (let [result (topic/start-new-topic {})
@@ -75,4 +76,22 @@
                     :topics {topic-id {:id topic-id :model "old-model"}}}
           actions  (topic/update-model state "new-model")]
       (is (= [[:effects/save [:topics topic-id :model] "new-model"]] actions)))))
+
+(deftest delete-topic-success-test
+  (testing "triggers workspace reload after successful deletion"
+    (let [topic-id "topic-123"
+          state    {}
+          actions  (topic/delete-topic-success state topic-id)]
+      (is (= [[:workspace.effects/reload]] actions)
+          "should return workspace reload effect"))))
+
+(deftest delete-topic-error-test
+  (testing "logs error and returns empty actions"
+    (with-console-error-silenced
+      (let [topic-id "topic-123"
+            state    {}
+            error    (js/Error. "deletion failed")
+            actions  (topic/delete-topic-error state topic-id error)]
+        (is (= [] actions)
+            "should return empty actions vector")))))
 
