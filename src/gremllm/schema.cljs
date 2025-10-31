@@ -169,7 +169,8 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "claude-sonnet-4-5-20250929"} (into [:enum] (keys supported-models))]
+   [:model {:default "gemini-2.5-flash"} ;; defaulting to Flash because is cheap and fast
+    (into [:enum] (keys supported-models))]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
