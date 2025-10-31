@@ -55,7 +55,16 @@
             margin: 0;
             /* Lean on Pico palette but fall back to subtle gray */
             border-color: var(--pico-color-muted-border, rgba(0, 0, 0, 0.12));
-            color: var(--pico-color-muted-border, rgba(0, 0, 0, 0.12));
+            color: var(--pico-muted-color, rgba(0, 0, 0, 0.12));
+
+            /* Show delete button only on hover */
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        /* Show delete button only on hover */
+        .topic-item:hover > button {
+            opacity: 1;
         }
 
         @keyframes spin {

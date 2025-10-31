@@ -98,27 +98,33 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Topic Delete Operations
 
+(defn- user-confirmed-deletion?
+  "Check if user confirmed deletion in dialog result."
+  [result]
+  (= 1 (.-response result)))
+
+(defn- attempt-delete
+  "Delete topic file, logging errors on failure."
+  [filepath]
+  (try
+    (io/delete-file filepath)
+    (catch :default e
+      (js/console.error "Failed to delete topic file" filepath (ex-message e)))))
+
 (defn delete-topic-with-confirmation
-  "Show confirmation dialog and delete topic file if confirmed.
-   Returns promise that resolves when complete (or user cancels)."
-  [workspace-dir topic-id]
+  "Execute topic deletion plan: optionally confirm, then delete from disk."
+  [{:keys [filepath confirmation-message confirmation-detail]}]
   (if-let [dialog (get-dialog)]
     (-> (.showMessageBox dialog
                          #js {:type "warning"
-                              :message "Delete topic?"
-                              :detail "This action cannot be undone."
+                              :message confirmation-message
+                              :detail confirmation-detail
                               :buttons #js ["Cancel" "Delete"]
                               :defaultId 0
                               :cancelId 0})
         (.then (fn [result]
-                 (when (= 1 (.-response result))
-                   (let [filepath (io/path-join
-                                   (io/topics-dir-path workspace-dir)
-                                   (str topic-id ".edn"))]
-                     (try
-                       (io/delete-file filepath)
-                       (catch :default e
-                         (js/console.error "Failed to delete topic file" filepath (ex-message e)))))))))
+                (when (user-confirmed-deletion? result)
+                  (attempt-delete filepath)))))
     (js/Promise.resolve nil)))
 
 ;;; ---------------------------------------------------------------------------
@@ -131,4 +137,4 @@
         workspace-meta (schema/create-workspace-meta workspace-name)
         topics         (-> workspace-path io/topics-dir-path load-topics)
         sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta)]
-    (dispatch [[:ipc.effects/send-to-renderer "workspace:sync" sync-payload]])))
+    (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))

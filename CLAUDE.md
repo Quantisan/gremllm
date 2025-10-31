@@ -108,11 +108,16 @@ Following FCIS principles, all state changes flow through Nexus:
 
 **IPC Channels:**
 - `chat/send-message` - LLM API calls
-- `topic/save` - Save topic to disk
+- `topic/save` - Persist topic to disk
+- `topic/delete` - Remove topic file from disk
 - `workspace/pick-folder` - Folder picker dialog
+- `workspace/reload` - Request refreshed workspace data
+- `workspace:opened` - Broadcast refreshed workspace payload (`onWorkspaceOpened`)
 - `system/get-info` - System capabilities
 - `secrets/save`, `secrets/delete` - Secure storage
 - Menu commands via `onMenuCommand`
+
+Explicit renderer listeners like `onWorkspaceOpened` wrap domain events so the preload boundary exposes intent-driven APIs instead of raw channel strings.
 
 **Data Storage:**
 ```
@@ -177,4 +182,3 @@ Framework and library documentation is available in the `context/` directory:
 - `context/electron_dialog.md` - Native dialogs and file pickers
 - `context/electron_safestorage.md` - Secure credential storage
 - `context/electron_menu.md` - Application menu system
-
