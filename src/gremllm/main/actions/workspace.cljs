@@ -10,3 +10,6 @@
 
 (defn pick-folder [_state]
   [[:workspace.effects/pick-folder-dialog]])
+
+(defn reload [state]
+  [[:workspace.effects/load-and-sync (state/get-workspace-dir state)]])

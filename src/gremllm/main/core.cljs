@@ -60,9 +60,9 @@
 
   (.handle ipcMain "workspace/reload"
            (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)]
-               (nxr/dispatch store {} [[:workspace.effects/load-and-sync workspace-dir]])
-               #js {})))
+             (nxr/dispatch store {}
+                           [[:workspace.actions/reload]])
+             #js {}))
 
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]
