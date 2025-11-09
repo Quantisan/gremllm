@@ -18,29 +18,38 @@
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations.
 
-   ARCHITECTURE: IPC handlers ARE the imperative shell
-   ====================================================
-   These handlers don't use Nexus dispatch because they must return
-   values synchronously to Electron's IPC. They're boundary adapters,
-   not business logic. Each follows FCIS internally:
-   - Extract context (workspace-dir from store)
-   - Transform with pure functions (topic-actions/topic->save-plan)
-   - Execute effects (workspace-effects/save)
-   - Return result
+   ARCHITECTURE: Hybrid pattern for IPC boundaries
+   ================================================
+   IPC handlers follow two patterns depending on whether they return values:
 
-   This is the correct pattern for synchronous system boundaries.
+   SYNC HANDLERS (must return values to IPC caller):
+   - Use direct effect pipeline (boundary adapters, not business logic)
+   - Flow: Extract context → Pure transform → Execute effect → Return result
+   - Examples: topic/save, topic/delete, secrets/*, system/get-info
+   - Why: Electron's IPC requires synchronous return values
+
+   ASYNC HANDLERS (fire-and-forget, return #js {}):
+   - Dispatch to registered Nexus actions (not effects directly)
+   - Flow: Dispatch action → Return empty → Effects execute → Events notify renderer
+   - Examples: chat/send-message, workspace/reload, workspace/pick-folder
+   - Why: Action registry provides discoverability and instrumentation points
+
+   Both patterns maintain FCIS: sync handlers pipeline through pure functions;
+   async handlers route through registered actions that return effect descriptions.
 
    Domains: Chat (LLM), Topics (save/load), Workspace (bulk ops),
             Secrets (config), System (capabilities)"
   [store secrets-filepath]
+  ;; Chat - async pattern: dispatches to action registry, response flows via events
   (.on ipcMain "chat/send-message"
        (fn [event request-id messages model]
          (let [messages-clj (js->clj messages :keywordize-keys true)]
            (nxr/dispatch store {:ipc-event event
                                 :request-id request-id
                                 :channel "chat/send-message"}
-                         [[:chat.effects/send-message messages-clj model [:env/api-key-for-model model]]]))))
+                         [[:chat.actions/send-message-from-ipc messages-clj model [:env/api-key-for-model model]]]))))
 
+  ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
              (let [workspace-dir (state/get-workspace-dir @store)]
@@ -58,11 +67,12 @@
                    (topic-actions/topic->delete-plan topics-dir)
                    (workspace-effects/delete-topic-with-confirmation)))))
 
+  ;; Workspace - async pattern: dispatch to actions, results broadcast via workspace:opened
   (.handle ipcMain "workspace/reload"
            (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)]
-               (nxr/dispatch store {} [[:workspace.effects/load-and-sync workspace-dir]])
-               #js {})))
+             (nxr/dispatch store {}
+                           [[:workspace.actions/reload]])
+             #js {}))
 
   (.handle ipcMain "workspace/pick-folder"
            (fn [_event]
@@ -72,7 +82,7 @@
              ;; Return empty - workspace data flows via workspace:opened
              #js {}))
 
-  ;; Secrets handlers - call functions directly at the boundary
+  ;; Secrets - sync pattern: call functions directly at boundary, return results
   (.handle ipcMain "secrets/save"
            (fn [_event key value]
              (secrets/save secrets-filepath (keyword key) value)))
@@ -81,6 +91,7 @@
            (fn [_event key]
              (secrets/del secrets-filepath (keyword key))))
 
+  ;; System - sync pattern: gather info, transform to IPC format, return
   (.handle ipcMain "system/get-info"
            (fn [_event]
              (-> (system-info
