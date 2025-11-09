@@ -68,7 +68,7 @@
     [:label {:style {:display "block"
                      :margin-bottom "0.5rem"}}
      [:small "Model:"]
-     [:select {:value selected-model
+     [:select {:value selected-model ;; FIX: this doesn't seem to work. UI defaults to the first item on list instead of selected-model
                :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
       (for [[provider-name model-ids] (schema/models-by-provider)]
         [:optgroup {:label provider-name}
