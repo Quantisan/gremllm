@@ -1,6 +1,7 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
             [gremllm.main.effects.ipc :as ipc-effects]
+            [gremllm.main.actions.chat :as chat-actions]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.llm :as llm]
@@ -79,7 +80,9 @@
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
-;; LLM effects
+;; Chat Actions/Effects Registration
+(nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
+
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages model api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
