@@ -23,7 +23,11 @@
                   ;; File menu
                   {:label "File"
                    :submenu (filter identity
-                                    [{:label "Save"
+                                    [{:label "New Window"
+                                      :accelerator (if is-mac "Cmd+N" "Ctrl+N")
+                                      :click #(nxr/dispatch store {} [[:menu.actions/new-window]])}
+
+                                     {:label "Save"
                                       :accelerator (if is-mac "Cmd+S" "Ctrl+S")
                                       :click #(nxr/dispatch store {} [[:menu.actions/save-topic]])}
 
