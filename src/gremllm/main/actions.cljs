@@ -8,6 +8,7 @@
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.io :as io]
+            [gremllm.main.window :as window]
             [gremllm.schema :as schema]
             ["electron/main" :refer [app]]))
 
@@ -54,6 +55,7 @@
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
 (nxr/register-action! :menu.actions/show-settings (fn [_state] [[:menu.effects/send-command :show-settings]]))
 (nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/pick-folder]]))
+(nxr/register-action! :menu.actions/new-window (fn [_state] [[:window.actions/create]]))
 
 ;; Store Effects
 ;; =============
@@ -62,6 +64,17 @@
 (nxr/register-effect! :store.effects/save
   (fn [_ store path value]
     (swap! store assoc-in path value)))
+
+;; Window Actions/Effects Registration
+;; ===================================
+
+(nxr/register-action! :window.actions/create
+  (fn [_state] [[:window.effects/create]]))
+
+(nxr/register-effect! :window.effects/create
+  (fn [_ _ _]
+    (-> (window/create-window)
+        (window/setup-close-handlers))))
 
 ;; IPC Effects Registration
 ;; ========================

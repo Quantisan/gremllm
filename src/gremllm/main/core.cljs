@@ -108,15 +108,13 @@
 
 (defn- initialize-app [store]
   (setup-system-resources store)
-  (-> (window/create-window)
-      (window/setup-close-handlers)))
+  (nxr/dispatch store {} [[:window.actions/create]]))
 
 (defn- handle-app-activate
   "macOS: Fired when app activated (dock clicked). Creates window if none exist."
-  [_store]
+  [store]
   (when (zero? (.-length (.getAllWindows BrowserWindow)))
-    (-> (window/create-window)
-        (window/setup-close-handlers))))
+    (nxr/dispatch store {} [[:window.actions/create]])))
 
 (defn- handle-window-all-closed
   "Quit on Windows/Linux when last window closes. macOS apps stay running."
