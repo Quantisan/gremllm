@@ -43,6 +43,21 @@
 (defn focus-chat-input [_state]
   [[:effects/focus ".chat-input"]])
 
+;; Pure action for handling dragover event
+(defn handle-dragover [_state]
+  [[:effects/prevent-default]])
+
+;; Pure action for handling file drop
+(defn handle-file-drop [_state files]
+  (when files
+    (doseq [file files]
+      (js/console.log "Dropped file:"
+        (clj->js {:name (.-name file)
+                  :size (.-size file)
+                  :type (.-type file)
+                  :path (.-path file)}))))
+  [])
+
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status
   [[:system.actions/request-info]
