@@ -89,7 +89,10 @@
                                 "Type a message... (Shift+Enter for new line)"
                                 "Add API key to start chatting...")
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
-                      :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]}
+                      :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
+                      :dragover [[:form.actions/handle-dragover]]
+                      :drop [[:effects/prevent-default]
+                             [:form.actions/handle-file-drop [:event/dropped-files]]]}
                  :autofocus true}]
 
      [:button {:type "submit"
