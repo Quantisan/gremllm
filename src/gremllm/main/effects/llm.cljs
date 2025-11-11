@@ -6,11 +6,19 @@
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
   Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
+  Supports optional :attachments for multimodal messages with inline_data.
   Pure function for easy testing."
   [messages]
-  (mapv (fn [{:keys [role content]}]
+  (mapv (fn [{:keys [role content attachments]}]
           {:role (if (= role "assistant") "model" role)
-           :parts [{:text content}]})
+           :parts (concat
+                    ;; Attachment parts (inline_data with base64)
+                    (mapv (fn [{:keys [mime-type data]}]
+                            {:inline_data {:mime_type mime-type
+                                           :data data}})
+                          (or attachments []))
+                    ;; Text part
+                    [{:text content}])})
         messages))
 
 (defn- log-and-throw-error [response model message-count body]

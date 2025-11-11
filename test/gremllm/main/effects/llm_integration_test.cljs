@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.llm-integration-test
   (:require [cljs.test :refer [deftest is testing async]]
+            [clojure.string :as str]
             [gremllm.main.effects.llm :as llm]
             [gremllm.main.effects.llm-test :refer [mock-claude-response
                                                    mock-openai-response
@@ -208,4 +209,34 @@
                          (done)))
                 (.catch (fn [error]
                           (is false (str "API call failed: " (.-message error)))
+                          (done))))))))))
+
+(deftest test-query-llm-provider-gemini-with-attachment-integration
+  (async done
+    (testing "INTEGRATION: validate Gemini accepts inline_data with real API"
+      (let [api-key (.-GEMINI_API_KEY (.-env js/process))]
+        (if-not api-key
+          (do (js/console.warn "Skipping Gemini attachment test - GEMINI_API_KEY not set")
+              (done))
+          ;; 1x1 red pixel PNG (base64 encoded, 91 bytes)
+          (let [test-image-base64 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
+                test-messages [{:role "user"
+                                :content "What color is this image?"
+                                :attachments [{:mime-type "image/png"
+                                               :data test-image-base64}]}]]
+            (-> (llm/query-llm-provider test-messages "gemini-2.5-flash-lite" api-key)
+                (.then (fn [response]
+                         (js/console.log "\n=== GEMINI MULTIMODAL RESPONSE ===")
+                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+
+                         (testing "response structure with attachment"
+                           (is (string? (:text response)) "Should receive text response")
+                           (is (re-find #"(?i)red" (:text response))
+                               "Response should identify red color in test image")
+                           (is (pos-int? (get-in response [:usage :total-tokens]))
+                               "Should include valid usage metadata"))
+
+                         (done)))
+                (.catch (fn [error]
+                          (is false (str "API call with attachment failed: " (.-message error)))
                           (done))))))))))
