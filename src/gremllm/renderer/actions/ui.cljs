@@ -3,6 +3,11 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
+;; UI Actions
+;; This file contains actions for two related namespaces:
+;; - :ui.actions/* - Global UI concerns (modals, scrolling, focus)
+;; - :form.actions/* - Chat input form (typing, submit, file attachments)
+
 (defn update-input [_state value]
   [[:effects/save form-state/user-input-path value]])
 
@@ -42,6 +47,21 @@
 ;; Pure action for focusing chat input
 (defn focus-chat-input [_state]
   [[:effects/focus ".chat-input"]])
+
+;; Pure action for handling dragover event
+(defn handle-dragover [_state]
+  [[:effects/prevent-default]])
+
+;; Pure action for handling file drop
+(defn handle-file-drop [_state files]
+  ;; TODO: Store files in state (decision: form state vs message schema vs parallel structure)
+  ;; TODO: Add UI indicators for attached files
+  ;; TODO: Implement file reading effect via IPC
+  ;; TODO: Research provider attachment APIs (Anthropic, OpenAI, Google)
+  (when files
+    (doseq [file files]
+      (js/console.log "Dropped file:" (clj->js file))))
+  [])
 
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status

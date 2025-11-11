@@ -31,6 +31,17 @@
     {:key (.-key dom-event)
      :shift? (.-shiftKey dom-event)}))
 
+;; Register placeholder for drag-drop file events
+(nxr/register-placeholder! :event/dropped-files
+  (fn [{:replicant/keys [dom-event]}]
+    (when-let [dt (.-dataTransfer dom-event)]
+      (mapv (fn [file]
+              {:name (.-name file)
+               :size (.-size file)
+               :type (.-type file)
+               :path (.-path file)})
+            (array-seq (.-files dt))))))
+
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
   (fn [{:keys [dispatch-data]} _]
@@ -83,6 +94,8 @@
 (nxr/register-action! :form.actions/clear-input ui/clear-input)
 (nxr/register-action! :form.actions/handle-submit-keys ui/handle-submit-keys)
 (nxr/register-action! :form.actions/submit ui/submit-messages)
+(nxr/register-action! :form.actions/handle-dragover ui/handle-dragover)
+(nxr/register-action! :form.actions/handle-file-drop ui/handle-file-drop)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
