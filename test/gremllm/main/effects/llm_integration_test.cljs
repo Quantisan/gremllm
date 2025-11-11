@@ -87,6 +87,47 @@
 
                          ;; Provider-specific structural checks
                          (is (vector? (:choices response)) "choices should be a vector")
+                         (is (seq (:choices response)) "choices should be non-empty")
+
+                         ;; API contract and nested structure validations
+                         (testing "API contract fields"
+                           (let [choice (first (:choices response))]
+                             (is (number? (:index choice))
+                                 "choice index should be a number")
+                             (is (= 0 (:index choice))
+                                 "first choice should have index 0")
+                             (is (= "assistant" (get-in choice [:message :role]))
+                                 "message role should be 'assistant'")
+                             (is (contains? #{"stop" "length" "content_filter" "tool_calls" "function_call"}
+                                            (:finish_reason choice))
+                                 "finish_reason should be valid enum value")))
+
+                         (testing "nested structure required by normalization"
+                           (let [message (get-in response [:choices 0 :message])]
+                             (is (map? message)
+                                 "message should be a map")
+                             (is (contains? message :role)
+                                 "message should have :role field")
+                             (is (contains? message :content)
+                                 "message should have :content field")
+                             (is (contains? message :refusal)
+                                 "message should have :refusal field")
+                             (is (contains? message :annotations)
+                                 "message should have :annotations field")
+                             (is (string? (:content message))
+                                 "content should be a string")
+                             (is (or (nil? (:refusal message)) (string? (:refusal message)))
+                                 "refusal should be nil or string")
+                             (is (vector? (:annotations message))
+                                 "annotations should be a vector")))
+
+                         (testing "usage structure"
+                           (let [usage (:usage response)]
+                             (is (map? usage) "usage should be a map")
+                             (is (every? number? [(:prompt_tokens usage)
+                                                  (:completion_tokens usage)
+                                                  (:total_tokens usage)])
+                                 "token counts should be numbers")))
 
                          (done)))
                 (.catch (fn [error]

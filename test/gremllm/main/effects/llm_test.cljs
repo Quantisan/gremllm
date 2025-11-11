@@ -64,7 +64,9 @@
    :model "gpt-5-nano"
    :choices [{:index 0
               :message {:role "assistant"
-                        :content "4"}
+                        :content "4"
+                        :refusal nil
+                        :annotations []}
               :finish_reason "stop"}]
    :usage {:prompt_tokens 9
            :completion_tokens 1
@@ -74,7 +76,9 @@
            :completion_tokens_details {:reasoning_tokens 0
                                        :audio_tokens 0
                                        :accepted_prediction_tokens 0
-                                       :rejected_prediction_tokens 0}}})
+                                       :rejected_prediction_tokens 0}}
+   :service_tier "default"
+   :system_fingerprint nil})
 
 (def mock-gemini-response
   "Google Gemini API response structure. Validated via test-query-llm-provider-gemini-integration."
