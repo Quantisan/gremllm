@@ -1,18 +1,14 @@
 (ns gremllm.main.effects.llm-integration-test
   (:require [cljs.test :refer [deftest is testing async]]
-            [gremllm.main.effects.llm :as llm]
-            [gremllm.main.effects.llm-test :refer [mock-claude-response
-                                                   mock-openai-response
-                                                   mock-gemini-response
-                                                   assert-matches-structure]]))
+            [gremllm.main.effects.llm :as llm]))
 
 ;; Integration Tests
-;; These call real APIs to validate our mocks match actual responses.
+;; These call real APIs to validate end-to-end functionality including response normalization.
 ;; Run with: ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=... npm run test:integration
 
 (deftest test-query-llm-provider-anthropic-integration
   (async done
-    (testing "INTEGRATION: validate mock-claude-response against real API"
+    (testing "INTEGRATION: validate Anthropic API returns normalized response"
       (let [api-key (.-ANTHROPIC_API_KEY (.-env js/process))]
         (if-not api-key
           (do (js/console.warn "Skipping Anthropic integration test - ANTHROPIC_API_KEY not set")
@@ -23,15 +19,19 @@
                          (js/console.log "\n=== ANTHROPIC API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         (testing "response matches mock-claude-response structure"
-                           (assert-matches-structure response
-                                                     mock-claude-response
-                                                     [:type :role :stop_reason :stop_sequence]
-                                                     [:id :model])
-                           ;; Anthropic-specific structure checks
-                           (is (vector? (:content response)) "content should be a vector")
-                           (is (every? #(contains? % :type) (:content response))
-                               "content items should have :type key"))
+                         (testing "response matches normalized LLMResponse schema"
+                           ;; Validate normalized structure
+                           (is (string? (:text response)) "text should be a string")
+                           (is (seq (:text response)) "text should be non-empty")
+
+                           ;; Validate usage map
+                           (is (map? (:usage response)) "usage should be a map")
+                           (is (int? (:input-tokens (:usage response))) "input-tokens should be an int")
+                           (is (int? (:output-tokens (:usage response))) "output-tokens should be an int")
+                           (is (int? (:total-tokens (:usage response))) "total-tokens should be an int")
+                           (is (pos? (:input-tokens (:usage response))) "input-tokens should be positive")
+                           (is (pos? (:output-tokens (:usage response))) "output-tokens should be positive")
+                           (is (pos? (:total-tokens (:usage response))) "total-tokens should be positive"))
 
                          (done)))
                 (.catch (fn [error]
@@ -40,7 +40,7 @@
 
 (deftest test-query-llm-provider-openai-integration
   (async done
-    (testing "INTEGRATION: validate mock-openai-response against real API"
+    (testing "INTEGRATION: validate OpenAI API returns normalized response"
       (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
         (if-not api-key
           (do (js/console.warn "Skipping OpenAI integration test - OPENAI_API_KEY not set")
@@ -51,15 +51,19 @@
                          (js/console.log "\n=== OPENAI API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         (testing "response matches mock-openai-response structure"
-                           (assert-matches-structure response
-                                                     mock-openai-response
-                                                     [:object]
-                                                     [:id :created :model])
-                           ;; OpenAI-specific structure checks
-                           (is (vector? (:choices response)) "choices should be a vector")
-                           (is (every? #(contains? % :message) (:choices response))
-                               "choices items should have :message key"))
+                         (testing "response matches normalized LLMResponse schema"
+                           ;; Validate normalized structure
+                           (is (string? (:text response)) "text should be a string")
+                           (is (seq (:text response)) "text should be non-empty")
+
+                           ;; Validate usage map
+                           (is (map? (:usage response)) "usage should be a map")
+                           (is (int? (:input-tokens (:usage response))) "input-tokens should be an int")
+                           (is (int? (:output-tokens (:usage response))) "output-tokens should be an int")
+                           (is (int? (:total-tokens (:usage response))) "total-tokens should be an int")
+                           (is (pos? (:input-tokens (:usage response))) "input-tokens should be positive")
+                           (is (pos? (:output-tokens (:usage response))) "output-tokens should be positive")
+                           (is (pos? (:total-tokens (:usage response))) "total-tokens should be positive"))
 
                          (done)))
                 (.catch (fn [error]
@@ -68,7 +72,7 @@
 
 (deftest test-query-llm-provider-gemini-integration
   (async done
-    (testing "INTEGRATION: validate mock-gemini-response against real API"
+    (testing "INTEGRATION: validate Gemini API returns normalized response"
       (let [api-key (.-GEMINI_API_KEY (.-env js/process))]
         (if-not api-key
           (do (js/console.warn "Skipping Gemini integration test - GEMINI_API_KEY not set")
@@ -79,15 +83,19 @@
                          (js/console.log "\n=== GEMINI API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         (testing "response matches mock-gemini-response structure"
-                           (assert-matches-structure response
-                                                     mock-gemini-response
-                                                     []
-                                                     [:modelVersion :responseId])
-                           ;; Gemini-specific structure checks
-                           (is (vector? (:candidates response)) "candidates should be a vector")
-                           (is (every? #(contains? % :content) (:candidates response))
-                               "candidates items should have :content key"))
+                         (testing "response matches normalized LLMResponse schema"
+                           ;; Validate normalized structure
+                           (is (string? (:text response)) "text should be a string")
+                           (is (seq (:text response)) "text should be non-empty")
+
+                           ;; Validate usage map
+                           (is (map? (:usage response)) "usage should be a map")
+                           (is (int? (:input-tokens (:usage response))) "input-tokens should be an int")
+                           (is (int? (:output-tokens (:usage response))) "output-tokens should be an int")
+                           (is (int? (:total-tokens (:usage response))) "total-tokens should be an int")
+                           (is (pos? (:input-tokens (:usage response))) "input-tokens should be positive")
+                           (is (pos? (:output-tokens (:usage response))) "output-tokens should be positive")
+                           (is (pos? (:total-tokens (:usage response))) "total-tokens should be positive"))
 
                          (done)))
                 (.catch (fn [error]
