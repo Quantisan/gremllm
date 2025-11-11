@@ -3,6 +3,11 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
+;; UI Actions
+;; This file contains actions for two related namespaces:
+;; - :ui.actions/* - Global UI concerns (modals, scrolling, focus)
+;; - :form.actions/* - Chat input form (typing, submit, file attachments)
+
 (defn update-input [_state value]
   [[:effects/save form-state/user-input-path value]])
 
