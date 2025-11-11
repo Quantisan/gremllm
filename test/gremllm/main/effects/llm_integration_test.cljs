@@ -115,6 +115,34 @@
                          ;; Provider-specific structural checks
                          (is (vector? (:candidates response)) "candidates should be a vector")
 
+                         ;; API contract and nested structure validations
+                         (testing "API contract fields"
+                           (let [candidate (first (:candidates response))]
+                             (is (= "model" (get-in candidate [:content :role]))
+                                 "assistant role should be 'model' in Gemini API")
+                             (is (= 0 (:index candidate))
+                                 "first candidate should have index 0")
+                             (is (contains? #{"STOP" "MAX_TOKENS" "SAFETY" "RECITATION"}
+                                            (:finishReason candidate))
+                                 "finishReason should be valid enum value")))
+
+                         (testing "nested structure required by normalization"
+                           (let [candidate (first (:candidates response))]
+                             (is (map? (:content candidate))
+                                 "candidate content should be a map")
+                             (is (vector? (get-in candidate [:content :parts]))
+                                 "content parts should be a vector")
+                             (is (string? (get-in candidate [:content :parts 0 :text]))
+                                 "text should exist and be a string")))
+
+                         (testing "usage metadata structure"
+                           (let [usage (:usageMetadata response)]
+                             (is (map? usage) "usageMetadata should be a map")
+                             (is (every? number? [(:promptTokenCount usage)
+                                                  (:candidatesTokenCount usage)
+                                                  (:totalTokenCount usage)])
+                                 "token counts should be numbers")))
+
                          (done)))
                 (.catch (fn [error]
                           (is false (str "API call failed: " (.-message error)))
