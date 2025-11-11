@@ -92,7 +92,7 @@
 (defmethod fetch-provider-response :openai
   [messages model api-key]
   (let [request-body {:model model
-                      :max_tokens 8192
+                      :max_completion_tokens 8192
                       :messages messages}
         headers {"Authorization" (str "Bearer " api-key)
                  "Content-Type" "application/json"}]

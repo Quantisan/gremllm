@@ -86,8 +86,7 @@
                    :candidatesTokenCount 1
                    :totalTokenCount 24
                    :promptTokensDetails [{:modality "TEXT"
-                                          :tokenCount 4}]
-                   :thoughtsTokenCount 19}
+                                          :tokenCount 4}]}
    :modelVersion "gemini-2.5-flash-lite"
    :responseId "tpboaMabLejN1e8PzMOD0Ak"})
 
