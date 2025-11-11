@@ -90,37 +90,6 @@
    :modelVersion "gemini-2.5-flash-lite"
    :responseId "tpboaMabLejN1e8PzMOD0Ak"})
 
-;; Shared test utilities (used by llm-integration-test)
-
-(defn assert-matches-structure
-  "Validates actual response matches mock structure, ignoring dynamic field values.
-  - Static fields must match exactly
-  - Dynamic fields are checked for existence only
-  - Usage keys must match (but values can differ)"
-  [actual mock static-fields dynamic-fields]
-  ;; All mock keys should be present in actual
-  (is (every? (set (keys actual)) (keys mock))
-      (str "Missing keys: " (remove (set (keys actual)) (keys mock))))
-
-  ;; Static fields must match exactly
-  (doseq [field static-fields]
-    (is (= (field actual) (field mock))
-        (str field " should match: expected " (field mock) ", got " (field actual))))
-
-  ;; Dynamic fields should exist (type checks left to caller if needed)
-  (doseq [field dynamic-fields]
-    (is (contains? actual field)
-        (str field " should exist in response")))
-
-  ;; Usage should have same keys as mock (handle both :usage and :usageMetadata)
-  (let [usage-key (cond
-                    (contains? actual :usage) :usage
-                    (contains? actual :usageMetadata) :usageMetadata
-                    :else nil)]
-    (when usage-key
-      (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
-          (str usage-key " keys should match mock")))))
-
 ;; Unit Tests
 
 (deftest test-messages->gemini-format
