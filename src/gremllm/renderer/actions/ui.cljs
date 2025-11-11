@@ -49,6 +49,10 @@
 
 ;; Pure action for handling file drop
 (defn handle-file-drop [_state files]
+  ;; TODO: Store files in state (decision: form state vs message schema vs parallel structure)
+  ;; TODO: Add UI indicators for attached files
+  ;; TODO: Implement file reading effect via IPC
+  ;; TODO: Research provider attachment APIs (Anthropic, OpenAI, Google)
   (when files
     (doseq [file files]
       (js/console.log "Dropped file:"
