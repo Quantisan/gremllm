@@ -44,7 +44,7 @@
   {:id "msg_01LaTD7HNzYujxh6ASPpTQ6T"
    :type "message"
    :role "assistant"
-   :model "claude-3-5-haiku-20241022"
+   :model "claude-haiku-4-5-20251001"
    :content [{:type "text" :text "4"}]
    :stop_reason "end_turn"
    :stop_sequence nil
@@ -61,7 +61,7 @@
   {:id "chatcmpl-123"
    :object "chat.completion"
    :created 1677652288
-   :model "gpt-4o-mini"
+   :model "gpt-5-nano"
    :choices [{:index 0
               :message {:role "assistant"
                         :content "4"}
@@ -88,7 +88,7 @@
                    :promptTokensDetails [{:modality "TEXT"
                                           :tokenCount 4}]
                    :thoughtsTokenCount 19}
-   :modelVersion "gemini-2.5-flash"
+   :modelVersion "gemini-2.5-flash-lite"
    :responseId "tpboaMabLejN1e8PzMOD0Ak"})
 
 ;; Shared test utilities (used by llm-integration-test)
