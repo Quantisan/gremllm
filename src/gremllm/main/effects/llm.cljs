@@ -1,7 +1,6 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [gremllm.main.llm :as llm]
-            [gremllm.schema :as schema]
+  (:require [gremllm.schema :as schema]
             [malli.core :as m]))
 
 (defn messages->gemini-format
@@ -66,15 +65,16 @@
                      :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
                      :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
 
-(defmulti ^LLMResponse query-llm-provider
-  "Dispatches to provider-specific implementation based on model string.
+(def response-normalizers
+  {:anthropic normalize-anthropic-response
+   :openai normalize-openai-response
+   :google normalize-gemini-response})
 
-  Uses direct fetch instead of provider SDKs for simplicity—our use case is
-  straightforward message exchange. Resist adding features (error handling,
-  retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
+(defmulti fetch-provider-response
+  "Fetches raw API response from provider. Returns promise of raw API response shape (not normalized)."
   (fn [_messages model _api-key] (schema/model->provider model)))
 
-(defmethod query-llm-provider :anthropic
+(defmethod fetch-provider-response :anthropic
   [messages model api-key]
   (let [request-body {:model model
                       :max_tokens 8192
@@ -87,10 +87,9 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true))
-        (.then normalize-anthropic-response))))
+        (.then #(js->clj % :keywordize-keys true)))))
 
-(defmethod query-llm-provider :openai
+(defmethod fetch-provider-response :openai
   [messages model api-key]
   (let [request-body {:model model
                       :max_tokens 8192
@@ -102,10 +101,9 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true))
-        (.then normalize-openai-response))))
+        (.then #(js->clj % :keywordize-keys true)))))
 
-(defmethod query-llm-provider :google
+(defmethod fetch-provider-response :google
   [messages model api-key]
   (let [request-body {:contents (messages->gemini-format messages)
                       :generationConfig {:maxOutputTokens 8192}}
@@ -117,5 +115,15 @@
                             :headers headers
                             :body (js/JSON.stringify (clj->js request-body))}))
         (.then #(handle-response % model (count messages)))
-        (.then #(js->clj % :keywordize-keys true))
-        (.then normalize-gemini-response))))
+        (.then #(js->clj % :keywordize-keys true)))))
+
+(defn ^LLMResponse query-llm-provider
+  "Dispatches to provider-specific implementation based on model string.
+
+  Uses direct fetch instead of provider SDKs for simplicity—our use case is
+  straightforward message exchange. Resist adding features (error handling,
+  retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
+  [messages model api-key]
+  (let [provider (schema/model->provider model)]
+    (.then (fetch-provider-response messages model api-key)
+           (response-normalizers provider))))
