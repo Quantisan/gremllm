@@ -60,11 +60,7 @@
   ;; TODO: Research provider attachment APIs (Anthropic, OpenAI, Google)
   (when files
     (doseq [file files]
-      (js/console.log "Dropped file:"
-        (clj->js {:name (.-name file)
-                  :size (.-size file)
-                  :type (.-type file)
-                  :path (.-path file)}))))
+      (js/console.log "Dropped file:" (clj->js file))))
   [])
 
 (defn show-settings [_state]

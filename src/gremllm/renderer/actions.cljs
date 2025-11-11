@@ -35,8 +35,12 @@
 (nxr/register-placeholder! :event/dropped-files
   (fn [{:replicant/keys [dom-event]}]
     (when-let [dt (.-dataTransfer dom-event)]
-      ;; TODO: Enforce explicit boundary: Transform to validated Clojure data before returninng
-      (array-seq (.-files dt)))))
+      (mapv (fn [file]
+              {:name (.-name file)
+               :size (.-size file)
+               :type (.-type file)
+               :path (.-path file)})
+            (array-seq (.-files dt))))))
 
 ;; Register prevent-default as an effect
 (nxr/register-effect! :effects/prevent-default
