@@ -42,12 +42,13 @@
   [store secrets-filepath]
   ;; Chat - async pattern: dispatches to action registry, response flows via events
   (.on ipcMain "chat/send-message"
-       (fn [event request-id messages model]
-         (let [messages-clj (js->clj messages :keywordize-keys true)]
+       (fn [event request-id messages model file-paths]
+         (let [messages-clj (js->clj messages :keywordize-keys true)
+               file-paths-clj (when file-paths (js->clj file-paths))]
            (nxr/dispatch store {:ipc-event event
                                 :request-id request-id
                                 :channel "chat/send-message"}
-                         [[:chat.actions/send-message-from-ipc messages-clj model [:env/api-key-for-model model]]]))))
+                         [[:chat.actions/send-message-from-ipc messages-clj model [:env/api-key-for-model model] file-paths-clj]]))))
 
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
