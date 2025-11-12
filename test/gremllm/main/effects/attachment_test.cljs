@@ -11,7 +11,7 @@
         (let [source-file (io/path-join workspace-dir "image.png")
               content "fake png content"]
           (io/write-file source-file content)
-          (let [ref (attachment/store-attachment nil nil workspace-dir source-file)
+          (let [ref (attachment/store-attachment workspace-dir source-file)
                 loaded (attachment/load-attachment-content workspace-dir (:ref ref))]
             ;; Correct metadata
             (is (= "image.png" (:name ref)))
@@ -28,8 +28,8 @@
               file2 (io/path-join workspace-dir "file2.txt")]
           (io/write-file file1 "duplicate content")
           (io/write-file file2 "duplicate content")
-          (let [ref1 (attachment/store-attachment nil nil workspace-dir file1)
-                ref2 (attachment/store-attachment nil nil workspace-dir file2)]
+          (let [ref1 (attachment/store-attachment workspace-dir file1)
+                ref2 (attachment/store-attachment workspace-dir file2)]
             (is (= (:ref ref1) (:ref ref2)))))))))
 
 (deftest test-gemini-format-conversion

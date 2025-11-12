@@ -70,9 +70,9 @@
    :size file-size})
 
 (defn store-attachment
-  "Effect: copy file to workspace attachments folder with content-addressed name.
+  "Helper: copy file to workspace attachments folder with content-addressed name.
    Returns validated AttachmentRef map: {:ref :name :mime-type :size}"
-  [_context _store workspace-path file-path]
+  [workspace-path file-path]
   ;; I/O: gather file metadata
   (let [file-hash (compute-file-hash file-path)
         original-name (io/path-basename file-path)
@@ -111,9 +111,8 @@
     {:inline_data {:mime_type (:mime-type attachment-ref)
                    :data base64-data}}))
 
-;; TODO: effect calling effect, this should be an action dispatchinng effect
 (defn process-attachments-batch
-  "Effect: process multiple file paths, store each, return vector of AttachmentRefs.
+  "Process multiple file paths, store each, return vector of AttachmentRefs.
    Used when user drops multiple files into chat."
-  [context store workspace-path file-paths]
-  (mapv #(store-attachment context store workspace-path %) file-paths))
+  [workspace-path file-paths]
+  (mapv #(store-attachment workspace-path %) file-paths))
