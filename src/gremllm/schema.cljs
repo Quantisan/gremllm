@@ -18,6 +18,22 @@
    [:mime-type :string]  ; MIME type (e.g., 'image/png')
    [:size :int]])        ; File size in bytes
 
+(def APIAttachment
+  "Attachment in API provider format (with base64 data).
+   Validated at filesystem→API boundary."
+  [:map
+   [:mime-type :string]
+   [:data :string]])     ; base64-encoded content
+
+(defn attachment-ref->api-format
+  "Transform AttachmentRef + content to validated API format.
+   Takes AttachmentRef and Node Buffer, returns validated APIAttachment.
+   Throws if schema invalid."
+  [attachment-ref content-buffer]
+  (let [api-attachment {:mime-type (:mime-type attachment-ref)
+                        :data (.toString content-buffer "base64")}]
+    (m/coerce APIAttachment api-attachment mt/json-transformer)))
+
 (def Message
   [:map
    [:id :int]
