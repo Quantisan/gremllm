@@ -66,15 +66,31 @@
                      :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
 
 (def response-normalizers
+  "Maps provider keywords to normalization functions.
+
+  Transforms external API contracts (provider-specific response shapes)
+  to our internal LLMResponse schema. Each normalizer is a pure function
+  that extracts data from a provider's response structure and validates
+  it against our schema using Malli coercion."
   {:anthropic normalize-anthropic-response
    :openai normalize-openai-response
    :google normalize-gemini-response})
 
-(defmulti fetch-provider-response
-  "Fetches raw API response from provider. Returns promise of raw API response shape (not normalized)."
+(defmulti fetch-raw-provider-response
+  "Fetches raw, unnormalized API response from provider.
+
+  Returns a promise of the provider-specific response shape (Anthropic, OpenAI, or
+  Gemini format). Each provider returns different field names, structures, and
+  metadata. This boundary is explicitly separated from normalization to:
+
+  1. Clearly model the external API contract vs internal schema transformation
+  2. Enable integration tests to validate that mock fixtures match real API responses
+
+  The response is converted from JSON to Clojure maps but retains the provider's
+  original structure. Use `response-normalizers` to transform to LLMResponse schema."
   (fn [_messages model _api-key] (schema/model->provider model)))
 
-(defmethod fetch-provider-response :anthropic
+(defmethod fetch-raw-provider-response :anthropic
   [messages model api-key]
   (let [request-body {:model model
                       :max_tokens 8192
@@ -89,7 +105,7 @@
         (.then #(handle-response % model (count messages)))
         (.then #(js->clj % :keywordize-keys true)))))
 
-(defmethod fetch-provider-response :openai
+(defmethod fetch-raw-provider-response :openai
   [messages model api-key]
   (let [request-body {:model model
                       :max_completion_tokens 8192
@@ -103,7 +119,7 @@
         (.then #(handle-response % model (count messages)))
         (.then #(js->clj % :keywordize-keys true)))))
 
-(defmethod fetch-provider-response :google
+(defmethod fetch-raw-provider-response :google
   [messages model api-key]
   (let [request-body {:contents (messages->gemini-format messages)
                       :generationConfig {:maxOutputTokens 8192}}
@@ -118,12 +134,20 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defn ^LLMResponse query-llm-provider
-  "Dispatches to provider-specific implementation based on model string.
+  "Queries an LLM provider and returns normalized response.
+
+  Composes two steps:
+  1. Fetch raw provider response (via `fetch-raw-provider-response`)
+  2. Normalize to internal LLMResponse schema (via `response-normalizers`)
+
+  This explicit separation models the boundary between external API contracts
+  and our internal schema. Each provider has different response shapes; the
+  normalizers transform these to a consistent interface.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
   retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
   [messages model api-key]
   (let [provider (schema/model->provider model)]
-    (.then (fetch-provider-response messages model api-key)
+    (.then (fetch-raw-provider-response messages model api-key)
            (response-normalizers provider))))

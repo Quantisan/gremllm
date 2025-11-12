@@ -34,9 +34,22 @@
       (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
           (str usage-key " keys should match mock")))))
 
-;; Integration Tests
-;; These call real APIs to validate that mock fixtures accurately represent actual API responses.
-;; This ensures unit test mocks stay synchronized with provider APIs.
+;; Integration Tests: External API Boundary Validation
+;;
+;; These tests validate the critical boundary between external LLM APIs and our internal
+;; mock fixtures. They ensure that:
+;;
+;; 1. Mock response structures accurately represent real provider API responses
+;; 2. Normalization functions can safely extract data from actual API responses
+;; 3. Unit tests using mocks won't pass while production breaks due to API changes
+;;
+;; The tests call real APIs with simple prompts and compare the structural shape (keys,
+;; types, nested structures) against mock fixtures. This validates that the paths used
+;; by our normalization functions actually exist in real responses.
+;;
+;; This is why `fetch-raw-provider-response` exists as a separate multimethod—it exposes
+;; the unnormalized API response for precise boundary testing.
+;;
 ;; Run with: ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=... npm run test:integration
 
 (deftest test-fetch-provider-response-anthropic-integration
@@ -47,7 +60,7 @@
           (do (js/console.warn "Skipping Anthropic integration test - ANTHROPIC_API_KEY not set")
               (done))
           (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-provider-response test-messages "claude-haiku-4-5-20251001" api-key)
+            (-> (llm/fetch-raw-provider-response test-messages "claude-haiku-4-5-20251001" api-key)
                 (.then (fn [response]
                          (js/console.log "\n=== ANTHROPIC RAW API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
@@ -89,7 +102,7 @@
           (do (js/console.warn "Skipping OpenAI integration test - OPENAI_API_KEY not set")
               (done))
           (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-provider-response test-messages "gpt-5-nano" api-key)
+            (-> (llm/fetch-raw-provider-response test-messages "gpt-5-nano" api-key)
                 (.then (fn [response]
                          (js/console.log "\n=== OPENAI RAW API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
@@ -157,7 +170,7 @@
           (do (js/console.warn "Skipping Gemini integration test - GEMINI_API_KEY not set")
               (done))
           (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-provider-response test-messages "gemini-2.5-flash-lite" api-key)
+            (-> (llm/fetch-raw-provider-response test-messages "gemini-2.5-flash-lite" api-key)
                 (.then (fn [response]
                          (js/console.log "\n=== GEMINI RAW API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
