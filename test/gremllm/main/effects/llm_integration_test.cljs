@@ -55,11 +55,26 @@
                          ;; Validate raw API structure against mock fixture
                          (assert-matches-structure response
                                                    mock-claude-response
-                                                   [:type :role]
-                                                   [:id :model :stop_reason :stop_sequence :content])
+                                                   [:type :role :model :stop_reason :stop_sequence]
+                                                   [:id :content])
 
                          ;; Provider-specific structural checks
                          (is (vector? (:content response)) "content should be a vector")
+                         (is (seq (:content response)) "content should be non-empty")
+
+                         ;; Content item structure validation
+                         (testing "content item structure"
+                           (let [content-item (first (:content response))]
+                             (is (map? content-item)
+                                 "content item should be a map")
+                             (is (contains? content-item :type)
+                                 "content item should have :type field")
+                             (is (= "text" (:type content-item))
+                                 "content item type should be 'text'")
+                             (is (contains? content-item :text)
+                                 "content item should have :text field")
+                             (is (string? (:text content-item))
+                                 "content text should be a string")))
 
                          (done)))
                 (.catch (fn [error]
