@@ -96,6 +96,7 @@
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :form.actions/handle-dragover ui/handle-dragover)
 (nxr/register-action! :form.actions/handle-file-drop ui/handle-file-drop)
+(nxr/register-action! :ui.actions/clear-pending-attachments ui/clear-pending-attachments)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)

@@ -1,7 +1,8 @@
 (ns gremllm.renderer.actions.messages
   (:require [nexus.registry :as nxr]
             [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.loading :as loading-state]))
+            [gremllm.renderer.state.loading :as loading-state]
+            [gremllm.renderer.state.form :as form-state]))
 
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
@@ -59,12 +60,16 @@
 ;; Effect for sending messages to LLM
 (nxr/register-effect! :llm.effects/send-llm-messages
   (fn [{dispatch :dispatch} store assistant-id model]
-    (dispatch
-      [[:effects/promise
-        {:promise    (-> (topic-state/get-messages @store)
-                         (messages->api-format)
-                         (clj->js)
-                         (js/window.electronAPI.sendMessage model))
-         :on-success [[:llm.actions/response-received assistant-id]]
-         :on-error   [[:llm.actions/response-error assistant-id]]}]])))
+    (let [state @store
+          messages (-> (topic-state/get-messages state)
+                       (messages->api-format)
+                       (clj->js))
+          attachments (form-state/get-pending-attachments state)
+          file-paths (when (seq attachments)
+                       (clj->js (mapv :path attachments)))]
+      (dispatch
+        [[:effects/promise
+          {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
+           :on-success [[:llm.actions/response-received assistant-id]]
+           :on-error   [[:llm.actions/response-error assistant-id]]}]]))))
 
