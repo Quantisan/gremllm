@@ -111,9 +111,7 @@
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 
 ;; Attachment Effects Registration
-(nxr/register-effect! :attachment.effects/store
-  (fn [_ _ workspace-path file-path]
-    (attachment-effects/store-attachment workspace-path file-path)))
+(nxr/register-effect! :attachment.effects/store attachment-effects/store-attachment)
 
 (nxr/register-effect! :attachment.effects/load
   (fn [_ _ workspace-path hash-prefix]
