@@ -9,11 +9,21 @@
 ;; Messages
 ;; ========================================
 
+(def AttachmentRef
+  "Reference to a stored attachment file.
+   Persisted in topic EDN, not the actual file content."
+  [:map
+   [:ref :string]        ; Hash prefix (first 8 chars of SHA256)
+   [:name :string]       ; Original filename
+   [:mime-type :string]  ; MIME type (e.g., 'image/png')
+   [:size :int]])        ; File size in bytes
+
 (def Message
   [:map
    [:id :int]
    [:type [:enum :user :assistant]]
-   [:text :string]])
+   [:text :string]
+   [:attachments {:optional true} [:vector AttachmentRef]]])
 
 (def LLMResponse
   "Normalized LLM response shape, independent of provider.

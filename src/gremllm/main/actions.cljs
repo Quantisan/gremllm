@@ -7,6 +7,7 @@
             [gremllm.main.llm :as llm]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.effects.attachment :as attachment-effects]
             [gremllm.main.io :as io]
             [gremllm.main.window :as window]
             [gremllm.schema :as schema]
@@ -108,4 +109,13 @@
 
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
+
+;; Attachment Effects Registration
+(nxr/register-effect! :attachment.effects/store
+  (fn [_ _ workspace-path file-path]
+    (attachment-effects/store-attachment workspace-path file-path)))
+
+(nxr/register-effect! :attachment.effects/load
+  (fn [_ _ workspace-path hash-prefix]
+    (attachment-effects/load-attachment-content workspace-path hash-prefix)))
 
