@@ -107,9 +107,9 @@
 ;; Attachment processing effects - each executes ONE domain operation then dispatches next step
 
 (nxr/register-effect! :attachment.effects/process-batch-then-continue
-  (fn [{:keys [dispatch] :as context} store workspace-dir file-paths messages model api-key]
+  (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
     ;; Effect: process attachment batch (multiple file I/O, but conceptually one operation)
-    (let [attachment-refs (attachment-effects/process-attachments-batch context store workspace-dir file-paths)]
+    (let [attachment-refs (attachment-effects/process-attachments-batch workspace-dir file-paths)]
       ;; Dispatch next action with results
       (dispatch [[:chat.actions/send-message-with-loaded-attachments workspace-dir attachment-refs messages model api-key]]))))
 
