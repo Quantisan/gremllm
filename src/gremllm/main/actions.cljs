@@ -101,6 +101,21 @@
   (fn [{:keys [dispatch]} _ messages model api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
 
+(nxr/register-effect! :chat.effects/send-message-with-attachments
+  (fn [{:keys [dispatch] :as context} store workspace-dir file-paths messages model api-key]
+    ;; Effect: process attachments (synchronous I/O)
+    (let [attachment-refs (attachment-effects/process-attachments-batch context store workspace-dir file-paths)
+          ;; Effect: load attachment content and convert to API format
+          attachments-with-data (mapv (fn [ref]
+                                        (let [content (attachment-effects/load-attachment-content workspace-dir (:ref ref))]
+                                          {:mime-type (:mime-type ref)
+                                           :data (.toString content "base64")}))
+                                      attachment-refs)
+          ;; Pure: enrich first message with attachments (in API-ready format)
+          enriched-messages (update messages 0 assoc :attachments attachments-with-data)]
+      ;; Dispatch normal chat flow with enriched messages
+      (dispatch [[:chat.effects/send-message enriched-messages model api-key]]))))
+
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
 (nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
@@ -116,4 +131,6 @@
 (nxr/register-effect! :attachment.effects/load
   (fn [_ _ workspace-path hash-prefix]
     (attachment-effects/load-attachment-content workspace-path hash-prefix)))
+
+(nxr/register-effect! :attachment.effects/process-batch attachment-effects/process-attachments-batch)
 
