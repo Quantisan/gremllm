@@ -44,7 +44,7 @@
   {:id "msg_01LaTD7HNzYujxh6ASPpTQ6T"
    :type "message"
    :role "assistant"
-   :model "claude-3-5-haiku-20241022"
+   :model "claude-haiku-4-5-20251001"
    :content [{:type "text" :text "4"}]
    :stop_reason "end_turn"
    :stop_sequence nil
@@ -61,10 +61,12 @@
   {:id "chatcmpl-123"
    :object "chat.completion"
    :created 1677652288
-   :model "gpt-4o-mini"
+   :model "gpt-5-nano"
    :choices [{:index 0
               :message {:role "assistant"
-                        :content "4"}
+                        :content "4"
+                        :refusal nil
+                        :annotations []}
               :finish_reason "stop"}]
    :usage {:prompt_tokens 9
            :completion_tokens 1
@@ -74,7 +76,9 @@
            :completion_tokens_details {:reasoning_tokens 0
                                        :audio_tokens 0
                                        :accepted_prediction_tokens 0
-                                       :rejected_prediction_tokens 0}}})
+                                       :rejected_prediction_tokens 0}}
+   :service_tier "default"
+   :system_fingerprint nil})
 
 (def mock-gemini-response
   "Google Gemini API response structure. Validated via test-query-llm-provider-gemini-integration."
@@ -86,41 +90,9 @@
                    :candidatesTokenCount 1
                    :totalTokenCount 24
                    :promptTokensDetails [{:modality "TEXT"
-                                          :tokenCount 4}]
-                   :thoughtsTokenCount 19}
-   :modelVersion "gemini-2.5-flash"
+                                          :tokenCount 4}]}
+   :modelVersion "gemini-2.5-flash-lite"
    :responseId "tpboaMabLejN1e8PzMOD0Ak"})
-
-;; Shared test utilities (used by llm-integration-test)
-
-(defn assert-matches-structure
-  "Validates actual response matches mock structure, ignoring dynamic field values.
-  - Static fields must match exactly
-  - Dynamic fields are checked for existence only
-  - Usage keys must match (but values can differ)"
-  [actual mock static-fields dynamic-fields]
-  ;; All mock keys should be present in actual
-  (is (every? (set (keys actual)) (keys mock))
-      (str "Missing keys: " (remove (set (keys actual)) (keys mock))))
-
-  ;; Static fields must match exactly
-  (doseq [field static-fields]
-    (is (= (field actual) (field mock))
-        (str field " should match: expected " (field mock) ", got " (field actual))))
-
-  ;; Dynamic fields should exist (type checks left to caller if needed)
-  (doseq [field dynamic-fields]
-    (is (contains? actual field)
-        (str field " should exist in response")))
-
-  ;; Usage should have same keys as mock (handle both :usage and :usageMetadata)
-  (let [usage-key (cond
-                    (contains? actual :usage) :usage
-                    (contains? actual :usageMetadata) :usageMetadata
-                    :else nil)]
-    (when usage-key
-      (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
-          (str usage-key " keys should match mock")))))
 
 ;; Unit Tests
 
