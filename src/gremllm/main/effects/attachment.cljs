@@ -111,6 +111,7 @@
     {:inline_data {:mime_type (:mime-type attachment-ref)
                    :data base64-data}}))
 
+;; TODO: effect calling effect, this should be an action dispatchinng effect
 (defn process-attachments-batch
   "Effect: process multiple file paths, store each, return vector of AttachmentRefs.
    Used when user drops multiple files into chat."
