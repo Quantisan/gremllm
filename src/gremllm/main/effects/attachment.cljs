@@ -69,7 +69,7 @@
    :mime-type mime-type
    :size file-size})
 
-(defn ^:private store-attachment
+(defn store-attachment
   "Helper: copy file to workspace attachments folder with content-addressed name.
    Returns validated AttachmentRef map: {:ref :name :mime-type :size}"
   [workspace-path file-path]
@@ -111,8 +111,8 @@
     {:inline_data {:mime_type (:mime-type attachment-ref)
                    :data base64-data}}))
 
-(defn ^:private process-attachments-batch
-  "Helper: process multiple file paths, store each, return vector of AttachmentRefs.
+(defn process-attachments-batch
+  "Process multiple file paths, store each, return vector of AttachmentRefs.
    Used when user drops multiple files into chat."
   [workspace-path file-paths]
   (mapv #(store-attachment workspace-path %) file-paths))
