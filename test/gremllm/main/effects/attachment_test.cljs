@@ -2,8 +2,7 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.main.effects.attachment :as attachment]
             [gremllm.main.io :as io]
-            [gremllm.test-utils :refer [with-temp-dir]]
-            ["fs" :as fs]))
+            [gremllm.test-utils :refer [with-temp-dir]]))
 
 (deftest test-attachments-dir-path
   (testing "builds correct path to attachments directory"
@@ -46,7 +45,7 @@
       (fn [workspace-dir]
         (let [source-file (io/path-join workspace-dir "source.txt")]
           (io/write-file source-file "test content")
-          (attachment/store-attachment workspace-dir source-file)
+          (attachment/store-attachment nil nil workspace-dir source-file)
           (is (io/file-exists? (attachment/attachments-dir-path workspace-dir)))))))
 
   (testing "copies file to attachments directory with hash-prefixed name"
@@ -54,7 +53,7 @@
       (fn [workspace-dir]
         (let [source-file (io/path-join workspace-dir "image.png")]
           (io/write-file source-file "fake png content")
-          (let [result (attachment/store-attachment workspace-dir source-file)
+          (let [result (attachment/store-attachment nil nil workspace-dir source-file)
                 attachments-dir (attachment/attachments-dir-path workspace-dir)
                 files (io/read-dir attachments-dir)]
             (is (= 1 (count files)))
@@ -65,7 +64,7 @@
       (fn [workspace-dir]
         (let [source-file (io/path-join workspace-dir "test.pdf")]
           (io/write-file source-file "fake pdf content")
-          (let [result (attachment/store-attachment workspace-dir source-file)]
+          (let [result (attachment/store-attachment nil nil workspace-dir source-file)]
             (is (string? (:ref result)))
             (is (= 8 (count (:ref result))))
             (is (= "test.pdf" (:name result)))
@@ -80,8 +79,8 @@
               file2 (io/path-join workspace-dir "file2.txt")]
           (io/write-file file1 "duplicate content")
           (io/write-file file2 "duplicate content")
-          (let [ref1 (attachment/store-attachment workspace-dir file1)
-                ref2 (attachment/store-attachment workspace-dir file2)
+          (let [ref1 (attachment/store-attachment nil nil workspace-dir file1)
+                ref2 (attachment/store-attachment nil nil workspace-dir file2)
                 attachments-dir (attachment/attachments-dir-path workspace-dir)
                 files (io/read-dir attachments-dir)]
             ;; Same hash prefix means deduplication worked
@@ -96,7 +95,7 @@
         (let [source-file (io/path-join workspace-dir "test.txt")
               content "test file content"]
           (io/write-file source-file content)
-          (let [ref (attachment/store-attachment workspace-dir source-file)
+          (let [ref (attachment/store-attachment nil nil workspace-dir source-file)
                 loaded (attachment/load-attachment-content workspace-dir (:ref ref))]
             (is (some? loaded))
             (is (instance? js/Buffer loaded))
