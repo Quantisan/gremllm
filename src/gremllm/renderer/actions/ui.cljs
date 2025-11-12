@@ -30,6 +30,7 @@
                                          :type :user
                                          :text text}]
          [:form.actions/clear-input]
+         [:ui.actions/clear-pending-attachments]
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
@@ -54,14 +55,12 @@
 
 ;; Pure action for handling file drop
 (defn handle-file-drop [_state files]
-  ;; TODO: Store files in state (decision: form state vs message schema vs parallel structure)
-  ;; TODO: Add UI indicators for attached files
-  ;; TODO: Implement file reading effect via IPC
-  ;; TODO: Research provider attachment APIs (Anthropic, OpenAI, Google)
-  (when files
-    (doseq [file files]
-      (js/console.log "Dropped file:" (clj->js file))))
-  [])
+  (if (seq files)
+    [[:effects/save form-state/pending-attachments-path (vec files)]]
+    []))
+
+(defn clear-pending-attachments [_state]
+  [[:effects/save form-state/pending-attachments-path []]])
 
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status

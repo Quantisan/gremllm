@@ -56,6 +56,19 @@
    ;; Show any errors
    (render-error-message errors)])
 
+(defn- render-attachment-indicator [pending-attachments]
+  (when (seq pending-attachments)
+    [:div {:style {:margin-bottom "0.5rem"
+                   :font-size "0.875rem"
+                   :color "#666"}}
+     [:span "📎 " (count pending-attachments) " file" (when (> (count pending-attachments) 1) "s") " attached"]
+     [:button {:type "button"
+               :style {:margin-left "0.5rem"
+                       :padding "0.125rem 0.5rem"
+                       :font-size "0.75rem"}
+               :on {:click [[:ui.actions/clear-pending-attachments]]}}
+      "Clear"]]))
+
 (defn- render-model-selector [selected-model has-messages?]
   (if has-messages?
     ;; Read-only: show model as static text
@@ -76,11 +89,12 @@
                :let [display-name (get schema/supported-models model-id)]]
            [:option {:value model-id} display-name])])]]))
 
-(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-any-api-key?]}]
+(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-any-api-key? pending-attachments]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
     (render-model-selector selected-model has-messages?)
+    (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"
                  :rows 2
