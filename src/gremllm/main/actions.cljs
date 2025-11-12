@@ -131,14 +131,3 @@
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 
-;; Attachment Effects Registration
-
-;; TODO: these effects are not used, but instead their fns are called directly
-(nxr/register-effect! :attachment.effects/store attachment-effects/store-attachment)
-
-(nxr/register-effect! :attachment.effects/load
-  (fn [_ _ workspace-path hash-prefix]
-    (attachment-effects/load-attachment-content workspace-path hash-prefix)))
-
-(nxr/register-effect! :attachment.effects/process-batch attachment-effects/process-attachments-batch)
-
