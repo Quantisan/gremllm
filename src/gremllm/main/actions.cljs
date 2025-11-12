@@ -96,27 +96,31 @@
 
 ;; Chat Actions/Effects Registration
 (nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
+(nxr/register-action! :chat.actions/send-message-with-attachments chat-actions/send-message-with-attachments)
+(nxr/register-action! :chat.actions/send-message-with-loaded-attachments chat-actions/send-message-with-loaded-attachments)
+(nxr/register-action! :chat.actions/enrich-and-send chat-actions/enrich-and-send)
 
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages model api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
 
-;; TODO: Effect handlers must execute ONE side effect and return; orchestration belongs in pure
-;; action functions that compose effect descriptions. Compare to the correct pattern at
-;; :chat.effects/send-message simply dispatches to a single effect function.
-(nxr/register-effect! :chat.effects/send-message-with-attachments
+;; Attachment processing effects - each executes ONE domain operation then dispatches next step
+
+(nxr/register-effect! :attachment.effects/process-batch-then-continue
   (fn [{:keys [dispatch] :as context} store workspace-dir file-paths messages model api-key]
-    ;; Effect: process attachments (synchronous I/O)
-    (let [attachment-refs (attachment-effects/process-attachments-batch context store workspace-dir file-paths)
-          ;; Effect: load attachment content and convert to validated API format
-          attachments-with-data (mapv (fn [ref]
-                                        (let [content (attachment-effects/load-attachment-content workspace-dir (:ref ref))]
-                                          (schema/attachment-ref->api-format ref content)))
-                                      attachment-refs)
-          ;; Pure: enrich first message with attachments (in API-ready format)
-          enriched-messages (update messages 0 assoc :attachments attachments-with-data)]
-      ;; Dispatch normal chat flow with enriched messages
-      (dispatch [[:chat.effects/send-message enriched-messages model api-key]]))))
+    ;; Effect: process attachment batch (multiple file I/O, but conceptually one operation)
+    (let [attachment-refs (attachment-effects/process-attachments-batch context store workspace-dir file-paths)]
+      ;; Dispatch next action with results
+      (dispatch [[:chat.actions/send-message-with-loaded-attachments workspace-dir attachment-refs messages model api-key]]))))
+
+(nxr/register-effect! :attachment.effects/load-then-enrich
+  (fn [{:keys [dispatch]} workspace-dir attachment-refs messages model api-key]
+    ;; Effect: load content for each attachment (file I/O)
+    (let [loaded-pairs (mapv (fn [ref]
+                               [ref (attachment-effects/load-attachment-content workspace-dir (:ref ref))])
+                             attachment-refs)]
+      ;; Dispatch action with loaded data for pure transformation
+      (dispatch [[:chat.actions/enrich-and-send loaded-pairs messages model api-key]]))))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
