@@ -45,6 +45,11 @@
        (fn [event request-id messages model file-paths]
          (let [messages-clj (js->clj messages :keywordize-keys true)
                file-paths-clj (when file-paths (js->clj file-paths))]
+           ;; CHECKPOINT 2: Main IPC receiving file paths
+           (js/console.log "[CHECKPOINT 2] Main IPC: Received file paths"
+                           (clj->js {:file-paths-clj file-paths-clj
+                                     :file-paths-count (count (or file-paths-clj []))
+                                     :messages-count (count messages-clj)}))
            (nxr/dispatch store {:ipc-event event
                                 :request-id request-id
                                 :channel "chat/send-message"}

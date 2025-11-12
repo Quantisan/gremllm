@@ -67,6 +67,11 @@
           attachments (form-state/get-pending-attachments state)
           file-paths (when (seq attachments)
                        (clj->js (mapv :path attachments)))]
+      ;; CHECKPOINT 1: Renderer sending to IPC
+      (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
+                      (clj->js {:attachment-count (count attachments)
+                                :file-paths file-paths
+                                :attachments attachments}))
       (dispatch
         [[:effects/promise
           {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
