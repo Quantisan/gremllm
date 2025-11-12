@@ -65,3 +65,28 @@
       ;; Check that all models are accounted for
       (is (= (set (keys schema/supported-models))
              (set (apply concat (vals grouped))))))))
+
+(deftest test-attachment-ref->api-format
+  (testing "transforms valid attachment-ref and buffer to API format"
+    (let [attachment-ref {:ref "abc12345"
+                          :name "test.png"
+                          :mime-type "image/png"
+                          :size 1024}
+          buffer (js/Buffer.from "test-content" "utf-8")
+          result (schema/attachment-ref->api-format attachment-ref buffer)]
+      (is (= "image/png" (:mime-type result)))
+      (is (= (.toString buffer "base64") (:data result)))))
+
+  (testing "validates mime-type is present"
+    (let [attachment-ref {:ref "abc12345"
+                          :name "test.png"
+                          :size 1024}
+          buffer (js/Buffer.from "test-content" "utf-8")]
+      (is (thrown? js/Error (schema/attachment-ref->api-format attachment-ref buffer)))))
+
+  (testing "validates data is a string"
+    (let [attachment-ref {:ref "abc12345"
+                          :name "test.png"
+                          :mime-type "image/png"
+                          :size 1024}]
+      (is (thrown? js/Error (schema/attachment-ref->api-format attachment-ref nil))))))

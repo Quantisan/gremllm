@@ -108,18 +108,10 @@
   (fn [{:keys [dispatch] :as context} store workspace-dir file-paths messages model api-key]
     ;; Effect: process attachments (synchronous I/O)
     (let [attachment-refs (attachment-effects/process-attachments-batch context store workspace-dir file-paths)
-          ;; Effect: load attachment content and convert to API format
-
-          ;; TODO: load-attachment-content returns a Buffer from disk that's immediately converted
-          ;; to base64 and embedded in API request without validation. The Message schema expects
-          ;; [:vector AttachmentRef] but code mutates to a different shape with :data field.
-          ;; Data entering from disk (untrusted) must be validated before transmission to another
-          ;; external system (LLM API), per the principle "validate at boundaries, not in core
-          ;; logic."
+          ;; Effect: load attachment content and convert to validated API format
           attachments-with-data (mapv (fn [ref]
                                         (let [content (attachment-effects/load-attachment-content workspace-dir (:ref ref))]
-                                          {:mime-type (:mime-type ref)
-                                           :data (.toString content "base64")}))
+                                          (schema/attachment-ref->api-format ref content)))
                                       attachment-refs)
           ;; Pure: enrich first message with attachments (in API-ready format)
           enriched-messages (update messages 0 assoc :attachments attachments-with-data)]
