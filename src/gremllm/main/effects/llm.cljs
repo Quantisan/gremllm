@@ -66,28 +66,16 @@
                      :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
 
 (def response-normalizers
-  "Maps provider keywords to normalization functions.
-
-  Transforms external API contracts (provider-specific response shapes)
-  to our internal LLMResponse schema. Each normalizer is a pure function
-  that extracts data from a provider's response structure and validates
-  it against our schema using Malli coercion."
+  "Maps provider keywords to functions that transform provider-specific
+  response shapes to LLMResponse schema."
   {:anthropic normalize-anthropic-response
    :openai normalize-openai-response
    :google normalize-gemini-response})
 
 (defmulti fetch-raw-provider-response
-  "Fetches raw, unnormalized API response from provider.
-
-  Returns a promise of the provider-specific response shape (Anthropic, OpenAI, or
-  Gemini format). Each provider returns different field names, structures, and
-  metadata. This boundary is explicitly separated from normalization to:
-
-  1. Clearly model the external API contract vs internal schema transformation
-  2. Enable integration tests to validate that mock fixtures match real API responses
-
-  The response is converted from JSON to Clojure maps but retains the provider's
-  original structure. Use `response-normalizers` to transform to LLMResponse schema."
+  "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
+  Separated from normalization to model the external API boundary explicitly
+  and enable integration tests to validate mock fixtures against real APIs."
   (fn [_messages model _api-key] (schema/model->provider model)))
 
 (defmethod fetch-raw-provider-response :anthropic
@@ -134,15 +122,8 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defn ^LLMResponse query-llm-provider
-  "Queries an LLM provider and returns normalized response.
-
-  Composes two steps:
-  1. Fetch raw provider response (via `fetch-raw-provider-response`)
-  2. Normalize to internal LLMResponse schema (via `response-normalizers`)
-
-  This explicit separation models the boundary between external API contracts
-  and our internal schema. Each provider has different response shapes; the
-  normalizers transform these to a consistent interface.
+  "Queries LLM provider and returns normalized LLMResponse.
+  Composes fetch-raw-provider-response + response-normalizers.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,

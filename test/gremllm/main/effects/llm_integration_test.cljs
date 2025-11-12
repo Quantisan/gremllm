@@ -34,21 +34,14 @@
       (is (= (set (keys (usage-key actual))) (set (keys (usage-key mock))))
           (str usage-key " keys should match mock")))))
 
-;; Integration Tests: External API Boundary Validation
+;; Integration Tests: Validate mock fixtures match real API responses
 ;;
-;; These tests validate the critical boundary between external LLM APIs and our internal
-;; mock fixtures. They ensure that:
+;; Calls real APIs and compares structure against mock fixtures to ensure:
+;; - Mock fixtures accurately represent actual provider responses
+;; - Normalization functions can extract data from real responses
+;; - Unit tests won't pass while production breaks on API changes
 ;;
-;; 1. Mock response structures accurately represent real provider API responses
-;; 2. Normalization functions can safely extract data from actual API responses
-;; 3. Unit tests using mocks won't pass while production breaks due to API changes
-;;
-;; The tests call real APIs with simple prompts and compare the structural shape (keys,
-;; types, nested structures) against mock fixtures. This validates that the paths used
-;; by our normalization functions actually exist in real responses.
-;;
-;; This is why `fetch-raw-provider-response` exists as a separate multimethod—it exposes
-;; the unnormalized API response for precise boundary testing.
+;; This is why fetch-raw-provider-response exists—enables testing the external API boundary.
 ;;
 ;; Run with: ANTHROPIC_API_KEY=... OPENAI_API_KEY=... GEMINI_API_KEY=... npm run test:integration
 
