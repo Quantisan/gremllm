@@ -106,6 +106,7 @@
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
+(nxr/register-action! :llm.actions/send-messages msg/send-messages)
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
