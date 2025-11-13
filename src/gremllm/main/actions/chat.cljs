@@ -10,8 +10,15 @@
   and optional file-paths for attachments.
   Returns effect description to send message to LLM provider."
   [state messages model api-key file-paths]
-  (let [workspace-dir (state/get-workspace-dir state)]
-    (if (and file-paths (seq file-paths) workspace-dir)
+  (let [workspace-dir (state/get-workspace-dir state)
+        has-attachments? (and file-paths (seq file-paths) workspace-dir)]
+    ;; CHECKPOINT 3: Routing decision
+    (js/console.log "[CHECKPOINT 3] Main: Routing decision"
+                    (clj->js {:has-attachments? has-attachments?
+                              :file-paths-count (count (or file-paths []))
+                              :workspace-dir workspace-dir
+                              :taking-path (if has-attachments? "with-attachments" "normal")}))
+    (if has-attachments?
       ;; Has attachments - dispatch orchestrating action
       [[:chat.actions/send-message-with-attachments workspace-dir file-paths messages model api-key]]
       ;; No attachments - normal flow
@@ -39,5 +46,15 @@
                               loaded-pairs)
         ;; Pure: enrich first message with API-ready attachments
         enriched-messages (update messages 0 assoc :attachments api-attachments)]
+    ;; CHECKPOINT 6: Message enrichment
+    (js/console.log "[CHECKPOINT 6] Main: Messages enriched"
+                    (clj->js {:api-attachments-count (count api-attachments)
+                              :api-attachments-info (mapv (fn [att]
+                                                            {:mime-type (:mime-type att)
+                                                             :data-length (count (:data att))
+                                                             :data-preview (subs (:data att) 0 (min 50 (count (:data att))))})
+                                                          api-attachments)
+                              :enriched-first-message-has-attachments? (some? (:attachments (first enriched-messages)))
+                              :enriched-messages-count (count enriched-messages)}))
     ;; Return effect to send enriched messages
     [[:chat.effects/send-message enriched-messages model api-key]]))

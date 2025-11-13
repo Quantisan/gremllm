@@ -110,15 +110,28 @@
   (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
     ;; Effect: process attachment batch (multiple file I/O, but conceptually one operation)
     (let [attachment-refs (attachment-effects/process-attachments-batch workspace-dir file-paths)]
+      ;; CHECKPOINT 4: Attachment refs created
+      (js/console.log "[CHECKPOINT 4] Main: Attachment refs created"
+                      (clj->js {:attachment-refs attachment-refs
+                                :refs-count (count attachment-refs)}))
       ;; Dispatch next action with results
       (dispatch [[:chat.actions/send-message-with-loaded-attachments workspace-dir attachment-refs messages model api-key]]))))
 
 (nxr/register-effect! :attachment.effects/load-then-enrich
-  (fn [{:keys [dispatch]} workspace-dir attachment-refs messages model api-key]
+  (fn [{:keys [dispatch]} _store workspace-dir attachment-refs messages model api-key]
     ;; Effect: load content for each attachment (file I/O)
     (let [loaded-pairs (mapv (fn [ref]
                                [ref (attachment-effects/load-attachment-content workspace-dir (:ref ref))])
                              attachment-refs)]
+      ;; CHECKPOINT 5: Attachment content loaded
+      (js/console.log "[CHECKPOINT 5] Main: Attachment content loaded"
+                      (clj->js {:loaded-pairs-count (count loaded-pairs)
+                                :loaded-info (mapv (fn [[ref buf]]
+                                                     {:ref (:ref ref)
+                                                      :mime-type (:mime-type ref)
+                                                      :buffer-size (when buf (.-length buf))
+                                                      :buffer-exists? (some? buf)})
+                                                   loaded-pairs)}))
       ;; Dispatch action with loaded data for pure transformation
       (dispatch [[:chat.actions/enrich-and-send loaded-pairs messages model api-key]]))))
 
