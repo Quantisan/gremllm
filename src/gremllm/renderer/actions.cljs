@@ -39,7 +39,7 @@
               {:name (.-name file)
                :size (.-size file)
                :type (.-type file)
-               :path (.-path file)})
+               :path (js/window.electronAPI.getFilePath file)})
             (array-seq (.-files dt))))))
 
 ;; Register prevent-default as an effect
