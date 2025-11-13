@@ -27,6 +27,10 @@
   (let [content (.readFileSync fs file-path)]
     (hash-content content)))
 
+;; TODO: MIME type inference has limited coverage - unknown extensions default to
+;; application/octet-stream, which some APIs (e.g., Gemini) reject. Root cause:
+;; browser File API provides correct MIME type in renderer, but it's not transmitted
+;; over IPC (only file paths sent). Should pass file metadata instead of just paths.
 (defn- mime-type-from-extension
   "Infer MIME type from file extension. Returns basic image/document types."
   [filename]
