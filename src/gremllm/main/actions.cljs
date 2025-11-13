@@ -118,7 +118,7 @@
       (dispatch [[:chat.actions/send-message-with-loaded-attachments workspace-dir attachment-refs messages model api-key]]))))
 
 (nxr/register-effect! :attachment.effects/load-then-enrich
-  (fn [{:keys [dispatch]} workspace-dir attachment-refs messages model api-key]
+  (fn [{:keys [dispatch]} _store workspace-dir attachment-refs messages model api-key]
     ;; Effect: load content for each attachment (file I/O)
     (let [loaded-pairs (mapv (fn [ref]
                                [ref (attachment-effects/load-attachment-content workspace-dir (:ref ref))])
