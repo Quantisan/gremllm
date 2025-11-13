@@ -30,12 +30,13 @@
                                          :type :user
                                          :text text}]
          [:form.actions/clear-input]
-         [:ui.actions/clear-pending-attachments]
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.effects/send-llm-messages assistant-id model]]))))
+         [:llm.effects/send-llm-messages assistant-id model]
+         ;; Clear attachments AFTER send-llm-messages reads them from state
+         [:ui.actions/clear-pending-attachments]]))))
 
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]

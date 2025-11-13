@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron/renderer");
+const { contextBridge, ipcRenderer, webUtils } = require("electron/renderer");
 
 /**
  * Creates a promise-based wrapper for Electron's event-based IPC.
@@ -48,4 +48,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	// Secrets API
 	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
 	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
+	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
+	getFilePath: (file) => webUtils.getPathForFile(file),
 });
