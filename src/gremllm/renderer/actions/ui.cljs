@@ -34,8 +34,8 @@
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.effects/send-llm-messages assistant-id model]
-         ;; Clear attachments AFTER send-llm-messages reads them from state
+         [:llm.actions/send-messages assistant-id model]
+         ;; Clear attachments AFTER send-messages reads them from state
          [:ui.actions/clear-pending-attachments]]))))
 
 ;; Pure action for scrolling chat to bottom
@@ -55,7 +55,11 @@
   [[:effects/prevent-default]])
 
 ;; Pure action for handling file drop
-(defn handle-file-drop [_state files]
+(defn handle-file-drop
+  "Saves dropped files to pending attachments state.
+  Files arrive from :event/dropped-files placeholder as DOM File metadata.
+  Shape saved: vector of {:name :size :type :path}."
+  [_state files]
   (if (seq files)
     [[:effects/save form-state/pending-attachments-path (vec files)]]
     []))
