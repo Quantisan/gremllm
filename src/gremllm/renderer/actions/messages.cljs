@@ -50,6 +50,20 @@
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
 
+;; Effect handler for sending messages to LLM via IPC
+(nxr/register-effect! :effects/send-llm-messages
+  (fn [_ _store {:keys [messages model file-paths on-success on-error]}]
+    ;; CHECKPOINT 1: Renderer sending to IPC
+    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
+                    (clj->js {:file-paths file-paths}))
+    [[:effects/promise
+      {:promise    (js/window.electronAPI.sendMessage
+                     (clj->js messages)
+                     model
+                     (clj->js file-paths))
+       :on-success on-success
+       :on-error   on-error}]]))
+
 ;; Helper function to convert messages to API format
 (defn messages->api-format [messages]
   (->> messages
@@ -59,16 +73,13 @@
 
 ;; Action for sending messages to LLM
 (defn send-messages [state assistant-id model]
-  (let [messages (-> (topic-state/get-messages state)
-                     (messages->api-format)
-                     (clj->js))
+  (let [messages (messages->api-format (topic-state/get-messages state))
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
-                     (clj->js (mapv :path attachments)))]
-    ;; CHECKPOINT 1: Renderer sending to IPC
-    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
-                    (clj->js {:file-paths file-paths}))
-    [[:effects/promise
-      {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
+                     (mapv :path attachments))]
+    [[:effects/send-llm-messages
+      {:messages   messages
+       :model      model
+       :file-paths file-paths
        :on-success [[:llm.actions/response-received assistant-id]]
        :on-error   [[:llm.actions/response-error assistant-id]]}]]))
 
