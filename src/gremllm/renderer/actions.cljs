@@ -6,7 +6,8 @@
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
-            [gremllm.renderer.state.ui :as ui-state]))
+            [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -104,9 +105,35 @@
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
+(nxr/register-action! :messages.actions/append-to-state msg/append-to-state)
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
 (nxr/register-action! :llm.actions/send-messages msg/send-messages)
+
+(nxr/register-action! :loading.actions/set-loading?
+  (fn [_state id loading?]
+    [[:effects/save (loading-state/loading-path id) loading?]]))
+
+(nxr/register-action! :llm.actions/set-error
+  (fn [_state assistant-id error-message]
+    [[:effects/save (loading-state/assistant-errors-path assistant-id) error-message]]))
+
+(nxr/register-action! :llm.actions/unset-all-errors
+  (fn [_state]
+    [[:effects/save [:assistant-errors] nil]]))
+
+(nxr/register-effect! :effects/send-llm-messages
+  (fn [_ _store {:keys [messages model file-paths on-success on-error]}]
+    ;; CHECKPOINT 1: Renderer sending to IPC
+    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
+                    (clj->js {:file-paths file-paths}))
+    [[:effects/promise
+      {:promise    (js/window.electronAPI.sendMessage
+                     (clj->js messages)
+                     model
+                     (clj->js file-paths))
+       :on-success on-success
+       :on-error   on-error}]]))
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
