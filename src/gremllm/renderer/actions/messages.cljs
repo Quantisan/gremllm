@@ -64,14 +64,11 @@
           messages (-> (topic-state/get-messages state)
                        (messages->api-format)
                        (clj->js))
-          attachments (form-state/get-pending-attachments state)
-          file-paths (when (seq attachments)
+          file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                        (clj->js (mapv :path attachments)))]
       ;; CHECKPOINT 1: Renderer sending to IPC
       (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
-                      (clj->js {:attachment-count (count attachments)
-                                :file-paths file-paths
-                                :attachments attachments}))
+                      (clj->js {:file-paths file-paths}))
       (dispatch
         [[:effects/promise
           {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
