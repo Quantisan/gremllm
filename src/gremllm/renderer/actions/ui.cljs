@@ -34,8 +34,8 @@
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.effects/send-llm-messages assistant-id model]
-         ;; Clear attachments AFTER send-llm-messages reads them from state
+         [:llm.actions/send-messages assistant-id model]
+         ;; Clear attachments AFTER send-messages reads them from state
          [:ui.actions/clear-pending-attachments]]))))
 
 ;; Pure action for scrolling chat to bottom

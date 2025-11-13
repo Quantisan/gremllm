@@ -57,21 +57,18 @@
               {:role (if (= type :user) "user" "assistant")
                :content text}))))
 
-;; Effect for sending messages to LLM
-(nxr/register-effect! :llm.effects/send-llm-messages
-  (fn [{dispatch :dispatch} store assistant-id model]
-    (let [state @store
-          messages (-> (topic-state/get-messages state)
-                       (messages->api-format)
-                       (clj->js))
-          file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
-                       (clj->js (mapv :path attachments)))]
-      ;; CHECKPOINT 1: Renderer sending to IPC
-      (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
-                      (clj->js {:file-paths file-paths}))
-      (dispatch
-        [[:effects/promise
-          {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
-           :on-success [[:llm.actions/response-received assistant-id]]
-           :on-error   [[:llm.actions/response-error assistant-id]]}]]))))
+;; Action for sending messages to LLM
+(defn send-messages [state assistant-id model]
+  (let [messages (-> (topic-state/get-messages state)
+                     (messages->api-format)
+                     (clj->js))
+        file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
+                     (clj->js (mapv :path attachments)))]
+    ;; CHECKPOINT 1: Renderer sending to IPC
+    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
+                    (clj->js {:file-paths file-paths}))
+    [[:effects/promise
+      {:promise    (js/window.electronAPI.sendMessage messages model file-paths)
+       :on-success [[:llm.actions/response-received assistant-id]]
+       :on-error   [[:llm.actions/response-error assistant-id]]}]]))
 
