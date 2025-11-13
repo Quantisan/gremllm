@@ -2,6 +2,20 @@
   (:require [cljs.test :refer [deftest is testing use-fixtures]]
             [gremllm.renderer.actions.messages :as msg]))
 
+;; TODO: Refactor test data to reduce DRY violations
+;; 1. Repeated message structures - inline maps like {:type :user :text "..."} duplicated
+;;    across test-messages->api-format, test-append-to-state, test-send-messages
+;; 2. Magic topic IDs and repetitive state setup - "t1", "topic-1" scattered throughout,
+;;    same :topics {...} structure rebuilt in every test. Consider schema/create-topic
+;; 3. Unvalidated mock electron API response - mock-electron-api returns unvalidated data,
+;;    should use schema/LLMResponse for properly shaped mocks
+;; 4. Hardcoded assistant IDs and model strings - random values (12345, 456, 789) and
+;;    model strings should be named constants or schema defaults
+;; 5. Inline attachment test data - "handles state with attachments" has hardcoded maps,
+;;    could use schema/AttachmentRef or fixture builder
+;; 6. Schema defaults unused - schema/create-topic and schema/PersistedTopic defaults
+;;    exist but tests manually rebuild what schema already provides
+
 ;; Mock helper for window.electronAPI
 (defn mock-electron-api []
   #js {:sendMessage (fn [_messages _model _file-paths]
