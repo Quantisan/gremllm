@@ -1,7 +1,5 @@
 (ns gremllm.renderer.actions.messages
-  (:require [nexus.registry :as nxr]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.loading :as loading-state]
+  (:require [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.form :as form-state]))
 
 (defn add-message [_state message]
@@ -17,21 +15,6 @@
           path-to-messages (topic-state/topic-field-path active-id :messages)]
       [[:effects/save path-to-messages (conj (or current-messages []) message)]])
     (throw (js/Error. "Cannot append message: no active topic."))))
-
-;; Domain-specific actions
-(nxr/register-action! :messages.actions/append-to-state append-to-state)
-
-(nxr/register-action! :loading.actions/set-loading?
-  (fn [_state id loading?]
-    [[:effects/save (loading-state/loading-path id) loading?]]))
-
-(nxr/register-action! :llm.actions/set-error
-  (fn [_state assistant-id error-message]
-    [[:effects/save (loading-state/assistant-errors-path assistant-id) error-message]]))
-
-(nxr/register-action! :llm.actions/unset-all-errors
-  (fn [_state]
-    [[:effects/save [:assistant-errors] nil]]))
 
 (defn llm-response-received [_state assistant-id response]
   (let [clj-response (js->clj response :keywordize-keys true)]
@@ -49,20 +32,6 @@
   [[:loading.actions/set-loading? assistant-id false]
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
-
-;; Effect handler for sending messages to LLM via IPC
-(nxr/register-effect! :effects/send-llm-messages
-  (fn [_ _store {:keys [messages model file-paths on-success on-error]}]
-    ;; CHECKPOINT 1: Renderer sending to IPC
-    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
-                    (clj->js {:file-paths file-paths}))
-    [[:effects/promise
-      {:promise    (js/window.electronAPI.sendMessage
-                     (clj->js messages)
-                     model
-                     (clj->js file-paths))
-       :on-success on-success
-       :on-error   on-error}]]))
 
 ;; Helper function to convert messages to API format
 (defn messages->api-format [messages]
