@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.messages-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is testing use-fixtures]]
             [gremllm.renderer.actions.messages :as msg]))
 
 ;; Mock helper for window.electronAPI
@@ -7,9 +7,20 @@
   #js {:sendMessage (fn [_messages _model _file-paths]
                       (js/Promise.resolve #js {:text "mock response"}))})
 
-;; Ensure window object exists in Node test environment
-(when-not (exists? js/window)
-  (set! js/window #js {}))
+;; Fixture to mock electron API for all tests
+(defn mock-electron-api-fixture [f]
+  ;; Ensure window object exists in Node test environment
+  (when-not (exists? js/window)
+    (set! js/window #js {}))
+
+  (let [original-api js/window.electronAPI]
+    (try
+      (set! js/window.electronAPI (mock-electron-api))
+      (f)
+      (finally
+        (set! js/window.electronAPI original-api)))))
+
+(use-fixtures :each mock-electron-api-fixture)
 
 (deftest test-messages->api-format
   (testing "converts messages to API format"
@@ -60,45 +71,34 @@
 
 (deftest test-send-messages
   (testing "returns promise effect with correct callback structure"
-    (let [original-api js/window.electronAPI
-          state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
                  :active-topic-id "t1"
                  :form {:pending-attachments []}}
           assistant-id 12345
-          model "claude-3-5-sonnet-20241022"]
-      (try
-        (set! js/window.electronAPI (mock-electron-api))
-        (let [effects (msg/send-messages state assistant-id model)]
-          (is (= 1 (count effects))
-              "Should return exactly one effect")
-          (let [[effect-type effect-data] (first effects)]
-            (is (= :effects/promise effect-type)
-                "Effect should be a promise effect")
-            (is (= [[:llm.actions/response-received assistant-id]]
-                   (:on-success effect-data))
-                "Success callback should receive assistant-id")
-            (is (= [[:llm.actions/response-error assistant-id]]
-                   (:on-error effect-data))
-                "Error callback should receive assistant-id")))
-        (finally
-          (set! js/window.electronAPI original-api)))))
+          model "claude-3-5-sonnet-20241022"
+          effects (msg/send-messages state assistant-id model)]
+      (is (= 1 (count effects))
+          "Should return exactly one effect")
+      (let [[effect-type effect-data] (first effects)]
+        (is (= :effects/promise effect-type)
+            "Effect should be a promise effect")
+        (is (= [[:llm.actions/response-received assistant-id]]
+               (:on-success effect-data))
+            "Success callback should receive assistant-id")
+        (is (= [[:llm.actions/response-error assistant-id]]
+               (:on-error effect-data))
+            "Error callback should receive assistant-id"))))
 
   (testing "handles state with no attachments"
-    (let [original-api js/window.electronAPI
-          state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
                  :active-topic-id "t1"
-                 :form {:pending-attachments []}}]
-      (try
-        (set! js/window.electronAPI (mock-electron-api))
-        (let [effects (msg/send-messages state 123 "model")]
-          (is (= 1 (count effects))
-              "Should return one effect even with no attachments"))
-        (finally
-          (set! js/window.electronAPI original-api)))))
+                 :form {:pending-attachments []}}
+          effects (msg/send-messages state 123 "model")]
+      (is (= 1 (count effects))
+          "Should return one effect even with no attachments")))
 
   (testing "handles state with attachments"
-    (let [original-api js/window.electronAPI
-          state {:topics {"t1" {:messages [{:type :user :text "Check this"}]}}
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Check this"}]}}
                  :active-topic-id "t1"
                  :form {:pending-attachments [{:name "file.txt"
                                                :size 1024
@@ -107,24 +107,15 @@
                                               {:name "image.png"
                                                :size 2048
                                                :type "image/png"
-                                               :path "/tmp/image.png"}]}}]
-      (try
-        (set! js/window.electronAPI (mock-electron-api))
-        (let [effects (msg/send-messages state 456 "model")]
-          (is (= 1 (count effects))
-              "Should return one effect with attachments"))
-        (finally
-          (set! js/window.electronAPI original-api)))))
+                                               :path "/tmp/image.png"}]}}
+          effects (msg/send-messages state 456 "model")]
+      (is (= 1 (count effects))
+          "Should return one effect with attachments")))
 
   (testing "handles state with nil pending-attachments"
-    (let [original-api js/window.electronAPI
-          state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
                  :active-topic-id "t1"
-                 :form {}}]
-      (try
-        (set! js/window.electronAPI (mock-electron-api))
-        (let [effects (msg/send-messages state 789 "model")]
-          (is (= 1 (count effects))
-              "Should handle missing pending-attachments gracefully"))
-        (finally
-          (set! js/window.electronAPI original-api))))))
+                 :form {}}
+          effects (msg/send-messages state 789 "model")]
+      (is (= 1 (count effects))
+          "Should handle missing pending-attachments gracefully"))))
