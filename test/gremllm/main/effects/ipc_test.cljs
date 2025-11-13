@@ -13,7 +13,7 @@
     ;; The success channel must include this ID.
     (let [sent (atom nil)
           ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
-                               :request-id "123"
+                               :ipc-correlation-id "123"
                                :channel "chat/send-message"}}]
 
       (ipc/reply ctx nil "result")
@@ -23,7 +23,7 @@
   (testing "no-op when ipc-event missing"
     ;; Not all actions come from IPC. Don't crash if there's no event to reply to.
     (let [sent (atom nil)
-          ctx {:dispatch-data {:request-id "123"
+          ctx {:dispatch-data {:ipc-correlation-id "123"
                                :channel "chat/send-message"}}]
 
       (ipc/reply ctx nil "result")
@@ -36,7 +36,7 @@
     (with-console-error-silenced
       (let [sent (atom nil)
             ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
-                                 :request-id "456"
+                                 :ipc-correlation-id "456"
                                  :channel "topic/save"}}]
 
         (ipc/reply-error ctx nil (js/Error. "Save failed"))
@@ -49,7 +49,7 @@
     (with-console-error-silenced
       (let [sent (atom nil)
             ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
-                                 :request-id "789"
+                                 :ipc-correlation-id "789"
                                  :channel "topic/load"}}]
 
         ;; String error

@@ -41,17 +41,20 @@
             Secrets (config), System (capabilities)"
   [store secrets-filepath]
   ;; Chat - async pattern: dispatches to action registry, response flows via events
+  ;; NOTE: ipc-correlation-id is IPC infrastructure, injected by preload.js:createIPCBoundary
+  ;; to match async responses. Not passed by renderer - see resources/public/js/preload.js:34
   (.on ipcMain "chat/send-message"
-       (fn [event request-id messages model file-paths]
+       (fn [event ipc-correlation-id messages model file-paths]
          (let [messages-clj (js->clj messages :keywordize-keys true)
                file-paths-clj (when file-paths (js->clj file-paths))]
            ;; CHECKPOINT 2: Main IPC receiving file paths
            (js/console.log "[CHECKPOINT 2] Main IPC: Received file paths"
                            (clj->js {:file-paths-clj file-paths-clj
                                      :file-paths-count (count (or file-paths-clj []))
-                                     :messages-count (count messages-clj)}))
+                                     :messages-count (count messages-clj)
+                                     :ipc-correlation-id ipc-correlation-id}))
            (nxr/dispatch store {:ipc-event event
-                                :request-id request-id
+                                :ipc-correlation-id ipc-correlation-id
                                 :channel "chat/send-message"}
                          [[:chat.actions/send-message-from-ipc messages-clj model [:env/api-key-for-model model] file-paths-clj]]))))
 
