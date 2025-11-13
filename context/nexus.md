@@ -11,7 +11,7 @@ Nexus is a small, zero-dependency library for dispatching **actions** — data
 describing what should happen — with mostly pure functions.
 
 ```clj
-no.cjohansen/nexus {:mvn/version "2025.07.1"}
+no.cjohansen/nexus {:mvn/version "2025.10.2"}
 ```
 
 [Replicant](https://replicant.fun) provides a data-driven and functional
@@ -193,8 +193,8 @@ is an atom, `deref` will do the job just fine:
 
     :task/set-status
     (fn [state task-id status]
-      (if (< (count (get-tasks-by-status @store status))
-             (get-status-limit @store status))
+      (if (< (count (get-tasks-by-status state status))
+             (get-status-limit state status))
         [[:effects/save [:tasks task-id :task/status] status]]
         [[:effects/save [:errors] [:errors/at-limit status]]]))}})
 ```
@@ -444,14 +444,23 @@ to make this decision when issuing the command:
 ```
 
 Once again, we want to refer to a value that’s only available when the action is
-triggered—without writing imperative glue code. The solution: more placeholders.
+triggered—without writing imperative glue code. Unfortunately we can't just
+stick a placeholder here, as it would resolved immediately upon dispatching
+`:effects/command` -- there is no way for Nexus to know that `:on-success`
+describes something that should happen later.
+
+This problem needs a custom solution in your app. One possibly solution is to
+use a placeholder anyway, and implement it such that it preserves the
+placeholder when there is not yet a value to replace it with:
 
 ```clj
 (def nexus
   {:nexus/placeholders
    {:http.res/header
     (fn [{:keys [response]} header]
-      (.get (.-headers response) header))}})
+      (if response
+        (.get (.-headers response) header)
+        [:http.res/header header]))}})
 ```
 
 We can use the placeholder in the `:on-success` actions:
@@ -538,7 +547,7 @@ Nexus' custom action panel like so:
 (require '[nexus.action-log :as action-log])
 
 (defn inspect-actions [nexus]
-  (let [log (action-log/start)]
+  (let [log (action-log/create-log)]
     (action-log/install-inspector log)
     (action-log/install-logger nexus log)))
 ```
@@ -926,11 +935,27 @@ effects:
 
 You can also register interceptors with `nexus.registry/register-interceptor!`.
 
+## Nexus in the wild
+
+**Ring middleware:** [ring-nexus-middleware](https://github.com/ovistoica/ring-nexus-middleware) applies Nexus to Ring handlers for clean, testable web applications.
+**Datastar:** [datastar.wow](https://github.com/brianium/datastar.wow) uses Nexus to create extensible, testable, and data-oriented real-time applications via [Datastar](https://data-star.dev/).
+
 ## Acknowledgments
 
 Designed by [Magnar Sveen](https://magnars.com) ([@magnars](https://github.com/magnars)),
 [Christian Johansen](https://cjohansen.no) ([@cjohansen](https://github.com/cjohansen)), and
 [Teodor Heggelund](https://play.teod.eu/) ([@teodorlu](https://github.com/teodorlu)).
+
+## Changelog
+
+### 2025.10.2
+
+Fixed a bug with interpolation accidentally introduced in 2025.10.1 ([Martin
+Solli](https://github.com/msolli)).
+
+### 2025.10.1
+
+Interpolate placeholders in between each action expansion.
 
 ## License: MIT
 
