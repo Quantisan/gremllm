@@ -55,7 +55,11 @@
   [[:effects/prevent-default]])
 
 ;; Pure action for handling file drop
-(defn handle-file-drop [_state files]
+(defn handle-file-drop
+  "Saves dropped files to pending attachments state.
+  Files arrive from :event/dropped-files placeholder as DOM File metadata.
+  Shape saved: vector of {:name :size :type :path}."
+  [_state files]
   (if (seq files)
     [[:effects/save form-state/pending-attachments-path (vec files)]]
     []))
