@@ -26,22 +26,22 @@
   "Reply to an IPC request with success"
   [{:keys [dispatch-data]} _ result]
   (when-let [event (:ipc-event dispatch-data)]
-    (let [request-id (:request-id dispatch-data)
+    (let [ipc-correlation-id (:ipc-correlation-id dispatch-data)
           channel (:channel dispatch-data)]
-      (.send (.-sender event) (str channel "-success-" request-id) result))))
+      (.send (.-sender event) (str channel "-success-" ipc-correlation-id) result))))
 
 (defn reply-error
   "Reply to an IPC request with error"
   [{:keys [dispatch-data]} _ error]
   (when-let [event (:ipc-event dispatch-data)]
-    (let [request-id (:request-id dispatch-data)
+    (let [ipc-correlation-id (:ipc-correlation-id dispatch-data)
           channel (:channel dispatch-data)
           error-msg (or (.-message error) (str error))]
       (js/console.error "IPC request failed:"
                         (clj->js {:channel channel
-                                  :requestId request-id
+                                  :ipcCorrelationId ipc-correlation-id
                                   :error error-msg}))
-      (.send (.-sender event) (str channel "-error-" request-id) error-msg))))
+      (.send (.-sender event) (str channel "-error-" ipc-correlation-id) error-msg))))
 
 (defn promise->reply
   "Convert promise result to IPC reply"
