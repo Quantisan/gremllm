@@ -4,23 +4,18 @@
             [gremllm.schema :as schema]))
 
 (defn send-message-from-ipc
-  "Handles chat message send requests from IPC boundary.
-
-  Takes messages, model identifier, API key (resolved from environment),
-  and optional file-paths for attachments.
-  Returns effect description to send message to LLM provider."
-  [state messages model api-key file-paths]
-  (let [workspace-dir (state/get-workspace-dir state)
-        has-attachments? (and file-paths (seq file-paths) workspace-dir)]
+  [state messages model api-key attachment-paths]
+  (let [workspace-dir    (state/get-workspace-dir state)
+        has-attachments? (and attachment-paths (seq attachment-paths) workspace-dir)]
     ;; CHECKPOINT 3: Routing decision
     (js/console.log "[CHECKPOINT 3] Main: Routing decision"
                     (clj->js {:has-attachments? has-attachments?
-                              :file-paths-count (count (or file-paths []))
+                              :file-paths-count (count (or attachment-paths []))
                               :workspace-dir workspace-dir
                               :taking-path (if has-attachments? "with-attachments" "normal")}))
     (if has-attachments?
       ;; Has attachments - dispatch orchestrating action
-      [[:chat.actions/send-message-with-attachments workspace-dir file-paths messages model api-key]]
+      [[:chat.actions/send-message-with-attachments workspace-dir attachment-paths messages model api-key]]
       ;; No attachments - normal flow
       [[:chat.effects/send-message messages model api-key]])))
 
