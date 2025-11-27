@@ -20,14 +20,10 @@
       [[:chat.effects/send-message messages model api-key]])))
 
 (defn send-message-with-attachments
-  "Orchestrates attachment processing flow: process files → load content → enrich → send.
-  Pure action that returns effect description to start the flow."
   [_state workspace-dir file-paths messages model api-key]
   [[:attachment.effects/process-batch-then-continue workspace-dir file-paths messages model api-key]])
 
 (defn send-message-with-loaded-attachments
-  "Orchestrates loading attachment content and sending.
-  Receives AttachmentRefs from previous step, returns effect to load content."
   [_state workspace-dir attachment-refs messages model api-key]
   [[:attachment.effects/load-then-enrich workspace-dir attachment-refs messages model api-key]])
 
