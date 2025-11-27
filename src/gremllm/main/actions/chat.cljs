@@ -4,42 +4,33 @@
             [gremllm.schema :as schema]))
 
 (defn send-message-from-ipc
-  "Handles chat message send requests from IPC boundary.
-
-  Takes messages, model identifier, API key (resolved from environment),
-  and optional file-paths for attachments.
-  Returns effect description to send message to LLM provider."
-  [state messages model api-key file-paths]
-  (let [workspace-dir (state/get-workspace-dir state)
-        has-attachments? (and file-paths (seq file-paths) workspace-dir)]
+  [state messages model api-key attachment-paths]
+  (let [workspace-dir    (state/get-workspace-dir state)
+        has-attachments? (and attachment-paths (seq attachment-paths) workspace-dir)]
     ;; CHECKPOINT 3: Routing decision
     (js/console.log "[CHECKPOINT 3] Main: Routing decision"
                     (clj->js {:has-attachments? has-attachments?
-                              :file-paths-count (count (or file-paths []))
+                              :file-paths-count (count (or attachment-paths []))
                               :workspace-dir workspace-dir
                               :taking-path (if has-attachments? "with-attachments" "normal")}))
     (if has-attachments?
       ;; Has attachments - dispatch orchestrating action
-      [[:chat.actions/send-message-with-attachments workspace-dir file-paths messages model api-key]]
+      [[:chat.actions/send-message-with-attachments workspace-dir attachment-paths messages model api-key]]
       ;; No attachments - normal flow
       [[:chat.effects/send-message messages model api-key]])))
 
 (defn send-message-with-attachments
-  "Orchestrates attachment processing flow: process files → load content → enrich → send.
-  Pure action that returns effect description to start the flow."
-  [state workspace-dir file-paths messages model api-key]
+  [_state workspace-dir file-paths messages model api-key]
   [[:attachment.effects/process-batch-then-continue workspace-dir file-paths messages model api-key]])
 
 (defn send-message-with-loaded-attachments
-  "Orchestrates loading attachment content and sending.
-  Receives AttachmentRefs from previous step, returns effect to load content."
-  [state workspace-dir attachment-refs messages model api-key]
+  [_state workspace-dir attachment-refs messages model api-key]
   [[:attachment.effects/load-then-enrich workspace-dir attachment-refs messages model api-key]])
 
 (defn enrich-and-send
   "Pure: transforms loaded attachment data to API format, enriches messages, returns send effect.
   Receives vector of [AttachmentRef Buffer] pairs from load effect."
-  [state loaded-pairs messages model api-key]
+  [_state loaded-pairs messages model api-key]
   (let [;; Pure: transform each ref+content pair to API format
         api-attachments (mapv (fn [[ref content]]
                                 (schema/attachment-ref->api-format ref content))
