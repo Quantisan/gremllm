@@ -5,6 +5,16 @@
             [malli.transform :as mt]
             [malli.util :as mu]))
 
+(def supported-models
+  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
+  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
+   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
+   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
+   "gpt-5"                      "GPT-5"
+   "gpt-5-mini"                 "GPT-5 Mini"
+   "gemini-2.5-flash"           "Gemini 2.5 Flash"
+   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+
 ;; ========================================
 ;; Messages
 ;; ========================================
@@ -94,16 +104,6 @@
   "Canonical list of supported LLM providers.
    Derived from provider-storage-key-map for single source of truth."
   (vec (keys provider-storage-key-map)))
-
-(def supported-models
-  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
-  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
-   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
-   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
-   "gpt-5"                      "GPT-5"
-   "gpt-5-mini"                 "GPT-5 Mini"
-   "gemini-2.5-flash"           "Gemini 2.5 Flash"
-   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
 
 (defn model->provider
   "Infers provider from model string. Pure function for easy testing."
