@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [gremllm.schema :as schema]
+  (:require [clojure.string :as str]
+            [gremllm.schema :as schema]
             [malli.core :as m]))
 
 (defn messages->gemini-format
@@ -17,8 +18,9 @@
                                          {:inline_data {:mime_type mime-type
                                                         :data data}})
                                        (or attachments []))
-                                 ;; Text part
-                                 [{:text content}])})
+                                 ;; Text part - only include if content is non-empty
+                                 (when (not (str/blank? content))
+                                   [{:text content}]))})
                      messages)]
     ;; CHECKPOINT 7: Gemini format transform
     (js/console.log "[CHECKPOINT 7] Main: Gemini format transform"
