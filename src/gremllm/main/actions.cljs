@@ -103,10 +103,10 @@
   (fn [{:keys [dispatch]} _ messages model api-key]
     (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
 
-;; Attachment processing effect - consolidates file storage and content loading
-
 (nxr/register-effect! :attachment.effects/store-and-load
   (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
+    "Stores attachment files to disk, loads their content, then dispatches to pure transformation.
+    Both I/O operations are consolidated here to avoid intermediate state management."
     ;; PHASE 1: Store files and create metadata refs
     (let [attachment-refs (attachment-effects/process-attachments-batch workspace-dir file-paths)]
       ;; CHECKPOINT 4: Attachment refs created
