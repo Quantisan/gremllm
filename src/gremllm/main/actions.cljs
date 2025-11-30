@@ -97,7 +97,7 @@
 ;; Chat Actions/Effects Registration
 (nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
 (nxr/register-action! :chat.actions/send-message-with-attachments chat-actions/send-message-with-attachments)
-(nxr/register-action! :chat.actions/enrich-and-send chat-actions/enrich-and-send)
+(nxr/register-action! :chat.actions/attach-and-send chat-actions/attach-and-send)
 
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages model api-key]
@@ -105,7 +105,7 @@
 
 ;; Attachment processing effect - consolidates file storage and content loading
 
-(nxr/register-effect! :attachment.effects/prepare-and-enrich
+(nxr/register-effect! :attachment.effects/store-and-load
   (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
     ;; PHASE 1: Store files and create metadata refs
     (let [attachment-refs (attachment-effects/process-attachments-batch workspace-dir file-paths)]
@@ -128,7 +128,7 @@
                                                         :buffer-exists? (some? buf)})
                                                      loaded-pairs)}))
         ;; Dispatch to pure action for transformation
-        (dispatch [[:chat.actions/enrich-and-send loaded-pairs messages model api-key]])))))
+        (dispatch [[:chat.actions/attach-and-send loaded-pairs messages model api-key]])))))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
