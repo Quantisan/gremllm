@@ -21,13 +21,9 @@
 
 (defn send-message-with-attachments
   [_state workspace-dir file-paths messages model api-key]
-  [[:attachment.effects/process-batch-then-continue workspace-dir file-paths messages model api-key]])
+  [[:attachment.effects/store-and-load workspace-dir file-paths messages model api-key]])
 
-(defn send-message-with-loaded-attachments
-  [_state workspace-dir attachment-refs messages model api-key]
-  [[:attachment.effects/load-then-enrich workspace-dir attachment-refs messages model api-key]])
-
-(defn enrich-and-send
+(defn attach-and-send
   "Pure: transforms loaded attachment data to API format, enriches messages, returns send effect.
   Receives vector of [AttachmentRef Buffer] pairs from load effect."
   [_state loaded-pairs messages model api-key]
