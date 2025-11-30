@@ -11,7 +11,7 @@
   (let [[[effect-name messages model api-key]] result]
     [effect-name messages model api-key]))
 
-(deftest test-enrich-and-send
+(deftest test-attach-and-send
   (testing "enriches first message with valid attachments and returns send effect"
     (let [attachment-ref {:ref "abc12345"
                           :name "test.png"
@@ -21,7 +21,7 @@
           loaded-pairs [[attachment-ref buffer]]
           messages [{:role "user" :content "Check this image"}
                     {:role "assistant" :content "OK"}]
-          result (chat/enrich-and-send {} loaded-pairs messages test-model test-api-key)
+          result (chat/attach-and-send {} loaded-pairs messages test-model test-api-key)
           [effect-name enriched-messages model api-key] (effect-with-messages result)
           [first-msg second-msg] enriched-messages
           attachment (first (:attachments first-msg))]
@@ -41,7 +41,7 @@
 
   (testing "handles empty attachments collection"
     (let [messages [{:role "user" :content "Hello"}]
-          result (chat/enrich-and-send {} [] messages test-model test-api-key)
+          result (chat/attach-and-send {} [] messages test-model test-api-key)
           [effect-name enriched-messages] (effect-with-messages result)]
 
       (is (= :chat.effects/send-message effect-name))
@@ -58,4 +58,4 @@
           messages [{:role "user" :content "Check this"}]]
 
       (is (thrown? js/Error
-                   (chat/enrich-and-send {} loaded-pairs messages test-model test-api-key))))))
+                   (chat/attach-and-send {} loaded-pairs messages test-model test-api-key))))))
