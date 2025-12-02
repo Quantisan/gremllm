@@ -23,6 +23,13 @@
             [{:type :user :text "Hello"}
              {:type :assistant :text "Hi there"}])))))
 
+(deftest test-build-conversation-with-new-message
+  (testing "builds conversation from state with new message"
+    (let [state {:topics {"t1" {:messages [{:text "first"}]}}
+                 :active-topic-id "t1"}]
+      (is (= [{:text "first"} {:text "second"}]
+             (msg/build-conversation-with-new-message state {:text "second"}))))))
+
 (deftest test-append-to-state
   (testing "returns action to append message to the active topic's messages"
     (let [state {:topics {"topic-1" {:messages [{:id 1 :type :user :text "Hello"}]}}
@@ -69,15 +76,17 @@
                  :form {:pending-attachments []}}
           assistant-id 12345
           model "claude-3-5-sonnet-20241022"
-          effects (msg/send-messages state assistant-id model)]
+          user-message {:type :user :text "World"}
+          effects (msg/send-messages state assistant-id model user-message)]
       (is (= 1 (count effects))
           "Should return exactly one effect")
       (let [[effect-type effect-data] (first effects)]
         (is (= :effects/send-llm-messages effect-type)
             "Effect should be send-llm-message")
-        (is (= [{:role "user" :content "Hello"}]
+        (is (= [{:role "user" :content "Hello"}
+                {:role "user" :content "World"}]
                (:messages effect-data))
-            "Messages should be in API format")
+            "Messages should include both existing and new user message in API format")
         (is (= model (:model effect-data))
             "Model should be passed through")
         (is (nil? (:file-paths effect-data))
@@ -93,7 +102,8 @@
     (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
                  :active-topic-id "t1"
                  :form {:pending-attachments []}}
-          effects (msg/send-messages state 123 "model")
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 123 "model" user-message)
           [_ effect-data] (first effects)]
       (is (nil? (:file-paths effect-data))
           "Empty attachments should result in nil file-paths")))
@@ -109,7 +119,8 @@
                                                :size 2048
                                                :type "image/png"
                                                :path "/tmp/image.png"}]}}
-          effects (msg/send-messages state 456 "model")
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 456 "model" user-message)
           [_ effect-data] (first effects)]
       (is (= ["/tmp/file.txt" "/tmp/image.png"]
              (:file-paths effect-data))
@@ -119,7 +130,8 @@
     (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
                  :active-topic-id "t1"
                  :form {}}
-          effects (msg/send-messages state 789 "model")
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 789 "model" user-message)
           [_ effect-data] (first effects)]
       (is (nil? (:file-paths effect-data))
           "Missing pending-attachments should result in nil file-paths"))))

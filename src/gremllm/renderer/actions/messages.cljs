@@ -9,11 +9,17 @@
    ;; TODO: we should not save if the last message was an Error
    [:topic.actions/auto-save]])
 
-(defn append-to-state [state message]
+(defn build-conversation-with-new-message
+  "Builds complete conversation history including the new user message."
+  [state new-user-message]
+  (let [message-history (topic-state/get-messages state)]
+    (conj (or message-history []) new-user-message)))
+
+(defn append-to-state [state new-user-message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
-    (let [current-messages (topic-state/get-messages state)
-          path-to-messages (topic-state/topic-field-path active-id :messages)]
-      [[:effects/save path-to-messages (conj (or current-messages []) message)]])
+    (let [path-to-messages (topic-state/topic-field-path active-id :messages)
+          messages-to-save (build-conversation-with-new-message state new-user-message)]
+      [[:effects/save path-to-messages messages-to-save]])
     (throw (js/Error. "Cannot append message: no active topic."))))
 
 (defn llm-response-received [_state assistant-id response]
@@ -41,14 +47,15 @@
                :content text}))))
 
 ;; Action for sending messages to LLM
-(defn send-messages [state assistant-id model]
-  (let [messages (messages->api-format (topic-state/get-messages state))
+;; Note: new-user-message passed explicitly because submit-messages action chain
+;; writes message to state and calls this simultaneously - can't read from state reliably
+(defn send-messages [state assistant-id model new-user-message]
+  (let [conversation (build-conversation-with-new-message state new-user-message)
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                      (mapv :path attachments))]
     [[:effects/send-llm-messages
-      {:messages   messages
+      {:messages   (messages->api-format conversation)
        :model      model
        :file-paths file-paths
        :on-success [[:llm.actions/response-received assistant-id]]
        :on-error   [[:llm.actions/response-error assistant-id]]}]]))
-
