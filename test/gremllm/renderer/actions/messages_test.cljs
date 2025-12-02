@@ -23,10 +23,12 @@
             [{:type :user :text "Hello"}
              {:type :assistant :text "Hi there"}])))))
 
-(deftest test-add-to-conversation
-  (testing "adds message to existing conversation"
-    (is (= [{:text "first"} {:text "second"}]
-           (msg/add-to-conversation [{:text "first"}] {:text "second"})))))
+(deftest test-build-conversation-with-new-message
+  (testing "builds conversation from state with new message"
+    (let [state {:topics {"t1" {:messages [{:text "first"}]}}
+                 :active-topic-id "t1"}]
+      (is (= [{:text "first"} {:text "second"}]
+             (msg/build-conversation-with-new-message state {:text "second"}))))))
 
 (deftest test-append-to-state
   (testing "returns action to append message to the active topic's messages"
