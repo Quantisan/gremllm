@@ -42,8 +42,10 @@
                :content text}))))
 
 ;; Action for sending messages to LLM
-(defn send-messages [state assistant-id model]
-  (let [messages (messages->api-format (topic-state/get-messages state))
+(defn send-messages [state assistant-id model user-message]
+  (let [topic-messages (topic-state/get-messages state)
+        all-messages (conj topic-messages user-message)
+        messages (messages->api-format all-messages)
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                      (mapv :path attachments))]
     [[:effects/send-llm-messages
@@ -52,4 +54,3 @@
        :file-paths file-paths
        :on-success [[:llm.actions/response-received assistant-id]]
        :on-error   [[:llm.actions/response-error assistant-id]]}]]))
-

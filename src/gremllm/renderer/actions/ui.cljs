@@ -25,16 +25,17 @@
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
-      (let [assistant-id (.now js/Date)]
-        [[:messages.actions/add-to-chat {:id   (.now js/Date)
-                                         :type :user
-                                         :text text}]
+      (let [user-message {:id   (.now js/Date)
+                          :type :user
+                          :text text}
+            assistant-id (.now js/Date)]
+        [[:messages.actions/add-to-chat user-message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.actions/send-messages assistant-id model]
+         [:llm.actions/send-messages assistant-id model user-message]
          ;; Clear attachments AFTER send-messages reads them from state
          [:ui.actions/clear-pending-attachments]]))))
 
