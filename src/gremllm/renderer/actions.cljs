@@ -123,17 +123,15 @@
     [[:effects/save [:assistant-errors] nil]]))
 
 (nxr/register-effect! :effects/send-llm-messages
-  (fn [_ _store {:keys [messages model file-paths on-success on-error]}]
-    ;; CHECKPOINT 1: Renderer sending to IPC
-    (js/console.log "[CHECKPOINT 1] Renderer: Sending attachments to IPC"
-                    (clj->js {:file-paths file-paths}))
-    [[:effects/promise
-      {:promise    (js/window.electronAPI.sendMessage
-                     (clj->js messages)
-                     model
-                     (clj->js file-paths))
-       :on-success on-success
-       :on-error   on-error}]]))
+  (fn [{:keys [dispatch]} _store {:keys [messages model file-paths on-success on-error]}]
+    (dispatch
+      [[:effects/promise
+        {:promise    (js/window.electronAPI.sendMessage
+                       (clj->js messages)
+                       model
+                       (clj->js file-paths))
+         :on-success on-success
+         :on-error   on-error}]])))
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
