@@ -14,15 +14,6 @@
 ;; 5. Schema defaults unused - schema/create-topic and schema/PersistedTopic defaults
 ;;    exist but tests manually rebuild what schema already provides
 
-
-(deftest test-messages->api-format
-  (testing "converts messages to API format"
-    (is (= [{:role "user" :content "Hello"}
-            {:role "assistant" :content "Hi there"}]
-           (msg/messages->api-format
-            [{:type :user :text "Hello"}
-             {:type :assistant :text "Hi there"}])))))
-
 (deftest test-build-conversation-with-new-message
   (testing "builds conversation from state with new message"
     (let [state {:topics {"t1" {:messages [{:text "first"}]}}
@@ -83,10 +74,10 @@
       (let [[effect-type effect-data] (first effects)]
         (is (= :effects/send-llm-messages effect-type)
             "Effect should be send-llm-message")
-        (is (= [{:role "user" :content "Hello"}
-                {:role "user" :content "World"}]
+        (is (= [{:type :user :text "Hello"}
+                {:type :user :text "World"}]
                (:messages effect-data))
-            "Messages should include both existing and new user message in API format")
+            "Messages should include both existing and new user message in internal format")
         (is (= model (:model effect-data))
             "Model should be passed through")
         (is (nil? (:file-paths effect-data))

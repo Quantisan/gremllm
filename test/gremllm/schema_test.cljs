@@ -90,3 +90,11 @@
                           :mime-type "image/png"
                           :size 1024}]
       (is (thrown? js/Error (schema/attachment-ref->api-format attachment-ref nil))))))
+
+(deftest test-messages->chat-api-format
+  (testing "converts internal message format to Chat API format"
+    (is (= [{:role "user" :content "Hello"}
+            {:role "assistant" :content "Hi there"}]
+           (schema/messages->chat-api-format
+            [{:type :user :text "Hello"}
+             {:type :assistant :text "Hi there"}])))))
