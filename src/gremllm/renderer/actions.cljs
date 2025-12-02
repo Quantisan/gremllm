@@ -124,6 +124,11 @@
 
 (nxr/register-effect! :effects/send-llm-messages
   (fn [{:keys [dispatch]} _store {:keys [messages model file-paths on-success on-error]}]
+    (js/console.log "[CHECKPOINT 1] Renderer: Sending to IPC"
+                    (clj->js {:messages messages
+                              :messages-count (count messages)
+                              :file-paths file-paths
+                              :model model}))
     (dispatch
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage
