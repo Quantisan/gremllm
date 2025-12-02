@@ -9,11 +9,16 @@
    ;; TODO: we should not save if the last message was an Error
    [:topic.actions/auto-save]])
 
+(defn add-to-conversation
+  "Adds a message to a conversation, handling nil/empty cases."
+  [conversation message]
+  (conj (or conversation []) message))
+
 (defn append-to-state [state message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
     (let [path-to-messages (topic-state/topic-field-path active-id :messages)
           current-messages (topic-state/get-messages state)
-          messages-to-save (conj (or current-messages []) message)]
+          messages-to-save (add-to-conversation current-messages message)]
       [[:effects/save path-to-messages messages-to-save]])
     (throw (js/Error. "Cannot append message: no active topic."))))
 
@@ -44,7 +49,7 @@
 ;; Action for sending messages to LLM
 (defn send-messages [state assistant-id model new-user-message]
   (let [message-history (topic-state/get-messages state)
-        conversation (conj message-history new-user-message)
+        conversation (add-to-conversation message-history new-user-message)
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                      (mapv :path attachments))]
     [[:effects/send-llm-messages
