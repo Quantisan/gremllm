@@ -14,11 +14,11 @@
   [conversation message]
   (conj (or conversation []) message))
 
-(defn append-to-state [state message]
+(defn append-to-state [state new-user-message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
     (let [path-to-messages (topic-state/topic-field-path active-id :messages)
-          current-messages (topic-state/get-messages state)
-          messages-to-save (add-to-conversation current-messages message)]
+          message-history (topic-state/get-messages state)
+          messages-to-save (add-to-conversation message-history new-user-message)]
       [[:effects/save path-to-messages messages-to-save]])
     (throw (js/Error. "Cannot append message: no active topic."))))
 
