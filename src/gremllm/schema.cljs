@@ -84,10 +84,29 @@
 
 (defn attachment-paths-from-ipc
   [attachment-paths-js]
+  ;; DIAGNOSTIC 1: What did we receive?
+  (js/console.log "[DIAGNOSTIC] attachment-paths-from-ipc received:"
+                  (clj->js {:raw-value attachment-paths-js
+                            :type (type attachment-paths-js)
+                            :truthy? (boolean attachment-paths-js)}))
   (when attachment-paths-js
+    ;; DIAGNOSTIC 2: Entering when block
+    (js/console.log "[DIAGNOSTIC] Inside when block, about to convert")
     (as-> attachment-paths-js $
-      (js->clj $)
-      (m/coerce AttachmentPaths $ mt/json-transformer))))
+      (do
+        ;; DIAGNOSTIC 3: After js->clj
+        (let [clj-val (js->clj $)]
+          (js/console.log "[DIAGNOSTIC] After js->clj:"
+                          (clj->js {:clj-value clj-val
+                                    :type (type clj-val)
+                                    :count (when (coll? clj-val) (count clj-val))}))
+          clj-val))
+      (do
+        ;; DIAGNOSTIC 4: About to coerce
+        (js/console.log "[DIAGNOSTIC] About to coerce with schema AttachmentPaths"
+                        (clj->js {:value $
+                                  :schema (m/form AttachmentPaths)}))
+        (m/coerce AttachmentPaths $ mt/json-transformer)))))
 
 ;; ========================================
 ;; Providers
