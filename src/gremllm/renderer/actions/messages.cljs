@@ -39,13 +39,6 @@
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
 
-;; Helper function to convert messages to API format
-(defn messages->api-format [messages]
-  (->> messages
-       (map (fn [{:keys [type text]}]
-              {:role (if (= type :user) "user" "assistant")
-               :content text}))))
-
 ;; Action for sending messages to LLM
 ;; Note: new-user-message passed explicitly because submit-messages action chain
 ;; writes message to state and calls this simultaneously - can't read from state reliably
@@ -54,7 +47,7 @@
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                      (mapv :path attachments))]
     [[:effects/send-llm-messages
-      {:messages   (messages->api-format conversation)
+      {:messages   conversation
        :model      model
        :file-paths file-paths
        :on-success [[:llm.actions/response-received assistant-id]]
