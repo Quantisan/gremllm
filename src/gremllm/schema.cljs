@@ -78,35 +78,27 @@
     (js->clj $ :keywordize-keys true)
     (m/coerce Messages $ mt/json-transformer)))
 
+(defn messages->chat-api-format
+  "Converts internal message format to Chat API format for LLM providers.
+  Internal: {:id, :type :user|:assistant, :text, :attachments?}
+  Chat API: {:role 'user'|'assistant', :content, :attachments?}"
+  [messages]
+  (mapv (fn [{:keys [type text attachments]}]
+          (cond-> {:role (if (= type :user) "user" "assistant")
+                   :content text}
+            attachments (assoc :attachments attachments)))
+        messages))
+
 (defn model-from-ipc
   [model-js]
   (m/coerce Model (js->clj model-js) mt/json-transformer))
 
 (defn attachment-paths-from-ipc
   [attachment-paths-js]
-  ;; DIAGNOSTIC 1: What did we receive?
-  (js/console.log "[DIAGNOSTIC] attachment-paths-from-ipc received:"
-                  (clj->js {:raw-value attachment-paths-js
-                            :type (type attachment-paths-js)
-                            :truthy? (boolean attachment-paths-js)}))
   (when attachment-paths-js
-    ;; DIAGNOSTIC 2: Entering when block
-    (js/console.log "[DIAGNOSTIC] Inside when block, about to convert")
     (as-> attachment-paths-js $
-      (do
-        ;; DIAGNOSTIC 3: After js->clj
-        (let [clj-val (js->clj $)]
-          (js/console.log "[DIAGNOSTIC] After js->clj:"
-                          (clj->js {:clj-value clj-val
-                                    :type (type clj-val)
-                                    :count (when (coll? clj-val) (count clj-val))}))
-          clj-val))
-      (do
-        ;; DIAGNOSTIC 4: About to coerce
-        (js/console.log "[DIAGNOSTIC] About to coerce with schema AttachmentPaths"
-                        (clj->js {:value $
-                                  :schema (m/form AttachmentPaths)}))
-        (m/coerce AttachmentPaths $ mt/json-transformer)))))
+      (js->clj $)
+      (m/coerce AttachmentPaths $ mt/json-transformer))))
 
 ;; ========================================
 ;; Providers
