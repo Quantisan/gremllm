@@ -146,7 +146,17 @@
 
   (testing "empty attachments array"
     (is (= [{:role "user" :parts [{:text "Hello"}]}]
-           (llm/messages->gemini-format [{:role "user" :content "Hello" :attachments []}])))))
+           (llm/messages->gemini-format [{:role "user" :content "Hello" :attachments []}]))))
+
+  (testing "attachment-only message (nil content)"
+    (is (= [{:role "user"
+             :parts [{:inline_data {:mime_type "image/png"
+                                    :data "base64-data"}}]}]
+           (llm/messages->gemini-format
+            [{:role "user"
+              :content nil
+              :attachments [{:mime-type "image/png"
+                             :data "base64-data"}]}])))))
 
 (deftest test-normalize-anthropic-response
   (testing "transforms Anthropic response to normalized LLMResponse schema"
