@@ -100,6 +100,25 @@
       (js->clj $)
       (m/coerce AttachmentPaths $ mt/json-transformer))))
 
+(defn messages-to-ipc
+  "Validates messages and converts to JS for IPC transmission. Throws if invalid."
+  [messages]
+  (-> (m/coerce Messages messages mt/json-transformer)
+      (clj->js)))
+
+(defn model-to-ipc
+  "Validates model and converts to JS for IPC transmission. Throws if invalid."
+  [model]
+  (-> (m/coerce Model model mt/json-transformer)
+      (clj->js)))
+
+(defn attachment-paths-to-ipc
+  "Validates attachment paths and converts to JS for IPC transmission. Throws if invalid."
+  [attachment-paths]
+  (when attachment-paths
+    (-> (m/coerce AttachmentPaths attachment-paths mt/json-transformer)
+        (clj->js))))
+
 ;; ========================================
 ;; Providers
 ;; ========================================
