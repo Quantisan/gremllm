@@ -101,7 +101,9 @@
 
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ messages model api-key]
-    (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
+    (dispatch [[:ipc.effects/promise->reply
+                (-> (schema/messages->chat-api-format messages)
+                    (llm-effects/query-llm-provider model api-key))]])))
 
 (nxr/register-effect! :attachment.effects/store-and-load
   (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]

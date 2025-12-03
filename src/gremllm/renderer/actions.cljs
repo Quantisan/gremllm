@@ -1,5 +1,6 @@
 (ns gremllm.renderer.actions
   (:require [nexus.registry :as nxr]
+            [gremllm.schema :as schema]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
@@ -132,9 +133,9 @@
     (dispatch
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage
-                       (clj->js messages)
-                       model
-                       (clj->js file-paths))
+                       (schema/messages-to-ipc messages)
+                       (schema/model-to-ipc model)
+                       (schema/attachment-paths-to-ipc file-paths))
          :on-success on-success
          :on-error   on-error}]])))
 
