@@ -32,11 +32,3 @@
                 ref2 (attachment/store-attachment workspace-dir file2)]
             (is (= (:ref ref1) (:ref ref2)))))))))
 
-(deftest test-gemini-format-conversion
-  (testing "converts attachment to Gemini inline_data format"
-    (let [ref {:mime-type "image/png"}
-          content (js/Buffer.from "fake image data" "utf8")
-          result (attachment/attachment-ref->inline-data ref content)]
-      (is (= "image/png" (get-in result [:inline_data :mime_type])))
-      (is (= "fake image data"
-             (.toString (js/Buffer.from (get-in result [:inline_data :data]) "base64") "utf8"))))))

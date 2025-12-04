@@ -17,11 +17,11 @@
       ;; Has attachments - dispatch orchestrating action
       [[:chat.actions/send-message-with-attachments workspace-dir attachment-paths messages model api-key]]
       ;; No attachments - normal flow
-      [[:chat.effects/send-message messages model api-key]])))
+      [[:chat.effects/send-message (schema/messages->chat-api-format messages) model api-key]])))
 
 (defn send-message-with-attachments
   [_state workspace-dir file-paths messages model api-key]
-  [[:attachment.effects/store-and-load workspace-dir file-paths messages model api-key]])
+  [[:attachment.effects/prepare-for-send workspace-dir file-paths messages model api-key]])
 
 (defn attach-and-send
   "Pure: transforms loaded attachment data to API format, enriches messages, returns send effect.
@@ -44,4 +44,4 @@
                               :enriched-first-message-has-attachments? (some? (:attachments (first enriched-messages)))
                               :enriched-messages-count (count enriched-messages)}))
     ;; Return effect to send enriched messages
-    [[:chat.effects/send-message enriched-messages model api-key]]))
+    [[:chat.effects/send-message (schema/messages->chat-api-format enriched-messages) model api-key]]))

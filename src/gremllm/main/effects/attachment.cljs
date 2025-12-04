@@ -8,13 +8,13 @@
 
 (def ^:private attachments-subdir "attachments")
 
-(defn attachments-dir-path
+(defn- attachments-dir-path
   "Build path to workspace attachments directory."
   [workspace-dir]
   (io/path-join workspace-dir attachments-subdir))
 
-(defn hash-content
-  "Pure: compute SHA256 hash of content buffer. Returns first 8 chars."
+(defn- hash-content
+  "Compute SHA256 hash of content buffer. Returns first 8 chars."
   [content-buffer]
   (let [hash-obj (.createHash crypto "sha256")]
     (.update hash-obj content-buffer)
@@ -27,10 +27,6 @@
   (let [content (.readFileSync fs file-path)]
     (hash-content content)))
 
-;; TODO: MIME type inference has limited coverage - unknown extensions default to
-;; application/octet-stream, which some APIs (e.g., Gemini) reject. Root cause:
-;; browser File API provides correct MIME type in renderer, but it's not transmitted
-;; over IPC (only file paths sent). Should pass file metadata instead of just paths.
 (defn- mime-type-from-extension
   "Infer MIME type from file extension. Returns basic image/document types."
   [filename]
@@ -49,13 +45,13 @@
       "md"   "text/markdown"
       "application/octet-stream")))
 
-(defn build-stored-filename
-  "Pure: build content-addressed filename from hash and original name."
+(defn- build-stored-filename
+  "Build content-addressed filename from hash and original name."
   [file-hash original-name]
   (str file-hash "-" original-name))
 
-(defn build-attachment-paths
-  "Pure: calculate storage paths for an attachment.
+(defn- build-attachment-paths
+  "Calculate storage paths for an attachment.
    Returns {:attachments-dir :dest-path :stored-name}"
   [workspace-path file-hash original-name]
   (let [stored-name (build-stored-filename file-hash original-name)
@@ -65,8 +61,8 @@
      :dest-path dest-path
      :stored-name stored-name}))
 
-(defn build-attachment-ref
-  "Pure: construct AttachmentRef from components."
+(defn- build-attachment-ref
+  "Construct AttachmentRef from components."
   [file-hash original-name mime-type file-size]
   {:ref file-hash
    :name original-name
@@ -107,16 +103,14 @@
         (when matching-file
           (.readFileSync fs (io/path-join attachments-dir matching-file)))))))
 
-(defn attachment-ref->inline-data
-  "Convert attachment reference + content Buffer to Gemini inline_data format.
-   Pure function: transforms data shape for API."
-  [attachment-ref content-buffer]
-  (let [base64-data (.toString content-buffer "base64")]
-    {:inline_data {:mime_type (:mime-type attachment-ref)
-                   :data base64-data}}))
-
-(defn process-attachments-batch
-  "Process multiple file paths, store each, return vector of AttachmentRefs.
-   Used when user drops multiple files into chat."
+(defn store-all
+  "Store multiple files to workspace attachments folder.
+   Returns vector of AttachmentRefs."
   [workspace-path file-paths]
   (mapv #(store-attachment workspace-path %) file-paths))
+
+(defn load-all-content
+  "Load content for all attachment refs.
+   Returns vector of [ref buffer] pairs."
+  [workspace-path refs]
+  (mapv (fn [ref] [ref (load-attachment-content workspace-path (:ref ref))]) refs))
