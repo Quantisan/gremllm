@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron/renderer");
+const { contextBridge, ipcRenderer, webUtils } = require("electron/renderer");
 
 /**
  * Creates a promise-based wrapper for Electron's event-based IPC.
@@ -16,11 +16,11 @@ const createIPCBoundary = (channel) => {
 	return (...args) => {
 		return new Promise((resolve, reject) => {
 			// Use standard UUID for request-response matching
-			const requestId = crypto.randomUUID();
+			const ipcCorrelationId = crypto.randomUUID();
 
 			// Set up one-time listeners for this request
-			const successChannel = `${channel}-success-${requestId}`;
-			const errorChannel = `${channel}-error-${requestId}`;
+			const successChannel = `${channel}-success-${ipcCorrelationId}`;
+			const errorChannel = `${channel}-error-${ipcCorrelationId}`;
 
 			ipcRenderer.once(successChannel, (event, result) => {
 				resolve(result);
@@ -31,7 +31,7 @@ const createIPCBoundary = (channel) => {
 			});
 
 			// Send request with ID so main process knows where to reply
-			ipcRenderer.send(channel, requestId, ...args);
+			ipcRenderer.send(channel, ipcCorrelationId, ...args);
 		});
 	};
 };
@@ -48,4 +48,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	// Secrets API
 	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
 	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
+	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
+	getFilePath: (file) => webUtils.getPathForFile(file),
 });

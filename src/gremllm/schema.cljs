@@ -5,15 +5,51 @@
             [malli.transform :as mt]
             [malli.util :as mu]))
 
+(def supported-models
+  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
+  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
+   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
+   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
+   "gpt-5"                      "GPT-5"
+   "gpt-5-mini"                 "GPT-5 Mini"
+   "gemini-2.5-flash"           "Gemini 2.5 Flash"
+   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+
 ;; ========================================
 ;; Messages
 ;; ========================================
+
+(def AttachmentRef
+  "Reference to a stored attachment file.
+   Persisted in topic EDN, not the actual file content."
+  [:map
+   [:ref :string]        ; Hash prefix (first 8 chars of SHA256)
+   [:name :string]       ; Original filename
+   [:mime-type :string]  ; MIME type (e.g., 'image/png')
+   [:size :int]])        ; File size in bytes
+
+(def APIAttachment
+  "Attachment in API provider format (with base64 data).
+   Validated at filesystem→API boundary."
+  [:map
+   [:mime-type :string]
+   [:data :string]])     ; base64-encoded content
+
+(defn attachment-ref->api-format
+  "Transform AttachmentRef + content to validated API format.
+   Takes AttachmentRef and Node Buffer, returns validated APIAttachment.
+   Throws if schema invalid."
+  [attachment-ref content-buffer]
+  (let [api-attachment {:mime-type (:mime-type attachment-ref)
+                        :data (.toString content-buffer "base64")}]
+    (m/coerce APIAttachment api-attachment mt/json-transformer)))
 
 (def Message
   [:map
    [:id :int]
    [:type [:enum :user :assistant]]
-   [:text :string]])
+   [:text :string]
+   [:attachments {:optional true} [:vector AttachmentRef]]])
 
 (def LLMResponse
   "Normalized LLM response shape, independent of provider.
@@ -24,6 +60,72 @@
             [:input-tokens :int]
             [:output-tokens :int]
             [:total-tokens :int]]]])
+
+(def Messages
+  [:vector Message])
+
+(def Model
+  "Valid LLM model identifier"
+  (into [:enum] (keys supported-models)))
+
+(def AttachmentPaths
+  "Vector of absolute file path strings for attachments"
+  [:vector [:string {:min 1}]])
+
+(defn messages-from-ipc
+  [messages-js]
+  (as-> messages-js $
+    (js->clj $ :keywordize-keys true)
+    (m/coerce Messages $ mt/json-transformer)))
+
+(defn messages->chat-api-format
+  "Converts internal message format to Chat API format for LLM providers.
+  Internal: {:id, :type :user|:assistant, :text, :attachments?}
+  Chat API: {:role 'user'|'assistant', :content, :attachments?}"
+  [messages]
+  (mapv (fn [{:keys [type text attachments]}]
+          (cond-> {:role (if (= type :user) "user" "assistant")
+                   :content text}
+            attachments (assoc :attachments attachments)))
+        messages))
+
+(defn model-from-ipc
+  [model-js]
+  (m/coerce Model (js->clj model-js) mt/json-transformer))
+
+(defn attachment-paths-from-ipc
+  [attachment-paths-js]
+  (when attachment-paths-js
+    (as-> attachment-paths-js $
+      (js->clj $)
+      (m/coerce AttachmentPaths $ mt/json-transformer))))
+
+(defn messages-to-ipc
+  "Validates messages and converts to JS for IPC transmission. Throws if invalid."
+  [messages]
+  (-> (m/coerce Messages messages mt/json-transformer)
+      (clj->js)))
+
+(defn model-to-ipc
+  "Validates model and converts to JS for IPC transmission. Throws if invalid."
+  [model]
+  (-> (m/coerce Model model mt/json-transformer)
+      (clj->js)))
+
+;; TODO: Attachment MIME types are lost at this boundary
+;;
+;; The browser File API provides accurate MIME types via content sniffing, but
+;; we only transmit file paths here. The main process must guess MIME types from
+;; extensions, which fails for uncommon types (defaults to application/octet-stream).
+;; This causes runtime failures with APIs that reject unknown MIME types (e.g., Gemini).
+;;
+;; See also: main/effects/attachment.cljs mime-type-from-extension
+(defn attachment-paths-to-ipc
+  "Validates attachment paths and converts to JS for IPC transmission. Throws if invalid."
+  [attachment-paths]
+  (when attachment-paths
+    (-> (m/coerce AttachmentPaths attachment-paths mt/json-transformer)
+        (clj->js))))
 
 ;; ========================================
 ;; Providers
@@ -40,16 +142,6 @@
   "Canonical list of supported LLM providers.
    Derived from provider-storage-key-map for single source of truth."
   (vec (keys provider-storage-key-map)))
-
-(def supported-models
-  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
-  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
-   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
-   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
-   "gpt-5"                      "GPT-5"
-   "gpt-5-mini"                 "GPT-5 Mini"
-   "gemini-2.5-flash"           "Gemini 2.5 Flash"
-   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
 
 (defn model->provider
   "Infers provider from model string. Pure function for easy testing."

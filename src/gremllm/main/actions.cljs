@@ -7,6 +7,7 @@
             [gremllm.main.llm :as llm]
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.effects.attachment :as attachment-effects]
             [gremllm.main.io :as io]
             [gremllm.main.window :as window]
             [gremllm.schema :as schema]
@@ -95,10 +96,21 @@
 
 ;; Chat Actions/Effects Registration
 (nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
+(nxr/register-action! :chat.actions/send-message-with-attachments chat-actions/send-message-with-attachments)
+(nxr/register-action! :chat.actions/attach-and-send chat-actions/attach-and-send)
 
 (nxr/register-effect! :chat.effects/send-message
-  (fn [{:keys [dispatch]} _ messages model api-key]
-    (dispatch [[:ipc.effects/promise->reply (llm-effects/query-llm-provider messages model api-key)]])))
+  (fn [{:keys [dispatch]} _ api-messages model api-key]
+    (dispatch [[:ipc.effects/promise->reply
+                (llm-effects/query-llm-provider api-messages model api-key)]])))
+
+(nxr/register-effect! :attachment.effects/prepare-for-send
+  (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
+    ;; Consolidated I/O: store + load is one domain operation.
+    ;; Pure transformation delegated to :chat.actions/attach-and-send.
+    (let [refs (attachment-effects/store-all workspace-dir file-paths)
+          loaded-pairs (attachment-effects/load-all-content workspace-dir refs)]
+      (dispatch [[:chat.actions/attach-and-send loaded-pairs messages model api-key]]))))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)

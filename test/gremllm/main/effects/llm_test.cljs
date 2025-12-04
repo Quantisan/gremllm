@@ -112,7 +112,51 @@
            (llm/messages->gemini-format
             [{:role "user" :content "2+2"}
              {:role "assistant" :content "4"}
-             {:role "user" :content "Thanks"}])))))
+             {:role "user" :content "Thanks"}]))))
+
+  (testing "message with single attachment"
+    (is (= [{:role "user"
+             :parts [{:inline_data {:mime_type "image/png"
+                                    :data "iVBORw0KG..."}}
+                     {:text "What's in this image?"}]}]
+           (llm/messages->gemini-format
+            [{:role "user"
+              :content "What's in this image?"
+              :attachments [{:mime-type "image/png"
+                             :data "iVBORw0KG..."}]}]))))
+
+  (testing "message with multiple attachments"
+    (is (= [{:role "user"
+             :parts [{:inline_data {:mime_type "image/png"
+                                    :data "base64-data-1"}}
+                     {:inline_data {:mime_type "application/pdf"
+                                    :data "base64-data-2"}}
+                     {:text "Describe these files"}]}]
+           (llm/messages->gemini-format
+            [{:role "user"
+              :content "Describe these files"
+              :attachments [{:mime-type "image/png"
+                             :data "base64-data-1"}
+                            {:mime-type "application/pdf"
+                             :data "base64-data-2"}]}]))))
+
+  (testing "backward compatibility - no attachments field"
+    (is (= [{:role "user" :parts [{:text "Hello"}]}]
+           (llm/messages->gemini-format [{:role "user" :content "Hello"}]))))
+
+  (testing "empty attachments array"
+    (is (= [{:role "user" :parts [{:text "Hello"}]}]
+           (llm/messages->gemini-format [{:role "user" :content "Hello" :attachments []}]))))
+
+  (testing "attachment-only message (nil content)"
+    (is (= [{:role "user"
+             :parts [{:inline_data {:mime_type "image/png"
+                                    :data "base64-data"}}]}]
+           (llm/messages->gemini-format
+            [{:role "user"
+              :content nil
+              :attachments [{:mime-type "image/png"
+                             :data "base64-data"}]}])))))
 
 (deftest test-normalize-anthropic-response
   (testing "transforms Anthropic response to normalized LLMResponse schema"

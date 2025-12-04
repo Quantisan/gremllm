@@ -1,17 +1,43 @@
 (ns gremllm.main.effects.llm
   "LLM provider side effects and HTTP operations"
-  (:require [gremllm.schema :as schema]
+  (:require [clojure.string :as str]
+            [gremllm.schema :as schema]
             [malli.core :as m]))
 
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
   Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
+  Supports optional :attachments for multimodal messages with inline_data.
   Pure function for easy testing."
   [messages]
-  (mapv (fn [{:keys [role content]}]
-          {:role (if (= role "assistant") "model" role)
-           :parts [{:text content}]})
-        messages))
+  (let [result (mapv (fn [{:keys [role content attachments]}]
+                       {:role (if (= role "assistant") "model" role)
+                        :parts (concat
+                                 ;; Attachment parts (inline_data with base64)
+                                 (mapv (fn [{:keys [mime-type data]}]
+                                         {:inline_data {:mime_type mime-type
+                                                        :data data}})
+                                       (or attachments []))
+                                 ;; Text part - only include if content is non-empty
+                                 (when (not (str/blank? content))
+                                   [{:text content}]))})
+                     messages)]
+    ;; CHECKPOINT 7: Gemini format transform
+    (js/console.log "[CHECKPOINT 7] Main: Gemini format transform"
+                    (clj->js {:input-messages-count (count messages)
+                              :output-contents-count (count result)
+                              :first-message-attachments-in-input (count (or (:attachments (first messages)) []))
+                              :first-content-parts-count (count (:parts (first result)))
+                              :first-content-parts-info (mapv (fn [part]
+                                                                (cond
+                                                                  (:text part) {:type "text" :text-length (count (:text part))}
+                                                                  (:inline_data part) {:type "inline_data"
+                                                                                       :mime_type (get-in part [:inline_data :mime_type])
+                                                                                       :data-length (count (get-in part [:inline_data :data]))
+                                                                                       :data-preview (subs (get-in part [:inline_data :data]) 0 (min 50 (count (get-in part [:inline_data :data]))))}
+                                                                  :else {:type "unknown"}))
+                                                              (:parts (first result)))}))
+    result))
 
 (defn- log-and-throw-error [response model message-count body]
   (let [status (.-status response)
@@ -114,6 +140,19 @@
         headers {"Content-Type" "application/json"}
         url (str "https://generativelanguage.googleapis.com/v1beta/models/"
                  model ":generateContent?key=" api-key)]
+    ;; CHECKPOINT 8: Final API request
+    (js/console.log "[CHECKPOINT 8] Main: Final Gemini API request"
+                    (clj->js {:contents-count (count (:contents request-body))
+                              :first-content-parts-count (count (get-in request-body [:contents 0 :parts]))
+                              :first-content-parts-summary (mapv (fn [part]
+                                                                   (cond
+                                                                     (:text part) {:type "text"}
+                                                                     (:inline_data part) {:type "inline_data"
+                                                                                          :mime_type (get-in part [:inline_data :mime_type])
+                                                                                          :has-data? (some? (get-in part [:inline_data :data]))}
+                                                                     :else {:type "unknown"}))
+                                                                 (get-in request-body [:contents 0 :parts]))
+                              :request-body-keys (keys request-body)}))
     (-> (js/fetch url
                   (clj->js {:method "POST"
                             :headers headers

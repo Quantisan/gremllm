@@ -1,7 +1,6 @@
 (ns gremllm.renderer.actions.messages
-  (:require [nexus.registry :as nxr]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.loading :as loading-state]))
+  (:require [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.form :as form-state]))
 
 (defn add-message [_state message]
   [[:messages.actions/append-to-state message]
@@ -10,27 +9,18 @@
    ;; TODO: we should not save if the last message was an Error
    [:topic.actions/auto-save]])
 
-(defn append-to-state [state message]
+(defn build-conversation-with-new-message
+  "Builds complete conversation history including the new user message."
+  [state new-user-message]
+  (let [message-history (topic-state/get-messages state)]
+    (conj (or message-history []) new-user-message)))
+
+(defn append-to-state [state new-user-message]
   (if-let [active-id (topic-state/get-active-topic-id state)]
-    (let [current-messages (topic-state/get-messages state)
-          path-to-messages (topic-state/topic-field-path active-id :messages)]
-      [[:effects/save path-to-messages (conj (or current-messages []) message)]])
+    (let [path-to-messages (topic-state/topic-field-path active-id :messages)
+          messages-to-save (build-conversation-with-new-message state new-user-message)]
+      [[:effects/save path-to-messages messages-to-save]])
     (throw (js/Error. "Cannot append message: no active topic."))))
-
-;; Domain-specific actions
-(nxr/register-action! :messages.actions/append-to-state append-to-state)
-
-(nxr/register-action! :loading.actions/set-loading?
-  (fn [_state id loading?]
-    [[:effects/save (loading-state/loading-path id) loading?]]))
-
-(nxr/register-action! :llm.actions/set-error
-  (fn [_state assistant-id error-message]
-    [[:effects/save (loading-state/assistant-errors-path assistant-id) error-message]]))
-
-(nxr/register-action! :llm.actions/unset-all-errors
-  (fn [_state]
-    [[:effects/save [:assistant-errors] nil]]))
 
 (defn llm-response-received [_state assistant-id response]
   (let [clj-response (js->clj response :keywordize-keys true)]
@@ -49,22 +39,16 @@
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
 
-;; Helper function to convert messages to API format
-(defn messages->api-format [messages]
-  (->> messages
-       (map (fn [{:keys [type text]}]
-              {:role (if (= type :user) "user" "assistant")
-               :content text}))))
-
-;; Effect for sending messages to LLM
-(nxr/register-effect! :llm.effects/send-llm-messages
-  (fn [{dispatch :dispatch} store assistant-id model]
-    (dispatch
-      [[:effects/promise
-        {:promise    (-> (topic-state/get-messages @store)
-                         (messages->api-format)
-                         (clj->js)
-                         (js/window.electronAPI.sendMessage model))
-         :on-success [[:llm.actions/response-received assistant-id]]
-         :on-error   [[:llm.actions/response-error assistant-id]]}]])))
-
+;; Action for sending messages to LLM
+;; Note: new-user-message passed explicitly because submit-messages action chain
+;; writes message to state and calls this simultaneously - can't read from state reliably
+(defn send-messages [state assistant-id model new-user-message]
+  (let [conversation (build-conversation-with-new-message state new-user-message)
+        file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
+                     (mapv :path attachments))]
+    [[:effects/send-llm-messages
+      {:messages   conversation
+       :model      model
+       :file-paths file-paths
+       :on-success [[:llm.actions/response-received assistant-id]]
+       :on-error   [[:llm.actions/response-error assistant-id]]}]]))

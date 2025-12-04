@@ -2,13 +2,24 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.messages :as msg]))
 
-(deftest test-messages->api-format
-  (testing "converts messages to API format"
-    (is (= [{:role "user" :content "Hello"}
-            {:role "assistant" :content "Hi there"}]
-           (msg/messages->api-format
-            [{:type :user :text "Hello"}
-             {:type :assistant :text "Hi there"}])))))
+;; TODO: Refactor test data to reduce DRY violations
+;; 1. Repeated message structures - inline maps like {:type :user :text "..."} duplicated
+;;    across test-messages->api-format, test-append-to-state, test-send-messages
+;; 2. Magic topic IDs and repetitive state setup - "t1", "topic-1" scattered throughout,
+;;    same :topics {...} structure rebuilt in every test. Consider schema/create-topic
+;; 3. Hardcoded assistant IDs and model strings - random values (12345, 456, 789) and
+;;    model strings should be named constants or schema defaults
+;; 4. Inline attachment test data - "includes file-paths when attachments present" has hardcoded maps,
+;;    could use schema/AttachmentRef or fixture builder
+;; 5. Schema defaults unused - schema/create-topic and schema/PersistedTopic defaults
+;;    exist but tests manually rebuild what schema already provides
+
+(deftest test-build-conversation-with-new-message
+  (testing "builds conversation from state with new message"
+    (let [state {:topics {"t1" {:messages [{:text "first"}]}}
+                 :active-topic-id "t1"}]
+      (is (= [{:text "first"} {:text "second"}]
+             (msg/build-conversation-with-new-message state {:text "second"}))))))
 
 (deftest test-append-to-state
   (testing "returns action to append message to the active topic's messages"
@@ -48,3 +59,70 @@
                                               :text nil}]]
              (msg/llm-response-received {} assistant-id api-response))
           "Missing text should result in nil text, not throw"))))
+
+(deftest test-send-messages
+  (testing "returns send-llm-message effect with correct structure"
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
+                 :active-topic-id "t1"
+                 :form {:pending-attachments []}}
+          assistant-id 12345
+          model "claude-3-5-sonnet-20241022"
+          user-message {:type :user :text "World"}
+          effects (msg/send-messages state assistant-id model user-message)]
+      (is (= 1 (count effects))
+          "Should return exactly one effect")
+      (let [[effect-type effect-data] (first effects)]
+        (is (= :effects/send-llm-messages effect-type)
+            "Effect should be send-llm-message")
+        (is (= [{:type :user :text "Hello"}
+                {:type :user :text "World"}]
+               (:messages effect-data))
+            "Messages should include both existing and new user message in internal format")
+        (is (= model (:model effect-data))
+            "Model should be passed through")
+        (is (nil? (:file-paths effect-data))
+            "file-paths should be nil when no attachments")
+        (is (= [[:llm.actions/response-received assistant-id]]
+               (:on-success effect-data))
+            "Success callback should receive assistant-id")
+        (is (= [[:llm.actions/response-error assistant-id]]
+               (:on-error effect-data))
+            "Error callback should receive assistant-id"))))
+
+  (testing "file-paths is nil when attachments empty"
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
+                 :active-topic-id "t1"
+                 :form {:pending-attachments []}}
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 123 "model" user-message)
+          [_ effect-data] (first effects)]
+      (is (nil? (:file-paths effect-data))
+          "Empty attachments should result in nil file-paths")))
+
+  (testing "includes file-paths when attachments present"
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Check this"}]}}
+                 :active-topic-id "t1"
+                 :form {:pending-attachments [{:name "file.txt"
+                                               :size 1024
+                                               :type "text/plain"
+                                               :path "/tmp/file.txt"}
+                                              {:name "image.png"
+                                               :size 2048
+                                               :type "image/png"
+                                               :path "/tmp/image.png"}]}}
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 456 "model" user-message)
+          [_ effect-data] (first effects)]
+      (is (= ["/tmp/file.txt" "/tmp/image.png"]
+             (:file-paths effect-data))
+          "Should extract paths from attachments")))
+
+  (testing "file-paths is nil when pending-attachments missing"
+    (let [state {:topics {"t1" {:messages [{:type :user :text "Test"}]}}
+                 :active-topic-id "t1"
+                 :form {}}
+          user-message {:type :user :text "New message"}
+          effects (msg/send-messages state 789 "model" user-message)
+          [_ effect-data] (first effects)]
+      (is (nil? (:file-paths effect-data))
+          "Missing pending-attachments should result in nil file-paths"))))

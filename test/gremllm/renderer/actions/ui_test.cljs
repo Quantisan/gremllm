@@ -12,10 +12,10 @@
     (let [effects (ui/submit-messages {:form            {:user-input "Hello"}
                                        :active-topic-id "t1"
                                        :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})]
-      (is (= 7 (count effects)))
+      (is (= 8 (count effects)))
       (is (= :messages.actions/add-to-chat (ffirst effects)))
       (is (= :form.actions/clear-input (first (second effects))))
-      (is (= :llm.effects/send-llm-messages (first (last effects)))))))
+      (is (= :ui.actions/clear-pending-attachments (first (last effects)))))))
 
 (deftest test-handle-submit-keys
   (testing "Enter without Shift returns prevent-default and submit effects"

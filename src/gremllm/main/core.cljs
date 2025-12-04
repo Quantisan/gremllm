@@ -41,13 +41,30 @@
             Secrets (config), System (capabilities)"
   [store secrets-filepath]
   ;; Chat - async pattern: dispatches to action registry, response flows via events
+  ;; NOTE: ipc-correlation-id is IPC infrastructure, injected by preload.js:createIPCBoundary
+  ;; to match async responses. Not passed by renderer - see resources/public/js/preload.js:34
   (.on ipcMain "chat/send-message"
-       (fn [event request-id messages model]
-         (let [messages-clj (js->clj messages :keywordize-keys true)]
+       (fn [event ipc-correlation-id messages model attachment-paths]
+         (js/console.log "[DIAGNOSTIC] Main IPC handler raw params:"
+                         (clj->js {:ipc-correlation-id ipc-correlation-id
+                                   :messages messages
+                                   :model model
+                                   :attachment-paths attachment-paths
+                                   :attachment-paths-type (type attachment-paths)
+                                   :attachment-paths-nil? (nil? attachment-paths)}))
+         (let [messages-clj         (schema/messages-from-ipc messages)
+               model-clj            (schema/model-from-ipc model)
+               attachment-paths-clj (schema/attachment-paths-from-ipc attachment-paths)]
+           ;; CHECKPOINT 2: Main IPC receiving file paths
+           (js/console.log "[CHECKPOINT 2] Main IPC: Received file paths"
+                           (clj->js {:file-paths-clj attachment-paths-clj
+                                     :file-paths-count (count (or attachment-paths-clj []))
+                                     :messages-count (count messages-clj)
+                                     :ipc-correlation-id ipc-correlation-id}))
            (nxr/dispatch store {:ipc-event event
-                                :request-id request-id
+                                :ipc-correlation-id ipc-correlation-id
                                 :channel "chat/send-message"}
-                         [[:chat.actions/send-message-from-ipc messages-clj model [:env/api-key-for-model model]]]))))
+                         [[:chat.actions/send-message-from-ipc messages-clj model-clj [:env/api-key-for-model model-clj] attachment-paths-clj]]))))
 
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"

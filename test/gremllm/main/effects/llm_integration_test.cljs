@@ -5,6 +5,11 @@
                                                    mock-openai-response
                                                    mock-gemini-response]]))
 
+(def test-api-messages
+  "Simple API-formatted messages for integration testing.
+  Shared across integration tests and schema boundary tests."
+  [{:role "user" :content "2+2"}])
+
 (defn assert-matches-structure
   "Validates actual response matches mock structure, ignoring dynamic field values.
   - Static fields must match exactly
@@ -52,40 +57,39 @@
         (if-not api-key
           (do (js/console.warn "Skipping Anthropic integration test - ANTHROPIC_API_KEY not set")
               (done))
-          (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-raw-provider-response test-messages "claude-haiku-4-5-20251001" api-key)
-                (.then (fn [response]
-                         (js/console.log "\n=== ANTHROPIC RAW API RESPONSE ===")
-                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+          (-> (llm/fetch-raw-provider-response test-api-messages "claude-haiku-4-5-20251001" api-key)
+              (.then (fn [response]
+                       (js/console.log "\n=== ANTHROPIC RAW API RESPONSE ===")
+                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         ;; Validate raw API structure against mock fixture
-                         (assert-matches-structure response
-                                                   mock-claude-response
-                                                   [:type :role :model :stop_reason :stop_sequence]
-                                                   [:id :content])
+                       ;; Validate raw API structure against mock fixture
+                       (assert-matches-structure response
+                                                 mock-claude-response
+                                                 [:type :role :model :stop_reason :stop_sequence]
+                                                 [:id :content])
 
-                         ;; Provider-specific structural checks
-                         (is (vector? (:content response)) "content should be a vector")
-                         (is (seq (:content response)) "content should be non-empty")
+                       ;; Provider-specific structural checks
+                       (is (vector? (:content response)) "content should be a vector")
+                       (is (seq (:content response)) "content should be non-empty")
 
-                         ;; Content item structure validation
-                         (testing "content item structure"
-                           (let [content-item (first (:content response))]
-                             (is (map? content-item)
-                                 "content item should be a map")
-                             (is (contains? content-item :type)
-                                 "content item should have :type field")
-                             (is (= "text" (:type content-item))
-                                 "content item type should be 'text'")
-                             (is (contains? content-item :text)
-                                 "content item should have :text field")
-                             (is (string? (:text content-item))
-                                 "content text should be a string")))
+                       ;; Content item structure validation
+                       (testing "content item structure"
+                         (let [content-item (first (:content response))]
+                           (is (map? content-item)
+                               "content item should be a map")
+                           (is (contains? content-item :type)
+                               "content item should have :type field")
+                           (is (= "text" (:type content-item))
+                               "content item type should be 'text'")
+                           (is (contains? content-item :text)
+                               "content item should have :text field")
+                           (is (string? (:text content-item))
+                               "content text should be a string")))
 
-                         (done)))
-                (.catch (fn [error]
-                          (is false (str "API call failed: " (.-message error)))
-                          (done))))))))))
+                       (done)))
+              (.catch (fn [error]
+                        (is false (str "API call failed: " (.-message error)))
+                        (done)))))))))
 
 (deftest test-fetch-provider-response-openai-integration
   (async done
@@ -94,9 +98,8 @@
         (if-not api-key
           (do (js/console.warn "Skipping OpenAI integration test - OPENAI_API_KEY not set")
               (done))
-          (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-raw-provider-response test-messages "gpt-5-nano" api-key)
-                (.then (fn [response]
+          (-> (llm/fetch-raw-provider-response test-api-messages "gpt-5-nano" api-key)
+              (.then (fn [response]
                          (js/console.log "\n=== OPENAI RAW API RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
@@ -151,9 +154,9 @@
                                  "token counts should be numbers")))
 
                          (done)))
-                (.catch (fn [error]
-                          (is false (str "API call failed: " (.-message error)))
-                          (done))))))))))
+              (.catch (fn [error]
+                        (is false (str "API call failed: " (.-message error)))
+                        (done)))))))))
 
 (deftest test-fetch-provider-response-gemini-integration
   (async done
@@ -162,50 +165,81 @@
         (if-not api-key
           (do (js/console.warn "Skipping Gemini integration test - GEMINI_API_KEY not set")
               (done))
-          (let [test-messages [{:role "user" :content "2+2"}]]
-            (-> (llm/fetch-raw-provider-response test-messages "gemini-2.5-flash-lite" api-key)
+          (-> (llm/fetch-raw-provider-response test-api-messages "gemini-2.5-flash-lite" api-key)
+              (.then (fn [response]
+                       (js/console.log "\n=== GEMINI RAW API RESPONSE ===")
+                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+
+                       ;; Validate raw API structure against mock fixture
+                       (assert-matches-structure response
+                                                 mock-gemini-response
+                                                 []
+                                                 [:candidates :modelVersion :responseId])
+
+                       ;; Provider-specific structural checks
+                       (is (vector? (:candidates response)) "candidates should be a vector")
+
+                       ;; API contract and nested structure validations
+                       (testing "API contract fields"
+                         (let [candidate (first (:candidates response))]
+                           (is (= "model" (get-in candidate [:content :role]))
+                               "assistant role should be 'model' in Gemini API")
+                           (is (= 0 (:index candidate))
+                               "first candidate should have index 0")
+                           (is (contains? #{"STOP" "MAX_TOKENS" "SAFETY" "RECITATION"}
+                                          (:finishReason candidate))
+                               "finishReason should be valid enum value")))
+
+                       (testing "nested structure required by normalization"
+                         (let [candidate (first (:candidates response))]
+                           (is (map? (:content candidate))
+                               "candidate content should be a map")
+                           (is (vector? (get-in candidate [:content :parts]))
+                               "content parts should be a vector")
+                           (is (string? (get-in candidate [:content :parts 0 :text]))
+                               "text should exist and be a string")))
+
+                       (testing "usage metadata structure"
+                         (let [usage (:usageMetadata response)]
+                           (is (map? usage) "usageMetadata should be a map")
+                           (is (every? number? [(:promptTokenCount usage)
+                                                (:candidatesTokenCount usage)
+                                                (:totalTokenCount usage)])
+                               "token counts should be numbers")))
+
+                       (done)))
+              (.catch (fn [error]
+                        (is false (str "API call failed: " (.-message error)))
+                        (done)))))))))
+
+(deftest test-query-llm-provider-gemini-with-markdown-attachment-integration
+  (async done
+    (testing "INTEGRATION: validate Gemini accepts text/markdown with real API"
+      (let [api-key (.-GEMINI_API_KEY (.-env js/process))]
+        (if-not api-key
+          (do (js/console.warn "Skipping Gemini markdown attachment test - GEMINI_API_KEY not set")
+              (done))
+          ;; Simple markdown document (base64 encoded)
+          (let [test-markdown-base64 "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg=="
+                test-messages [{:role "user"
+                                :content "What are the three programming languages listed in this document?"
+                                :attachments [{:mime-type "text/markdown"
+                                               :data test-markdown-base64}]}]]
+            (-> (llm/query-llm-provider test-messages "gemini-2.5-flash-lite" api-key)
                 (.then (fn [response]
-                         (js/console.log "\n=== GEMINI RAW API RESPONSE ===")
+                         (js/console.log "\n=== GEMINI MARKDOWN ATTACHMENT RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
 
-                         ;; Validate raw API structure against mock fixture
-                         (assert-matches-structure response
-                                                   mock-gemini-response
-                                                   []
-                                                   [:candidates :modelVersion :responseId])
-
-                         ;; Provider-specific structural checks
-                         (is (vector? (:candidates response)) "candidates should be a vector")
-
-                         ;; API contract and nested structure validations
-                         (testing "API contract fields"
-                           (let [candidate (first (:candidates response))]
-                             (is (= "model" (get-in candidate [:content :role]))
-                                 "assistant role should be 'model' in Gemini API")
-                             (is (= 0 (:index candidate))
-                                 "first candidate should have index 0")
-                             (is (contains? #{"STOP" "MAX_TOKENS" "SAFETY" "RECITATION"}
-                                            (:finishReason candidate))
-                                 "finishReason should be valid enum value")))
-
-                         (testing "nested structure required by normalization"
-                           (let [candidate (first (:candidates response))]
-                             (is (map? (:content candidate))
-                                 "candidate content should be a map")
-                             (is (vector? (get-in candidate [:content :parts]))
-                                 "content parts should be a vector")
-                             (is (string? (get-in candidate [:content :parts 0 :text]))
-                                 "text should exist and be a string")))
-
-                         (testing "usage metadata structure"
-                           (let [usage (:usageMetadata response)]
-                             (is (map? usage) "usageMetadata should be a map")
-                             (is (every? number? [(:promptTokenCount usage)
-                                                  (:candidatesTokenCount usage)
-                                                  (:totalTokenCount usage)])
-                                 "token counts should be numbers")))
+                         (testing "response structure with markdown attachment"
+                           (is (string? (:text response)) "Should receive text response")
+                           (is (and (re-find #"(?i)clojure" (:text response))
+                                    (re-find #"(?i)python" (:text response))
+                                    (re-find #"(?i)rust" (:text response)))
+                               "Response should identify all three languages from markdown")
+                           (is (pos-int? (get-in response [:usage :total-tokens]))
+                               "Should include valid usage metadata"))
 
                          (done)))
                 (.catch (fn [error]
-                          (is false (str "API call failed: " (.-message error)))
+                          (is false (str "API call with markdown attachment failed: " (.-message error)))
                           (done))))))))))

@@ -25,16 +25,19 @@
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
-      (let [assistant-id (.now js/Date)]
-        [[:messages.actions/add-to-chat {:id   (.now js/Date)
-                                         :type :user
-                                         :text text}]
+      (let [new-user-message {:id   (.now js/Date)
+                              :type :user
+                              :text text}
+            assistant-id (.now js/Date)]
+        [[:messages.actions/add-to-chat new-user-message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.effects/send-llm-messages assistant-id model]]))))
+         [:llm.actions/send-messages assistant-id model new-user-message]
+         ;; Clear attachments AFTER send-messages reads them from state
+         [:ui.actions/clear-pending-attachments]]))))
 
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]
@@ -53,15 +56,17 @@
   [[:effects/prevent-default]])
 
 ;; Pure action for handling file drop
-(defn handle-file-drop [_state files]
-  ;; TODO: Store files in state (decision: form state vs message schema vs parallel structure)
-  ;; TODO: Add UI indicators for attached files
-  ;; TODO: Implement file reading effect via IPC
-  ;; TODO: Research provider attachment APIs (Anthropic, OpenAI, Google)
-  (when files
-    (doseq [file files]
-      (js/console.log "Dropped file:" (clj->js file))))
-  [])
+(defn handle-file-drop
+  "Saves dropped files to pending attachments state.
+  Files arrive from :event/dropped-files placeholder as DOM File metadata.
+  Shape saved: vector of {:name :size :type :path}."
+  [_state files]
+  (if (seq files)
+    [[:effects/save form-state/pending-attachments-path (vec files)]]
+    []))
+
+(defn clear-pending-attachments [_state]
+  [[:effects/save form-state/pending-attachments-path []]])
 
 (defn show-settings [_state]
   ;; Refresh system info to ensure settings modal displays current API key status

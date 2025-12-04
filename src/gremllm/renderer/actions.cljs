@@ -1,12 +1,14 @@
 (ns gremllm.renderer.actions
   (:require [nexus.registry :as nxr]
+            [gremllm.schema :as schema]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
-            [gremllm.renderer.state.ui :as ui-state]))
+            [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -39,7 +41,7 @@
               {:name (.-name file)
                :size (.-size file)
                :type (.-type file)
-               :path (.-path file)})
+               :path (js/window.electronAPI.getFilePath file)})
             (array-seq (.-files dt))))))
 
 ;; Register prevent-default as an effect
@@ -96,6 +98,7 @@
 (nxr/register-action! :form.actions/submit ui/submit-messages)
 (nxr/register-action! :form.actions/handle-dragover ui/handle-dragover)
 (nxr/register-action! :form.actions/handle-file-drop ui/handle-file-drop)
+(nxr/register-action! :ui.actions/clear-pending-attachments ui/clear-pending-attachments)
 (nxr/register-action! :ui.actions/show-settings ui/show-settings)
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
@@ -103,8 +106,38 @@
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
+(nxr/register-action! :messages.actions/append-to-state msg/append-to-state)
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
+(nxr/register-action! :llm.actions/send-messages msg/send-messages)
+
+(nxr/register-action! :loading.actions/set-loading?
+  (fn [_state id loading?]
+    [[:effects/save (loading-state/loading-path id) loading?]]))
+
+(nxr/register-action! :llm.actions/set-error
+  (fn [_state assistant-id error-message]
+    [[:effects/save (loading-state/assistant-errors-path assistant-id) error-message]]))
+
+(nxr/register-action! :llm.actions/unset-all-errors
+  (fn [_state]
+    [[:effects/save [:assistant-errors] nil]]))
+
+(nxr/register-effect! :effects/send-llm-messages
+  (fn [{:keys [dispatch]} _store {:keys [messages model file-paths on-success on-error]}]
+    (js/console.log "[CHECKPOINT 1] Renderer: Sending to IPC"
+                    (clj->js {:messages messages
+                              :messages-count (count messages)
+                              :file-paths file-paths
+                              :model model}))
+    (dispatch
+      [[:effects/promise
+        {:promise    (js/window.electronAPI.sendMessage
+                       (schema/messages-to-ipc messages)
+                       (schema/model-to-ipc model)
+                       (schema/attachment-paths-to-ipc file-paths))
+         :on-success on-success
+         :on-error   on-error}]])))
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
