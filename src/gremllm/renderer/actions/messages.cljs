@@ -10,7 +10,8 @@
    [:topic.actions/auto-save]])
 
 (defn build-conversation-with-new-message
-  "Builds complete conversation history including the new user message."
+  "Builds complete conversation history including the new user message.
+  Note: New message is appended last - main/enrich-last-message-with-attachments depends on this."
   [state new-user-message]
   (let [message-history (topic-state/get-messages state)]
     (conj (or message-history []) new-user-message)))

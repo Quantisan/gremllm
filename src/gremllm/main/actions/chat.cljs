@@ -24,7 +24,8 @@
   [[:attachment.effects/prepare-for-send workspace-dir file-paths messages model api-key]])
 
 (defn enrich-last-message-with-attachments
-  "Adds attachments to the last message in the conversation."
+  "Adds attachments to the last message in the conversation.
+  Note: Assumes last message is the user message - coupled to renderer/build-conversation-with-new-message."
   [messages attachments]
   (conj (pop messages)
         (assoc (peek messages) :attachments attachments)))
