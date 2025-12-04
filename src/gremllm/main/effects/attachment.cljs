@@ -8,13 +8,13 @@
 
 (def ^:private attachments-subdir "attachments")
 
-(defn attachments-dir-path
+(defn- attachments-dir-path
   "Build path to workspace attachments directory."
   [workspace-dir]
   (io/path-join workspace-dir attachments-subdir))
 
-(defn hash-content
-  "Pure: compute SHA256 hash of content buffer. Returns first 8 chars."
+(defn- hash-content
+  "Compute SHA256 hash of content buffer. Returns first 8 chars."
   [content-buffer]
   (let [hash-obj (.createHash crypto "sha256")]
     (.update hash-obj content-buffer)
@@ -49,13 +49,13 @@
       "md"   "text/markdown"
       "application/octet-stream")))
 
-(defn build-stored-filename
-  "Pure: build content-addressed filename from hash and original name."
+(defn- build-stored-filename
+  "Build content-addressed filename from hash and original name."
   [file-hash original-name]
   (str file-hash "-" original-name))
 
-(defn build-attachment-paths
-  "Pure: calculate storage paths for an attachment.
+(defn- build-attachment-paths
+  "Calculate storage paths for an attachment.
    Returns {:attachments-dir :dest-path :stored-name}"
   [workspace-path file-hash original-name]
   (let [stored-name (build-stored-filename file-hash original-name)
@@ -65,8 +65,8 @@
      :dest-path dest-path
      :stored-name stored-name}))
 
-(defn build-attachment-ref
-  "Pure: construct AttachmentRef from components."
+(defn- build-attachment-ref
+  "Construct AttachmentRef from components."
   [file-hash original-name mime-type file-size]
   {:ref file-hash
    :name original-name
