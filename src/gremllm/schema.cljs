@@ -112,6 +112,14 @@
   (-> (m/coerce Model model mt/json-transformer)
       (clj->js)))
 
+;; TODO: Attachment MIME types are lost at this boundary
+;;
+;; The browser File API provides accurate MIME types via content sniffing, but
+;; we only transmit file paths here. The main process must guess MIME types from
+;; extensions, which fails for uncommon types (defaults to application/octet-stream).
+;; This causes runtime failures with APIs that reject unknown MIME types (e.g., Gemini).
+;;
+;; See also: main/effects/attachment.cljs mime-type-from-extension
 (defn attachment-paths-to-ipc
   "Validates attachment paths and converts to JS for IPC transmission. Throws if invalid."
   [attachment-paths]
