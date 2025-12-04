@@ -115,8 +115,14 @@
     {:inline_data {:mime_type (:mime-type attachment-ref)
                    :data base64-data}}))
 
-(defn process-attachments-batch
-  "Process multiple file paths, store each, return vector of AttachmentRefs.
-   Used when user drops multiple files into chat."
+(defn store-all
+  "Store multiple files to workspace attachments folder.
+   Returns vector of AttachmentRefs."
   [workspace-path file-paths]
   (mapv #(store-attachment workspace-path %) file-paths))
+
+(defn load-all-content
+  "Load content for all attachment refs.
+   Returns vector of [ref buffer] pairs."
+  [workspace-path refs]
+  (mapv (fn [ref] [ref (load-attachment-content workspace-path (:ref ref))]) refs))

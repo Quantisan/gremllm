@@ -21,7 +21,7 @@
 
 (defn send-message-with-attachments
   [_state workspace-dir file-paths messages model api-key]
-  [[:attachment.effects/store-and-load workspace-dir file-paths messages model api-key]])
+  [[:attachment.effects/prepare-for-send workspace-dir file-paths messages model api-key]])
 
 (defn attach-and-send
   "Pure: transforms loaded attachment data to API format, enriches messages, returns send effect.
