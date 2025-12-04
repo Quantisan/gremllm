@@ -107,14 +107,6 @@
         (when matching-file
           (.readFileSync fs (io/path-join attachments-dir matching-file)))))))
 
-(defn attachment-ref->inline-data
-  "Convert attachment reference + content Buffer to Gemini inline_data format.
-   Pure function: transforms data shape for API."
-  [attachment-ref content-buffer]
-  (let [base64-data (.toString content-buffer "base64")]
-    {:inline_data {:mime_type (:mime-type attachment-ref)
-                   :data base64-data}}))
-
 (defn store-all
   "Store multiple files to workspace attachments folder.
    Returns vector of AttachmentRefs."
