@@ -32,31 +32,41 @@
   (let [[[effect-name messages model api-key]] result]
     [effect-name messages model api-key]))
 
+(deftest test-enrich-last-message-with-attachments
+  (let [messages [(make-message {:id 1 :text "First"})
+                  (make-message {:id 2 :text "Second"})]
+        attachments [{:mime-type "image/png" :data "base64data"}]
+        result (chat/enrich-last-message-with-attachments messages attachments)]
+    (is (nil? (:attachments (first result))))
+    (is (= attachments (:attachments (last result))))))
+
 (deftest test-attach-and-send
-  (testing "enriches first message with valid attachments and returns send effect"
+  (testing "enriches last message with valid attachments and returns send effect"
     (let [attachment-ref (make-attachment-ref)
           buffer (js/Buffer.from "test-content" "utf-8")
           loaded-pairs [[attachment-ref buffer]]
-          messages [(make-message {:text "Check this image"})
-                    (make-message {:id 2 :type :assistant :text "OK"})]
+          messages [(make-message {:id 1 :type :assistant :text "How can I help?"})
+                    (make-message {:id 2 :text "Check this image"})]
           result (chat/attach-and-send {} loaded-pairs messages test-model test-api-key)
           [effect-name api-messages model api-key] (effect-with-messages result)
           [first-msg second-msg] api-messages
-          attachment (first (:attachments first-msg))]
+          attachment (first (:attachments second-msg))]
 
       (is (= :chat.effects/send-message effect-name))
       (is (= test-model model))
       (is (= test-api-key api-key))
 
-      (testing "first message enriched with attachment and transformed to API format"
-        (is (= "user" (:role first-msg)))
-        (is (= "Check this image" (:content first-msg)))
-        (is (= 1 (count (:attachments first-msg))))
-        (is (= "image/png" (:mime-type attachment)))
-        (is (= (.toString buffer "base64") (:data attachment))))
+      (testing "first message has no attachments"
+        (is (= "assistant" (:role first-msg)))
+        (is (= "How can I help?" (:content first-msg)))
+        (is (nil? (:attachments first-msg))))
 
-      (testing "second message transformed to API format"
-        (is (= {:role "assistant" :content "OK"} second-msg)))))
+      (testing "last message enriched with attachment and transformed to API format"
+        (is (= "user" (:role second-msg)))
+        (is (= "Check this image" (:content second-msg)))
+        (is (= 1 (count (:attachments second-msg))))
+        (is (= "image/png" (:mime-type attachment)))
+        (is (= (.toString buffer "base64") (:data attachment))))))
 
   (testing "handles empty attachments collection"
     (let [messages [(make-message)]

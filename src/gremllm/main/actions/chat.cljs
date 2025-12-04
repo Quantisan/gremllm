@@ -23,6 +23,13 @@
   [_state workspace-dir file-paths messages model api-key]
   [[:attachment.effects/prepare-for-send workspace-dir file-paths messages model api-key]])
 
+(defn enrich-last-message-with-attachments
+  "Adds attachments to the last message in the conversation.
+  Note: Assumes last message is the user message - coupled to renderer/build-conversation-with-new-message."
+  [messages attachments]
+  (conj (pop messages)
+        (assoc (peek messages) :attachments attachments)))
+
 (defn attach-and-send
   "Pure: transforms loaded attachment data to API format, enriches messages, returns send effect.
   Receives vector of [AttachmentRef Buffer] pairs from load effect."
@@ -31,8 +38,8 @@
         api-attachments (mapv (fn [[ref content]]
                                 (schema/attachment-ref->api-format ref content))
                               loaded-pairs)
-        ;; Pure: enrich first message with API-ready attachments
-        enriched-messages (update messages 0 assoc :attachments api-attachments)]
+        ;; Pure: enrich last message with API-ready attachments
+        enriched-messages (enrich-last-message-with-attachments messages api-attachments)]
     ;; CHECKPOINT 6: Message enrichment
     (js/console.log "[CHECKPOINT 6] Main: Messages enriched"
                     (clj->js {:api-attachments-count (count api-attachments)
