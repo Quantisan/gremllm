@@ -8,4 +8,6 @@
  {:dev
   {:extra-paths ["test" "dev"]
    :extra-deps {no.cjohansen/lookup {:mvn/version "2025.04.12"}
-                no.cjohansen/dataspex {:mvn/version "2025.06.8"}}}}}
+                no.cjohansen/dataspex {:mvn/version "2025.06.8"}}}
+  :outdated {:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+             :main-opts ["-m" "antq.core"]}}}
