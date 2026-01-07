@@ -46,6 +46,16 @@ npx dotenvx encrypt
 npm run dev
 ```
 
+## Maintenance
+
+```bash
+# Check for outdated Clojure dependencies
+clj -M:outdated
+
+# Update npm packages
+npm update
+```
+
 ## Tech
 
 - Electron for the desktop app

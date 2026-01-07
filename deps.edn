@@ -1,11 +1,13 @@
 {:paths ["src"]
- :deps {org.clojure/clojure {:mvn/version "1.12.3"}
-        thheller/shadow-cljs {:mvn/version "3.3.2"}
+ :deps {org.clojure/clojure {:mvn/version "1.12.4"}
+        thheller/shadow-cljs {:mvn/version "3.3.4"}
         no.cjohansen/nexus {:mvn/version "2025.11.1"}
-        no.cjohansen/replicant {:mvn/version "2025.06.21"}
+        no.cjohansen/replicant {:mvn/version "2025.12.1"}
         metosin/malli {:mvn/version "0.20.0"}}
  :aliases
  {:dev
   {:extra-paths ["test" "dev"]
-   :extra-deps {no.cjohansen/lookup {:mvn/version "2025.04.12"}
-                no.cjohansen/dataspex {:mvn/version "2025.06.8"}}}}}
+   :extra-deps {no.cjohansen/lookup {:mvn/version "2025.12.1"}
+                no.cjohansen/dataspex {:mvn/version "2025.10.2"}}}
+  :outdated {:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
+             :main-opts ["-m" "antq.core"]}}}
