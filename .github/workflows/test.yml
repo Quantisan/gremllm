@@ -17,5 +17,9 @@ jobs:
     - name: Setup environment
       uses: ./.github/actions/setup-environment
 
+    # test:ci compiles then runs via node for proper exit codes.
+    # shadow-cljs compile always exits 0 if compilation succeeds,
+    # even when tests fail. This is intentional behavior:
+    # https://github.com/thheller/shadow-cljs/issues/425
     - name: Run tests
-      run: npm run test
+      run: npm run test:ci
