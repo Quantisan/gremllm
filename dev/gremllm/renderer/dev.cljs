@@ -1,7 +1,10 @@
 (ns gremllm.renderer.dev
-  "Browser-only development tooling. Required by renderer/core for side effects."
-  (:require [nexus.action-log :as action-log]
+  "Development entry point for renderer. Adds dev tooling then delegates to core."
+  (:require [gremllm.renderer.core :as core]
+            [nexus.action-log :as action-log]
             [dataspex.core :as dataspex]))
 
-(action-log/inspect)
-(dataspex/connect-remote-inspector)
+(defn ^:export main []
+  (action-log/inspect)
+  (dataspex/connect-remote-inspector)
+  (core/main))

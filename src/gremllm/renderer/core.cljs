@@ -3,7 +3,6 @@
             [nexus.registry :as nxr]
             [gremllm.renderer.ui :as ui]
             [gremllm.renderer.actions]
-            [gremllm.renderer.dev]
             [gremllm.schema :as schema]
             [gremllm.renderer.state.topic :as topic-state]))
 
