@@ -7,7 +7,7 @@
   "author": "Quantisan, LLC",
   "main": "target/main.js",
   "scripts": {
-    "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\" \"clj -A:dev -M -e '(require (quote [dataspex.core :as dataspex])) (dataspex/start-server!) @(promise)'\"",
+    "dev": "concurrently \"shadow-cljs watch main-dev renderer\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\" \"clj -A:dev -M -e '(require (quote [dataspex.core :as dataspex])) (dataspex/start-server!) @(promise)'\" \"sleep 5 && open http://localhost:7117\"",
     "build": "npm run clean && shadow-cljs compile main renderer",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
