@@ -1,7 +1,5 @@
 (ns gremllm.renderer.actions
   (:require [nexus.registry :as nxr]
-            [nexus.action-log :as action-log]
-            [dataspex.core :as dataspex]
             [gremllm.schema :as schema]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
@@ -185,10 +183,3 @@
 (nxr/register-action! :settings.actions/save-error settings/save-error)
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
-
-;; TODO: move this to a dev env
-;;
-;; Development tooling - inspect actions and state via Dataspex
-(action-log/inspect)
-(dataspex/connect-remote-inspector)
-

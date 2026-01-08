@@ -14,6 +14,11 @@
              :asset-path "js"
              :modules {:renderer {:init-fn gremllm.renderer.core/main}}}
 
+  :renderer-dev {:target :browser
+                 :output-dir "resources/public/compiled-js"
+                 :asset-path "js"
+                 :modules {:renderer {:init-fn gremllm.renderer.dev/main}}}
+
   :test {:target :node-test
          :output-to "target/test.js"
          :ns-regexp "(?<!integration)-test$"
