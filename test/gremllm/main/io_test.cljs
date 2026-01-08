@@ -55,12 +55,13 @@
   (testing "returns created-at and last-accessed-at (ms)"
     (with-temp-dir "timestamps"
       (fn [dir]
-        (let [start    (.getTime (js/Date.))
-              filename (str "gremllm-io-ts-" start ".txt")
+        (let [now      (.getTime (js/Date.))
+              filename (str "gremllm-io-ts-" now ".txt")
               filepath (io/path-join dir filename)]
           (io/write-file filepath "hello")
           (let [{:keys [created-at last-accessed-at]} (io/file-timestamps filepath)]
             (is (number? created-at))
             (is (number? last-accessed-at))
-            (is (<= start created-at))
-            (is (<= start last-accessed-at))))))))
+            ;; Use tolerance - js/Date and filesystem clocks can skew in CI
+            (is (< (js/Math.abs (- created-at now)) 1000))
+            (is (< (js/Math.abs (- last-accessed-at now)) 1000))))))))
