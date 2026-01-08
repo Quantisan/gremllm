@@ -2,6 +2,7 @@ name: Run Tests
 
 on:
   push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_call:
@@ -12,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-
+    
     - name: Setup environment
       uses: ./.github/actions/setup-environment
 
