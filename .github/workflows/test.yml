@@ -18,4 +18,4 @@ jobs:
       uses: ./.github/actions/setup-environment
 
     - name: Run tests
-      run: npm run test
+      run: npm run test:ci

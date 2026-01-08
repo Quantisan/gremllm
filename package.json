@@ -14,6 +14,7 @@
     "repl": "shadow-cljs cljs-repl renderer",
     "clean": "rm -rf .shadow-cljs target resources/public/compiled-js",
     "test": "shadow-cljs compile test",
+    "test:ci": "shadow-cljs compile test --config-merge '{:autorun false}' && node target/test.js",
     "test:watch": "shadow-cljs watch test",
     "test:all": "shadow-cljs compile test-all",
     "test:integration": "shadow-cljs compile test-integration",
