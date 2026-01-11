@@ -2,8 +2,8 @@
   (:require [gremllm.renderer.state.system :as system-state]
             [gremllm.schema :as schema]))
 
-(defn set-info [_state system-info]
-  [[:effects/save system-state/system-info-path (schema/system-info-from-ipc system-info)]])
+(defn set-info [_state system-info-js]
+  [[:effects/save system-state/system-info-path (schema/system-info-from-ipc system-info-js)]])
 
 (defn request-info [_state]
   [[:effects/promise
