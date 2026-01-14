@@ -24,10 +24,13 @@
 ;;  :role    string?   ; "user" or "assistant"
 ;;  :content string?}  ; The actual message text
 
-(defn ^:export main []
-  ;; Set up the atom
-  (let [store (atom nil)
-        el    (js/document.getElementById "app")]
+(defn create-store []
+  (atom nil))
+
+(defn ^:export main
+  ([] (main (create-store)))
+  ([store]
+   (let [el (js/document.getElementById "app")]
     ;; Handle menu commands - these originate from main process menus
     (.onMenuCommand js/window.electronAPI "menu:command"
                     (fn [_ command-str]
@@ -58,4 +61,4 @@
     ;; Trigger the first render
     (nxr/dispatch store {}
                   [[:system.actions/request-info]
-                   [:workspace.actions/bootstrap]])))
+                   [:workspace.actions/bootstrap]]))))
