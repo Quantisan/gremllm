@@ -158,6 +158,24 @@
               :attachments [{:mime-type "image/png"
                              :data "base64-data"}]}])))))
 
+(deftest test-messages->openai-format
+  (testing "messages without attachments use simple string content"
+    (is (= [{:role "user" :content "Hello"}]
+           (llm/messages->openai-format [{:role "user" :content "Hello"}]))))
+
+  (testing "messages with attachments use multimodal content with data URL"
+    (is (= [{:role "user"
+             :content [{:type "file"
+                        :file {:filename "doc.pdf"
+                               :file_data "data:application/pdf;base64,abc123"}}
+                       {:type "text" :text "Summarize this"}]}]
+           (llm/messages->openai-format
+            [{:role "user"
+              :content "Summarize this"
+              :attachments [{:mime-type "application/pdf"
+                             :data "abc123"
+                             :filename "doc.pdf"}]}])))))
+
 (deftest test-normalize-anthropic-response
   (testing "transforms Anthropic response to normalized LLMResponse schema"
     (is (= {:text "4"
