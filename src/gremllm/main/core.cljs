@@ -45,22 +45,13 @@
   ;; to match async responses. Not passed by renderer - see resources/public/js/preload.js:34
   (.on ipcMain "chat/send-message"
        (fn [event ipc-correlation-id messages model attachment-paths]
-         (js/console.log "[DIAGNOSTIC] Main IPC handler raw params:"
-                         (clj->js {:ipc-correlation-id ipc-correlation-id
-                                   :messages messages
-                                   :model model
-                                   :attachment-paths attachment-paths
-                                   :attachment-paths-type (type attachment-paths)
-                                   :attachment-paths-nil? (nil? attachment-paths)}))
          (let [messages-clj         (schema/messages-from-ipc messages)
                model-clj            (schema/model-from-ipc model)
                attachment-paths-clj (schema/attachment-paths-from-ipc attachment-paths)]
-           ;; CHECKPOINT 2: Main IPC receiving file paths
-           (js/console.log "[CHECKPOINT 2] Main IPC: Received file paths"
-                           (clj->js {:file-paths-clj attachment-paths-clj
-                                     :file-paths-count (count (or attachment-paths-clj []))
-                                     :messages-count (count messages-clj)
-                                     :ipc-correlation-id ipc-correlation-id}))
+           (js/console.log "[chat:recv]"
+                           (clj->js {:messages-count (count messages-clj)
+                                     :model model-clj
+                                     :attachments-count (count (or attachment-paths-clj []))}))
            (nxr/dispatch store {:ipc-event event
                                 :ipc-correlation-id ipc-correlation-id
                                 :channel "chat/send-message"}

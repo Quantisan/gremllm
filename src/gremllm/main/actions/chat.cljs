@@ -7,12 +7,9 @@
   [state messages model api-key attachment-paths]
   (let [workspace-dir    (state/get-workspace-dir state)
         has-attachments? (and attachment-paths (seq attachment-paths) workspace-dir)]
-    ;; CHECKPOINT 3: Routing decision
-    (js/console.log "[CHECKPOINT 3] Main: Routing decision"
-                    (clj->js {:has-attachments? has-attachments?
-                              :file-paths-count (count (or attachment-paths []))
-                              :workspace-dir workspace-dir
-                              :taking-path (if has-attachments? "with-attachments" "normal")}))
+    (js/console.log "[chat:route]"
+                    (clj->js {:path (if has-attachments? "with-attachments" "direct")
+                              :attachments-count (count (or attachment-paths []))}))
     (if has-attachments?
       ;; Has attachments - dispatch orchestrating action
       [[:chat.actions/send-message-with-attachments workspace-dir attachment-paths messages model api-key]]
@@ -40,15 +37,10 @@
                               loaded-pairs)
         ;; Pure: enrich last message with API-ready attachments
         enriched-messages (enrich-last-message-with-attachments messages api-attachments)]
-    ;; CHECKPOINT 6: Message enrichment
-    (js/console.log "[CHECKPOINT 6] Main: Messages enriched"
-                    (clj->js {:api-attachments-count (count api-attachments)
-                              :api-attachments-info (mapv (fn [att]
-                                                            {:mime-type (:mime-type att)
-                                                             :data-length (count (:data att))
-                                                             :data-preview (subs (:data att) 0 (min 50 (count (:data att))))})
-                                                          api-attachments)
-                              :enriched-first-message-has-attachments? (some? (:attachments (first enriched-messages)))
-                              :enriched-messages-count (count enriched-messages)}))
+    (js/console.log "[chat:enrich]"
+                    (clj->js {:attachments (mapv (fn [att]
+                                                   {:mime-type (:mime-type att)
+                                                    :data-bytes (count (:data att))})
+                                                 api-attachments)}))
     ;; Return effect to send enriched messages
     [[:chat.effects/send-message (schema/messages->chat-api-format enriched-messages) model api-key]]))

@@ -22,21 +22,15 @@
                                  (when (not (str/blank? content))
                                    [{:text content}]))})
                      messages)]
-    ;; CHECKPOINT 7: Gemini format transform
-    (js/console.log "[CHECKPOINT 7] Main: Gemini format transform"
-                    (clj->js {:input-messages-count (count messages)
-                              :output-contents-count (count result)
-                              :first-message-attachments-in-input (count (or (:attachments (first messages)) []))
-                              :first-content-parts-count (count (:parts (first result)))
-                              :first-content-parts-info (mapv (fn [part]
-                                                                (cond
-                                                                  (:text part) {:type "text" :text-length (count (:text part))}
-                                                                  (:inline_data part) {:type "inline_data"
-                                                                                       :mime_type (get-in part [:inline_data :mime_type])
-                                                                                       :data-length (count (get-in part [:inline_data :data]))
-                                                                                       :data-preview (subs (get-in part [:inline_data :data]) 0 (min 50 (count (get-in part [:inline_data :data]))))}
-                                                                  :else {:type "unknown"}))
-                                                              (:parts (first result)))}))
+    (js/console.log "[chat:transform:gemini]"
+                    (clj->js {:messages (count messages)
+                              :parts (mapv (fn [part]
+                                             (cond
+                                               (:text part) {:type "text"}
+                                               (:inline_data part) {:type "inline_data"
+                                                                    :mime_type (get-in part [:inline_data :mime_type])}
+                                               :else {:type "unknown"}))
+                                           (:parts (first result)))}))
     result))
 
 (defn- log-and-throw-error [response model message-count body]
@@ -140,19 +134,9 @@
         headers {"Content-Type" "application/json"}
         url (str "https://generativelanguage.googleapis.com/v1beta/models/"
                  model ":generateContent?key=" api-key)]
-    ;; CHECKPOINT 8: Final API request
-    (js/console.log "[CHECKPOINT 8] Main: Final Gemini API request"
-                    (clj->js {:contents-count (count (:contents request-body))
-                              :first-content-parts-count (count (get-in request-body [:contents 0 :parts]))
-                              :first-content-parts-summary (mapv (fn [part]
-                                                                   (cond
-                                                                     (:text part) {:type "text"}
-                                                                     (:inline_data part) {:type "inline_data"
-                                                                                          :mime_type (get-in part [:inline_data :mime_type])
-                                                                                          :has-data? (some? (get-in part [:inline_data :data]))}
-                                                                     :else {:type "unknown"}))
-                                                                 (get-in request-body [:contents 0 :parts]))
-                              :request-body-keys (keys request-body)}))
+    (js/console.log "[chat:request:gemini]"
+                    (clj->js {:contents (count (:contents request-body))
+                              :parts (count (get-in request-body [:contents 0 :parts]))}))
     (-> (js/fetch url
                   (clj->js {:method "POST"
                             :headers headers
