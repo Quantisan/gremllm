@@ -4,7 +4,7 @@ Gremllm-specific guidance for Claude Code.
 
 ## Overview
 
-Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Shadow-CLJS (build tool), PicoCSS (styling).
+Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
 
 ## Architecture
 
@@ -176,6 +176,12 @@ Framework and library documentation is available in the `context/` directory:
 - `context/replicant_guide.md` - UI framework overview and patterns
 - `context/replicant_concept.md` - Conceptual model and architecture
 - `context/replicant_hiccup.md` - Hiccup syntax and component structure
+
+**Debugging:**
+- `context/dataspex.md` - State inspection and action logging
+- Dataspex automatically logs every Nexus action and state change in the Renderer process
+- Diagnostic console.log statements are unnecessary in Renderer code—use Dataspex instead
+- Note: Dataspex only works in browser context (Renderer), not in Node (Main process)
 
 **Electron Integration:**
 - `context/electron_ipc.md` - Inter-process communication
