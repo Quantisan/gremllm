@@ -36,7 +36,7 @@ npm run repl       # ClojureScript REPL
 ## Design Philosophy
 
 ### Pragmatic Evolution: From Skateboard to Scooter
-We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. The **Skateboard** is complete: a functional, end-to-end chat interface. We are now building the **Scooter**, which introduces our core domain concept of organizing conversations into **topics**. Every stage delivers a more capable, yet complete, product.
+We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. The **Skateboard** is complete: a functional, end-to-end chat interface. We are now building the **Scooter**, refining our core organizational model and document-centric interface. Every stage delivers a more capable, yet complete, product.
 
 ### Strict FCIS (Functional Core, Imperative Shell)
 We maintain a strict separation between pure functions and side effects:
@@ -71,13 +71,14 @@ By aligning our code with our mental model, we reduce cognitive load, make the s
 
 ### Vision: An IDE for Thought
 
-Gremllm is not a chat app; it is an **Idea Development Environment (IDE)**—a structured workspace for complex cognitive tasks like strategic planning, analysis, and creative exploration. Our entire architecture is modeled directly on the familiar and powerful metaphor of a code repository.
+Gremllm is an **Idea Development Environment**—a structured workspace for complex cognitive tasks like strategic planning, analysis, and creative exploration. Unlike flat chat interfaces, Gremllm organizes thinking hierarchically with context inheritance.
 
--   **Workspace as Repository:** A Workspace is the root of a project, equivalent to a git repository's top-level folder. It contains all related thinking on a single macro-subject. Switching workspaces is like switching project directories.
+**UI Design (under exploration):** We're pursuing a Document-First Interface—reimagining what a writing tool becomes when users orchestrate agentic flows rather than composing word-by-word. The document is the center of gravity; AI participates as collaborator, not just responder.
 
--   **Topic as Source File:** A Topic is an individual file within that repository. It is a container for a specific line of inquiry, a single analysis, or a focused creative thread. It inherits context from its parent but allows for the isolated "development" of an idea.
-
-This structure creates a **topic tree** where context flows from the workspace down through parent topics to children. This hierarchy supports both broad, high-level context and deep, specific exploration without cross-contamination. Every feature we build must serve this model of structured, hierarchical, and context-aware thinking.
+This design direction may evolve. The invariants are:
+- Structured organization (not flat history)
+- Context flows between related work
+- User controls narrative; AI assists execution
 
 ## State Management with Nexus
 
