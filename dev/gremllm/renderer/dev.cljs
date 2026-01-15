@@ -6,5 +6,8 @@
 
 (defn ^:export main []
   (action-log/inspect)
+  ;; connect to our JVM Dataspex server for remote viewing at http://localhost:7117/
   (dataspex/connect-remote-inspector)
-  (core/main))
+  (let [store (core/create-store)]
+    (dataspex/inspect "Renderer state" store)
+    (core/main store)))

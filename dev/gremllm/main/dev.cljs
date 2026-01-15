@@ -2,8 +2,11 @@
   (:require [gremllm.main.core :as core]
             [gremllm.main.electron-runtime-test :as electron-runtime-test]))
 
+;; NOTE: Dataspex/action-log not used here. dataspex.core uses js/location at
+;; load time, which doesn't exist in Node.js (main process). Works in renderer
+;; (browser context) but fails here. Requires upstream fix to make init lazy.
+
 (defn main []
-  ;; Development-specific setup
   (println "[INFO] Running in development mode.")
 
   ;; Enable electron-reload for hot reloading
