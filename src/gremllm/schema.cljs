@@ -33,7 +33,8 @@
    Validated at filesystem→API boundary."
   [:map
    [:mime-type :string]
-   [:data :string]])     ; base64-encoded content
+   [:data :string]                            ; base64-encoded content
+   [:filename {:optional true} :string]])     ; original filename (needed by OpenAI)
 
 (defn attachment-ref->api-format
   "Transform AttachmentRef + content to validated API format.
@@ -41,7 +42,8 @@
    Throws if schema invalid."
   [attachment-ref content-buffer]
   (let [api-attachment {:mime-type (:mime-type attachment-ref)
-                        :data (.toString content-buffer "base64")}]
+                        :data (.toString content-buffer "base64")
+                        :filename (:name attachment-ref)}]
     (m/coerce APIAttachment api-attachment mt/json-transformer)))
 
 (def Message
