@@ -212,92 +212,67 @@
                         (is false (str "API call failed: " (.-message error)))
                         (done)))))))))
 
+;; Shared test data for markdown attachment tests
+(def test-markdown-base64
+  "Base64-encoded markdown: '# Favorite Programming Languages\n\nMy top three languages are:\n- Clojure\n- Python\n- Rust'"
+  "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg==")
+
+(def markdown-attachment-providers
+  "Provider configurations for markdown attachment integration tests."
+  {:gemini    {:name "Gemini"
+               :env-key "GEMINI_API_KEY"
+               :model "gemini-2.5-flash-lite"
+               :include-filename? false}
+   :openai    {:name "OpenAI"
+               :env-key "OPENAI_API_KEY"
+               :model "gpt-5-nano"
+               :include-filename? true}
+   :anthropic {:name "Anthropic"
+               :env-key "ANTHROPIC_API_KEY"
+               :model "claude-haiku-4-5-20251001"
+               :include-filename? true}})
+
+(defn run-markdown-attachment-test
+  "Runs a markdown attachment integration test for a given provider.
+   Returns a promise that resolves when the test completes."
+  [{:keys [name env-key model include-filename?]} done]
+  (let [api-key (aget (.-env js/process) env-key)]
+    (if-not api-key
+      (do (js/console.warn (str "Skipping " name " markdown attachment test - " env-key " not set"))
+          (done))
+      (let [attachment (cond-> {:mime-type "text/markdown"
+                                :data test-markdown-base64}
+                         include-filename? (assoc :filename "languages.md"))
+            test-messages [{:role "user"
+                            :content "What are the three programming languages listed in this document?"
+                            :attachments [attachment]}]]
+        (-> (llm/query-llm-provider test-messages model api-key)
+            (.then (fn [response]
+                     (js/console.log (str "\n=== " name " MARKDOWN ATTACHMENT RESPONSE ==="))
+                     (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+                     (is (string? (:text response)) "Should receive text response")
+                     (is (and (re-find #"(?i)clojure" (:text response))
+                              (re-find #"(?i)python" (:text response))
+                              (re-find #"(?i)rust" (:text response)))
+                         "Response should identify all three languages from markdown")
+                     (is (pos-int? (get-in response [:usage :total-tokens]))
+                         "Should include valid usage metadata")
+                     (done)))
+            (.catch (fn [error]
+                      (is false (str "API call with markdown attachment failed: " (.-message error)))
+                      (done))))))))
+
 (deftest test-query-llm-provider-gemini-with-markdown-attachment-integration
   (async done
     (testing "INTEGRATION: validate Gemini accepts text/markdown with real API"
-      (let [api-key (.-GEMINI_API_KEY (.-env js/process))]
-        (if-not api-key
-          (do (js/console.warn "Skipping Gemini markdown attachment test - GEMINI_API_KEY not set")
-              (done))
-          ;; Simple markdown document (base64 encoded)
-          (let [test-markdown-base64 "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg=="
-                test-messages [{:role "user"
-                                :content "What are the three programming languages listed in this document?"
-                                :attachments [{:mime-type "text/markdown"
-                                               :data test-markdown-base64}]}]]
-            (-> (llm/query-llm-provider test-messages "gemini-2.5-flash-lite" api-key)
-                (.then (fn [response]
-                         (js/console.log "\n=== GEMINI MARKDOWN ATTACHMENT RESPONSE ===")
-                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
-
-                         (testing "response structure with markdown attachment"
-                           (is (string? (:text response)) "Should receive text response")
-                           (is (and (re-find #"(?i)clojure" (:text response))
-                                    (re-find #"(?i)python" (:text response))
-                                    (re-find #"(?i)rust" (:text response)))
-                               "Response should identify all three languages from markdown")
-                           (is (pos-int? (get-in response [:usage :total-tokens]))
-                               "Should include valid usage metadata"))
-
-                         (done)))
-                (.catch (fn [error]
-                          (is false (str "API call with markdown attachment failed: " (.-message error)))
-                          (done))))))))))
+      (run-markdown-attachment-test (:gemini markdown-attachment-providers) done))))
 
 (deftest test-query-llm-provider-openai-with-markdown-attachment-integration
   (async done
     (testing "INTEGRATION: validate OpenAI handles markdown attachment via text conversion"
-      (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
-        (if-not api-key
-          (do (js/console.warn "Skipping OpenAI markdown attachment test - OPENAI_API_KEY not set")
-              (done))
-          (let [test-markdown-base64 "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg=="
-                test-messages [{:role "user"
-                                :content "What are the three programming languages listed in this document?"
-                                :attachments [{:mime-type "text/markdown"
-                                               :data test-markdown-base64
-                                               :filename "languages.md"}]}]]
-            (-> (llm/query-llm-provider test-messages "gpt-5-nano" api-key)
-                (.then (fn [response]
-                         (js/console.log "\n=== OPENAI MARKDOWN ATTACHMENT RESPONSE ===")
-                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
-                         (is (string? (:text response)) "Should receive text response")
-                         (is (and (re-find #"(?i)clojure" (:text response))
-                                  (re-find #"(?i)python" (:text response))
-                                  (re-find #"(?i)rust" (:text response)))
-                             "Response should identify all three languages from markdown")
-                         (is (pos-int? (get-in response [:usage :total-tokens]))
-                             "Should include valid usage metadata")
-                         (done)))
-                (.catch (fn [error]
-                          (is false (str "API call with markdown attachment failed: " (.-message error)))
-                          (done))))))))))
+      (run-markdown-attachment-test (:openai markdown-attachment-providers) done))))
 
 (deftest test-query-llm-provider-anthropic-with-markdown-attachment-integration
   (async done
     (testing "INTEGRATION: validate Anthropic handles markdown attachment via text conversion"
-      (let [api-key (.-ANTHROPIC_API_KEY (.-env js/process))]
-        (if-not api-key
-          (do (js/console.warn "Skipping Anthropic markdown attachment test - ANTHROPIC_API_KEY not set")
-              (done))
-          (let [test-markdown-base64 "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg=="
-                test-messages [{:role "user"
-                                :content "What are the three programming languages listed in this document?"
-                                :attachments [{:mime-type "text/markdown"
-                                               :data test-markdown-base64
-                                               :filename "languages.md"}]}]]
-            (-> (llm/query-llm-provider test-messages "claude-haiku-4-5-20251001" api-key)
-                (.then (fn [response]
-                         (js/console.log "\n=== ANTHROPIC MARKDOWN ATTACHMENT RESPONSE ===")
-                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
-                         (is (string? (:text response)) "Should receive text response")
-                         (is (and (re-find #"(?i)clojure" (:text response))
-                                  (re-find #"(?i)python" (:text response))
-                                  (re-find #"(?i)rust" (:text response)))
-                             "Response should identify all three languages from markdown")
-                         (is (pos-int? (get-in response [:usage :total-tokens]))
-                             "Should include valid usage metadata")
-                         (done)))
-                (.catch (fn [error]
-                          (is false (str "API call with markdown attachment failed: " (.-message error)))
-                          (done))))))))))
+      (run-markdown-attachment-test (:anthropic markdown-attachment-providers) done))))
