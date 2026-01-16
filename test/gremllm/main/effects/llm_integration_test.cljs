@@ -243,3 +243,32 @@
                 (.catch (fn [error]
                           (is false (str "API call with markdown attachment failed: " (.-message error)))
                           (done))))))))))
+
+(deftest test-query-llm-provider-openai-with-markdown-attachment-integration
+  (async done
+    (testing "INTEGRATION: validate OpenAI handles markdown attachment via text conversion"
+      (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
+        (if-not api-key
+          (do (js/console.warn "Skipping OpenAI markdown attachment test - OPENAI_API_KEY not set")
+              (done))
+          (let [test-markdown-base64 "IyBGYXZvcml0ZSBQcm9ncmFtbWluZyBMYW5ndWFnZXMKCk15IHRvcCB0aHJlZSBsYW5ndWFnZXMgYXJlOgotIENsb2p1cmUKLSBQeXRob24KLSBSdXN0Cg=="
+                test-messages [{:role "user"
+                                :content "What are the three programming languages listed in this document?"
+                                :attachments [{:mime-type "text/markdown"
+                                               :data test-markdown-base64
+                                               :filename "languages.md"}]}]]
+            (-> (llm/query-llm-provider test-messages "gpt-5-nano" api-key)
+                (.then (fn [response]
+                         (js/console.log "\n=== OPENAI MARKDOWN ATTACHMENT RESPONSE ===")
+                         (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+                         (is (string? (:text response)) "Should receive text response")
+                         (is (and (re-find #"(?i)clojure" (:text response))
+                                  (re-find #"(?i)python" (:text response))
+                                  (re-find #"(?i)rust" (:text response)))
+                             "Response should identify all three languages from markdown")
+                         (is (pos-int? (get-in response [:usage :total-tokens]))
+                             "Should include valid usage metadata")
+                         (done)))
+                (.catch (fn [error]
+                          (is false (str "API call with markdown attachment failed: " (.-message error)))
+                          (done))))))))))
