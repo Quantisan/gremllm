@@ -4,24 +4,28 @@
             [gremllm.schema :as schema]
             [malli.core :as m]))
 
+(defn- attachment->gemini-part
+  "Transform a single attachment to Gemini inline_data part."
+  [{:keys [mime-type data]}]
+  {:inline_data {:mime_type mime-type
+                 :data data}})
+
+(defn- message->gemini-format
+  "Transform a single message to Gemini contents format."
+  [{:keys [role content attachments]}]
+  {:role (if (= role "assistant") "model" role)
+   :parts (concat
+            (mapv attachment->gemini-part (or attachments []))
+            (when-not (str/blank? content)
+              [{:text content}]))})
+
 (defn messages->gemini-format
   "Transform OpenAI/Anthropic message format to Gemini contents format.
   Maps {:role 'assistant' :content 'text'} to {:role 'model' :parts [{:text 'text'}]}.
   Supports optional :attachments for multimodal messages with inline_data.
   Pure function for easy testing."
   [messages]
-  (let [result (mapv (fn [{:keys [role content attachments]}]
-                       {:role (if (= role "assistant") "model" role)
-                        :parts (concat
-                                 ;; Attachment parts (inline_data with base64)
-                                 (mapv (fn [{:keys [mime-type data]}]
-                                         {:inline_data {:mime_type mime-type
-                                                        :data data}})
-                                       (or attachments []))
-                                 ;; Text part - only include if content is non-empty
-                                 (when (not (str/blank? content))
-                                   [{:text content}]))})
-                     messages)]
+  (let [result (mapv message->gemini-format messages)]
     (js/console.log "[chat:transform:gemini]"
                     (clj->js {:messages (count messages)
                               :parts (mapv (fn [part]
