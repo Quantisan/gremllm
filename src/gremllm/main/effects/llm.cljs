@@ -33,35 +33,50 @@
                                            (:parts (first result)))}))
     result))
 
+(def ^:private text-mime-types
+  "MIME types that should be converted to text parts instead of file parts."
+  #{"text/markdown" "text/plain"})
+
+(defn- attachment->openai-part
+  "Transform a single attachment to OpenAI multimodal part.
+   Text types become {:type 'text'}, others become {:type 'file'}."
+  [{:keys [mime-type data filename]}]
+  (if (text-mime-types mime-type)
+    {:type "text"
+     :text (str "Attachment" (when filename (str " (" filename ")"))
+                ":\n\n"
+                (.toString (js/Buffer.from data "base64") "utf8"))}
+    {:type "file"
+     :file {:filename (or filename "attachment")
+            :file_data (str "data:" mime-type ";base64," data)}}))
+
+(defn- message->openai-format
+  "Transform a single message to OpenAI multimodal format."
+  [{:keys [role content attachments]}]
+  (if (seq attachments)
+    {:role role
+     :content (into (mapv attachment->openai-part attachments)
+                    (when-not (str/blank? content)
+                      [{:type "text" :text content}]))}
+    {:role role :content content}))
+
 (defn messages->openai-format
   "Transform messages to OpenAI multimodal format.
-   Maps attachments to {:type 'file' :file {:filename ... :file_data 'data:mime;base64,...'}}.
-   text/markdown + text/plain attachments become {:type 'text' :text '...'}.
-   Text content becomes {:type 'text' :text '...'}.
    Pure function for easy testing."
   [messages]
-  (let [text-attachment-types #{"text/markdown" "text/plain"}
-        base64->utf8 (fn [data]
-                       (.toString (js/Buffer.from data "base64") "utf8"))]
-    (mapv (fn [{:keys [role content attachments]}]
-            (let [attachment-parts (mapv (fn [{:keys [mime-type data filename]}]
-                                           (if (contains? text-attachment-types mime-type)
-                                             {:type "text"
-                                              :text (str "Attachment"
-                                                         (when filename (str " (" filename ")"))
-                                                         ":\n\n"
-                                                         (base64->utf8 data))}
-                                             {:type "file"
-                                              :file {:filename (or filename "attachment")
-                                                     :file_data (str "data:" mime-type ";base64," data)}}))
-                                         (or attachments []))
-                  text-parts (when (not (str/blank? content))
-                               [{:type "text" :text content}])
-                  all-parts (into (vec attachment-parts) text-parts)]
-              (if (seq attachments)
-                {:role role :content all-parts}
-                {:role role :content content})))
-          messages)))
+  (let [result (mapv message->openai-format messages)
+        first-content (:content (first result))]
+    (js/console.log "[chat:transform:openai]"
+                    (clj->js {:messages (count messages)
+                              :parts (when (vector? first-content)
+                                       (mapv (fn [part]
+                                               (case (:type part)
+                                                 "text" {:type "text"}
+                                                 "file" {:type "file"
+                                                         :filename (get-in part [:file :filename])}
+                                                 {:type "unknown"}))
+                                             first-content))}))
+    result))
 
 (defn- log-and-throw-error [response model message-count body]
   (let [status (.-status response)
