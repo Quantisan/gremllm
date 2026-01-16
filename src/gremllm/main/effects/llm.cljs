@@ -41,15 +41,28 @@
   "MIME types that should be converted to text parts instead of file parts."
   #{"text/markdown" "text/plain"})
 
+(def ^:private image-mime-types
+  "MIME types that Anthropic accepts as image content blocks."
+  #{"image/png" "image/jpeg" "image/gif" "image/webp"})
+
+(def ^:private document-mime-types
+  "MIME types that Anthropic accepts as document content blocks."
+  #{"application/pdf"})
+
+(defn- attachment->text-block
+  "Convert text attachment to text content block (shared by OpenAI/Anthropic)."
+  [{:keys [data filename]}]
+  {:type "text"
+   :text (str "Attachment" (when filename (str " (" filename ")"))
+              ":\n\n"
+              (.toString (js/Buffer.from data "base64") "utf8"))})
+
 (defn- attachment->openai-part
   "Transform a single attachment to OpenAI multimodal part.
    Text types become {:type 'text'}, others become {:type 'file'}."
-  [{:keys [mime-type data filename]}]
+  [{:keys [mime-type data filename] :as attachment}]
   (if (text-mime-types mime-type)
-    {:type "text"
-     :text (str "Attachment" (when filename (str " (" filename ")"))
-                ":\n\n"
-                (.toString (js/Buffer.from data "base64") "utf8"))}
+    (attachment->text-block attachment)
     {:type "file"
      :file {:filename (or filename "attachment")
             :file_data (str "data:" mime-type ";base64," data)}}))
@@ -80,6 +93,48 @@
                                                          :filename (get-in part [:file :filename])}
                                                  {:type "unknown"}))
                                              first-content))}))
+    result))
+
+(defn- attachment->anthropic-part
+  "Transform attachment to Anthropic content block.
+   Images → image block, PDFs → document block, text → text block."
+  [{:keys [mime-type data] :as attachment}]
+  (cond
+    (text-mime-types mime-type)
+    (attachment->text-block attachment)
+
+    (image-mime-types mime-type)
+    {:type "image"
+     :source {:type "base64"
+              :media_type mime-type
+              :data data}}
+
+    (document-mime-types mime-type)
+    {:type "document"
+     :source {:type "base64"
+              :media_type mime-type
+              :data data}}))
+
+(defn- message->anthropic-format
+  "Transform a single message to Anthropic multimodal format."
+  [{:keys [role content attachments]}]
+  (if (seq attachments)
+    {:role role
+     :content (into (mapv attachment->anthropic-part attachments)
+                    (when-not (str/blank? content)
+                      [{:type "text" :text content}]))}
+    {:role role :content content}))
+
+(defn messages->anthropic-format
+  "Transform messages to Anthropic multimodal format.
+   Pure function for easy testing."
+  [messages]
+  (let [result (mapv message->anthropic-format messages)
+        first-content (:content (first result))]
+    (js/console.log "[chat:transform:anthropic]"
+                    (clj->js {:messages (count messages)
+                              :parts (when (vector? first-content)
+                                       (mapv :type first-content))}))
     result))
 
 (defn- log-and-throw-error [response model message-count body]
@@ -151,7 +206,7 @@
   [messages model api-key]
   (let [request-body {:model model
                       :max_tokens 8192
-                      :messages messages}
+                      :messages (messages->anthropic-format messages)}
         headers {"x-api-key" api-key
                  "anthropic-version" "2023-06-01"
                  "content-type" "application/json"}]

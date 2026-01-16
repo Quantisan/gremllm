@@ -187,6 +187,84 @@
                              :data "SGVsbG8gd29ybGQ="
                              :filename "notes.md"}]}])))))
 
+(deftest test-messages->anthropic-format
+  (testing "messages without attachments use simple string content"
+    (is (= [{:role "user" :content "Hello"}]
+           (llm/messages->anthropic-format [{:role "user" :content "Hello"}]))))
+
+  (testing "image attachments become image blocks"
+    (is (= [{:role "user"
+             :content [{:type "image"
+                        :source {:type "base64"
+                                 :media_type "image/png"
+                                 :data "iVBORw0KG..."}}
+                       {:type "text" :text "What's in this image?"}]}]
+           (llm/messages->anthropic-format
+            [{:role "user"
+              :content "What's in this image?"
+              :attachments [{:mime-type "image/png"
+                             :data "iVBORw0KG..."}]}]))))
+
+  (testing "PDF attachments become document blocks"
+    (is (= [{:role "user"
+             :content [{:type "document"
+                        :source {:type "base64"
+                                 :media_type "application/pdf"
+                                 :data "JVBERi0..."}}
+                       {:type "text" :text "Summarize this"}]}]
+           (llm/messages->anthropic-format
+            [{:role "user"
+              :content "Summarize this"
+              :attachments [{:mime-type "application/pdf"
+                             :data "JVBERi0..."}]}]))))
+
+  (testing "text/markdown attachments become text blocks"
+    (is (= [{:role "user"
+             :content [{:type "text"
+                        :text "Attachment (notes.md):\n\nHello world"}
+                       {:type "text" :text "Summarize this"}]}]
+           (llm/messages->anthropic-format
+            [{:role "user"
+              :content "Summarize this"
+              :attachments [{:mime-type "text/markdown"
+                             :data "SGVsbG8gd29ybGQ="
+                             :filename "notes.md"}]}]))))
+
+  (testing "multiple attachments in one message"
+    (is (= [{:role "user"
+             :content [{:type "image"
+                        :source {:type "base64"
+                                 :media_type "image/png"
+                                 :data "img-data"}}
+                       {:type "document"
+                        :source {:type "base64"
+                                 :media_type "application/pdf"
+                                 :data "pdf-data"}}
+                       {:type "text" :text "Compare these"}]}]
+           (llm/messages->anthropic-format
+            [{:role "user"
+              :content "Compare these"
+              :attachments [{:mime-type "image/png"
+                             :data "img-data"}
+                            {:mime-type "application/pdf"
+                             :data "pdf-data"}]}]))))
+
+  (testing "empty attachments array"
+    (is (= [{:role "user" :content "Hello"}]
+           (llm/messages->anthropic-format [{:role "user" :content "Hello" :attachments []}]))))
+
+  (testing "attachment-only message (nil content)"
+    (is (= [{:role "user"
+             :content [{:type "image"
+                        :source {:type "base64"
+                                 :media_type "image/png"
+                                 :data "base64-data"}}]}]
+           (llm/messages->anthropic-format
+            [{:role "user"
+              :content nil
+              :attachments [{:mime-type "image/png"
+                             :data "base64-data"}]}])))))
+
 (deftest test-normalize-anthropic-response
   (testing "transforms Anthropic response to normalized LLMResponse schema"
     (is (= {:text "4"
