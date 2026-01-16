@@ -29,8 +29,8 @@
    [:size :int]])        ; File size in bytes
 
 (def APIAttachment
-  "Attachment in API provider format (with base64 data).
-   Validated at filesystem→API boundary."
+  "Internal canonical attachment format. Contains all fields needed
+   by any provider. Provider-specific transforms extract what they need."
   [:map
    [:mime-type :string]
    [:data :string]                            ; base64-encoded content
