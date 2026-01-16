@@ -174,7 +174,18 @@
               :content "Summarize this"
               :attachments [{:mime-type "application/pdf"
                              :data "abc123"
-                             :filename "doc.pdf"}]}])))))
+                             :filename "doc.pdf"}]}]))))
+  (testing "markdown attachments are converted to text parts"
+    (is (= [{:role "user"
+             :content [{:type "text"
+                        :text "Attachment (notes.md):\n\nHello world"}
+                       {:type "text" :text "Summarize this"}]}]
+           (llm/messages->openai-format
+            [{:role "user"
+              :content "Summarize this"
+              :attachments [{:mime-type "text/markdown"
+                             :data "SGVsbG8gd29ybGQ="
+                             :filename "notes.md"}]}])))))
 
 (deftest test-normalize-anthropic-response
   (testing "transforms Anthropic response to normalized LLMResponse schema"

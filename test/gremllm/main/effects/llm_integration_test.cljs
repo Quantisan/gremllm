@@ -246,7 +246,7 @@
 
 (deftest test-query-llm-provider-openai-with-markdown-attachment-integration
   (async done
-    (testing "INTEGRATION: validate OpenAI accepts file attachments with real API"
+    (testing "INTEGRATION: validate OpenAI handles markdown attachment via text conversion"
       (let [api-key (.-OPENAI_API_KEY (.-env js/process))]
         (if-not api-key
           (do (js/console.warn "Skipping OpenAI markdown attachment test - OPENAI_API_KEY not set")
@@ -262,6 +262,10 @@
                          (js/console.log "\n=== OPENAI MARKDOWN ATTACHMENT RESPONSE ===")
                          (js/console.log (js/JSON.stringify (clj->js response) nil 2))
                          (is (string? (:text response)) "Should receive text response")
+                         (is (and (re-find #"(?i)clojure" (:text response))
+                                  (re-find #"(?i)python" (:text response))
+                                  (re-find #"(?i)rust" (:text response)))
+                             "Response should identify all three languages from markdown")
                          (is (pos-int? (get-in response [:usage :total-tokens]))
                              "Should include valid usage metadata")
                          (done)))

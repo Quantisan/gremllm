@@ -36,22 +36,32 @@
 (defn messages->openai-format
   "Transform messages to OpenAI multimodal format.
    Maps attachments to {:type 'file' :file {:filename ... :file_data 'data:mime;base64,...'}}.
+   text/markdown + text/plain attachments become {:type 'text' :text '...'}.
    Text content becomes {:type 'text' :text '...'}.
    Pure function for easy testing."
   [messages]
-  (mapv (fn [{:keys [role content attachments]}]
-          (let [file-parts (mapv (fn [{:keys [mime-type data filename]}]
-                                   {:type "file"
-                                    :file {:filename (or filename "attachment")
-                                           :file_data (str "data:" mime-type ";base64," data)}})
-                                 (or attachments []))
-                text-parts (when (not (str/blank? content))
-                             [{:type "text" :text content}])
-                all-parts (into (vec file-parts) text-parts)]
-            (if (seq attachments)
-              {:role role :content all-parts}
-              {:role role :content content})))
-        messages))
+  (let [text-attachment-types #{"text/markdown" "text/plain"}
+        base64->utf8 (fn [data]
+                       (.toString (js/Buffer.from data "base64") "utf8"))]
+    (mapv (fn [{:keys [role content attachments]}]
+            (let [attachment-parts (mapv (fn [{:keys [mime-type data filename]}]
+                                           (if (contains? text-attachment-types mime-type)
+                                             {:type "text"
+                                              :text (str "Attachment"
+                                                         (when filename (str " (" filename ")"))
+                                                         ":\n\n"
+                                                         (base64->utf8 data))}
+                                             {:type "file"
+                                              :file {:filename (or filename "attachment")
+                                                     :file_data (str "data:" mime-type ";base64," data)}}))
+                                         (or attachments []))
+                  text-parts (when (not (str/blank? content))
+                               [{:type "text" :text content}])
+                  all-parts (into (vec attachment-parts) text-parts)]
+              (if (seq attachments)
+                {:role role :content all-parts}
+                {:role role :content content})))
+          messages)))
 
 (defn- log-and-throw-error [response model message-count body]
   (let [status (.-status response)
