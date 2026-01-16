@@ -35,6 +35,9 @@ npm install
 # Run tests
 npm run test
 
+# Run integration tests (requires API keys)
+ANTHROPIC_API_KEY=... GEMINI_API_KEY=... OPENAI_API_KEY=... npm run test:integration
+
 # Set up your API key
 cp .env_example .env
 # Edit .env and add your Anthropic API key
