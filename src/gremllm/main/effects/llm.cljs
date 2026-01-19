@@ -160,14 +160,22 @@
 
 (defn normalize-anthropic-response
   "Transforms Anthropic API response to LLMResponse schema.
-  Validates the result, throwing if Anthropic returns unexpected shape."
+  Validates the result, throwing if Anthropic returns unexpected shape.
+  When extended thinking is enabled, extracts both thinking and text blocks."
   [response]
-  (m/coerce schema/LLMResponse
-            {:text (get-in response [:content 0 :text])
-             :usage {:input-tokens (get-in response [:usage :input_tokens])
-                     :output-tokens (get-in response [:usage :output_tokens])
-                     :total-tokens (+ (get-in response [:usage :input_tokens])
-                                      (get-in response [:usage :output_tokens]))}}))
+  (let [content (:content response)
+        thinking-block (first (filter #(= "thinking" (:type %)) content))
+        text-block (first (filter #(= "text" (:type %)) content))
+        ;; Fall back to old path for non-thinking responses
+        text (or (:text text-block)
+                 (get-in response [:content 0 :text]))]
+    (m/coerce schema/LLMResponse
+              (cond-> {:text text
+                       :usage {:input-tokens (get-in response [:usage :input_tokens])
+                               :output-tokens (get-in response [:usage :output_tokens])
+                               :total-tokens (+ (get-in response [:usage :input_tokens])
+                                                (get-in response [:usage :output_tokens]))}}
+                thinking-block (assoc :thinking (:thinking thinking-block))))))
 
 (defn normalize-openai-response
   "Transforms OpenAI API response to LLMResponse schema.
@@ -199,14 +207,20 @@
 (defmulti fetch-raw-provider-response
   "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
   Separated from normalization to model the external API boundary explicitly
-  and enable integration tests to validate mock fixtures against real APIs."
-  (fn [_messages model _api-key] (schema/model->provider model)))
+  and enable integration tests to validate mock fixtures against real APIs.
+  The reasoning param enables extended thinking for Anthropic models."
+  (fn [_messages model _api-key _reasoning] (schema/model->provider model)))
 
 (defmethod fetch-raw-provider-response :anthropic
-  [messages model api-key]
-  (let [request-body {:model model
-                      :max_tokens 8192
-                      :messages (messages->anthropic-format messages)}
+  [messages model api-key reasoning]
+  (let [;; When reasoning is enabled, budget_tokens must be less than max_tokens.
+        ;; Using 16000 max_tokens with 10000 budget to satisfy this constraint.
+        max-tokens (if reasoning 16000 8192)
+        request-body (cond-> {:model model
+                              :max_tokens max-tokens
+                              :messages (messages->anthropic-format messages)}
+                       reasoning (assoc :thinking {:type "enabled"
+                                                   :budget_tokens 10000}))
         headers {"x-api-key" api-key
                  "anthropic-version" "2023-06-01"
                  "content-type" "application/json"}]
@@ -218,7 +232,7 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defmethod fetch-raw-provider-response :openai
-  [messages model api-key]
+  [messages model api-key _reasoning]
   (let [request-body {:model model
                       :max_completion_tokens 8192
                       :messages (messages->openai-format messages)}
@@ -232,7 +246,7 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defmethod fetch-raw-provider-response :google
-  [messages model api-key]
+  [messages model api-key _reasoning]
   (let [request-body {:contents (messages->gemini-format messages)
                       :generationConfig {:maxOutputTokens 8192}}
         headers {"Content-Type" "application/json"}
@@ -251,11 +265,12 @@
 (defn ^LLMResponse query-llm-provider
   "Queries LLM provider and returns normalized LLMResponse.
   Composes fetch-raw-provider-response + response-normalizers.
+  The reasoning param enables extended thinking for Anthropic models.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
   retries, streaming, etc.). Upgrade to SDKs when requirements outgrow this."
-  [messages model api-key]
+  [messages model api-key reasoning]
   (let [provider (schema/model->provider model)]
-    (.then (fetch-raw-provider-response messages model api-key)
+    (.then (fetch-raw-provider-response messages model api-key reasoning)
            (response-normalizers provider))))
