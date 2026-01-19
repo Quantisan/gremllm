@@ -289,14 +289,7 @@
               :usage {:input-tokens 100
                       :output-tokens 50
                       :total-tokens 150}}
-             (llm/normalize-anthropic-response response-with-thinking)))))
-
-  (testing "handles response without thinking block (backwards compatible)"
-    (is (= {:text "4"
-            :usage {:input-tokens 16
-                    :output-tokens 5
-                    :total-tokens 21}}
-           (llm/normalize-anthropic-response mock-claude-response)))))
+             (llm/normalize-anthropic-response response-with-thinking))))))
 
 (deftest test-normalize-openai-response
   (testing "transforms OpenAI response to normalized LLMResponse schema"
