@@ -213,11 +213,10 @@
 
 (defmethod fetch-raw-provider-response :anthropic
   [messages model api-key reasoning]
-  (let [;; When reasoning is enabled, budget_tokens must be less than max_tokens.
-        ;; Using 16000 max_tokens with 10000 budget to satisfy this constraint.
-        max-tokens (if reasoning 16000 8192)
-        request-body (cond-> {:model model
-                              :max_tokens max-tokens
+  (let [request-body (cond-> {:model model
+                               ;; When reasoning is enabled, budget_tokens must be less than max_tokens.
+                               ;; Using 16000 max_tokens with 10000 thinking budget to satisfy this constraint.
+                              :max_tokens 16000
                               :messages (messages->anthropic-format messages)}
                        reasoning (assoc :thinking {:type "enabled"
                                                    :budget_tokens 10000}))
