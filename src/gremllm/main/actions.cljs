@@ -100,17 +100,17 @@
 (nxr/register-action! :chat.actions/attach-and-send chat-actions/attach-and-send)
 
 (nxr/register-effect! :chat.effects/send-message
-  (fn [{:keys [dispatch]} _ api-messages model api-key]
+  (fn [{:keys [dispatch]} _ api-messages model api-key reasoning]
     (dispatch [[:ipc.effects/promise->reply
-                (llm-effects/query-llm-provider api-messages model api-key)]])))
+                (llm-effects/query-llm-provider api-messages model api-key reasoning)]])))
 
 (nxr/register-effect! :attachment.effects/prepare-for-send
-  (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key]
+  (fn [{:keys [dispatch]} _store workspace-dir file-paths messages model api-key reasoning]
     ;; Consolidated I/O: store + load is one domain operation.
     ;; Pure transformation delegated to :chat.actions/attach-and-send.
     (let [refs (attachment-effects/store-all workspace-dir file-paths)
           loaded-pairs (attachment-effects/load-all-content workspace-dir refs)]
-      (dispatch [[:chat.actions/attach-and-send loaded-pairs messages model api-key]]))))
+      (dispatch [[:chat.actions/attach-and-send loaded-pairs messages model api-key reasoning]]))))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
