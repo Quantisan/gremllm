@@ -5,6 +5,8 @@
                                                    mock-openai-response
                                                    mock-gemini-response]]))
 
+;; TODO: model names hardcoded many times in this ns. DRY. Use `schema/supported-models` somehow.
+
 (def test-api-messages
   "Simple API-formatted messages for integration testing.
   Shared across integration tests and schema boundary tests."

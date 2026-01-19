@@ -166,7 +166,8 @@
   (let [content (:content response)
         thinking-block (first (filter #(= "thinking" (:type %)) content))
         text-block (first (filter #(= "text" (:type %)) content))
-        ;; Fall back to old path for non-thinking responses
+        ;; TODO: Remove fallback - Anthropic always returns typed content blocks,
+        ;; so the filter should always find the text block. Fail explicitly if missing.
         text (or (:text text-block)
                  (get-in response [:content 0 :text]))]
     (m/coerce schema/LLMResponse
@@ -197,6 +198,7 @@
                      :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
                      :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
 
+;; TODO: refactor to multimethod for consistency with fetch-raw-provider-response
 (def response-normalizers
   "Maps provider keywords to functions that transform provider-specific
   response shapes to LLMResponse schema."
@@ -218,6 +220,7 @@
                                ;; Using 16000 max_tokens with 10000 thinking budget to satisfy this constraint.
                               :max_tokens 16000
                               :messages (messages->anthropic-format messages)}
+                       ;; Reference https://platform.claude.com/docs/en/build-with-claude/extended-thinking
                        reasoning (assoc :thinking {:type "enabled"
                                                    :budget_tokens 10000}))
         headers {"x-api-key" api-key

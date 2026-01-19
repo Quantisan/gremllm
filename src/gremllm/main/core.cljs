@@ -57,6 +57,7 @@
            (nxr/dispatch store {:ipc-event event
                                 :ipc-correlation-id ipc-correlation-id
                                 :channel "chat/send-message"}
+                         ;; TODO: too many positioal args, rippling down the action chain of fns
                          [[:chat.actions/send-message-from-ipc messages-clj model-clj [:env/api-key-for-model model-clj] attachment-paths-clj reasoning-clj]]))))
 
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
