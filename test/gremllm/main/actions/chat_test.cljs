@@ -27,10 +27,10 @@
                     overrides))))
 
 (defn- effect-with-messages
-  "Destructure effect result and return [effect-name messages model api-key]."
+  "Destructure effect result and return [effect-name messages model api-key reasoning]."
   [result]
-  (let [[[effect-name messages model api-key]] result]
-    [effect-name messages model api-key]))
+  (let [[[effect-name messages model api-key reasoning]] result]
+    [effect-name messages model api-key reasoning]))
 
 (deftest test-enrich-last-message-with-attachments
   (let [messages [(make-message {:id 1 :text "First"})
@@ -47,8 +47,8 @@
           loaded-pairs [[attachment-ref buffer]]
           messages [(make-message {:id 1 :type :assistant :text "How can I help?"})
                     (make-message {:id 2 :text "Check this image"})]
-          result (chat/attach-and-send {} loaded-pairs messages test-model test-api-key)
-          [effect-name api-messages model api-key] (effect-with-messages result)
+          result (chat/attach-and-send {} loaded-pairs messages test-model test-api-key false)
+          [effect-name api-messages model api-key reasoning] (effect-with-messages result)
           [first-msg second-msg] api-messages
           attachment (first (:attachments second-msg))]
 
@@ -70,7 +70,7 @@
 
   (testing "handles empty attachments collection"
     (let [messages [(make-message)]
-          result (chat/attach-and-send {} [] messages test-model test-api-key)
+          result (chat/attach-and-send {} [] messages test-model test-api-key false)
           [effect-name api-messages] (effect-with-messages result)]
 
       (is (= :chat.effects/send-message effect-name))
@@ -87,4 +87,4 @@
           messages [(make-message {:text "Check this"})]]
 
       (is (thrown? js/Error
-                   (chat/attach-and-send {} loaded-pairs messages test-model test-api-key))))))
+                   (chat/attach-and-send {} loaded-pairs messages test-model test-api-key false))))))

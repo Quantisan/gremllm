@@ -186,7 +186,7 @@
             test-messages [{:role "user"
                             :content "What are the three programming languages listed in this document?"
                             :attachments [attachment]}]]
-        (-> (llm/query-llm-provider test-messages model api-key)
+        (-> (llm/query-llm-provider test-messages model api-key false)
             (.then (fn [response]
                      (js/console.log (str "\n=== " name " MARKDOWN ATTACHMENT RESPONSE ==="))
                      (js/console.log (js/JSON.stringify (clj->js response) nil 2))
