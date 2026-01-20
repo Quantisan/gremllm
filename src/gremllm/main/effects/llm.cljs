@@ -264,7 +264,7 @@
 (defmethod fetch-raw-provider-response :openai
   [messages model api-key reasoning]
   (let [request-body (cond-> {:model model
-                              :max_completion_tokens 8192
+                              :max_completion_tokens 16000
                               :messages (messages->openai-format messages)}
                        ;; Reference https://platform.openai.com/docs/api-reference/chat/object
                        reasoning (assoc :reasoning_effort :high))
@@ -280,7 +280,7 @@
 (defmethod fetch-raw-provider-response :google
   [messages model api-key reasoning]
   (let [request-body {:contents (messages->gemini-format messages)
-                      :generationConfig (cond-> {:maxOutputTokens 8192}
+                      :generationConfig (cond-> {:maxOutputTokens 16000}
                                           ;; Reference https://ai.google.dev/gemini-api/docs/thinking
                                           reasoning (assoc :thinkingConfig
                                                            {:thinkingLevel   :high
