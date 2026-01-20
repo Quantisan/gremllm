@@ -178,6 +178,8 @@
   "Transforms OpenAI API response to LLMResponse schema.
   Validates the result, throwing if OpenAI returns unexpected shape."
   [response]
+  ;; TODO: Chat Completions only reports reasoning token counts (usage),
+  ;; not reasoning content. Upgrade to Responses API to access reasoning items.
   (m/coerce schema/LLMResponse
             {:text (get-in response [:choices 0 :message :content])
              :usage {:input-tokens (get-in response [:usage :prompt_tokens])
