@@ -170,6 +170,10 @@
               (cond-> {:text  (:text text-block)
                        :usage {:input-tokens (get-in response [:usage :input_tokens])
                                :output-tokens (get-in response [:usage :output_tokens])
+                               ;; NOTE: Anthropic does not provide thinking tokens separately in the usage object.
+                                ;; Thinking tokens are bundled into output_tokens. For Claude 4 models, the visible
+                                ;; thinking is a summary while billing reflects full thinking tokens.
+                                ;; Reference: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
                                :total-tokens (+ (get-in response [:usage :input_tokens])
                                                 (get-in response [:usage :output_tokens]))}}
                 thinking-block (assoc :thinking (:thinking thinking-block))))))
