@@ -194,13 +194,21 @@
                      :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
                      :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
 
-;; TODO: refactor to multimethod for consistency with fetch-raw-provider-response
-(def response-normalizers
-  "Maps provider keywords to functions that transform provider-specific
-  response shapes to LLMResponse schema."
-  {:anthropic normalize-anthropic-response
-   :openai normalize-openai-response
-   :google normalize-gemini-response})
+(defmulti response-normalizers
+  "Transforms provider-specific response shapes to LLMResponse schema."
+  (fn [provider _response] provider))
+
+(defmethod response-normalizers :anthropic
+  [_provider response]
+  (normalize-anthropic-response response))
+
+(defmethod response-normalizers :openai
+  [_provider response]
+  (normalize-openai-response response))
+
+(defmethod response-normalizers :google
+  [_provider response]
+  (normalize-gemini-response response))
 
 (defmulti fetch-raw-provider-response
   "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
@@ -271,4 +279,4 @@
   [messages model api-key reasoning]
   (let [provider (schema/model->provider model)]
     (.then (fetch-raw-provider-response messages model api-key reasoning)
-           (response-normalizers provider))))
+           #(response-normalizers provider %))))
