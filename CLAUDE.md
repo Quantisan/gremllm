@@ -159,7 +159,7 @@ Gremllm supports multiple LLM providers: Anthropic (Claude), OpenAI (GPT), and G
 - Graceful degradation when encryption unavailable (session-only storage)
 
 **Development:**
-- Environment variables override secure storage: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`
+- Environment variables override secure storage: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`
 - Useful for testing without configuring through UI
 
 ## Reference Documentation

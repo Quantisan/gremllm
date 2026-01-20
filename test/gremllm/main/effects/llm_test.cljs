@@ -309,6 +309,25 @@
                     :total-tokens 24}}
            (llm/normalize-gemini-response mock-gemini-response)))))
 
+(deftest test-normalize-gemini-response-with-thinking
+  (testing "extracts thinking from parts where thought: true"
+    (let [response-with-thinking {:candidates [{:content {:parts [{:text "Let me work through this..."
+                                                                   :thought true}
+                                                                  {:text "The answer is 4."}]
+                                                          :role "model"}
+                                                :finishReason "STOP"}]
+                                  :usageMetadata {:promptTokenCount 10
+                                                  :candidatesTokenCount 50
+                                                  :totalTokenCount 60
+                                                  :thoughtsTokenCount 30}}]
+      (is (= {:text "The answer is 4."
+              :thinking "Let me work through this..."
+              :usage {:input-tokens 10
+                      :output-tokens 50
+                      :total-tokens 60
+                      :reasoning-tokens 30}}
+             (llm/normalize-gemini-response response-with-thinking))))))
+
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses and normalizes Claude API response"
     (let [original-fetch js/fetch
