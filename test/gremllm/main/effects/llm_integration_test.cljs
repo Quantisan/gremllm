@@ -126,6 +126,28 @@
                   "token counts should be numbers"))))
         done))))
 
+(deftest test-fetch-provider-response-openai-with-reasoning-integration
+  (async done
+    (testing "INTEGRATION: validate OpenAI reasoning effort with chat completions"
+      (let [api-key (aget (.-env js/process) "OPENAI_API_KEY")]
+        (if-not api-key
+          (do (js/console.warn "Skipping OpenAI reasoning test - OPENAI_API_KEY not set")
+              (done))
+          (-> (llm/fetch-raw-provider-response test-api-messages "gpt-5-nano" api-key true)
+              (.then (fn [response]
+                       (js/console.log "\n=== OPENAI REASONING CHAT COMPLETIONS RESPONSE ===")
+                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+                       (is (vector? (:choices response)) "choices should be a vector")
+                       (is (string? (get-in response [:choices 0 :message :content]))
+                           "content should be a string")
+                       (is (contains? (get-in response [:usage :completion_tokens_details])
+                                      :reasoning_tokens)
+                           "usage should include reasoning_tokens details when available")
+                       (done)))
+              (.catch (fn [error]
+                        (is false (str "OpenAI reasoning API call failed: " (.-message error)))
+                        (done)))))))))
+
 (deftest test-fetch-provider-response-gemini-integration
   (async done
     (testing "INTEGRATION: validate Gemini API structure matches mock fixture"
