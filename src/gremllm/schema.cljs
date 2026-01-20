@@ -62,7 +62,8 @@
    [:usage [:map
             [:input-tokens :int]
             [:output-tokens :int]
-            [:total-tokens :int]]]])
+            [:total-tokens :int]
+            [:reasoning-tokens {:optional true} :int]]]])
 
 (def Messages
   [:vector Message])

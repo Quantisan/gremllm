@@ -296,7 +296,8 @@
     (is (= {:text "4"
             :usage {:input-tokens 9
                     :output-tokens 1
-                    :total-tokens 10}}
+                    :total-tokens 10
+                    :reasoning-tokens 0}}
            (llm/normalize-openai-response mock-openai-response)))))
 
 (deftest test-normalize-gemini-response
@@ -372,7 +373,8 @@
                      (is (= {:text "4"
                              :usage {:input-tokens 9
                                      :output-tokens 1
-                                     :total-tokens 10}}
+                                     :total-tokens 10
+                                     :reasoning-tokens 0}}
                             response)))))
           (.finally #(set! js/fetch original-fetch))))))
 

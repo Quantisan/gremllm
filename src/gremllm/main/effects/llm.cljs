@@ -170,6 +170,10 @@
               (cond-> {:text  (:text text-block)
                        :usage {:input-tokens (get-in response [:usage :input_tokens])
                                :output-tokens (get-in response [:usage :output_tokens])
+                               ;; NOTE: Anthropic does not provide thinking tokens separately in the usage object.
+                                ;; Thinking tokens are bundled into output_tokens. For Claude 4 models, the visible
+                                ;; thinking is a summary while billing reflects full thinking tokens.
+                                ;; Reference: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
                                :total-tokens (+ (get-in response [:usage :input_tokens])
                                                 (get-in response [:usage :output_tokens]))}}
                 thinking-block (assoc :thinking (:thinking thinking-block))))))
@@ -178,11 +182,14 @@
   "Transforms OpenAI API response to LLMResponse schema.
   Validates the result, throwing if OpenAI returns unexpected shape."
   [response]
+  ;; TODO: Chat Completions only reports reasoning token counts (usage),
+  ;; not reasoning content. Upgrade to Responses API to access reasoning items.
   (m/coerce schema/LLMResponse
             {:text (get-in response [:choices 0 :message :content])
              :usage {:input-tokens (get-in response [:usage :prompt_tokens])
                      :output-tokens (get-in response [:usage :completion_tokens])
-                     :total-tokens (get-in response [:usage :total_tokens])}}))
+                     :total-tokens (get-in response [:usage :total_tokens])
+                     :reasoning-tokens (get-in response [:usage :completion_tokens_details :reasoning_tokens])}}))
 
 (defn normalize-gemini-response
   "Transforms Gemini API response to LLMResponse schema.
@@ -214,7 +221,8 @@
   "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
   Separated from normalization to model the external API boundary explicitly
   and enable integration tests to validate mock fixtures against real APIs.
-  The reasoning param enables extended thinking for Anthropic models."
+  The reasoning param enables extended thinking for Anthropic models and
+  reasoning effort for OpenAI models."
   (fn [_messages model _api-key _reasoning] (schema/model->provider model)))
 
 (defmethod fetch-raw-provider-response :anthropic
@@ -238,10 +246,12 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defmethod fetch-raw-provider-response :openai
-  [messages model api-key _reasoning]
-  (let [request-body {:model model
-                      :max_completion_tokens 8192
-                      :messages (messages->openai-format messages)}
+  [messages model api-key reasoning]
+  (let [request-body (cond-> {:model model
+                              :max_completion_tokens 8192
+                              :messages (messages->openai-format messages)}
+                       ;; Reference https://platform.openai.com/docs/api-reference/chat/object
+                       reasoning (assoc :reasoning_effort "high"))
         headers {"Authorization" (str "Bearer " api-key)
                  "Content-Type" "application/json"}]
     (-> (js/fetch "https://api.openai.com/v1/chat/completions"
@@ -271,7 +281,8 @@
 (defn ^LLMResponse query-llm-provider
   "Queries LLM provider and returns normalized LLMResponse.
   Composes fetch-raw-provider-response + response-normalizers.
-  The reasoning param enables extended thinking for Anthropic models.
+  The reasoning param enables extended thinking for Anthropic models and
+  reasoning effort for OpenAI models.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
