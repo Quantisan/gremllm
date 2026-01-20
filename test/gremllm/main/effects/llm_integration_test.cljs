@@ -267,3 +267,26 @@
               (.catch (fn [error]
                         (is false (str "API call with reasoning failed: " (.-message error)))
                         (done)))))))))
+
+(deftest test-query-llm-provider-gemini-with-reasoning-integration
+  (async done
+    (testing "INTEGRATION: validate Gemini thinking returns thinking content"
+      (let [api-key (aget (.-env js/process) "GEMINI_API_KEY")]
+        (if-not api-key
+          (do (js/console.warn "Skipping Gemini reasoning test - GEMINI_API_KEY not set")
+              (done))
+          ;; Use a simple math problem to trigger reasoning
+          (-> (llm/query-llm-provider test-api-messages "gemini-3-flash-preview" api-key true)
+              (.then (fn [response]
+                       (js/console.log "\n=== GEMINI THINKING RESPONSE ===")
+                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+                       (is (string? (:text response)) "Should have text response")
+                       (is (string? (:thinking response)) "Should have thinking content")
+                       (is (pos-int? (get-in response [:usage :total-tokens]))
+                           "Should include valid usage metadata")
+                       (is (pos-int? (get-in response [:usage :reasoning-tokens]))
+                           "Should include reasoning token count")
+                       (done)))
+              (.catch (fn [error]
+                        (is false (str "API call with reasoning failed: " (.-message error)))
+                        (done)))))))))

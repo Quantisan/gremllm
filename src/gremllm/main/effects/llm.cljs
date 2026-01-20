@@ -193,13 +193,29 @@
 
 (defn normalize-gemini-response
   "Transforms Gemini API response to LLMResponse schema.
-  Validates the result, throwing if Gemini returns unexpected shape."
+  Validates the result, throwing if Gemini returns unexpected shape.
+  When thinking is enabled, extracts thinking from parts where thought: true
+  and text from parts where thought is absent or false."
   [response]
-  (m/coerce schema/LLMResponse
-            {:text (get-in response [:candidates 0 :content :parts 0 :text])
-             :usage {:input-tokens (get-in response [:usageMetadata :promptTokenCount])
-                     :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
-                     :total-tokens (get-in response [:usageMetadata :totalTokenCount])}}))
+  (let [parts (get-in response [:candidates 0 :content :parts])
+        thinking-parts (filter :thought parts)
+        text-parts (remove :thought parts)
+        thinking-text (when (seq thinking-parts)
+                        (->> thinking-parts
+                             (map :text)
+                             (str/join "\n\n")))
+        text (->> text-parts
+                  (map :text)
+                  (str/join "\n\n"))
+        reasoning-tokens (get-in response [:usageMetadata :thoughtsTokenCount])]
+    (m/coerce schema/LLMResponse
+              (cond-> {:text text
+                       :usage (cond-> {:input-tokens (get-in response [:usageMetadata :promptTokenCount])
+                                       :output-tokens (get-in response [:usageMetadata :candidatesTokenCount])
+                                       :total-tokens (get-in response [:usageMetadata :totalTokenCount])}
+                                (and reasoning-tokens (pos? reasoning-tokens))
+                                (assoc :reasoning-tokens reasoning-tokens))}
+                thinking-text (assoc :thinking thinking-text)))))
 
 (defmulti response-normalizers
   "Transforms provider-specific response shapes to LLMResponse schema."
@@ -248,10 +264,10 @@
 (defmethod fetch-raw-provider-response :openai
   [messages model api-key reasoning]
   (let [request-body (cond-> {:model model
-                              :max_completion_tokens 8192
+                              :max_completion_tokens 16000
                               :messages (messages->openai-format messages)}
                        ;; Reference https://platform.openai.com/docs/api-reference/chat/object
-                       reasoning (assoc :reasoning_effort "high"))
+                       reasoning (assoc :reasoning_effort :high))
         headers {"Authorization" (str "Bearer " api-key)
                  "Content-Type" "application/json"}]
     (-> (js/fetch "https://api.openai.com/v1/chat/completions"
@@ -262,9 +278,13 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defmethod fetch-raw-provider-response :google
-  [messages model api-key _reasoning]
+  [messages model api-key reasoning]
   (let [request-body {:contents (messages->gemini-format messages)
-                      :generationConfig {:maxOutputTokens 8192}}
+                      :generationConfig (cond-> {:maxOutputTokens 16000}
+                                          ;; Reference https://ai.google.dev/gemini-api/docs/thinking
+                                          reasoning (assoc :thinkingConfig
+                                                           {:thinkingLevel   :high
+                                                            :includeThoughts true}))}
         headers {"Content-Type" "application/json"}
         url (str "https://generativelanguage.googleapis.com/v1beta/models/"
                  model ":generateContent?key=" api-key)]
