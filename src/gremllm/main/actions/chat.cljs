@@ -4,7 +4,7 @@
             [gremllm.schema :as schema]))
 
 (defn send-message-from-ipc
-  [state messages model api-key attachment-paths reasoning]
+  [state {:keys [messages model api-key attachment-paths reasoning]}]
   (let [workspace-dir    (state/get-workspace-dir state)
         has-attachments? (and attachment-paths (seq attachment-paths) workspace-dir)]
     (js/console.log "[chat:route]"
