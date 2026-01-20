@@ -376,6 +376,31 @@
                             response)))))
           (.finally #(set! js/fetch original-fetch))))))
 
+(deftest test-fetch-raw-provider-response-openai-with-reasoning
+  (async done
+    (testing "adds reasoning_effort when reasoning=true"
+      (let [original-fetch js/fetch
+            seen (atom nil)
+            test-messages  [{:role "user" :content "2+2"}]]
+        (set! js/fetch (fn [url opts]
+                         (reset! seen {:url url :opts opts})
+                         (js/Promise.resolve
+                          #js {:ok true
+                               :json (fn []
+                                       (js/Promise.resolve
+                                        (clj->js mock-openai-response)))})))
+
+        (-> (llm/fetch-raw-provider-response test-messages "gpt-5" "test-key" true)
+            (.then (fn [_]
+                     (let [opts (:opts @seen)
+                           body (js->clj (js/JSON.parse (.-body opts)) :keywordize-keys true)]
+                       (is (= "https://api.openai.com/v1/chat/completions" (:url @seen)))
+                       (is (= "high" (:reasoning_effort body))
+                           "reasoning_effort should be set when reasoning=true"))))
+            (.finally (fn []
+                        (set! js/fetch original-fetch)
+                        (done))))))))
+
 (deftest test-query-llm-provider-gemini
   (testing "successfully parses and normalizes Gemini API response"
     (let [original-fetch js/fetch

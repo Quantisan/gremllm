@@ -214,7 +214,8 @@
   "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
   Separated from normalization to model the external API boundary explicitly
   and enable integration tests to validate mock fixtures against real APIs.
-  The reasoning param enables extended thinking for Anthropic models."
+  The reasoning param enables extended thinking for Anthropic models and
+  reasoning effort for OpenAI models."
   (fn [_messages model _api-key _reasoning] (schema/model->provider model)))
 
 (defmethod fetch-raw-provider-response :anthropic
@@ -238,10 +239,12 @@
         (.then #(js->clj % :keywordize-keys true)))))
 
 (defmethod fetch-raw-provider-response :openai
-  [messages model api-key _reasoning]
-  (let [request-body {:model model
-                      :max_completion_tokens 8192
-                      :messages (messages->openai-format messages)}
+  [messages model api-key reasoning]
+  (let [request-body (cond-> {:model model
+                              :max_completion_tokens 8192
+                              :messages (messages->openai-format messages)}
+                       ;; Reference https://platform.openai.com/docs/api-reference/chat/object
+                       reasoning (assoc :reasoning_effort "high"))
         headers {"Authorization" (str "Bearer " api-key)
                  "Content-Type" "application/json"}]
     (-> (js/fetch "https://api.openai.com/v1/chat/completions"
@@ -271,7 +274,8 @@
 (defn ^LLMResponse query-llm-provider
   "Queries LLM provider and returns normalized LLMResponse.
   Composes fetch-raw-provider-response + response-normalizers.
-  The reasoning param enables extended thinking for Anthropic models.
+  The reasoning param enables extended thinking for Anthropic models and
+  reasoning effort for OpenAI models.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is
   straightforward message exchange. Resist adding features (error handling,
