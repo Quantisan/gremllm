@@ -184,7 +184,8 @@
             {:text (get-in response [:choices 0 :message :content])
              :usage {:input-tokens (get-in response [:usage :prompt_tokens])
                      :output-tokens (get-in response [:usage :completion_tokens])
-                     :total-tokens (get-in response [:usage :total_tokens])}}))
+                     :total-tokens (get-in response [:usage :total_tokens])
+                     :reasoning-tokens (get-in response [:usage :completion_tokens_details :reasoning_tokens])}}))
 
 (defn normalize-gemini-response
   "Transforms Gemini API response to LLMResponse schema.
