@@ -47,7 +47,12 @@
           loaded-pairs [[attachment-ref buffer]]
           messages [(make-message {:id 1 :type :assistant :text "How can I help?"})
                     (make-message {:id 2 :text "Check this image"})]
-          result (chat/attach-and-send {} loaded-pairs messages test-model test-api-key false)
+          result (chat/attach-and-send {}
+                                       {:loaded-pairs loaded-pairs
+                                        :messages messages
+                                        :model test-model
+                                        :api-key test-api-key
+                                        :reasoning false})
           [effect-name api-messages model api-key reasoning] (effect-with-messages result)
           [first-msg second-msg] api-messages
           attachment (first (:attachments second-msg))]
@@ -70,7 +75,12 @@
 
   (testing "handles empty attachments collection"
     (let [messages [(make-message)]
-          result (chat/attach-and-send {} [] messages test-model test-api-key false)
+          result (chat/attach-and-send {}
+                                       {:loaded-pairs []
+                                        :messages messages
+                                        :model test-model
+                                        :api-key test-api-key
+                                        :reasoning false})
           [effect-name api-messages] (effect-with-messages result)]
 
       (is (= :chat.effects/send-message effect-name))
@@ -87,4 +97,9 @@
           messages [(make-message {:text "Check this"})]]
 
       (is (thrown? js/Error
-                   (chat/attach-and-send {} loaded-pairs messages test-model test-api-key false))))))
+                   (chat/attach-and-send {}
+                                         {:loaded-pairs loaded-pairs
+                                          :messages messages
+                                          :model test-model
+                                          :api-key test-api-key
+                                          :reasoning false}))))))
