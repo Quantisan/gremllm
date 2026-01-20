@@ -5,6 +5,8 @@
                                                    mock-openai-response
                                                    mock-gemini-response]]))
 
+;; TODO: model names hardcoded many times in this ns. DRY. Use `schema/supported-models` somehow.
+
 (def test-api-messages
   "Simple API-formatted messages for integration testing.
   Shared across integration tests and schema boundary tests."
@@ -58,7 +60,7 @@
     (if-not api-key
       (do (js/console.warn (str "Skipping " name " integration test - " env-key " not set"))
           (done))
-      (-> (llm/fetch-raw-provider-response test-api-messages model api-key)
+      (-> (llm/fetch-raw-provider-response test-api-messages model api-key false)
           (.then (fn [response]
                    (js/console.log (str "\n=== " name " RAW API RESPONSE ==="))
                    (js/console.log (js/JSON.stringify (clj->js response) nil 2))
@@ -186,7 +188,7 @@
             test-messages [{:role "user"
                             :content "What are the three programming languages listed in this document?"
                             :attachments [attachment]}]]
-        (-> (llm/query-llm-provider test-messages model api-key)
+        (-> (llm/query-llm-provider test-messages model api-key false)
             (.then (fn [response]
                      (js/console.log (str "\n=== " name " MARKDOWN ATTACHMENT RESPONSE ==="))
                      (js/console.log (js/JSON.stringify (clj->js response) nil 2))
@@ -216,3 +218,31 @@
   (async done
     (testing "INTEGRATION: validate Anthropic handles markdown attachment via text conversion"
       (run-markdown-attachment-test (:anthropic markdown-attachment-providers) done))))
+
+;; Extended Thinking Integration Test
+;;
+;; Validates that Anthropic's extended thinking feature works end-to-end:
+;; - Request includes thinking config when reasoning=true
+;; - Response contains both thinking and text content blocks
+;; - Normalization correctly extracts :thinking field
+
+(deftest test-query-llm-provider-anthropic-with-reasoning-integration
+  (async done
+    (testing "INTEGRATION: validate Anthropic extended thinking returns thinking content"
+      (let [api-key (aget (.-env js/process) "ANTHROPIC_API_KEY")]
+        (if-not api-key
+          (do (js/console.warn "Skipping Anthropic reasoning test - ANTHROPIC_API_KEY not set")
+              (done))
+          ;; Use a simple math problem to trigger reasoning
+          (-> (llm/query-llm-provider test-api-messages "claude-haiku-4-5-20251001" api-key true)
+              (.then (fn [response]
+                       (js/console.log "\n=== ANTHROPIC EXTENDED THINKING RESPONSE ===")
+                       (js/console.log (js/JSON.stringify (clj->js response) nil 2))
+                       (is (string? (:text response)) "Should have text response")
+                       (is (string? (:thinking response)) "Should have thinking content")
+                       (is (pos-int? (get-in response [:usage :total-tokens]))
+                           "Should include valid usage metadata")
+                       (done)))
+              (.catch (fn [error]
+                        (is false (str "API call with reasoning failed: " (.-message error)))
+                        (done)))))))))

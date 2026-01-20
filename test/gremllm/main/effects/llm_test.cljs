@@ -273,6 +273,24 @@
                     :total-tokens 21}}
            (llm/normalize-anthropic-response mock-claude-response)))))
 
+(deftest test-normalize-anthropic-response-with-thinking
+  (testing "extracts thinking block from extended thinking response"
+    (let [response-with-thinking {:id "msg_123"
+                                  :type "message"
+                                  :role "assistant"
+                                  :content [{:type "thinking"
+                                             :thinking "Let me work through this step by step..."}
+                                            {:type "text"
+                                             :text "The answer is 4."}]
+                                  :usage {:input_tokens 100
+                                          :output_tokens 50}}]
+      (is (= {:text "The answer is 4."
+              :thinking "Let me work through this step by step..."
+              :usage {:input-tokens 100
+                      :output-tokens 50
+                      :total-tokens 150}}
+             (llm/normalize-anthropic-response response-with-thinking))))))
+
 (deftest test-normalize-openai-response
   (testing "transforms OpenAI response to normalized LLMResponse schema"
     (is (= {:text "4"
@@ -298,7 +316,7 @@
 
       (set! js/fetch (mock-successful-fetch mock-claude-response))
 
-      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key false)
           (.then (fn [response]
                    (testing "normalized response structure"
                      (is (= {:text "4"
@@ -318,7 +336,7 @@
 
       (set! js/fetch (mock-failed-fetch error-message))
 
-      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key false)
           (.then (fn [_]
                    (is false "Should not succeed")))
           (.catch (fn [error]
@@ -331,7 +349,7 @@
           restore-console (with-console-error-silenced)]
       (set! js/fetch (mock-http-error-fetch 401 "Unauthorized" "Invalid API key"))
 
-      (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key")
+      (-> (llm/query-llm-provider [{:role "user" :content "test"}] "claude-3-5-haiku-latest" "bad-key" false)
           (.then #(is false "Should not succeed"))
           (.catch (fn [error]
                     (is (re-find #"401.*Unauthorized.*Invalid API key" (.-message error)))))
@@ -348,7 +366,7 @@
 
       (set! js/fetch (mock-successful-fetch mock-openai-response))
 
-      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key false)
           (.then (fn [response]
                    (testing "normalized response structure"
                      (is (= {:text "4"
@@ -367,7 +385,7 @@
 
       (set! js/fetch (mock-successful-fetch mock-gemini-response))
 
-      (-> (llm/query-llm-provider test-messages test-model test-api-key)
+      (-> (llm/query-llm-provider test-messages test-model test-api-key false)
           (.then (fn [response]
                    (testing "normalized response structure"
                      (is (= {:text "4"

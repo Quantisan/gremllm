@@ -58,6 +58,7 @@
    Main process transforms provider responses to this format before IPC."
   [:map
    [:text :string]
+   [:thinking {:optional true} :string]
    [:usage [:map
             [:input-tokens :int]
             [:output-tokens :int]
