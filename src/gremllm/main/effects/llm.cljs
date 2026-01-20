@@ -161,22 +161,22 @@
 (defn normalize-anthropic-response
   "Transforms Anthropic API response to LLMResponse schema.
   Validates the result, throwing if Anthropic returns unexpected shape.
-  When extended thinking is enabled, extracts both thinking and text blocks."
+  When reasoning is enabled, extracts both reasoning and text blocks."
   [response]
   (let [content (:content response)
-        thinking-block (first (filter #(= "thinking" (:type %)) content))
+        reasoning-block (first (filter #(= "thinking" (:type %)) content))
         text-block (first (filter #(= "text" (:type %)) content))]
     (m/coerce schema/LLMResponse
               (cond-> {:text  (:text text-block)
                        :usage {:input-tokens (get-in response [:usage :input_tokens])
                                :output-tokens (get-in response [:usage :output_tokens])
-                               ;; NOTE: Anthropic does not provide thinking tokens separately in the usage object.
-                                ;; Thinking tokens are bundled into output_tokens. For Claude 4 models, the visible
-                                ;; thinking is a summary while billing reflects full thinking tokens.
+                               ;; NOTE: Anthropic does not provide reasoning tokens separately in the usage object.
+                                ;; Reasoning tokens are bundled into output_tokens. For Claude 4 models, the visible
+                                ;; reasoning is a summary while billing reflects full reasoning tokens.
                                 ;; Reference: https://platform.claude.com/docs/en/build-with-claude/extended-thinking
                                :total-tokens (+ (get-in response [:usage :input_tokens])
                                                 (get-in response [:usage :output_tokens]))}}
-                thinking-block (assoc :thinking (:thinking thinking-block))))))
+                reasoning-block (assoc :reasoning (:thinking reasoning-block))))))
 
 (defn normalize-openai-response
   "Transforms OpenAI API response to LLMResponse schema.
@@ -194,14 +194,14 @@
 (defn normalize-gemini-response
   "Transforms Gemini API response to LLMResponse schema.
   Validates the result, throwing if Gemini returns unexpected shape.
-  When thinking is enabled, extracts thinking from parts where thought: true
+  When reasoning is enabled, extracts reasoning from parts where thought: true
   and text from parts where thought is absent or false."
   [response]
   (let [parts (get-in response [:candidates 0 :content :parts])
-        thinking-parts (filter :thought parts)
+        reasoning-parts (filter :thought parts)
         text-parts (remove :thought parts)
-        thinking-text (when (seq thinking-parts)
-                        (->> thinking-parts
+        reasoning-text (when (seq reasoning-parts)
+                        (->> reasoning-parts
                              (map :text)
                              (str/join "\n\n")))
         text (->> text-parts
@@ -215,7 +215,7 @@
                                        :total-tokens (get-in response [:usageMetadata :totalTokenCount])}
                                 (and reasoning-tokens (pos? reasoning-tokens))
                                 (assoc :reasoning-tokens reasoning-tokens))}
-                thinking-text (assoc :thinking thinking-text)))))
+                reasoning-text (assoc :reasoning reasoning-text)))))
 
 (defmulti response-normalizers
   "Transforms provider-specific response shapes to LLMResponse schema."
@@ -237,7 +237,7 @@
   "Returns promise of unnormalized, provider-specific response (JSON→CLJS only).
   Separated from normalization to model the external API boundary explicitly
   and enable integration tests to validate mock fixtures against real APIs.
-  The reasoning param enables extended thinking for Anthropic models and
+  The reasoning param enables reasoning for Anthropic models and
   reasoning effort for OpenAI models."
   (fn [_messages model _api-key _reasoning] (schema/model->provider model)))
 
@@ -245,7 +245,7 @@
   [messages model api-key reasoning]
   (let [request-body (cond-> {:model model
                                ;; When reasoning is enabled, budget_tokens must be less than max_tokens.
-                               ;; Using 16000 max_tokens with 10000 thinking budget to satisfy this constraint.
+                               ;; Using 16000 max_tokens with 10000 reasoning budget to satisfy this constraint.
                               :max_tokens 16000
                               :messages (messages->anthropic-format messages)}
                        ;; Reference https://platform.claude.com/docs/en/build-with-claude/extended-thinking
@@ -301,7 +301,7 @@
 (defn ^LLMResponse query-llm-provider
   "Queries LLM provider and returns normalized LLMResponse.
   Composes fetch-raw-provider-response + response-normalizers.
-  The reasoning param enables extended thinking for Anthropic models and
+  The reasoning param enables reasoning for Anthropic models and
   reasoning effort for OpenAI models.
 
   Uses direct fetch instead of provider SDKs for simplicity—our use case is

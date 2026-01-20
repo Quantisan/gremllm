@@ -274,23 +274,23 @@
                     :total-tokens 21}}
            (llm/normalize-anthropic-response mock-claude-response)))))
 
-(deftest test-normalize-anthropic-response-with-thinking
-  (testing "extracts thinking block from extended thinking response"
-    (let [response-with-thinking {:id "msg_123"
-                                  :type "message"
-                                  :role "assistant"
-                                  :content [{:type "thinking"
-                                             :thinking "Let me work through this step by step..."}
-                                            {:type "text"
-                                             :text "The answer is 4."}]
-                                  :usage {:input_tokens 100
-                                          :output_tokens 50}}]
+(deftest test-normalize-anthropic-response-with-reasoning
+  (testing "extracts reasoning block from reasoning response"
+    (let [response-with-reasoning {:id "msg_123"
+                                   :type "message"
+                                   :role "assistant"
+                                   :content [{:type "thinking"
+                                              :thinking "Let me work through this step by step..."}
+                                             {:type "text"
+                                              :text "The answer is 4."}]
+                                   :usage {:input_tokens 100
+                                           :output_tokens 50}}]
       (is (= {:text "The answer is 4."
-              :thinking "Let me work through this step by step..."
+              :reasoning "Let me work through this step by step..."
               :usage {:input-tokens 100
                       :output-tokens 50
                       :total-tokens 150}}
-             (llm/normalize-anthropic-response response-with-thinking))))))
+             (llm/normalize-anthropic-response response-with-reasoning))))))
 
 (deftest test-normalize-openai-response
   (testing "transforms OpenAI response to normalized LLMResponse schema"
@@ -309,24 +309,24 @@
                     :total-tokens 24}}
            (llm/normalize-gemini-response mock-gemini-response)))))
 
-(deftest test-normalize-gemini-response-with-thinking
-  (testing "extracts thinking from parts where thought: true"
-    (let [response-with-thinking {:candidates [{:content {:parts [{:text "Let me work through this..."
-                                                                   :thought true}
-                                                                  {:text "The answer is 4."}]
-                                                          :role "model"}
-                                                :finishReason "STOP"}]
-                                  :usageMetadata {:promptTokenCount 10
-                                                  :candidatesTokenCount 50
-                                                  :totalTokenCount 60
-                                                  :thoughtsTokenCount 30}}]
+(deftest test-normalize-gemini-response-with-reasoning
+  (testing "extracts reasoning from parts where thought: true"
+    (let [response-with-reasoning {:candidates [{:content {:parts [{:text "Let me work through this..."
+                                                                    :thought true}
+                                                                   {:text "The answer is 4."}]
+                                                           :role "model"}
+                                                 :finishReason "STOP"}]
+                                   :usageMetadata {:promptTokenCount 10
+                                                   :candidatesTokenCount 50
+                                                   :totalTokenCount 60
+                                                   :thoughtsTokenCount 30}}]
       (is (= {:text "The answer is 4."
-              :thinking "Let me work through this..."
+              :reasoning "Let me work through this..."
               :usage {:input-tokens 10
                       :output-tokens 50
                       :total-tokens 60
                       :reasoning-tokens 30}}
-             (llm/normalize-gemini-response response-with-thinking))))))
+             (llm/normalize-gemini-response response-with-reasoning))))))
 
 (deftest test-query-llm-provider-anthropic
   (testing "successfully parses and normalizes Claude API response"

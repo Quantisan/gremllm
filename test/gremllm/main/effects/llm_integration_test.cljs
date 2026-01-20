@@ -240,16 +240,16 @@
     (testing "INTEGRATION: validate Anthropic handles markdown attachment via text conversion"
       (run-markdown-attachment-test (:anthropic markdown-attachment-providers) done))))
 
-;; Extended Thinking Integration Test
+;; Reasoning Integration Test
 ;;
-;; Validates that Anthropic's extended thinking feature works end-to-end:
-;; - Request includes thinking config when reasoning=true
-;; - Response contains both thinking and text content blocks
-;; - Normalization correctly extracts :thinking field
+;; Validates that Anthropic's reasoning feature works end-to-end:
+;; - Request includes reasoning config when reasoning=true
+;; - Response contains both reasoning and text content blocks
+;; - Normalization correctly extracts :reasoning field
 
 (deftest test-query-llm-provider-anthropic-with-reasoning-integration
   (async done
-    (testing "INTEGRATION: validate Anthropic extended thinking returns thinking content"
+    (testing "INTEGRATION: validate Anthropic reasoning returns reasoning content"
       (let [api-key (aget (.-env js/process) "ANTHROPIC_API_KEY")]
         (if-not api-key
           (do (js/console.warn "Skipping Anthropic reasoning test - ANTHROPIC_API_KEY not set")
@@ -257,10 +257,10 @@
           ;; Use a simple math problem to trigger reasoning
           (-> (llm/query-llm-provider test-api-messages "claude-haiku-4-5-20251001" api-key true)
               (.then (fn [response]
-                       (js/console.log "\n=== ANTHROPIC EXTENDED THINKING RESPONSE ===")
+                       (js/console.log "\n=== ANTHROPIC REASONING RESPONSE ===")
                        (js/console.log (js/JSON.stringify (clj->js response) nil 2))
                        (is (string? (:text response)) "Should have text response")
-                       (is (string? (:thinking response)) "Should have thinking content")
+                       (is (string? (:reasoning response)) "Should have reasoning content")
                        (is (pos-int? (get-in response [:usage :total-tokens]))
                            "Should include valid usage metadata")
                        (done)))
@@ -270,7 +270,7 @@
 
 (deftest test-query-llm-provider-gemini-with-reasoning-integration
   (async done
-    (testing "INTEGRATION: validate Gemini thinking returns thinking content"
+    (testing "INTEGRATION: validate Gemini reasoning returns reasoning content"
       (let [api-key (aget (.-env js/process) "GEMINI_API_KEY")]
         (if-not api-key
           (do (js/console.warn "Skipping Gemini reasoning test - GEMINI_API_KEY not set")
@@ -278,10 +278,10 @@
           ;; Use a simple math problem to trigger reasoning
           (-> (llm/query-llm-provider test-api-messages "gemini-3-flash-preview" api-key true)
               (.then (fn [response]
-                       (js/console.log "\n=== GEMINI THINKING RESPONSE ===")
+                       (js/console.log "\n=== GEMINI REASONING RESPONSE ===")
                        (js/console.log (js/JSON.stringify (clj->js response) nil 2))
                        (is (string? (:text response)) "Should have text response")
-                       (is (string? (:thinking response)) "Should have thinking content")
+                       (is (string? (:reasoning response)) "Should have reasoning content")
                        (is (pos-int? (get-in response [:usage :total-tokens]))
                            "Should include valid usage metadata")
                        (is (pos-int? (get-in response [:usage :reasoning-tokens]))
