@@ -165,13 +165,9 @@
   [response]
   (let [content (:content response)
         thinking-block (first (filter #(= "thinking" (:type %)) content))
-        text-block (first (filter #(= "text" (:type %)) content))
-        ;; TODO: Remove fallback - Anthropic always returns typed content blocks,
-        ;; so the filter should always find the text block. Fail explicitly if missing.
-        text (or (:text text-block)
-                 (get-in response [:content 0 :text]))]
+        text-block (first (filter #(= "text" (:type %)) content))]
     (m/coerce schema/LLMResponse
-              (cond-> {:text text
+              (cond-> {:text  (:text text-block)
                        :usage {:input-tokens (get-in response [:usage :input_tokens])
                                :output-tokens (get-in response [:usage :output_tokens])
                                :total-tokens (+ (get-in response [:usage :input_tokens])
