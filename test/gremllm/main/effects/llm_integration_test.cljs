@@ -151,7 +151,7 @@
   (async done
     (testing "INTEGRATION: validate Gemini API structure matches mock fixture"
       (with-provider-api
-        {:name "Gemini" :env-key "GEMINI_API_KEY" :model "gemini-2.5-flash-lite"}
+        {:name "Gemini" :env-key "GEMINI_API_KEY" :model "gemini-3-flash-preview"}
         (fn [response]
           (assert-matches-structure response mock-gemini-response
                                     []
@@ -184,7 +184,7 @@
   "Provider configurations for markdown attachment integration tests."
   {:gemini    {:name "Gemini"
                :env-key "GEMINI_API_KEY"
-               :model "gemini-2.5-flash-lite"
+               :model "gemini-3-flash-preview"
                :include-filename? false}
    :openai    {:name "OpenAI"
                :env-key "OPENAI_API_KEY"

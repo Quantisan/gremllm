@@ -12,8 +12,8 @@
    "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
    "gpt-5"                      "GPT-5"
    "gpt-5-mini"                 "GPT-5 Mini"
-   "gemini-2.5-flash"           "Gemini 2.5 Flash"
-   "gemini-2.5-pro"             "Gemini 2.5 Pro"})
+   "gemini-3-flash-preview"     "Gemini 3 Flash"
+   "gemini-3-pro-preview"       "Gemini 3 Pro"})
 
 ;; ========================================
 ;; Messages
@@ -265,7 +265,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "gemini-2.5-flash"} ;; defaulting to Flash because is cheap and fast
+   [:model {:default "gemini-3-flash-preview"} ;; defaulting to Flash because is cheap and fast
     (into [:enum] (keys supported-models))]
    [:messages {:default []} [:vector Message]]])
 

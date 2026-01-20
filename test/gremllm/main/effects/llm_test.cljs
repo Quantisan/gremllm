@@ -89,9 +89,10 @@
    :usageMetadata {:promptTokenCount 4
                    :candidatesTokenCount 1
                    :totalTokenCount 24
+                   :thoughtsTokenCount 0
                    :promptTokensDetails [{:modality "TEXT"
                                           :tokenCount 4}]}
-   :modelVersion "gemini-2.5-flash-lite"
+   :modelVersion "gemini-3-flash-preview"
    :responseId "tpboaMabLejN1e8PzMOD0Ak"})
 
 ;; Unit Tests
@@ -382,7 +383,7 @@
   (testing "successfully parses and normalizes Gemini API response"
     (let [original-fetch js/fetch
           test-messages  [{:role "user" :content "2+2"}]
-          test-model     "gemini-2.5-flash"
+          test-model     "gemini-3-flash-preview"
           test-api-key   "test-key"]
 
       (set! js/fetch (mock-successful-fetch mock-gemini-response))

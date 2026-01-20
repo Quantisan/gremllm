@@ -15,7 +15,7 @@ Right now it's just a basic chat interface. The branching features aren't built 
 Not useful yet.
 
 **What works:**
-- Chat with Claude 4.x, GPT-5, or Gemini 2.5
+- Chat with Claude 4.x, GPT-5, or Gemini 3
 - Basic desktop app with Electron
 - Message history during a session
 
