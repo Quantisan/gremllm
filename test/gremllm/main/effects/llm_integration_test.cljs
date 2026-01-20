@@ -140,9 +140,8 @@
                        (is (vector? (:choices response)) "choices should be a vector")
                        (is (string? (get-in response [:choices 0 :message :content]))
                            "content should be a string")
-                       (is (contains? (get-in response [:usage :completion_tokens_details])
-                                      :reasoning_tokens)
-                           "usage should include reasoning_tokens details when available")
+                       (is (pos-int? (get-in response [:usage :completion_tokens_details :reasoning_tokens]))
+                           "usage should include a positive reasoning_tokens count when available")
                        (done)))
               (.catch (fn [error]
                         (is false (str "OpenAI reasoning API call failed: " (.-message error)))
