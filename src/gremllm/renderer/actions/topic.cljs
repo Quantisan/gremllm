@@ -98,7 +98,7 @@
     (if-let [topic (topic-state/get-topic @store topic-id)]
       (dispatch
        [[:effects/promise
-         {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
+         {:promise    (.saveTopic js/window.electronAPI (schema/topic-to-ipc topic))
           :on-success [[:topic.actions/save-success topic-id]]
           :on-error   [[:topic.actions/save-error topic-id]]}]])
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))

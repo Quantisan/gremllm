@@ -308,6 +308,10 @@
   [name]
   {:name name})
 
+(defn topic-to-ipc [topic-clj]
+  (-> (m/coerce Topic topic-clj mt/json-transformer)
+      (clj->js)))
+
 (defn topic-from-ipc
   "Transforms topic data from IPC into internal Topic schema. Throws if invalid."
   [topic-js]
