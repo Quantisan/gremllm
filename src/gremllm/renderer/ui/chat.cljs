@@ -89,8 +89,7 @@
      (get schema/supported-models selected-model selected-model)]
 
     ;; Editable: show model selector dropdown
-    [:label {:style {:display "block"
-                     :margin-bottom "0.5rem"}}
+    [:label {:style {:display "block"}}
      [:small "Model:"]
      [:select {:value selected-model ;; FIX: this doesn't seem to work. UI defaults to the first item on list instead of selected-model
                :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
@@ -104,8 +103,13 @@
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
-    (render-model-selector selected-model has-messages?)
-    (render-reasoning-toggle reasoning? has-messages?)
+    [:div {:style {:display "flex"
+                   :gap "0.5rem"
+                   :align-items "center"
+                   :margin-bottom "0.5rem"}}
+     [:div {:style {:flex "1"}}
+      (render-model-selector selected-model has-messages?)]
+     (render-reasoning-toggle reasoning? has-messages?)]
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"
