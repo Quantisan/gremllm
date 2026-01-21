@@ -103,6 +103,8 @@
           :on-error   [[:topic.actions/save-error topic-id]]}]])
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
 
+;; TODO: should :topic.effects/save-active-topic be an action?
+;;
 ;; Convenience effect for saving the active topic
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
@@ -110,6 +112,8 @@
       (dispatch [[:topic.effects/save-topic topic-id]])
       (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]]))))
 
+;; TODO: should :topic.effects/delete-topic be an action?
+;;
 ;; Delete topic effect - shows confirmation dialog and deletes file
 (nxr/register-effect! :topic.effects/delete-topic
   (fn [{dispatch :dispatch} _store topic-id]
