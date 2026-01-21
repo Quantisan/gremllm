@@ -21,7 +21,8 @@
 
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)
-        model (:model (topic-state/get-active-topic state))]
+        {selected-model  :model
+         reasoning?      :reasoning?} (topic-state/get-active-topic state)]
     (when-not (empty? text)
       ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
       ;; Probably with Malli.
@@ -35,7 +36,7 @@
          [:loading.actions/set-loading? assistant-id true]
          [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.actions/send-messages assistant-id model new-user-message]
+         [:llm.actions/send-messages assistant-id selected-model reasoning? new-user-message]
          ;; Clear attachments AFTER send-messages reads them from state
          [:ui.actions/clear-pending-attachments]]))))
 

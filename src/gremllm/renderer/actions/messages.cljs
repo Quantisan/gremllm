@@ -43,13 +43,14 @@
 ;; Action for sending messages to LLM
 ;; Note: new-user-message passed explicitly because submit-messages action chain
 ;; writes message to state and calls this simultaneously - can't read from state reliably
-(defn send-messages [state assistant-id model new-user-message]
+(defn send-messages [state assistant-id model reasoning? new-user-message]
   (let [conversation (build-conversation-with-new-message state new-user-message)
         file-paths (when-let [attachments (seq (form-state/get-pending-attachments state))]
                      (mapv :path attachments))]
     [[:effects/send-llm-messages
       {:messages   conversation
        :model      model
+       :reasoning? reasoning?
        :file-paths file-paths
        :on-success [[:llm.actions/response-received assistant-id]]
        :on-error   [[:llm.actions/response-error assistant-id]]}]]))

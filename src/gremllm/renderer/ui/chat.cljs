@@ -69,6 +69,17 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
+(defn- render-reasoning-toggle [enabled? has-messages?]
+  (when (or (not has-messages?) enabled?)
+    [:button {:type "button"
+              :class (when-not enabled? "outline")
+              :aria-pressed enabled?
+              :disabled has-messages?
+              :style {:padding "0.25rem 0.75rem"
+                      :font-size "0.875rem"}
+              :on {:click [[:topic.actions/toggle-reasoning]]}}
+     "Reasoning"]))
+
 (defn- render-model-selector [selected-model has-messages?]
   (if has-messages?
     ;; Read-only: show model as static text
@@ -78,8 +89,7 @@
      (get schema/supported-models selected-model selected-model)]
 
     ;; Editable: show model selector dropdown
-    [:label {:style {:display "block"
-                     :margin-bottom "0.5rem"}}
+    [:label {:style {:display "block"}}
      [:small "Model:"]
      [:select {:value selected-model ;; FIX: this doesn't seem to work. UI defaults to the first item on list instead of selected-model
                :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
@@ -89,11 +99,17 @@
                :let [display-name (get schema/supported-models model-id)]]
            [:option {:value model-id} display-name])])]]))
 
-(defn render-input-form [{:keys [input-value selected-model has-messages? loading? has-any-api-key? pending-attachments]}]
+(defn render-input-form [{:keys [input-value selected-model reasoning? has-messages? loading? has-any-api-key? pending-attachments]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
-    (render-model-selector selected-model has-messages?)
+    [:div {:style {:display "flex"
+                   :gap "0.5rem"
+                   :align-items "center"
+                   :margin-bottom "0.5rem"}}
+     [:div {:style {:flex "1"}}
+      (render-model-selector selected-model has-messages?)]
+     (render-reasoning-toggle reasoning? has-messages?)]
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"

@@ -66,9 +66,10 @@
                  :active-topic-id "t1"
                  :form {:pending-attachments []}}
           assistant-id 12345
-          model "claude-3-5-sonnet-20241022"
+          model        "claude-3-5-sonnet-20241022"
+          reasoning?   true
           user-message {:type :user :text "World"}
-          effects (msg/send-messages state assistant-id model user-message)]
+          effects      (msg/send-messages state assistant-id model reasoning? user-message)]
       (is (= 1 (count effects))
           "Should return exactly one effect")
       (let [[effect-type effect-data] (first effects)]
@@ -80,6 +81,8 @@
             "Messages should include both existing and new user message in internal format")
         (is (= model (:model effect-data))
             "Model should be passed through")
+        (is (= reasoning? (:reasoning? effect-data))
+            "Reasoning? toggle should be passed through")
         (is (nil? (:file-paths effect-data))
             "file-paths should be nil when no attachments")
         (is (= [[:llm.actions/response-received assistant-id]]
@@ -94,7 +97,7 @@
                  :active-topic-id "t1"
                  :form {:pending-attachments []}}
           user-message {:type :user :text "New message"}
-          effects (msg/send-messages state 123 "model" user-message)
+          effects (msg/send-messages state 123 "model" false user-message)
           [_ effect-data] (first effects)]
       (is (nil? (:file-paths effect-data))
           "Empty attachments should result in nil file-paths")))
@@ -111,7 +114,7 @@
                                                :type "image/png"
                                                :path "/tmp/image.png"}]}}
           user-message {:type :user :text "New message"}
-          effects (msg/send-messages state 456 "model" user-message)
+          effects (msg/send-messages state 456 "model" false user-message)
           [_ effect-data] (first effects)]
       (is (= ["/tmp/file.txt" "/tmp/image.png"]
              (:file-paths effect-data))
@@ -122,7 +125,7 @@
                  :active-topic-id "t1"
                  :form {}}
           user-message {:type :user :text "New message"}
-          effects (msg/send-messages state 789 "model" user-message)
+          effects (msg/send-messages state 789 "model" false user-message)
           [_ effect-data] (first effects)]
       (is (nil? (:file-paths effect-data))
           "Missing pending-attachments should result in nil file-paths"))))

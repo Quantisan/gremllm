@@ -265,8 +265,8 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "gemini-3-flash-preview"} ;; defaulting to Flash because is cheap and fast
-    (into [:enum] (keys supported-models))]
+   [:model {:default "gemini-3-flash-preview"} Model] ;; defaulting to Flash because is cheap and fast
+   [:reasoning? {:default true} :boolean]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic
@@ -307,6 +307,10 @@
   "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
   [name]
   {:name name})
+
+(defn topic-to-ipc [topic-clj]
+  (-> (m/coerce Topic topic-clj mt/json-transformer)
+      (clj->js)))
 
 (defn topic-from-ipc
   "Transforms topic data from IPC into internal Topic schema. Throws if invalid."

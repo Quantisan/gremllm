@@ -24,6 +24,11 @@
   (let [active-id (topic-state/get-active-topic-id state)]
     [[:effects/save (topic-state/topic-field-path active-id :model) model]]))
 
+(defn toggle-reasoning [state]
+  (let [active-id (topic-state/get-active-topic-id state)
+        current-reasoning? (topic-state/get-topic-field state active-id :reasoning?)]
+    [[:effects/save (topic-state/topic-field-path active-id :reasoning?) (not current-reasoning?)]]))
+
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
   (js/console.log "Topic" topic-id "saved to:" filepath)
@@ -93,11 +98,13 @@
     (if-let [topic (topic-state/get-topic @store topic-id)]
       (dispatch
        [[:effects/promise
-         {:promise    (.saveTopic js/window.electronAPI (clj->js topic))
+         {:promise    (.saveTopic js/window.electronAPI (schema/topic-to-ipc topic))
           :on-success [[:topic.actions/save-success topic-id]]
           :on-error   [[:topic.actions/save-error topic-id]]}]])
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
 
+;; TODO: should :topic.effects/save-active-topic be an action?
+;;
 ;; Convenience effect for saving the active topic
 (nxr/register-effect! :topic.effects/save-active-topic
   (fn [{dispatch :dispatch} store]
@@ -105,6 +112,8 @@
       (dispatch [[:topic.effects/save-topic topic-id]])
       (dispatch [[:topic.actions/save-error nil (js/Error. "No active topic to save")]]))))
 
+;; TODO: should :topic.effects/delete-topic be an action?
+;;
 ;; Delete topic effect - shows confirmation dialog and deletes file
 (nxr/register-effect! :topic.effects/delete-topic
   (fn [{dispatch :dispatch} _store topic-id]

@@ -124,13 +124,14 @@
     [[:effects/save [:assistant-errors] nil]]))
 
 (nxr/register-effect! :effects/send-llm-messages
-  (fn [{:keys [dispatch]} _store {:keys [messages model file-paths on-success on-error]}]
+  (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
     (dispatch
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage
                        (schema/messages-to-ipc messages)
                        (schema/model-to-ipc model)
-                       (schema/attachment-paths-to-ipc file-paths))
+                       (schema/attachment-paths-to-ipc file-paths)
+                       reasoning?)
          :on-success on-success
          :on-error   on-error}]])))
 
@@ -154,6 +155,7 @@
 (nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
 (nxr/register-action! :topic.actions/set-name topic/set-name)
 (nxr/register-action! :topic.actions/update-model topic/update-model)
+(nxr/register-action! :topic.actions/toggle-reasoning topic/toggle-reasoning)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
     [[:effects/save ui-state/renaming-topic-id-path nil]]))

@@ -41,6 +41,7 @@
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
          :selected-model       (:model (topic-state/get-active-topic state))
+         :reasoning?           (:reasoning? (topic-state/get-active-topic state))
          :has-messages?        (seq (topic-state/get-messages state))
          :loading?             (loading-state/loading? state)
          :has-any-api-key?     has-any-api-key?
