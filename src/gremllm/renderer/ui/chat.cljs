@@ -69,14 +69,16 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn- render-reasoning-toggle [enabled?]
-  [:button {:type "button"
-            :class (when-not enabled? "outline")
-            :aria-pressed enabled?
-            :style {:padding "0.25rem 0.75rem"
-                    :font-size "0.875rem"}
-            :on {:click [[:topic.actions/toggle-reasoning]]}}
-   "Reasoning"])
+(defn- render-reasoning-toggle [enabled? has-messages?]
+  (when (or (not has-messages?) enabled?)
+    [:button {:type "button"
+              :class (when-not enabled? "outline")
+              :aria-pressed enabled?
+              :disabled has-messages?
+              :style {:padding "0.25rem 0.75rem"
+                      :font-size "0.875rem"}
+              :on {:click [[:topic.actions/toggle-reasoning]]}}
+     "Reasoning"]))
 
 (defn- render-model-selector [selected-model has-messages?]
   (if has-messages?
@@ -103,7 +105,7 @@
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
     (render-model-selector selected-model has-messages?)
-    (render-reasoning-toggle reasoning?)
+    (render-reasoning-toggle reasoning? has-messages?)
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"
