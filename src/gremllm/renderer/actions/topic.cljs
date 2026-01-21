@@ -24,6 +24,11 @@
   (let [active-id (topic-state/get-active-topic-id state)]
     [[:effects/save (topic-state/topic-field-path active-id :model) model]]))
 
+(defn toggle-reasoning [state]
+  (let [active-id (topic-state/get-active-topic-id state)
+        current-reasoning? (topic-state/get-topic-field state active-id :reasoning?)]
+    [[:effects/save (topic-state/topic-field-path active-id :reasoning?) (not current-reasoning?)]]))
+
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
   (js/console.log "Topic" topic-id "saved to:" filepath)
