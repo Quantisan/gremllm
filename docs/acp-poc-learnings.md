@@ -47,19 +47,87 @@ const proc = spawn("npx", ["@zed-industries/claude-code-acp"], {
 
 5. **Exit behavior:** Clean SIGTERM produces `signal=SIGTERM, code=null`. Killing mid-install produces `code=1` npm error (expected).
 
-## Phase 2: NDJSON Protocol (Next)
+## Phase 2: NDJSON Protocol ✅
 
-**Goals:**
-- Wire up NDJSON streams using `@agentclientprotocol/sdk`
-- Send `initialize` request
-- Receive and parse `initialize` response
-- Verify protocol handshake completes
+**Goal:** Verify we can establish a valid NDJSON connection with the ACP subprocess using the SDK's `ClientSideConnection` and complete the protocol initialization handshake.
 
-**Questions to answer:**
-- How does the SDK handle stream parsing?
-- What's in the `initialize` request payload?
-- What capabilities are returned in response?
-- How do we handle protocol errors?
+**Implementation:** `test/acp-ndjson.mjs`
+
+### What Works
+
+```javascript
+import { Writable, Readable } from "node:stream";
+import * as acp from "@agentclientprotocol/sdk";
+
+// Convert Node streams → Web streams (order matters!)
+const input = Writable.toWeb(proc.stdin);   // Where we WRITE to agent
+const output = Readable.toWeb(proc.stdout); // Where we READ from agent
+
+// Create NDJSON stream and connection
+const stream = acp.ndJsonStream(input, output);
+const connection = new acp.ClientSideConnection(() => client, stream);
+
+// Initialize with handshake
+const response = await connection.initialize({
+  protocolVersion: acp.PROTOCOL_VERSION,
+  clientCapabilities: { fs: {}, terminal: false },
+  clientInfo: {
+    name: "gremllm-test",
+    title: "Gremllm ACP Test",
+    version: "0.1.0"
+  }
+});
+```
+
+**Verified:**
+- ✅ SDK's `ndJsonStream` correctly parses NDJSON framing
+- ✅ `ClientSideConnection` handles JSON-RPC protocol
+- ✅ `initialize()` completes handshake successfully
+- ✅ Protocol version negotiation works (returns `1`)
+- ✅ Agent capabilities are returned in structured format
+
+### Key Learnings
+
+1. **Stream conversion order matters:** The naming is from the SDK's perspective:
+   - `input` = `Writable.toWeb(proc.stdin)` - where SDK writes TO the agent
+   - `output` = `Readable.toWeb(proc.stdout)` - where SDK reads FROM the agent
+   - Getting these backwards causes `getWriter is not a function` errors
+
+2. **Agent capabilities returned:** The `@zed-industries/claude-code-acp` agent reports:
+   ```json
+   {
+     "promptCapabilities": {
+       "image": true,
+       "embeddedContext": true
+     },
+     "mcpCapabilities": {
+       "http": true,
+       "sse": true
+     },
+     "sessionCapabilities": {
+       "fork": {},
+       "resume": {}
+     }
+   }
+   ```
+   - Supports image prompts
+   - Supports embedded context in prompts
+   - Can use HTTP and SSE MCP servers
+   - Can fork and resume sessions
+
+3. **Minimal client interface:** Only two methods required for handshake:
+   - `requestPermission(request)` - Handle permission requests from agent
+   - `sessionUpdate(update)` - Receive streaming progress notifications
+   - File system and terminal methods are optional (check capabilities first)
+
+4. **Clean initialization:** The `initialize()` call is straightforward—just pass protocol version, capabilities, and client info. No complex setup needed.
+
+5. **Protocol version:** Agent returns `protocolVersion: 1`, matching the SDK's `PROTOCOL_VERSION` constant.
+
+### Gotchas
+
+- **Initial error:** Attempted manual Web stream conversion was complex and error-prone. Node's built-in `Writable.toWeb()` and `Readable.toWeb()` work perfectly.
+- **Stream direction confusion:** It's easy to swap input/output since they're relative to different perspectives (SDK vs subprocess).
 
 ## Phase 3: Integration into Gremllm (Future)
 
@@ -91,4 +159,4 @@ const proc = spawn("npx", ["@zed-industries/claude-code-acp"], {
 
 ---
 
-**Last Updated:** 2026-01-22 (Phase 1 complete)
+**Last Updated:** 2026-01-23 (Phase 2 complete)
