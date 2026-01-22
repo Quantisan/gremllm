@@ -129,19 +129,32 @@ const response = await connection.initialize({
 - **Initial error:** Attempted manual Web stream conversion was complex and error-prone. Node's built-in `Writable.toWeb()` and `Readable.toWeb()` work perfectly.
 - **Stream direction confusion:** It's easy to swap input/output since they're relative to different perspectives (SDK vs subprocess).
 
-## Phase 3: Integration into Gremllm (Future)
+## Phase 3: Integration into Gremllm
 
-**Goals:**
-- Implement as ClojureScript effect in `main/effects/acp.cljs`
-- Expose IPC channel for renderer to trigger agent runs
-- Handle streaming responses back to UI
-- Manage subprocess lifecycle (spawn on demand, keep-alive, shutdown)
+### Architectural Decisions
 
-**Questions to answer:**
-- Should subprocess be long-lived or spawn-per-request?
-- How to handle concurrent requests?
-- What's the latency overhead?
-- How to surface tool use to users?
+- **Subprocess:** Long-lived (spawn once, reuse for all requests)
+- **Sessions:** One per topic (isolated conversation contexts)
+- **Capabilities:** Minimal (prompts only, no file system or terminal delegation)
+- **Streaming:** IPC events per sessionUpdate
+
+### Vertical Slices
+
+| Slice | Goal | Status |
+|-------|------|--------|
+| **1** | End-to-end prompt/response | 🔄 In Progress |
+| **2** | Streaming updates | Planned |
+| **3** | Session lifecycle (per-topic) | Planned |
+| **4** | Renderer UI integration | Planned |
+
+### Slice Dependencies
+
+Slice 1 (foundation) → Slice 2 (streaming) + Slice 3 (sessions) → Slice 4 (UI)
+
+### Implementation Plans
+
+- **Slice 1:** `docs/plans/2026-01-23-acp-slice-1-design.md`
+- Future slices: TBD
 
 ## Resources
 
@@ -159,4 +172,4 @@ const response = await connection.initialize({
 
 ---
 
-**Last Updated:** 2026-01-23 (Phase 2 complete)
+**Last Updated:** 2026-01-23 (Phase 3 Slice 1 in progress)
