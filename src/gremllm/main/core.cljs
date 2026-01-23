@@ -114,7 +114,24 @@
                    (secrets/load-all secrets-filepath)
                    (secrets/check-availability))
                  (schema/system-info-to-ipc)
-                 (clj->js)))))
+                 (clj->js))))
+
+  ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
+  ;; cwd: absolute path the agent uses as working directory and file system boundary
+  ;; TBD: likely set to Gremllm workspace path
+  (.on ipcMain "acp/new-session"
+       (fn [event ipc-correlation-id cwd]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/new-session"}
+                       [[:acp.actions/new-session cwd]])))
+
+  (.on ipcMain "acp/prompt"
+       (fn [event ipc-correlation-id session-id text]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/prompt"}
+                       [[:acp.actions/prompt session-id text]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")
