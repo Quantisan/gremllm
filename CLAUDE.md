@@ -189,3 +189,6 @@ Framework and library documentation is available in the `context/` directory:
 - `context/electron_dialog.md` - Native dialogs and file pickers
 - `context/electron_safestorage.md` - Secure credential storage
 - `context/electron_menu.md` - Application menu system
+
+**Agent Protocols:**
+- `context/acp_client.md` - Agent Client Protocol client library documentation
