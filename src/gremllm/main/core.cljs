@@ -2,6 +2,7 @@
   (:require [gremllm.main.actions]
             [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.actions.topic :as topic-actions]
+            [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.window :as window]
@@ -119,7 +120,12 @@
   (let [user-data-dir   (.getPath app "userData")
         secrets-filepath (io/secrets-file-path user-data-dir)]
     (register-domain-handlers store secrets-filepath)
-    (menu/create-menu store)))
+    (menu/create-menu store)
+    ;; Wire ACP dispatcher bridge
+    (acp-effects/set-dispatcher!
+      (fn [event-type data]
+        (let [coerced (schema/session-update-from-js data)]
+          (nxr/dispatch store {} [[(keyword event-type) coerced]]))))))
 
 (defn- initialize-app [store]
   (setup-system-resources store)
