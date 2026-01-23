@@ -1,89 +1,117 @@
-# ACP Integration - Slice 1: End-to-End Prompt/Response
+# ACP Integration - Slice 1: SDK Wrapper + Dispatch Bridge
 
 **Date:** 2026-01-23
-**Status:** In Progress
+**Status:** Complete ✅
 
 ## Goal
 
-Prove the complete data flow works: renderer → main → ACP agent → response → renderer.
+Prove the JS/SDK layer works: subprocess lifecycle, session management, prompt/response, and event dispatch bridge.
 
-No streaming, no session management, no UI. Just the plumbing.
+IPC wiring (renderer → main) is deferred to Slice 1b.
 
 ## Files
 
+| File | Action | Purpose | Status |
+|------|--------|---------|--------|
+| `resources/acp.js` | Create | JS module wrapping ACP SDK | ✅ Done |
+| `src/gremllm/main/effects/acp.cljs` | Create | CLJS effects calling JS module | ✅ Done |
+| `src/gremllm/main/actions.cljs` | Edit | Register ACP effects and event actions | ✅ Done |
+| `shadow-cljs.edn` | Edit | Add resolve alias for `"acp"` module | ✅ Done |
+| `test/acp-dispatch.mjs` | Create | Test script for verification | ✅ Done |
+
+**Deferred to Slice 1b:**
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/gremllm/main/acp.mjs` | Create | JS module wrapping ACP SDK |
-| `src/gremllm/main/effects/acp.cljs` | Create | CLJS effects calling JS module |
-| `src/gremllm/main/actions.cljs` | Edit | Register ACP effects |
 | `src/gremllm/main/core.cljs` | Edit | Add IPC handler `acp/prompt` |
-| `test/acp-integration.mjs` | Create | Test script for verification |
+| `resources/public/js/preload.js` | Edit | Add `sendAcpPrompt` API |
 
 ## Implementation Steps
 
-### Step 1: Create JS Interop Module (`acp.mjs`)
+### Step 1: Create JS Interop Module ✅
+
+**Location:** `resources/acp.js` (resolved via Shadow-CLJS `:js-options`)
 
 The JS module manages subprocess lifecycle and exposes a clean API for CLJS.
 
 ```javascript
-// Exports:
-// - initialize() → Promise<void>  - Spawn subprocess, complete handshake
-// - prompt(text) → Promise<string> - Send prompt, return result text
-// - shutdown() → void             - Clean process termination
+// Actual exports:
+// - initialize() → Promise<void>     - Spawn subprocess, complete handshake
+// - newSession(cwd) → Promise<string> - Create session, return sessionId
+// - prompt(sessionId, text) → Promise<result> - Send prompt, return full result
+// - shutdown() → void                 - Clean process termination
+// - setDispatcher(fn) → void          - Wire event callbacks to CLJS dispatch
 ```
 
 **Key responsibilities:**
 - Spawn `npx @zed-industries/claude-code-acp` subprocess
 - Convert Node streams → Web streams for SDK
-- Create `ClientSideConnection` with minimal client
+- Create `ClientSideConnection` with client callbacks
 - Handle initialization handshake
-- Track connection state (not-started → initializing → ready → closed)
+- **Dispatch bridge:** Route `sessionUpdate` events to CLJS via `setDispatcher()`
+- Auto-approve permissions (Slice 1 simplification)
 
 **Why JS instead of CLJS?**
 - ES module imports (`import * as acp from "@agentclientprotocol/sdk"`)
 - Node stream APIs
 - ClojureScript interop with ES modules is tricky; JS wrapper isolates complexity
 
-### Step 2: Create CLJS Effects (`effects/acp.cljs`)
+**Why `resources/acp.js` instead of `src/`?**
+Shadow-CLJS resolves it via `:js-options {:resolve {"acp" {:target :file :file "resources/acp.js"}}}`. This keeps the module importable as `["acp" :as acp-js]` in CLJS.
+
+### Step 2: Create CLJS Effects ✅
+
+**Location:** `src/gremllm/main/effects/acp.cljs`
 
 Thin wrapper calling JS module.
 
 ```clojure
 (ns gremllm.main.effects.acp
-  (:require ["./acp.mjs" :as acp-js]))
+  (:require ["acp" :as acp-js]))
 
-;; Effects:
-;; - :acp.effects/prompt - Send prompt, return promise of response
-;; - :acp.effects/initialize - Ensure connection ready (lazy init)
+;; Exports:
+;; - initialize      - Spawn subprocess, complete handshake
+;; - new-session     - Create session for working directory
+;; - prompt          - Send prompt, return promise of result
+;; - shutdown        - Clean process termination
+;; - set-dispatcher! - Wire event callbacks to CLJS dispatch
 ```
 
-### Step 3: Register Effects (`actions.cljs`)
+### Step 3: Register Effects and Event Actions ✅
 
-Add to effect registry:
+**Location:** `src/gremllm/main/actions.cljs`
 
 ```clojure
-(nxr/register-effect! :acp.effects/prompt acp-effects/prompt)
+;; Effects
+(nxr/register-effect! :acp.effects/initialize ...)
+(nxr/register-effect! :acp.effects/prompt ...)
+
+;; Event action (receives dispatched events from JS)
+(nxr/register-action! :acp.events/session-update ...)
 ```
 
-### Step 4: Add IPC Handler (`core.cljs`)
+### Step 4: Add IPC Handler ⏳ (Deferred to Slice 1b)
 
 Pattern: async handler (like `chat/send-message`).
 
 ```clojure
 (.on ipcMain "acp/prompt"
-     (fn [event ipc-correlation-id text]
+     (fn [event ipc-correlation-id session-id text]
        ;; Dispatch to action that triggers effect
        ;; Response flows back via ipc.effects/reply
        ))
 ```
 
-### Step 5: Module Integration Test (`test/acp-integration.mjs`)
+### Step 5: Integration Test ✅
 
-Standalone Node.js test focused on the JS interop layer (no IPC):
-1. Imports and calls `acp.mjs` directly
-2. Sends a simple prompt ("Hello, respond with just 'Hi'")
-3. Verifies response received
-4. Cleans up subprocess
+**Location:** `test/acp-dispatch.mjs`
+
+Standalone Node.js test exercising the JS module + dispatch bridge:
+1. Wire up test dispatcher to collect events
+2. Initialize connection
+3. Create session
+4. Send prompt, verify response
+5. Verify `session-update` events were dispatched
+6. Clean shutdown
 
 ## Data Flow Diagram
 
@@ -120,26 +148,27 @@ Standalone Node.js test focused on the JS interop layer (no IPC):
 
 ## Verification
 
-**Test 1: JS module standalone**
+**Test 1: JS module + dispatch bridge ✅**
 ```bash
-node test/acp-integration.mjs
-# Expected: Sends prompt, prints response, exits cleanly
+node test/acp-dispatch.mjs
+# Verifies: initialize, newSession, prompt, event dispatch, shutdown
 ```
 
-**Test 2: IPC from renderer console**
+**Test 2: IPC from renderer console ⏳ (Slice 1b)**
 ```javascript
 // In Electron DevTools console:
-await window.electronAPI.sendAcpPrompt("Hello, respond with just 'Hi'")
-// Expected: Returns "Hi" (or similar short response)
+await window.electronAPI.sendAcpPrompt(sessionId, "Hello")
+// Requires IPC handler + preload API (deferred)
 ```
 
 ## Out of Scope (Slice 1)
 
-- Streaming updates (Slice 2)
-- Session management (Slice 3)
+- IPC wiring (renderer → main) - **Slice 1b**
+- Wiring dispatcher during app initialization - **Slice 1b**
+- Streaming updates to renderer (Slice 2)
 - Topic integration (Slice 3)
 - Renderer UI (Slice 4)
-- Permission request handling (deferred)
+- Permission request UI (auto-approve for now)
 - Error recovery / reconnection
 - Concurrent request handling
 
@@ -151,8 +180,17 @@ await window.electronAPI.sendAcpPrompt("Hello, respond with just 'Hi'")
 | Cold start latency | Accept 3-5s first-time cost; long-lived process amortizes |
 | Subprocess crash | For Slice 1: log error, return failure. Reconnect logic in later slice |
 
-## Next Steps After Slice 1
+## Next Steps
 
-- **Slice 2:** Add streaming sessionUpdate events
+- **Slice 1b:** IPC wiring (renderer → main → ACP)
+  - Add IPC handler in `core.cljs`
+  - Add `sendAcpPrompt` to preload.js
+  - Wire dispatcher during app initialization
+  - Fix key casing at JS/CLJS boundary (camelCase → kebab-case)
+- **Slice 2:** Streaming sessionUpdate events to renderer
 - **Slice 3:** Session lifecycle management (per-topic)
 - **Slice 4:** Renderer UI integration
+
+## Known Issues
+
+1. **Key casing mismatch:** JS dispatches `{ sessionId: ... }` but CLJS expects `:session-id`. Need coercion at boundary before Slice 1b.

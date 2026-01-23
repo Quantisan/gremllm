@@ -1,5 +1,7 @@
 {:deps {:aliases [:dev]}
 
+ :js-options {:resolve {"acp" {:target :file :file "resources/acp.js"}}}
+
  :builds
  {:main {:target :node-script
          :output-to "target/main.js"
