@@ -342,3 +342,23 @@
 (def topic-for-disk
   "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
   (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
+
+;; ========================================
+;; ACP Session Updates
+;; ========================================
+
+(def SessionUpdate
+  "Schema for session updates from JS dispatcher bridge."
+  [:map
+   [:session-id :string]
+   [:update :any]])
+
+(defn session-update-from-js
+  "Coerce session update from JS dispatcher bridge.
+   Handles camelCase → kebab-case conversion."
+  [js-data]
+  (as-> js-data $
+    (js->clj $ :keywordize-keys true)
+    {:session-id (:sessionId $)
+     :update (:update $)}
+    (m/coerce SessionUpdate $ mt/json-transformer)))
