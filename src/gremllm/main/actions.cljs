@@ -8,6 +8,7 @@
             [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.effects.attachment :as attachment-effects]
+            [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.io :as io]
             [gremllm.main.window :as window]
             [gremllm.schema :as schema]
@@ -125,3 +126,26 @@
 
 (nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
+
+;; ACP Event Actions
+;; =================
+;; These handle events dispatched FROM the ACP JS module.
+;; The JS client callbacks call dispatcher("acp.events/...", data)
+;; which triggers these actions.
+
+(nxr/register-action! :acp.events/session-update
+  (fn [state {:keys [session-id update]}]
+    ;; For Slice 1: just log. State accumulation in later slices.
+    (js/console.log "[ACP] Session update:" session-id (clj->js update))
+    []))
+
+;; ACP Effects Registration
+;; ========================
+
+(nxr/register-effect! :acp.effects/initialize
+  (fn [_ _ _]
+    (acp-effects/initialize)))
+
+(nxr/register-effect! :acp.effects/prompt
+  (fn [{:keys [dispatch]} _ session-id text]
+    (dispatch [[:ipc.effects/promise->reply (acp-effects/prompt session-id text)]])))
