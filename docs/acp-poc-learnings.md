@@ -137,24 +137,92 @@ const response = await connection.initialize({
 - **Sessions:** One per topic (isolated conversation contexts)
 - **Capabilities:** Minimal (prompts only, no file system or terminal delegation)
 - **Streaming:** IPC events per sessionUpdate
+- **JS/CLJS boundary:** Dispatch bridge pattern for event callbacks
 
 ### Vertical Slices
 
 | Slice | Goal | Status |
 |-------|------|--------|
-| **1** | End-to-end prompt/response | 🔄 In Progress |
-| **2** | Streaming updates | Planned |
+| **1** | SDK wrapper + dispatch bridge | ✅ Complete |
+| **1b** | IPC wiring (renderer → main) | Planned |
+| **2** | Streaming updates to renderer | Planned |
 | **3** | Session lifecycle (per-topic) | Planned |
 | **4** | Renderer UI integration | Planned |
 
 ### Slice Dependencies
 
-Slice 1 (foundation) → Slice 2 (streaming) + Slice 3 (sessions) → Slice 4 (UI)
+Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) → Slice 4 (UI)
 
 ### Implementation Plans
 
 - **Slice 1:** `docs/plans/2026-01-23-acp-slice-1-design.md`
 - Future slices: TBD
+
+## Phase 3.1: SDK Wrapper Learnings ✅
+
+**Goal:** Wrap the ACP SDK in a JS module callable from CLJS, with event dispatch bridge.
+
+**Implementation:** `resources/acp.js`, `src/gremllm/main/effects/acp.cljs`
+
+### What Works
+
+```javascript
+// resources/acp.js exports:
+initialize()              // Spawn subprocess, complete handshake
+newSession(cwd)           // Create session, return sessionId
+prompt(sessionId, text)   // Send prompt, return full result object
+shutdown()                // Clean process termination
+setDispatcher(fn)         // Wire JS callbacks → CLJS dispatch
+```
+
+**Verified:**
+- ✅ Subprocess lifecycle management (spawn, shutdown)
+- ✅ Session creation with working directory
+- ✅ Prompt/response round-trip
+- ✅ Dispatch bridge routes `sessionUpdate` events to callback
+- ✅ Permission auto-approval with logging
+- ✅ Idempotent initialization
+
+### Key Learnings
+
+1. **Shadow-CLJS module resolution:** Place JS module in `resources/acp.js` and configure:
+   ```clojure
+   :js-options {:resolve {"acp" {:target :file :file "resources/acp.js"}}}
+   ```
+   Then import as `["acp" :as acp-js]` in CLJS.
+
+2. **Dispatch bridge pattern:** JS client callbacks can't directly call CLJS. Solution:
+   ```javascript
+   // JS side
+   let dispatcher = null;
+   export function setDispatcher(fn) { dispatcher = fn; }
+
+   const client = {
+     async sessionUpdate(params) {
+       if (dispatcher) dispatcher("acp.events/session-update", params);
+     }
+   };
+   ```
+   CLJS wires this during initialization to route events into Nexus dispatch.
+
+3. **Session management required:** The ACP protocol requires sessions. Original spec had `prompt(text)` but actual API needs `prompt(sessionId, text)`. Sessions are scoped to a working directory.
+
+4. **Permission handling:** For Slice 1, auto-approve all permissions:
+   ```javascript
+   async requestPermission(params) {
+     const firstOption = params.options?.[0];
+     return { outcome: { outcome: "selected", optionId: firstOption?.optionId ?? 0 } };
+   }
+   ```
+
+5. **Key casing at boundary:** JS sends camelCase (`sessionId`), CLJS expects kebab-case (`:session-id`). Need coercion function at boundary—discovered during code review.
+
+### Test
+
+```bash
+node test/acp-dispatch.mjs
+# Exercises: init → session → prompt → verify events → shutdown
+```
 
 ## Resources
 
@@ -164,12 +232,12 @@ Slice 1 (foundation) → Slice 2 (streaming) + Slice 3 (sessions) → Slice 4 (U
 
 ## Open Questions
 
-1. What's the cold-start latency for spawning the subprocess?
-2. Can we reuse one subprocess for multiple requests?
-3. How does the subprocess access our workspace files?
+1. ~~What's the cold-start latency for spawning the subprocess?~~ **Answered:** 3-5s on first run (npx install), ~1s thereafter.
+2. ~~Can we reuse one subprocess for multiple requests?~~ **Answered:** Yes, one subprocess supports multiple sessions.
+3. ~~How does the subprocess access our workspace files?~~ **Answered:** Session is scoped to a `cwd` passed to `newSession()`.
 4. What tools are available by default?
 5. Can we restrict tool access (e.g., prevent file writes)?
 
 ---
 
-**Last Updated:** 2026-01-23 (Phase 3 Slice 1 in progress)
+**Last Updated:** 2026-01-23 (Phase 3 Slice 1 complete, Slice 1b planned)
