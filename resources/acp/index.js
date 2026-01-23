@@ -63,7 +63,7 @@ async function initialize() {
 }
 
 async function newSession(cwd) {
-  if (!connection) throw new Error("Not initialized");
+  if (!connection) await initialize(); // Lazy init
   const result = await connection.newSession({ cwd, mcpServers: [] });
   return result.sessionId;
 }
