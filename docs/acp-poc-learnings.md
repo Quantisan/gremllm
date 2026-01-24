@@ -144,7 +144,7 @@ const response = await connection.initialize({
 | Slice | Goal | Status |
 |-------|------|--------|
 | **1** | SDK wrapper + dispatch bridge | ✅ Complete |
-| **1b** | IPC wiring (renderer → main) | Planned |
+| **1b** | IPC wiring (renderer → main) | ✅ Complete |
 | **2** | Streaming updates to renderer | Planned |
 | **3** | Session lifecycle (per-topic) | Planned |
 | **4** | Renderer UI integration | Planned |
@@ -224,6 +224,110 @@ node test/acp-dispatch.mjs
 # Exercises: init → session → prompt → verify events → shutdown
 ```
 
+## Phase 3.2: IPC Wiring Learnings ✅
+
+**Goal:** Connect renderer to ACP agent via IPC so DevTools can call `window.electronAPI.acpNewSession()` and `acpPrompt()`.
+
+**Implementation:**
+- `resources/public/js/preload.js` - Preload API
+- `src/gremllm/main/core.cljs` - IPC handlers + dispatcher wiring
+- `src/gremllm/main/actions.cljs` - Action/effect registrations
+- `src/gremllm/schema.cljs` - Boundary coercion
+- `resources/acp/` - Local npm package
+
+### What Works
+
+```javascript
+// In DevTools console:
+const sessionId = await window.electronAPI.acpNewSession("/path/to/workspace")
+// → "a9e59303-732c-4b48-8a7c-e942c8b8b96f"
+
+const result = await window.electronAPI.acpPrompt(sessionId, "Say only: Hello")
+// → {stopReason: 'end_turn'}
+
+// Meanwhile, terminal shows streaming session updates:
+// [ACP] Session update: a9e59303... {content: {text: 'Hello'}, sessionUpdate: 'agent_message_chunk'}
+```
+
+**Verified:**
+- ✅ Preload exposes `acpNewSession(cwd)` and `acpPrompt(sessionId, text)`
+- ✅ IPC handlers dispatch to Nexus actions
+- ✅ Effects call through to acp.js module
+- ✅ Dispatcher bridge routes session events back to Nexus
+- ✅ Schema coercion handles camelCase→kebab-case at boundary
+- ✅ Lazy initialization spawns subprocess on first use
+
+### Key Learnings
+
+1. **Shadow-cljs watch mode requires npm resolution:** The `:js-options {:resolve {...}}` config only works for bundled builds. In watch/dev mode, shadow-cljs creates shims that use Node's `require()` at runtime. Solution: structure local JS as an npm package.
+
+2. **Local npm package pattern:**
+   ```
+   resources/acp/
+   ├── package.json   # {"name": "acp", "main": "index.js"}
+   └── index.js       # The actual module code
+   ```
+   Then in package.json: `"acp": "file:./resources/acp"`
+
+   npm creates a symlink, so file changes are immediately available without reinstall.
+
+3. **CommonJS required for dev mode:** ES modules (`import`/`export`) cause shim errors in shadow-cljs watch mode. Use CommonJS (`require`/`module.exports`) for local modules consumed by the main process.
+
+4. **Lazy initialization:** Rather than requiring explicit `initialize()` calls, `newSession()` now auto-initializes on first use:
+   ```javascript
+   async function newSession(cwd) {
+     if (!connection) await initialize(); // Lazy init
+     // ...
+   }
+   ```
+
+5. **Streaming vs return values:** ACP responses stream via `sessionUpdate` events, not the `prompt()` return value. The return is just `{stopReason: 'end_turn'}` signaling completion. Actual content arrives as `agent_message_chunk` events through the dispatcher bridge.
+
+6. **IPC correlation pattern:** The `createIPCBoundary` helper in preload.js generates unique correlation IDs for request-response matching over Electron's event-based IPC. Main process handlers receive this ID and use it for reply channels.
+
+7. **Boundary coercion with Malli validation:** Schema coercion functions now validate with Malli after transformation:
+   ```clojure
+   (defn session-update-from-js [js-data]
+     (as-> js-data $
+       (js->clj $ :keywordize-keys true)
+       {:session-id (:sessionId $)
+        :update (:update $)}
+       (m/coerce SessionUpdate $ mt/json-transformer)))
+   ```
+
+### Architecture Summary
+
+```
+Renderer (DevTools)
+    │
+    ▼ window.electronAPI.acpNewSession(cwd)
+Preload (createIPCBoundary)
+    │
+    ▼ ipcRenderer.send("acp/new-session", correlationId, cwd)
+Main Process (core.cljs)
+    │
+    ▼ nxr/dispatch [[:acp.effects/new-session cwd]]
+Effects (actions.cljs)
+    │
+    ▼ acp-effects/new-session → promise
+    │
+    ▼ dispatch [:ipc.effects/promise->reply promise]
+IPC Effects
+    │
+    ▼ ipcMain.send("acp/new-session-success-{id}", sessionId)
+Preload
+    │
+    ▼ resolve(sessionId)
+Renderer
+    ▼ returns session ID
+```
+
+### Gotchas
+
+- **`process` not in renderer:** Can't use `process.cwd()` in DevTools—Electron's context isolation. Pass explicit paths.
+- **Module not found in dev:** If you see "Cannot find module 'acp'" in dev mode, the local package isn't linked. Run `npm install` to create the symlink.
+- **Dispatcher must be wired at startup:** The `set-dispatcher!` call in `setup-system-resources` ensures events flow before any sessions are created.
+
 ## Resources
 
 - [ACP Protocol Spec](https://agentclientprotocol.org/)
@@ -240,4 +344,4 @@ node test/acp-dispatch.mjs
 
 ---
 
-**Last Updated:** 2026-01-23 (Phase 3 Slice 1 complete, Slice 1b planned)
+**Last Updated:** 2026-01-24 (Phase 3 Slice 1b complete, Slice 2 next)

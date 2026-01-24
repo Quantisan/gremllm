@@ -1,6 +1,6 @@
 // test/acp-dispatch.mjs
 // Integration test for ACP SDK Wrapper + Dispatch pattern
-import * as acp from "../resources/acp.js";
+import * as acp from "../resources/acp/index.js";
 
 const events = [];
 

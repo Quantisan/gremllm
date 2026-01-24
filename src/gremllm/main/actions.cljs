@@ -146,6 +146,10 @@
   (fn [_ _ _]
     (acp-effects/initialize)))
 
+(nxr/register-effect! :acp.effects/new-session
+  (fn [{:keys [dispatch]} _ cwd]
+    (dispatch [[:ipc.effects/promise->reply (acp-effects/new-session cwd)]])))
+
 (nxr/register-effect! :acp.effects/prompt
   (fn [{:keys [dispatch]} _ session-id text]
     (dispatch [[:ipc.effects/promise->reply (acp-effects/prompt session-id text)]])))

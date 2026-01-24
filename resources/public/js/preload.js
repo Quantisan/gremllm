@@ -50,4 +50,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
 	getFilePath: (file) => webUtils.getPathForFile(file),
+	// ACP API
+	acpNewSession: createIPCBoundary("acp/new-session"),
+	acpPrompt: createIPCBoundary("acp/prompt"),
 });

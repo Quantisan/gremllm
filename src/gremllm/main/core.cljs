@@ -2,9 +2,9 @@
   (:require [gremllm.main.actions]
             [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.actions.topic :as topic-actions]
+            [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.menu :as menu]
-            [gremllm.main.window :as window]
             [gremllm.main.io :as io]
             [gremllm.main.state :as state]
             [gremllm.schema :as schema]
@@ -113,13 +113,38 @@
                    (secrets/load-all secrets-filepath)
                    (secrets/check-availability))
                  (schema/system-info-to-ipc)
-                 (clj->js)))))
+                 (clj->js))))
+
+  ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
+  ;; cwd: absolute path the agent uses as working directory and file system boundary
+  ;; TBD: likely set to Gremllm workspace path
+  (.on ipcMain "acp/new-session"
+       (fn [event ipc-correlation-id cwd]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/new-session"}
+                       [[:acp.effects/new-session cwd]])))
+
+  (.on ipcMain "acp/prompt"
+       (fn [event ipc-correlation-id session-id text]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/prompt"}
+                       [[:acp.effects/prompt session-id text]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")
         secrets-filepath (io/secrets-file-path user-data-dir)]
     (register-domain-handlers store secrets-filepath)
-    (menu/create-menu store)))
+    (menu/create-menu store)
+    ;; Wire ACP dispatcher bridge
+    ;; WATCH-OUT: event-type from JS is converted to keyword without validation.
+    ;; If JS dispatches unexpected event types, they become unregistered actions
+    ;; (silently ignored by Nexus). Add a whitelist if this causes debugging pain.
+    (acp-effects/set-dispatcher!
+      (fn [event-type data]
+        (let [coerced (schema/acp-session-update-from-js data)]
+          (nxr/dispatch store {} [[(keyword event-type) coerced]]))))))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

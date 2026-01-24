@@ -1,7 +1,7 @@
-// resources/acp.js
-import { spawn } from "node:child_process";
-import { Writable, Readable } from "node:stream";
-import * as acp from "@agentclientprotocol/sdk";
+// resources/acp/index.js
+const { spawn } = require("node:child_process");
+const { Writable, Readable } = require("node:stream");
+const acp = require("@agentclientprotocol/sdk");
 
 // Module state
 let subprocess = null;
@@ -9,7 +9,7 @@ let connection = null;
 let dispatcher = null;
 
 // Dispatch bridge - CLJS sets this
-export function setDispatcher(fn) {
+function setDispatcher(fn) {
   dispatcher = fn;
 }
 
@@ -37,7 +37,7 @@ const client = {
   }
 };
 
-export async function initialize() {
+async function initialize() {
   if (connection) return; // Idempotent
 
   subprocess = spawn("npx", ["@zed-industries/claude-code-acp"], {
@@ -62,13 +62,16 @@ export async function initialize() {
   });
 }
 
-export async function newSession(cwd) {
-  if (!connection) throw new Error("Not initialized");
+async function newSession(cwd) {
+  if (!connection) await initialize(); // Lazy init
   const result = await connection.newSession({ cwd, mcpServers: [] });
   return result.sessionId;
 }
 
-export async function prompt(sessionId, text) {
+async function prompt(sessionId, text) {
+  // PITFALL: Unlike newSession, this throws rather than lazy-initializing.
+  // If subprocess crashes mid-session, callers must create a new session.
+  // Consider adding auto-recovery or lazy init if this becomes a pain point.
   if (!connection) throw new Error("Not initialized");
   const result = await connection.prompt({
     sessionId,
@@ -77,10 +80,18 @@ export async function prompt(sessionId, text) {
   return result;
 }
 
-export function shutdown() {
+function shutdown() {
   if (subprocess) {
     subprocess.kill("SIGTERM");
     subprocess = null;
     connection = null;
   }
 }
+
+module.exports = {
+  setDispatcher,
+  initialize,
+  newSession,
+  prompt,
+  shutdown
+};

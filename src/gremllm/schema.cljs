@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [clojure.set :as set]
+  (:require [camel-snake-kebab.core :as csk]
+            [clojure.set :as set]
             [clojure.string :as str]
             [malli.core :as m]
             [malli.transform :as mt]
@@ -342,3 +343,26 @@
 (def topic-for-disk
   "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
   (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
+
+;; ========================================
+;; ACP Session Updates
+;; ========================================
+
+(def AcpSessionUpdate
+  "Schema for session updates from JS dispatcher bridge.
+   WATCH-OUT: :update is :any because ACP protocol shapes vary.
+   Tighten this schema when we know which update types we actually handle."
+  [:map
+   [:session-id :string]
+   ;; TODO: don't use :any
+   [:update :any]])
+
+(def ^:private camel->kebab-key-transformer
+  (mt/key-transformer {:decode csk/->kebab-case-keyword}))
+
+(defn acp-session-update-from-js
+  "Coerce ACP session update from JS dispatcher bridge."
+  [js-data]
+  (m/coerce AcpSessionUpdate
+            (js->clj js-data)
+            (mt/transformer camel->kebab-key-transformer mt/json-transformer)))

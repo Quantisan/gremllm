@@ -39,6 +39,7 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.13.1",
     "@dotenvx/dotenvx": "^1.47.6",
+    "acp": "file:./resources/acp",
     "sanitize-html": "^2.17.0",
     "snarkdown": "^2.0.0"
   }
