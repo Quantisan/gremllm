@@ -106,8 +106,8 @@
                                     :sessionUpdate "agent_message_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "e0eb7ced-4b3f-45af-b911-6b9de025788b" (:session-id result)))
-      (is (= "agent_message_chunk" (get-in result [:update :sessionUpdate])))
-      (is (= "Hello" (get-in result [:update :content :text])))))
+      (is (= "agent_message_chunk" (get-in result [:update "sessionUpdate"])))
+      (is (= "Hello" (get-in result [:update "content" "text"])))))
 
   (testing "coerces agent_thought_chunk from JS"
     (let [js-data #js {:sessionId "abc-123"
@@ -115,7 +115,7 @@
                                     :sessionUpdate "agent_thought_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "abc-123" (:session-id result)))
-      (is (= "agent_thought_chunk" (get-in result [:update :sessionUpdate])))))
+      (is (= "agent_thought_chunk" (get-in result [:update "sessionUpdate"])))))
 
   (testing "coerces available_commands_update with nested arrays"
     (let [js-data #js {:sessionId "xyz-789"
@@ -123,5 +123,5 @@
                                     :sessionUpdate "available_commands_update"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "xyz-789" (:session-id result)))
-      (is (= "available_commands_update" (get-in result [:update :sessionUpdate])))
-      (is (= "commit" (get-in result [:update :availableCommands 0 :name]))))))
+      (is (= "available_commands_update" (get-in result [:update "sessionUpdate"])))
+      (is (= "commit" (get-in result [:update "availableCommands" 0 "name"]))))))

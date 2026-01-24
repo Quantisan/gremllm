@@ -3,7 +3,8 @@
         thheller/shadow-cljs {:mvn/version "3.3.5"}
         no.cjohansen/nexus {:mvn/version "2025.11.1"}
         no.cjohansen/replicant {:mvn/version "2025.12.1"}
-        metosin/malli {:mvn/version "0.20.0"}}
+        metosin/malli {:mvn/version "0.20.0"}
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}}
  :aliases
  {:dev
   {:extra-paths ["test" "dev"]

@@ -1,5 +1,6 @@
 (ns gremllm.schema
-  (:require [clojure.set :as set]
+  (:require [camel-snake-kebab.core :as csk]
+            [clojure.set :as set]
             [clojure.string :as str]
             [malli.core :as m]
             [malli.transform :as mt]
@@ -353,14 +354,15 @@
    Tighten this schema when we know which update types we actually handle."
   [:map
    [:session-id :string]
+   ;; TODO: don't use :any
    [:update :any]])
 
+(def ^:private camel->kebab-key-transformer
+  (mt/key-transformer {:decode csk/->kebab-case-keyword}))
+
 (defn acp-session-update-from-js
-  "Coerce ACP session update from JS dispatcher bridge.
-   Handles camelCase → kebab-case conversion."
+  "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
-  (as-> js-data $
-    (js->clj $ :keywordize-keys true)
-    {:session-id (:sessionId $)
-     :update (:update $)}
-    (m/coerce AcpSessionUpdate $ mt/json-transformer)))
+  (m/coerce AcpSessionUpdate
+            (js->clj js-data)
+            (mt/transformer camel->kebab-key-transformer mt/json-transformer)))
