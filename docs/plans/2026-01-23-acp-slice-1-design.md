@@ -129,7 +129,7 @@ Standalone Node.js test exercising the JS module + dispatch bridge:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ Main Process                                                            │
 │ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ ipcMain.on("acp/prompt") → nxr/dispatch [:acp.actions/prompt]       │ │
+│ │ ipcMain.on("acp/prompt") → nxr/dispatch [:acp.effects/prompt]       │ │
 │ │                                    ↓                                │ │
 │ │ :acp.effects/prompt → acp.mjs.prompt(text)                          │ │
 │ │                                    ↓                                │ │

@@ -139,18 +139,6 @@
     (js/console.log "[ACP] Session update:" session-id (clj->js update))
     []))
 
-;; ACP Actions Registration
-;; ========================
-;; These handle IPC requests FROM the renderer via preload API.
-
-(nxr/register-action! :acp.actions/new-session
-  (fn [_state cwd]
-    [[:acp.effects/new-session cwd]]))
-
-(nxr/register-action! :acp.actions/prompt
-  (fn [_state session-id text]
-    [[:acp.effects/prompt session-id text]]))
-
 ;; ACP Effects Registration
 ;; ========================
 

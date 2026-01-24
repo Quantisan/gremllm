@@ -123,14 +123,14 @@
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/new-session"}
-                       [[:acp.actions/new-session cwd]])))
+                       [[:acp.effects/new-session cwd]])))
 
   (.on ipcMain "acp/prompt"
        (fn [event ipc-correlation-id session-id text]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.actions/prompt session-id text]]))))
+                       [[:acp.effects/prompt session-id text]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")

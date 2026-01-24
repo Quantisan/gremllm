@@ -306,10 +306,7 @@ Preload (createIPCBoundary)
     ▼ ipcRenderer.send("acp/new-session", correlationId, cwd)
 Main Process (core.cljs)
     │
-    ▼ nxr/dispatch [:acp.actions/new-session cwd]
-Actions (actions.cljs)
-    │
-    ▼ returns [[:acp.effects/new-session cwd]]
+    ▼ nxr/dispatch [[:acp.effects/new-session cwd]]
 Effects (actions.cljs)
     │
     ▼ acp-effects/new-session → promise
