@@ -347,7 +347,7 @@
 ;; ACP Session Updates
 ;; ========================================
 
-(def SessionUpdate
+(def AcpSessionUpdate
   "Schema for session updates from JS dispatcher bridge.
    WATCH-OUT: :update is :any because ACP protocol shapes vary.
    Tighten this schema when we know which update types we actually handle."
@@ -355,12 +355,12 @@
    [:session-id :string]
    [:update :any]])
 
-(defn session-update-from-js
-  "Coerce session update from JS dispatcher bridge.
+(defn acp-session-update-from-js
+  "Coerce ACP session update from JS dispatcher bridge.
    Handles camelCase → kebab-case conversion."
   [js-data]
   (as-> js-data $
     (js->clj $ :keywordize-keys true)
     {:session-id (:sessionId $)
      :update (:update $)}
-    (m/coerce SessionUpdate $ mt/json-transformer)))
+    (m/coerce AcpSessionUpdate $ mt/json-transformer)))
