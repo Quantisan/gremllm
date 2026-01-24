@@ -1,4 +1,4 @@
-// resources/acp.js
+// resources/acp/index.js
 const { spawn } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
@@ -69,6 +69,9 @@ async function newSession(cwd) {
 }
 
 async function prompt(sessionId, text) {
+  // PITFALL: Unlike newSession, this throws rather than lazy-initializing.
+  // If subprocess crashes mid-session, callers must create a new session.
+  // Consider adding auto-recovery or lazy init if this becomes a pain point.
   if (!connection) throw new Error("Not initialized");
   const result = await connection.prompt({
     sessionId,

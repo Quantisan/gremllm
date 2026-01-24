@@ -139,10 +139,13 @@
     (register-domain-handlers store secrets-filepath)
     (menu/create-menu store)
     ;; Wire ACP dispatcher bridge
+    ;; WATCH-OUT: event-type from JS is converted to keyword without validation.
+    ;; If JS dispatches unexpected event types, they become unregistered actions
+    ;; (silently ignored by Nexus). Add a whitelist if this causes debugging pain.
     (acp-effects/set-dispatcher!
       (fn [event-type data]
         (let [coerced (schema/session-update-from-js data)]
-          (nxr/dispatch store {} [[(keyword event-type) coerced]]))))))
+          (nxr/dispatch store {} [[(keyword event-type) coerced]])))))))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

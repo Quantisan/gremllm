@@ -348,7 +348,9 @@
 ;; ========================================
 
 (def SessionUpdate
-  "Schema for session updates from JS dispatcher bridge."
+  "Schema for session updates from JS dispatcher bridge.
+   WATCH-OUT: :update is :any because ACP protocol shapes vary.
+   Tighten this schema when we know which update types we actually handle."
   [:map
    [:session-id :string]
    [:update :any]])
