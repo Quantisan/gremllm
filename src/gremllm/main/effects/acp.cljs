@@ -11,11 +11,13 @@
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
+  (js/console.log "[acp] invoking new-session, cwd:" cwd)
   (acp-js/newSession cwd))
 
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."
   [session-id text]
+  (js/console.log "[acp] invoking prompt, session-id:" session-id)
   (acp-js/prompt session-id text))
 
 (defn shutdown
