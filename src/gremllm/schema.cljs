@@ -359,7 +359,7 @@
   [:map
    [:name :string]
    [:description :string]
-   [:input [:maybe AcpCommandInput]]])
+   [:input {:optional true} [:maybe AcpCommandInput]]])
 
 (def AcpTextContent
   "Schema for text content in ACP chunks."
@@ -370,22 +370,25 @@
 (def AcpUpdate
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
-  [:multi {:dispatch :session-update}
-   [:available-commands-update
+  [:multi {:dispatch (fn [m]
+                       ;; JS payloads use camelCase strings; dispatch must accept them.
+                       (or (:session-update m)
+                           (get m :sessionUpdate)
+                           (get m "sessionUpdate")))}
+   ["available_commands_update"
     [:map
      [:session-update [:= "available_commands_update"]]
      [:available-commands [:vector AcpCommand]]]]
 
-   [:agent-thought-chunk
+   ["agent_thought_chunk"
     [:map
      [:session-update [:= "agent_thought_chunk"]]
      [:content AcpTextContent]]]
 
-   [:agent-message-chunk
+   ["agent_message_chunk"
     [:map
      [:session-update [:= "agent_message_chunk"]]
-     [:content AcpTextContent]]]
-   [::m/default :any]])  ;; Allow unknown update types to pass through
+     [:content AcpTextContent]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
@@ -396,28 +399,13 @@
 (def ^:private camel->kebab-key-transformer
   (mt/key-transformer {:decode csk/->kebab-case-keyword}))
 
-(defn- kebab-key
-  [k]
-  (cond
-    (keyword? k) (csk/->kebab-case-keyword k)
-    (string? k) (csk/->kebab-case-keyword k)
-    :else k))
-
-(defn- deep-kebabize-keys
-  [x]
-  (cond
-    (map? x) (into {} (map (fn [[k v]] [(kebab-key k) (deep-kebabize-keys v)])) x)
-    (sequential? x) (mapv deep-kebabize-keys x)
-    :else x))
-
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
-  (let [raw (js->clj js-data)
-        normalized (deep-kebabize-keys raw)]
-    (m/coerce AcpSessionUpdate
-              normalized
-              mt/json-transformer)))
+  ;; Keep this pure Malli; dispatch handles raw keys before transformer runs.
+  (m/coerce AcpSessionUpdate
+            (js->clj js-data)
+            (mt/transformer camel->kebab-key-transformer mt/json-transformer)))
 
 (defn acp-session-update-from-ipc
   "Validates and transforms ACP session update from IPC. Throws if invalid."
