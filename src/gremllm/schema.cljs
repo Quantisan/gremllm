@@ -371,15 +371,17 @@
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
   [:multi {:dispatch :session-update}
-   ["available_commands_update"
+   [:available-commands-update
     [:map
      [:session-update [:= "available_commands_update"]]
      [:available-commands [:vector AcpCommand]]]]
-   ["agent_thought_chunk"
+
+   [:agent-thought-chunk
     [:map
      [:session-update [:= "agent_thought_chunk"]]
      [:content AcpTextContent]]]
-   ["agent_message_chunk"
+
+   [:agent-message-chunk
     [:map
      [:session-update [:= "agent_message_chunk"]]
      [:content AcpTextContent]]]
