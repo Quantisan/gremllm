@@ -349,17 +349,22 @@
 ;; ========================================
 
 ;; ACP Update sub-schemas
+(def AcpCommandInput
+  "Optional input schema for ACP commands."
+  [:map
+   [:hint {:optional true} :string]])
+
 (def AcpCommand
   "Schema for an ACP command definition."
   [:map
    [:name :string]
    [:description :string]
-   [:input [:maybe :any]]])
+   [:input [:maybe AcpCommandInput]]])
 
 (def AcpTextContent
   "Schema for text content in ACP chunks."
   [:map
-   [:type :string]
+   [:type [:= "text"]]
    [:text :string]])
 
 (def AcpUpdate
