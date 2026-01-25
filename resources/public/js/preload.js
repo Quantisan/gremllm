@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	reloadWorkspace: () => ipcRenderer.invoke("workspace/reload"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
 	onWorkspaceOpened: (callback) => ipcRenderer.on("workspace:opened", callback),
+	onAcpSessionUpdate: (callback) => ipcRenderer.on("acp:session-update", callback),
 	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),
 	// Secrets API
 	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),

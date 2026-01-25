@@ -134,10 +134,10 @@
 ;; which triggers these actions.
 
 (nxr/register-action! :acp.events/session-update
-  (fn [state {:keys [session-id update]}]
-    ;; For Slice 1: just log. State accumulation in later slices.
-    (js/console.log "[ACP] Session update:" session-id (clj->js update))
-    []))
+  (fn [_state {:keys [session-id update] :as event-data}]
+    ;; WIP: Push to renderer for observability
+    (js/console.log "[ACP→IPC] Pushing session update:" session-id)
+    [[:ipc.effects/send-to-renderer "acp:session-update" event-data]]))
 
 ;; ACP Effects Registration
 ;; ========================
