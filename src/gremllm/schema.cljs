@@ -396,12 +396,28 @@
 (def ^:private camel->kebab-key-transformer
   (mt/key-transformer {:decode csk/->kebab-case-keyword}))
 
+(defn- kebab-key
+  [k]
+  (cond
+    (keyword? k) (csk/->kebab-case-keyword k)
+    (string? k) (csk/->kebab-case-keyword k)
+    :else k))
+
+(defn- deep-kebabize-keys
+  [x]
+  (cond
+    (map? x) (into {} (map (fn [[k v]] [(kebab-key k) (deep-kebabize-keys v)])) x)
+    (sequential? x) (mapv deep-kebabize-keys x)
+    :else x))
+
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
-  (m/coerce AcpSessionUpdate
-            (js->clj js-data)
-            (mt/transformer camel->kebab-key-transformer mt/json-transformer)))
+  (let [raw (js->clj js-data)
+        normalized (deep-kebabize-keys raw)]
+    (m/coerce AcpSessionUpdate
+              normalized
+              mt/json-transformer)))
 
 (defn acp-session-update-from-ipc
   "Validates and transforms ACP session update from IPC. Throws if invalid."
