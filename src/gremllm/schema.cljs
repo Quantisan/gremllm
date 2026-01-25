@@ -406,6 +406,4 @@
 (defn acp-session-update-from-ipc
   "Validates and transforms ACP session update from IPC. Throws if invalid."
   [event-data-js]
-  (as-> event-data-js $
-    (js->clj $ :keywordize-keys true)
-    (m/coerce AcpSessionUpdate $ mt/json-transformer)))
+  (acp-session-update-from-js event-data-js))
