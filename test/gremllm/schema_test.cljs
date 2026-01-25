@@ -100,28 +100,36 @@
              {:type :assistant :text "Hi there"}])))))
 
 (deftest test-acp-session-update-from-js
-  (testing "coerces agent_message_chunk from JS"
+  (testing "coerces agent_message_chunk from JS with kebab-case keywords"
     (let [js-data #js {:sessionId "e0eb7ced-4b3f-45af-b911-6b9de025788b"
                        :update #js {:content #js {:text "Hello" :type "text"}
                                     :sessionUpdate "agent_message_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "e0eb7ced-4b3f-45af-b911-6b9de025788b" (:session-id result)))
-      (is (= "agent_message_chunk" (get-in result [:update "sessionUpdate"])))
-      (is (= "Hello" (get-in result [:update "content" "text"])))))
 
-  (testing "coerces agent_thought_chunk from JS"
+      (when (and (is (contains? (set (keys (:update result))) :session-update))
+                 (is (contains? (set (keys (:update result))) :content)))
+        (is (= "agent_message_chunk" (get-in result [:update :session-update])))
+        (is (= "Hello" (get-in result [:update :content :text]))))))
+
+  (testing "coerces agent_thought_chunk from JS with kebab-case keywords"
     (let [js-data #js {:sessionId "abc-123"
                        :update #js {:content #js {:text "The user wants" :type "text"}
                                     :sessionUpdate "agent_thought_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "abc-123" (:session-id result)))
-      (is (= "agent_thought_chunk" (get-in result [:update "sessionUpdate"])))))
 
-  (testing "coerces available_commands_update with nested arrays"
+      (when (is (contains? (set (keys (:update result))) :session-update))
+        (is (= "agent_thought_chunk" (get-in result [:update :session-update]))))))
+
+  (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
     (let [js-data #js {:sessionId "xyz-789"
                        :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
                                     :sessionUpdate "available_commands_update"}}
           result (schema/acp-session-update-from-js js-data)]
       (is (= "xyz-789" (:session-id result)))
-      (is (= "available_commands_update" (get-in result [:update "sessionUpdate"])))
-      (is (= "commit" (get-in result [:update "availableCommands" 0 "name"]))))))
+
+      (when (and (is (contains? (set (keys (:update result))) :session-update))
+                 (is (contains? (set (keys (:update result))) :available-commands)))
+        (is (= "available_commands_update" (get-in result [:update :session-update])))
+        (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
