@@ -47,7 +47,7 @@
     ;; Handle ACP session updates from main process
     (.onAcpSessionUpdate js/window.electronAPI
                          (fn [_ event-data]
-                           (nxr/dispatch store {} [[:acp.events/session-update (js->clj event-data :keywordize-keys true)]])))
+                           (nxr/dispatch store {} [[:acp.events/session-update (schema/acp-session-update-from-ipc event-data)]])))
 
     ;; Render on every change
     (add-watch store ::render-topic
