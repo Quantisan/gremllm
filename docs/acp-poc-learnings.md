@@ -145,7 +145,7 @@ const response = await connection.initialize({
 |-------|------|--------|
 | **1** | SDK wrapper + dispatch bridge | ✅ Complete |
 | **1b** | IPC wiring (renderer → main) | ✅ Complete |
-| **2** | Streaming updates to renderer | Planned |
+| **2** | Streaming updates to renderer | 🚧 In Progress (events flowing, UI pending) |
 | **3** | Session lifecycle (per-topic) | Planned |
 | **4** | Renderer UI integration | Planned |
 
@@ -328,6 +328,101 @@ Renderer
 - **Module not found in dev:** If you see "Cannot find module 'acp'" in dev mode, the local package isn't linked. Run `npm install` to create the symlink.
 - **Dispatcher must be wired at startup:** The `set-dispatcher!` call in `setup-system-resources` ensures events flow before any sessions are created.
 
+## Phase 3.3: Streaming to Renderer (Partial) 🚧
+
+**Goal:** Route ACP session update events from Main process to Renderer process with full schema validation.
+
+**Implementation:**
+- `src/gremllm/schema.cljs:348-417` - `AcpUpdate` discriminated union, `AcpSessionUpdate`, pure Malli transforms
+- `src/gremllm/main/actions.cljs:137-140` - Forward events via `acp:session-update` IPC channel
+- `resources/public/js/preload.js:47` - `onAcpSessionUpdate` listener registration
+- `src/gremllm/renderer/core.cljs:48-50` - Wire listener, dispatch with schema coercion
+- `src/gremllm/renderer/actions.cljs:184-188` - Console.log placeholder action
+
+### What Works
+
+```bash
+# In DevTools console:
+const sessionId = await window.electronAPI.acpNewSession("/Users/paul/Projects/gremllm")
+const result = await window.electronAPI.acpPrompt(sessionId, "Say only: Hello")
+
+# Renderer console shows coerced, validated events:
+# {:session-id "abc...", :update {:session-update :agent-message-chunk, :content {:text "Hello"}}}
+```
+
+**Verified:**
+- ✅ Events flow from ACP subprocess → Main → Renderer via IPC
+- ✅ Schema discriminates on `:session-update` field (`:agent-message-chunk`, `:usage`, etc.)
+- ✅ Malli dispatch function handles raw keys BEFORE transforms
+- ✅ Pure Malli transformers (no manual key mapping)
+- ✅ Boundary coercion validates against schema
+
+### Key Learnings
+
+1. **Malli dispatch runs BEFORE transformers:** When using discriminated unions (`:multi` schema), the dispatch function sees raw input data. For keys coming from JS as strings, dispatch must handle both string and keyword forms:
+   ```clojure
+   :multi {:dispatch (fn [data]
+                       (let [update (or (:session-update data)
+                                        (get data "sessionUpdate"))]
+                         (keyword update)))}
+   ```
+
+2. **IPC channel naming convention:** Main→Renderer broadcast channels use colon separator (`acp:session-update`), while Renderer→Main request channels use slash (`acp/new-session`). This distinguishes event streams from RPC-style calls.
+
+3. **Pure Malli transforms > manual coercion:** Earlier phases manually mapped camelCase→kebab-case. Phase 3.3 uses pure Malli transformers for nested structures:
+   ```clojure
+   [:map
+    [:session-update [:enum :agent-message-chunk :usage ...]]
+    [:content {:optional true} [:map [:text string?]]]]
+   ```
+   The `:json-transformer` handles key casing automatically.
+
+4. **Schema validation catches drift:** Adding Malli validation to boundary coercion caught the dispatch key handling bug immediately. The schema acts as a contract between processes.
+
+5. **Event flow is one-way:** Main process broadcasts session updates to all renderer windows. No reply needed—these are notifications, not requests.
+
+### Architecture
+
+```
+ACP Subprocess (Node)
+    │ agent_message_chunk event
+    ▼
+resources/acp/index.js (dispatcher)
+    │ Dispatch bridge callback
+    ▼
+main/core.cljs (dispatcher handler)
+    │ [[:acp.actions/session-update params]]
+    ▼
+main/actions.cljs (action)
+    │ [[:ipc.effects/send-to-renderer "acp:session-update" update]]
+    ▼
+preload.js (onAcpSessionUpdate)
+    │ window.electronAPI.onAcpSessionUpdate(callback)
+    ▼
+renderer/core.cljs (setup-acp-listener)
+    │ Coerce via schema.cljs/acp-update-from-js
+    ▼
+renderer/actions.cljs (acp.actions/session-update)
+    │ console.log placeholder
+    ▼
+[Future: State accumulation + UI display]
+```
+
+### What's Next
+
+**Remaining work for Slice 2:**
+- Accumulate events in Renderer state (append text chunks, track usage)
+- Display streaming responses in chat UI
+- Handle all event types (`:agent-thinking`, `:tool-use-chunk`, etc.)
+
+**Test Command:**
+```javascript
+// DevTools console
+const sid = await window.electronAPI.acpNewSession("/Users/paul/Projects/gremllm")
+await window.electronAPI.acpPrompt(sid, "Say only: Hello")
+// Watch console.log output for streaming events
+```
+
 ## Resources
 
 - [ACP Protocol Spec](https://agentclientprotocol.org/)
@@ -344,4 +439,4 @@ Renderer
 
 ---
 
-**Last Updated:** 2026-01-24 (Phase 3 Slice 1b complete, Slice 2 next)
+**Last Updated:** 2026-01-26 (Phase 3.3 streaming partial - events flowing to renderer, UI pending)
