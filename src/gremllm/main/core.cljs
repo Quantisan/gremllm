@@ -118,12 +118,10 @@
   ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
   (.on ipcMain "acp/new-session"
        (fn [event ipc-correlation-id]
-         (let [cwd (or (state/get-workspace-dir @store)
-                       (.getPath app "userData"))]
-           (nxr/dispatch store {:ipc-event event
-                                :ipc-correlation-id ipc-correlation-id
-                                :channel "acp/new-session"}
-                         [[:acp.effects/new-session cwd]]))))
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/new-session"}
+                       [[:acp.effects/new-session (state/get-workspace-dir @store)]])))
 
   (.on ipcMain "acp/prompt"
        (fn [event ipc-correlation-id session-id text]
