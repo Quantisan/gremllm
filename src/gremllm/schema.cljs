@@ -373,6 +373,7 @@
   [:multi {:dispatch (fn [m]
                        ;; JS payloads use camelCase strings; dispatch must accept them.
                        (or (:session-update m)
+                           (get m "session-update")
                            (get m :sessionUpdate)
                            (get m "sessionUpdate")))}
    ["available_commands_update"
