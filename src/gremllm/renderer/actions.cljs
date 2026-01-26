@@ -185,7 +185,7 @@
 (nxr/register-action! :acp.events/session-update
   (fn [state {:keys [session-id update]}]
     (js/console.log "[ACP] Session update:" session-id (clj->js update))
-    (if (= (:session-update update) "agent_message_chunk")
+    (if (= (:session-update update) :agent-message-chunk)
       ;; TODO: use a state path
       (let [chunks (get-in state [:acp :sessions session-id :chunks] [])]
         [[:effects/save [:acp :sessions session-id :chunks] (conj chunks (:content update))]])

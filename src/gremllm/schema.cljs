@@ -371,26 +371,29 @@
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
   [:multi {:dispatch (fn [m]
+                       ;; Convert raw string/keyword to kebab-case keyword for dispatch.
                        ;; Dispatch runs BEFORE transformers, expects raw keys:
                        ;; - "sessionUpdate" from ACP JS module (camelCase string)
                        ;; - "session-update" over IPC from main (kebab string via clj->js)
                        ;; - :session-update when data already in CLJS form (internal validation, tests)
-                       (or (:session-update m)
-                           (get m "sessionUpdate")
-                           (get m "session-update")))}
-   ["available_commands_update"
+                       (some-> (or (:session-update m)
+                                   (get m "sessionUpdate")
+                                   (get m "session-update"))
+                               csk/->kebab-case
+                               keyword))}
+   [:available-commands-update
     [:map
-     [:session-update [:= "available_commands_update"]]
+     [:session-update [:= :available-commands-update]]
      [:available-commands [:vector AcpCommand]]]]
 
-   ["agent_thought_chunk"
+   [:agent-thought-chunk
     [:map
-     [:session-update [:= "agent_thought_chunk"]]
+     [:session-update [:= :agent-thought-chunk]]
      [:content AcpTextContent]]]
 
-   ["agent_message_chunk"
+   [:agent-message-chunk
     [:map
-     [:session-update [:= "agent_message_chunk"]]
+     [:session-update [:= :agent-message-chunk]]
      [:content AcpTextContent]]]])
 
 (def AcpSessionUpdate
@@ -402,13 +405,25 @@
 (def ^:private camel->kebab-key-transformer
   (mt/key-transformer {:decode csk/->kebab-case-keyword}))
 
+(def ^:private session-update-value-transformer
+  "Transforms :session-update string values to kebab-case keywords."
+  (mt/transformer
+    {:name :session-update
+     :decoders {:map (fn [x]
+                       (if (and (map? x) (string? (:session-update x)))
+                         (update x :session-update (comp keyword csk/->kebab-case))
+                         x))}}))
+
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
   ;; Keep this pure Malli; dispatch handles raw keys before transformer runs.
   (m/coerce AcpSessionUpdate
             (js->clj js-data)
-            (mt/transformer camel->kebab-key-transformer mt/json-transformer)))
+            (mt/transformer
+              camel->kebab-key-transformer
+              session-update-value-transformer
+              mt/json-transformer)))
 
 (defn acp-session-update-from-ipc
   "Validates and transforms ACP session update from IPC. Throws if invalid."
