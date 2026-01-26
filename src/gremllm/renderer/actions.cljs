@@ -183,10 +183,10 @@
 
 ;; ACP Events (Slice 2: accumulate chunks)
 (nxr/register-action! :acp.events/session-update
-  (fn [state {:keys [session-id update]}]
-    (js/console.log "[ACP] Session update:" session-id (clj->js update))
+  (fn [state {:keys [update]}]
     (if (= (:session-update update) :agent-message-chunk)
-      ;; TODO: use a state path
-      (let [chunks (get-in state [:acp :sessions session-id :chunks] [])]
-        [[:effects/save [:acp :sessions session-id :chunks] (conj chunks (:content update))]])
+      (let [chunks (get-in state [:acp :chunks] [])
+            text (get-in update [:content :text])]
+        [[:effects/save [:acp :chunks] (conj chunks text)]
+         [:effects/save [:acp :loading?] false]])
       [])))
