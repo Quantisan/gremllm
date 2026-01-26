@@ -55,7 +55,7 @@ Agent Client Protocol (ACP) is a JSON-RPC protocol that allows applications to s
 |-------|------|--------|
 | **1** | SDK wrapper + dispatch bridge | ✅ Complete |
 | **1b** | IPC wiring (renderer → main) | ✅ Complete |
-| **2** | Streaming updates to renderer | 🚧 In Progress (events flowing, UI pending) |
+| **2** | Streaming updates to renderer | 🚧 In Progress (state accumulation done, UI pending) |
 | **3** | Session lifecycle (per-topic) | Planned |
 | **4** | Renderer UI integration | Planned |
 
@@ -149,6 +149,10 @@ Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) �
 
 4. **Schema as contract:** Malli validation at boundary caught dispatch key handling bug immediately.
 
+5. **Discriminator value normalization:** Session-update type strings (`"agent_message_chunk"`) are converted to kebab-case keywords (`:agent-message-chunk`) for internal consistency. This happens via a custom Malli transformer that runs after key transformation but before schema validation.
+
+6. **State accumulation pattern:** Chunks accumulate in session-specific state path (`[:acp :sessions session-id :chunks]`), enabling incremental assembly of streaming responses.
+
 ### Architecture
 
 ```
@@ -161,19 +165,20 @@ main/actions.cljs
 preload.js (onAcpSessionUpdate)
     ↓ window.electronAPI.onAcpSessionUpdate(callback)
 renderer/core.cljs (coerce via schema)
-    ↓ [[:acp.actions/session-update update]]
-renderer/actions.cljs (console.log placeholder)
-    ↓ [Future: State accumulation + UI]
+    ↓ [[:acp.events/session-update update]]
+renderer/actions.cljs (accumulate chunks in state)
+    ↓ [:acp :sessions session-id :chunks]
+[Future: UI display]
 ```
 
 **Test:**
 ```javascript
 const sid = await window.electronAPI.acpNewSession("/Users/paul/Projects/gremllm")
 await window.electronAPI.acpPrompt(sid, "Say only: Hello")
-// Watch console for streaming events
+// Watch console for streaming events, check state[:acp :sessions sid :chunks]
 ```
 
-**Remaining work:** Accumulate events in state, display in chat UI, handle all event types (`:agent-thinking`, `:tool-use-chunk`, etc.)
+**Remaining work:** Display accumulated chunks in chat UI, handle all event types (`:agent-thought-chunk`, `:available-commands-update`), integrate with topic-based sessions
 
 ## Resources
 
@@ -188,4 +193,4 @@ await window.electronAPI.acpPrompt(sid, "Say only: Hello")
 
 ---
 
-**Last Updated:** 2026-01-26 (Phase 3.3 streaming partial - events flowing to renderer, UI pending)
+**Last Updated:** 2026-01-26 (Phase 3.3 partial - events flow to renderer and accumulate in state, UI display pending)

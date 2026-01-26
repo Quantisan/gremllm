@@ -109,7 +109,7 @@
 
       (when (and (is (contains? (set (keys (:update result))) :session-update))
                  (is (contains? (set (keys (:update result))) :content)))
-        (is (= "agent_message_chunk" (get-in result [:update :session-update])))
+        (is (= :agent-message-chunk (get-in result [:update :session-update])))
         (is (= "Hello" (get-in result [:update :content :text]))))))
 
   (testing "coerces agent_thought_chunk from JS with kebab-case keywords"
@@ -120,7 +120,7 @@
       (is (= "abc-123" (:session-id result)))
 
       (when (is (contains? (set (keys (:update result))) :session-update))
-        (is (= "agent_thought_chunk" (get-in result [:update :session-update]))))))
+        (is (= :agent-thought-chunk (get-in result [:update :session-update]))))))
 
   (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
     (let [js-data #js {:sessionId "xyz-789"
@@ -131,5 +131,5 @@
 
       (when (and (is (contains? (set (keys (:update result))) :session-update))
                  (is (contains? (set (keys (:update result))) :available-commands)))
-        (is (= "available_commands_update" (get-in result [:update :session-update])))
+        (is (= :available-commands-update (get-in result [:update :session-update])))
         (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
