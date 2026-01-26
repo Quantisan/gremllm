@@ -62,16 +62,15 @@ User types next message → Previous response implicitly complete
 
 ## Implementation Status
 
-**Completed:**
+**All tasks complete! ✅**
+
 - ✅ Task 1: Add ACP State Accessors (commit: 6c31976)
 - ✅ Task 2: Update Chunk Handler to Use Flat State (commit: aebca4e)
 - ✅ Task 3: Initialize ACP Session on Workspace Load (commits: eebfd65, d902035)
 - ✅ Task 4: Add ACP Session Lifecycle Actions (commit: da1deaf)
 - ✅ Task 5: Update Main Process to Use Workspace Dir (commit: 14d6723)
-
-**Remaining:**
-- ⏸️ Task 6: Wire Form Submit to ACP
-- ⏸️ Task 7: Update Chat UI to Render ACP Chunks
+- ✅ Task 6: Wire Form Submit to ACP (commit: ef96495)
+- ✅ Task 7: Update Chat UI to Render ACP Chunks (commit: f353593)
 
 ---
 
@@ -291,14 +290,21 @@ Committed: 14d6723
 
 ---
 
-### Task 6: Wire Form Submit to ACP
+### Task 6: Wire Form Submit to ACP ✅
 
 **Files:**
-- Modify: `src/gremllm/renderer/actions/ui.cljs:22-41`
+- Modify: `src/gremllm/renderer/actions/acp.cljs` (add send-prompt)
+- Modify: `src/gremllm/renderer/actions.cljs` (register send-prompt)
+- Modify: `src/gremllm/renderer/actions/ui.cljs` (update submit-messages)
 
-**Step 1: Update submit-messages to use ACP**
+**Step 1: Add send-prompt action to acp.cljs**
 
-Replace the function:
+Added `send-prompt` function that gets session-id from state, sets loading,
+clears chunks, and calls IPC. Also updated `session-ready` to store session-id.
+
+**Step 2: Update submit-messages to use ACP**
+
+Simplified function:
 
 ```clojure
 (defn submit-messages [state]
@@ -321,16 +327,18 @@ Key changes:
 - Added ACP prompt action
 - Removed attachment handling (defer for now)
 
-**Step 2: Commit**
+**Step 3: Commit**
 
 ```bash
-git add src/gremllm/renderer/actions/ui.cljs
+git add src/gremllm/renderer/actions/acp.cljs src/gremllm/renderer/actions.cljs src/gremllm/renderer/actions/ui.cljs
 git commit -m "feat(acp): route form submit through ACP instead of LLM"
 ```
 
+Committed: ef96495
+
 ---
 
-### Task 7: Update Chat UI to Render ACP Chunks
+### Task 7: Update Chat UI to Render ACP Chunks ✅
 
 **Files:**
 - Modify: `src/gremllm/renderer/ui.cljs:36-39`
@@ -386,6 +394,8 @@ Key changes:
 git add src/gremllm/renderer/ui.cljs src/gremllm/renderer/ui/chat.cljs
 git commit -m "feat(acp): display streaming ACP chunks in chat UI"
 ```
+
+Committed: f353593
 
 ---
 
