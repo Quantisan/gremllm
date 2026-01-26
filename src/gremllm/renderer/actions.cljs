@@ -7,6 +7,7 @@
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
+            [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
@@ -180,6 +181,11 @@
 (nxr/register-action! :settings.actions/save-error settings/save-error)
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
+
+;; ACP
+(nxr/register-action! :acp.actions/init-session acp/init-session)
+(nxr/register-action! :acp.actions/session-ready acp/session-ready)
+(nxr/register-action! :acp.actions/session-error acp/session-error)
 
 ;; ACP Events (Slice 2: accumulate chunks)
 (nxr/register-action! :acp.events/session-update
