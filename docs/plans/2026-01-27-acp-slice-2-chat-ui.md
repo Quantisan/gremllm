@@ -60,7 +60,22 @@ User types next message → Previous response implicitly complete
 
 ---
 
-### Task 1: Add ACP State Accessors
+## Implementation Status
+
+**Completed:**
+- ✅ Task 1: Add ACP State Accessors (commit: 6c31976)
+- ✅ Task 2: Update Chunk Handler to Use Flat State (commit: aebca4e)
+- ✅ Task 3: Initialize ACP Session on Workspace Load (commits: eebfd65, d902035)
+- ✅ Task 4: Add ACP Session Lifecycle Actions (commit: da1deaf)
+- ✅ Task 5: Update Main Process to Use Workspace Dir (commit: 14d6723)
+
+**Remaining:**
+- ⏸️ Task 6: Wire Form Submit to ACP
+- ⏸️ Task 7: Update Chat UI to Render ACP Chunks
+
+---
+
+### Task 1: Add ACP State Accessors ✅
 
 **Files:**
 - Create: `src/gremllm/renderer/state/acp.cljs`
@@ -97,9 +112,11 @@ git add src/gremllm/renderer/state/acp.cljs
 git commit -m "feat(acp): add renderer state accessors for ACP"
 ```
 
+Committed: 6c31976
+
 ---
 
-### Task 2: Update Chunk Handler to Use Flat State
+### Task 2: Update Chunk Handler to Use Flat State ✅
 
 **Files:**
 - Modify: `src/gremllm/renderer/actions.cljs:184-192`
@@ -136,45 +153,43 @@ git add src/gremllm/renderer/actions.cljs
 git commit -m "feat(acp): simplify chunk handler to flat state structure"
 ```
 
+Committed: aebca4e
+
 ---
 
-### Task 3: Initialize ACP Session on Workspace Load
+### Task 3: Initialize ACP Session on Workspace Load ✅
 
 **Files:**
 - Modify: `src/gremllm/renderer/actions/workspace.cljs`
 
-**Step 1: Add require for state accessor**
+**Step 1: Add ACP init to mark-loaded**
 
-Add to ns requires:
-
-```clojure
-[gremllm.renderer.state.acp :as acp-state]
-```
-
-**Step 2: Add ACP init to mark-loaded**
-
-Replace `mark-loaded` function:
+Replace `mark-loaded` function (no workspace-name needed - main process uses its own state):
 
 ```clojure
 (defn mark-loaded
   "Mark the workspace as successfully loaded and initialize ACP session."
-  [state]
-  (let [workspace (workspace-state/get-workspace state)
-        workspace-name (:name workspace)]
-    [[:effects/save workspace-state/loaded-path true]
-     [:acp.actions/init-session workspace-name]]))
+  [_state]
+  [[:effects/save workspace-state/loaded-path true]
+   [:acp.actions/init-session]])
 ```
+
+**Step 2: Remove unused acp-state require**
+
+The `acp-state` require is not needed in this module.
 
 **Step 3: Commit**
 
 ```bash
 git add src/gremllm/renderer/actions/workspace.cljs
-git commit -m "feat(acp): trigger session init on workspace load"
+git commit -m "fix(acp): remove workspace-name param from init-session call"
 ```
+
+Commits: eebfd65 (initial), d902035 (corrected)
 
 ---
 
-### Task 4: Add ACP Session Init and Prompt Actions
+### Task 4: Add ACP Session Lifecycle Actions ✅
 
 **Files:**
 - Create: `src/gremllm/renderer/actions/acp.cljs`
@@ -184,41 +199,31 @@ git commit -m "feat(acp): trigger session init on workspace load"
 
 ```clojure
 (ns gremllm.renderer.actions.acp
-  (:require [gremllm.renderer.state.acp :as acp-state]))
+  "Actions for managing ACP (Agent Client Protocol) sessions.")
 
 (defn init-session
   "Initialize ACP session. Called on workspace load."
-  [_state workspace-name]
-  ;; Use workspace name as cwd hint - main process resolves to full path
+  [_state]
   [[:effects/promise
-    {:promise    (.acpNewSession js/window.electronAPI workspace-name)
+    {:promise    (.acpNewSession js/window.electronAPI)
      :on-success [[:acp.actions/session-ready]]
      :on-error   [[:acp.actions/session-error]]}]])
 
 (defn session-ready
-  "ACP session initialized successfully."
+  "ACP session has been initialized successfully."
   [_state session-id]
-  [[:effects/save acp-state/session-id-path session-id]])
+  (js/console.log "[ACP] Session ready:" session-id)
+  ;; TODO: Store session-id in state once we need it
+  [])
 
 (defn session-error
-  "ACP session failed to initialize."
+  "ACP session initialization failed."
   [_state error]
   (js/console.error "[ACP] Session init failed:" error)
   [])
-
-(defn send-prompt
-  "Send user message to ACP agent."
-  [state text]
-  (let [session-id (acp-state/get-session-id state)]
-    (if session-id
-      [[:effects/save acp-state/loading-path true]
-       [:effects/save acp-state/chunks-path []]
-       [:effects/promise
-        {:promise (.acpPrompt js/window.electronAPI session-id text)}]]
-      (do
-        (js/console.error "[ACP] No session - cannot send prompt")
-        []))))
 ```
+
+Note: `send-prompt` action deferred to Task 6.
 
 **Step 2: Register actions in actions.cljs**
 
@@ -228,51 +233,61 @@ Add to requires:
 [gremllm.renderer.actions.acp :as acp]
 ```
 
-Add registrations after settings section (around line 182):
+Add registrations after settings section (around line 185):
 
 ```clojure
-;; ACP Actions
+;; ACP
 (nxr/register-action! :acp.actions/init-session acp/init-session)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
-(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 ```
 
 **Step 3: Commit**
 
 ```bash
 git add src/gremllm/renderer/actions/acp.cljs src/gremllm/renderer/actions.cljs
-git commit -m "feat(acp): add session init and prompt actions"
+git commit -m "feat(acp): add renderer actions for session lifecycle"
 ```
+
+Committed: da1deaf
 
 ---
 
-### Task 5: Update Main Process to Use Workspace Dir
+### Task 5: Update Main Process to Use Workspace Dir ✅
 
 **Files:**
-- Modify: `src/gremllm/main/core.cljs:121-124`
+- Modify: `src/gremllm/main/core.cljs:119-126`
 
 **Step 1: Update acp/new-session handler**
 
-The current handler receives `cwd` from renderer. Change it to use main's workspace-dir state:
+Handler no longer receives `cwd` param. Uses main process state instead:
 
 ```clojure
+;; ACP - async pattern: dispatch to actions, response flows via IPC reply
 (.on ipcMain "acp/new-session"
-     (fn [event ipc-correlation-id _workspace-hint]
+     (fn [event ipc-correlation-id]
        (let [cwd (or (state/get-workspace-dir @store)
-                     (io/user-data-path))]  ;; fallback to userData
-         (nxr/dispatch store {:ipc-event event :ipc-correlation-id ipc-correlation-id}
-                       [[:acp.actions/new-session cwd]]))))
+                     (.getPath app "userData"))]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/new-session"}
+                       [[:acp.effects/new-session cwd]]))))
 ```
 
-Add require for state and io if not present.
+Key changes:
+- No parameter from renderer (clean separation)
+- Uses `state/get-workspace-dir` from main state
+- Falls back to Electron's userData path directly
+- Removed obsolete comments
 
 **Step 2: Commit**
 
 ```bash
 git add src/gremllm/main/core.cljs
-git commit -m "feat(acp): use workspace-dir from main state for session cwd"
+git commit -m "feat(acp): main process resolves workspace-dir from state"
 ```
+
+Committed: 14d6723
 
 ---
 
