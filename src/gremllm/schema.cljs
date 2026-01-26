@@ -371,11 +371,13 @@
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
   [:multi {:dispatch (fn [m]
-                       ;; JS payloads use camelCase strings; dispatch must accept them.
+                       ;; Dispatch runs BEFORE transformers, expects raw keys:
+                       ;; - "sessionUpdate" from ACP JS module (camelCase string)
+                       ;; - "session-update" over IPC from main (kebab string via clj->js)
+                       ;; - :session-update when data already in CLJS form (internal validation, tests)
                        (or (:session-update m)
-                           (get m "session-update")
-                           (get m :sessionUpdate)
-                           (get m "sessionUpdate")))}
+                           (get m "sessionUpdate")
+                           (get m "session-update")))}
    ["available_commands_update"
     [:map
      [:session-update [:= "available_commands_update"]]
