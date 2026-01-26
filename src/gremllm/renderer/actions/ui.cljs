@@ -20,25 +20,16 @@
      [:form.actions/submit]]))
 
 (defn submit-messages [state]
-  (let [text (form-state/get-user-input state)
-        {selected-model  :model
-         reasoning?      :reasoning?} (topic-state/get-active-topic state)]
+  (let [text (form-state/get-user-input state)]
     (when-not (empty? text)
-      ;; TODO: IDs should use UUID, but need to ensure clj->js->clj through IPC works properly.
-      ;; Probably with Malli.
       (let [new-user-message {:id   (.now js/Date)
                               :type :user
-                              :text text}
-            assistant-id (.now js/Date)]
+                              :text text}]
         [[:messages.actions/add-to-chat new-user-message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
-         [:loading.actions/set-loading? assistant-id true]
-         [:llm.actions/unset-all-errors]
          [:ui.actions/scroll-chat-to-bottom]
-         [:llm.actions/send-messages assistant-id selected-model reasoning? new-user-message]
-         ;; Clear attachments AFTER send-messages reads them from state
-         [:ui.actions/clear-pending-attachments]]))))
+         [:acp.actions/send-prompt text]]))))
 
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]

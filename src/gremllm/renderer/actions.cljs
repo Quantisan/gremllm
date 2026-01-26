@@ -186,6 +186,7 @@
 (nxr/register-action! :acp.actions/init-session acp/init-session)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
+(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 
 ;; ACP Events (Slice 2: accumulate chunks)
 (nxr/register-action! :acp.events/session-update
