@@ -180,3 +180,9 @@
 (nxr/register-action! :settings.actions/save-error settings/save-error)
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
+
+;; ACP Events (Slice 1c: observability only)
+(nxr/register-action! :acp.events/session-update
+  (fn [_state {:keys [session-id update]}]
+    (js/console.log "[ACP] Session update:" session-id (clj->js update))
+    []))

@@ -348,14 +348,56 @@
 ;; ACP Session Updates
 ;; ========================================
 
+;; ACP Update sub-schemas
+(def AcpCommandInput
+  "Optional input schema for ACP commands."
+  [:map
+   [:hint {:optional true} :string]])
+
+(def AcpCommand
+  "Schema for an ACP command definition."
+  [:map
+   [:name :string]
+   [:description :string]
+   [:input {:optional true} [:maybe AcpCommandInput]]])
+
+(def AcpTextContent
+  "Schema for text content in ACP chunks."
+  [:map
+   [:type [:= "text"]]
+   [:text :string]])
+
+(def AcpUpdate
+  "Discriminated union of ACP session update types.
+   Dispatches on :session-update field."
+  [:multi {:dispatch (fn [m]
+                       ;; Dispatch runs BEFORE transformers, expects raw keys:
+                       ;; - "sessionUpdate" from ACP JS module (camelCase string)
+                       ;; - "session-update" over IPC from main (kebab string via clj->js)
+                       ;; - :session-update when data already in CLJS form (internal validation, tests)
+                       (or (:session-update m)
+                           (get m "sessionUpdate")
+                           (get m "session-update")))}
+   ["available_commands_update"
+    [:map
+     [:session-update [:= "available_commands_update"]]
+     [:available-commands [:vector AcpCommand]]]]
+
+   ["agent_thought_chunk"
+    [:map
+     [:session-update [:= "agent_thought_chunk"]]
+     [:content AcpTextContent]]]
+
+   ["agent_message_chunk"
+    [:map
+     [:session-update [:= "agent_message_chunk"]]
+     [:content AcpTextContent]]]])
+
 (def AcpSessionUpdate
-  "Schema for session updates from JS dispatcher bridge.
-   WATCH-OUT: :update is :any because ACP protocol shapes vary.
-   Tighten this schema when we know which update types we actually handle."
+  "Schema for session updates from ACP."
   [:map
    [:session-id :string]
-   ;; TODO: don't use :any
-   [:update :any]])
+   [:update AcpUpdate]])
 
 (def ^:private camel->kebab-key-transformer
   (mt/key-transformer {:decode csk/->kebab-case-keyword}))
@@ -363,6 +405,12 @@
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
+  ;; Keep this pure Malli; dispatch handles raw keys before transformer runs.
   (m/coerce AcpSessionUpdate
             (js->clj js-data)
             (mt/transformer camel->kebab-key-transformer mt/json-transformer)))
+
+(defn acp-session-update-from-ipc
+  "Validates and transforms ACP session update from IPC. Throws if invalid."
+  [event-data-js]
+  (acp-session-update-from-js event-data-js))
