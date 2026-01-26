@@ -50,6 +50,9 @@
    (for [message messages]
      (render-message message))
 
+   ;; TODO: ACP chunks need to be interweaved with our messages
+   ;; chronologically. Re-think our data scheme.
+
    ;; Show streaming ACP response
    (when (seq acp-chunks)
      (render-assistant-message {:text (apply str acp-chunks)}))

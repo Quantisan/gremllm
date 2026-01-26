@@ -10,6 +10,8 @@
   "Mark the workspace as successfully loaded and initialize ACP session."
   [_state]
   [[:effects/save workspace-state/loaded-path true]
+   ;; TODO: This assumes a single hard-coded global agent session. Which is probably not that
+   ;; usable.
    [:acp.actions/init-session]])
 
 (defn set-workspace

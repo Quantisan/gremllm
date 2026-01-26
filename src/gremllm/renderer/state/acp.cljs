@@ -2,6 +2,9 @@
 
 (def acp-path [:acp])
 
+;; {:acp {:session-id "..."
+;;        :chunks     []        ;; vector of text strings
+;;        :loading?   false)
 (def session-id-path (conj acp-path :session-id))
 (def chunks-path (conj acp-path :chunks))
 (def loading-path (conj acp-path :loading?))
