@@ -181,8 +181,12 @@
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
-;; ACP Events (Slice 1c: observability only)
+;; ACP Events (Slice 2: accumulate chunks)
 (nxr/register-action! :acp.events/session-update
-  (fn [_state {:keys [session-id update]}]
+  (fn [state {:keys [session-id update]}]
     (js/console.log "[ACP] Session update:" session-id (clj->js update))
-    []))
+    (if (= (:session-update update) "agent_message_chunk")
+      ;; TODO: use a state path
+      (let [chunks (get-in state [:acp :sessions session-id :chunks] [])]
+        [[:effects/save [:acp :sessions session-id :chunks] (conj chunks (:content update))]])
+      [])))
