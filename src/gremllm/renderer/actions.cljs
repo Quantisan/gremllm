@@ -191,9 +191,8 @@
 ;; ACP Events (Slice 2: accumulate chunks)
 (nxr/register-action! :acp.events/session-update
   (fn [state {:keys [update]}]
-    (if (= (:session-update update) :agent-message-chunk)
-      (let [chunks (get-in state [:acp :chunks] [])
-            text (get-in update [:content :text])]
-        [[:effects/save [:acp :chunks] (conj chunks text)]
-         [:effects/save [:acp :loading?] false]])
-      [])))
+    (when (= (:session-update update) :agent-message-chunk)
+      (let [chunks    (get-in state [:acp :chunks] [])
+            prev-text (get-in update [:content :text])]
+        [[:effects/save [:acp :chunks] (conj chunks prev-text)]
+         [:effects/save [:acp :loading?] false]]))))
