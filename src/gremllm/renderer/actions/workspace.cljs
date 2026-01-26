@@ -1,19 +1,16 @@
 (ns gremllm.renderer.actions.workspace
   (:require [gremllm.schema :as schema]
             [gremllm.renderer.state.workspace :as workspace-state]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.acp :as acp-state]))
+            [gremllm.renderer.state.topic :as topic-state]))
 
 ;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
 (defn bootstrap [_state])
 
 (defn mark-loaded
   "Mark the workspace as successfully loaded and initialize ACP session."
-  [state]
-  (let [workspace (workspace-state/get-workspace state)
-        workspace-name (:name workspace)]
-    [[:effects/save workspace-state/loaded-path true]
-     [:acp.actions/init-session workspace-name]]))
+  [_state]
+  [[:effects/save workspace-state/loaded-path true]
+   [:acp.actions/init-session]])
 
 (defn set-workspace
   "Save workspace metadata into renderer state."
