@@ -45,12 +45,20 @@
   (when-let [error (first (vals errors))]
     [:div.assistant-error "⚠️ " error]))
 
-(defn render-chat-area [messages loading errors]
+(defn render-chat-area [messages acp-chunks acp-loading? errors]
   [e/chat-area {}
    (for [message messages]
      (render-message message))
-   ;; Show loading indicator if any assistant is loading
-   (when (some true? (vals loading))
+
+   ;; TODO: ACP chunks need to be interweaved with our messages
+   ;; chronologically. Re-think our data scheme.
+
+   ;; Show streaming ACP response
+   (when (seq acp-chunks)
+     (render-assistant-message {:text (apply str acp-chunks)}))
+
+   ;; Show loading indicator while waiting for first chunk
+   (when acp-loading?
      (render-loading-indicator))
 
    ;; Show any errors

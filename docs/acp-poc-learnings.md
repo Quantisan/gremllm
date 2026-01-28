@@ -55,9 +55,9 @@ Agent Client Protocol (ACP) is a JSON-RPC protocol that allows applications to s
 |-------|------|--------|
 | **1** | SDK wrapper + dispatch bridge | ✅ Complete |
 | **1b** | IPC wiring (renderer → main) | ✅ Complete |
-| **2** | Streaming updates to renderer | 🚧 In Progress (state accumulation done, UI pending) |
-| **3** | Session lifecycle (per-topic) | Planned |
-| **4** | Renderer UI integration | Planned |
+| **2** | Chat UI integration | ✅ Complete |
+| **3** | Persist ACP responses to messages | Planned |
+| **4** | Session lifecycle (per-topic) | Planned |
 
 ### Slice Dependencies
 
@@ -66,6 +66,7 @@ Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) �
 ### Implementation Plans
 
 - **Slice 1:** `docs/plans/2026-01-23-acp-slice-1-design.md`
+- **Slice 2:** `docs/plans/2026-01-27-acp-slice-2-chat-ui.md`
 - Future slices: TBD
 
 ## Phase 3.1: SDK Wrapper ✅
@@ -123,11 +124,14 @@ Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) �
 
 6. **Boundary coercion:** Malli validation runs after camelCase→kebab-case transformation at JS/CLJS boundary.
 
-## Phase 3.3: Streaming to Renderer 🚧
+## Phase 3.3: Chat UI Integration ✅
 
-**Goal:** Route ACP session events from Main to Renderer with schema validation.
+**Goal:** Route ACP session events to renderer, accumulate chunks in state, and display streaming responses in chat UI.
 
-**Implementation:** `schema.cljs` (discriminated union + transforms), `main/actions.cljs` (IPC forwarding), `preload.js` (listener), `renderer/{core,actions}.cljs`
+**Implementation:**
+- Main: `main/core.cljs` (workspace-dir resolution), `main/actions.cljs` (IPC forwarding)
+- Renderer: `renderer/state/acp.cljs`, `renderer/actions/acp.cljs`, `renderer/actions/ui.cljs`, `renderer/ui/chat.cljs`
+- Boundary: `preload.js` (IPC listener), `schema.cljs` (validation)
 
 **Key Learnings:**
 
@@ -151,34 +155,50 @@ Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) �
 
 5. **Discriminator value normalization:** Session-update type strings (`"agent_message_chunk"`) are converted to kebab-case keywords (`:agent-message-chunk`) for internal consistency. This happens via a custom Malli transformer that runs after key transformation but before schema validation.
 
-6. **State accumulation pattern:** Chunks accumulate in session-specific state path (`[:acp :sessions session-id :chunks]`), enabling incremental assembly of streaming responses.
+6. **State accumulation pattern:** Chunks accumulate in flat state path (`[:acp :chunks]`), enabling incremental assembly of streaming responses. Loading indicator (`[:acp :loading?]`) shows between submit and first chunk arrival.
 
-### Architecture
+7. **Session lifecycle:** ACP session initializes automatically on workspace load. Main process resolves workspace directory from its own state, eliminating renderer→main parameter passing.
+
+8. **Form routing:** User messages now route through `acp.actions/send-prompt` instead of direct LLM effects. ACP responses stream back as chunks and render as growing assistant message.
+
+### Data Flow
 
 ```
-ACP Subprocess
-    ↓ agent_message_chunk event
-resources/acp/index.js (dispatcher callback)
+User submit form
+    ↓ [:form.actions/submit]
+renderer/actions/ui.cljs
+    ↓ [:acp.actions/send-prompt text]
+renderer/actions/acp.cljs
+    ↓ IPC: acpPrompt(session-id, text)
+main/core.cljs
+    ↓ resources/acp/index.js (ACP SDK)
+    ↓ agent_message_chunk events
+    ↓ dispatcher callback
     ↓ [[:acp.actions/session-update params]]
 main/actions.cljs
     ↓ [[:ipc.effects/send-to-renderer "acp:session-update" update]]
 preload.js (onAcpSessionUpdate)
     ↓ window.electronAPI.onAcpSessionUpdate(callback)
-renderer/core.cljs (coerce via schema)
+renderer/core.cljs (schema coercion)
     ↓ [[:acp.events/session-update update]]
-renderer/actions.cljs (accumulate chunks in state)
-    ↓ [:acp :sessions session-id :chunks]
-[Future: UI display]
+renderer/actions.cljs (chunk handler)
+    ↓ State: [:acp :chunks] accumulates text
+    ↓        [:acp :loading?] set to false
+renderer/ui/chat.cljs
+    ↓ Renders streaming assistant message
 ```
 
-**Test:**
-```javascript
-const sid = await window.electronAPI.acpNewSession("/Users/paul/Projects/gremllm")
-await window.electronAPI.acpPrompt(sid, "Say only: Hello")
-// Watch console for streaming events, check state[:acp :sessions sid :chunks]
-```
+**Current State:**
+- Form submissions route through ACP
+- Streaming chunks accumulate in flat state structure
+- UI displays growing assistant message with loading indicator
+- Session initializes automatically on workspace load
 
-**Remaining work:** Display accumulated chunks in chat UI, handle all event types (`:agent-thought-chunk`, `:available-commands-update`), integrate with topic-based sessions
+**Next Steps (Slice 3):**
+- Interleave ACP chunks chronologically with user messages for display and persistence
+- Design unified message data structure that handles both user messages and ACP responses
+- Persist complete conversations (user + assistant) to topic files
+- Handle conversation history context for subsequent prompts
 
 ## Resources
 
@@ -193,4 +213,4 @@ await window.electronAPI.acpPrompt(sid, "Say only: Hello")
 
 ---
 
-**Last Updated:** 2026-01-26 (Phase 3.3 partial - events flow to renderer and accumulate in state, UI display pending)
+**Last Updated:** 2026-01-27 (Slice 2 complete - ACP chat UI integration working end-to-end)

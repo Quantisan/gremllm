@@ -6,6 +6,7 @@
             [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.state.workspace :as workspace-state]
+            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
@@ -35,7 +36,8 @@
       ;; TODO: we have `topics-map` already. Why are we getting from state below? What's more
       ;; readable and simple?
       (chat-ui/render-chat-area (topic-state/get-messages state)
-                                (loading-state/get-loading state)
+                                (acp-state/get-chunks state)
+                                (acp-state/loading? state)
                                 (loading-state/get-assistant-errors state))
 
       (chat-ui/render-input-form
