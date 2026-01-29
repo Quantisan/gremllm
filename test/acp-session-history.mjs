@@ -30,19 +30,23 @@ async function createConnection() {
   );
   const conn = new acp.ClientSideConnection(() => client, stream);
 
-  await conn.initialize({
+  const initResult = await conn.initialize({
     protocolVersion: acp.PROTOCOL_VERSION,
     clientCapabilities: { fs: {}, terminal: false },
     clientInfo: { name: "test", title: "Test", version: "0.0.1" }
   });
 
-  return { conn, proc };
+  return { conn, proc, initResult };
 }
 
 async function main() {
   // First connection
   console.log("=== CONNECTION 1 ===");
-  let { conn, proc } = await createConnection();
+  let { conn, proc, initResult } = await createConnection();
+
+  console.log("\n--- Agent Capabilities ---");
+  console.log(JSON.stringify(initResult.agentCapabilities, null, 2));
+  console.log("loadSession supported:", initResult.agentCapabilities?.loadSession ?? false);
 
   const { sessionId } = await conn.newSession({ cwd: process.cwd(), mcpServers: [] });
   console.log("Session:", sessionId);
@@ -57,21 +61,50 @@ async function main() {
 
   // Second connection
   console.log("\n=== CONNECTION 2 (New Process) ===");
-  ({ conn, proc } = await createConnection());
+  ({ conn, proc, initResult } = await createConnection());
 
-  console.log("Attempting to use same sessionId:", sessionId);
-  console.log("\n--- Prompt 2: What is my name? ---");
-  response = "";
+  const supportsResume = initResult.agentCapabilities?.sessionCapabilities?.resume !== undefined;
+  const supportsLoad = initResult.agentCapabilities?.loadSession === true;
+
+  if (!supportsResume && !supportsLoad) {
+    console.log("\n--- Result ---");
+    console.log("✗ Agent does NOT support session resumption");
+    console.log("Sessions cannot persist across connection restarts with this agent.");
+    proc.kill("SIGTERM");
+    return;
+  }
+
+  console.log(`✓ Agent supports: ${supportsResume ? 'resume' : ''} ${supportsLoad ? 'load' : ''}`);
+  console.log("Attempting to resume sessionId:", sessionId);
 
   try {
+    if (supportsResume) {
+      console.log("\n--- Resuming session (unstable_resumeSession) ---");
+      await conn.unstable_resumeSession({
+        sessionId,
+        cwd: process.cwd(),
+        mcpServers: []
+      });
+    } else {
+      console.log("\n--- Loading session (loadSession) ---");
+      await conn.loadSession({
+        sessionId,
+        cwd: process.cwd(),
+        mcpServers: []
+      });
+    }
+
+    console.log("\n--- Prompt 2: What is my name? ---");
+    response = "";
     await conn.prompt({ sessionId, prompt: [{ type: "text", text: "What is my name?" }] });
+
     console.log("\n\n--- Result ---");
     console.log("✓ Session resumed successfully!");
     console.log("If response mentions 'Alice', history persists across connections.");
   } catch (err) {
     console.log("\n\n--- Result ---");
     console.log("✗ Could not resume session:", err.message);
-    console.log("Sessions likely don't persist across connection restarts.");
+    if (err.data) console.log("Error details:", err.data);
   }
 
   proc.kill("SIGTERM");
