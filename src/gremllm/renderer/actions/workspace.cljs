@@ -7,12 +7,9 @@
 (defn bootstrap [_state])
 
 (defn mark-loaded
-  "Mark the workspace as successfully loaded and initialize ACP session."
+  "Mark the workspace as successfully loaded and ready for use."
   [_state]
-  [[:effects/save workspace-state/loaded-path true]
-   ;; TODO: This assumes a single hard-coded global agent session. Which is probably not that
-   ;; usable.
-   [:acp.actions/init-session]])
+  [[:effects/save workspace-state/loaded-path true]])
 
 (defn set-workspace
   "Save workspace metadata into renderer state."
