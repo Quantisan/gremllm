@@ -126,6 +126,7 @@
   (fn [_state]
     [[:effects/save [:assistant-errors] nil]]))
 
+;; TODO: this can be an Action
 (nxr/register-effect! :effects/send-llm-messages
   (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
     (dispatch
