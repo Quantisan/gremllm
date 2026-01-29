@@ -200,6 +200,54 @@ renderer/ui/chat.cljs
 - Persist complete conversations (user + assistant) to topic files
 - Handle conversation history context for subsequent prompts
 
+## Session Persistence Investigation
+
+**Goal:** Determine if ACP sessions persist across connection restarts (process crashes, app restarts).
+
+**Key Learnings:**
+
+1. **✅ Sessions DO persist across connection restarts:**
+   - ACP agent maintains session state independently of client connection
+   - After killing and restarting the agent process, sessions can be resumed using stored sessionId
+   - Conversation history is preserved—agent remembers previous context
+
+2. **⚠️ Check `sessionCapabilities.resume`, NOT `loadSession`:**
+   - Claude Code ACP advertises: `agentCapabilities.sessionCapabilities.resume: {}`
+   - Does NOT advertise: `agentCapabilities.loadSession: true`
+   - This is the modern ACP approach (as of protocol updates in late 2025/early 2026)
+
+3. **Two resumption methods:**
+   - `unstable_resumeSession()` - Restores session WITHOUT replaying history (used by Claude Code ACP)
+   - `loadSession()` - Restores session AND streams full conversation history via `sessionUpdate` notifications
+   - Use `unstable_resumeSession()` when you maintain your own message history in UI
+
+4. **Implementation pattern:**
+   ```javascript
+   // Check capability during initialization
+   const supportsResume = initResult.agentCapabilities?.sessionCapabilities?.resume !== undefined;
+
+   // On reconnect, resume instead of creating new session
+   if (supportsResume && hasStoredSessionId) {
+     await connection.unstable_resumeSession({
+       sessionId: storedSessionId,
+       cwd: workspaceDir,
+       mcpServers: []
+     });
+   }
+   ```
+
+5. **Storage implications:**
+   - Gremllm can store sessionId per topic in topic files
+   - On app restart or reconnect, resume sessions instead of creating new ones
+   - Eliminates need for our own conversation history persistence to maintain context
+   - Agent handles all context management internally
+
+**Test:** `test/acp-session-history.mjs` verifies session resumption across process restarts.
+
+**References:**
+- [ACP SDK ClientSideConnection](https://agentclientprotocol.github.io/typescript-sdk/classes/ClientSideConnection.html)
+- [ACP Protocol Schema](https://agentclientprotocol.com/protocol/schema)
+
 ## Resources
 
 - [ACP Protocol Spec](https://agentclientprotocol.org/)
@@ -213,4 +261,4 @@ renderer/ui/chat.cljs
 
 ---
 
-**Last Updated:** 2026-01-27 (Slice 2 complete - ACP chat UI integration working end-to-end)
+**Last Updated:** 2026-01-29 (Session persistence investigation complete)
