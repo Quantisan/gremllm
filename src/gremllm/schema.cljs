@@ -267,6 +267,7 @@
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
    [:model {:default "gemini-3-flash-preview"} Model] ;; defaulting to Flash because is cheap and fast
+   [:session-id {:optional true} :string]              ;; ACP session for resume
    [:reasoning? {:default true} :boolean]
    [:messages {:default []} [:vector Message]]])
 
