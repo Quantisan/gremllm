@@ -60,9 +60,10 @@
      [[:topic.effects/save-topic topic-id]])))
 
 (defn set-active
-  "Set the active topic."
+  "Set the active topic and initialize its ACP session."
   [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]])
+  [[:effects/save topic-state/active-topic-id-path topic-id]
+   [:acp.actions/new-session topic-id]])
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic

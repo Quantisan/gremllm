@@ -185,10 +185,10 @@
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
 ;; ACP
-(nxr/register-action! :acp.actions/init-session acp/init-session)
+(nxr/register-action! :acp.actions/new-session acp/new-session)
+(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
-(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 
 ;; ACP Events (Slice 3: append chunks to assistant message)
 (nxr/register-action! :acp.events/session-update
