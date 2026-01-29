@@ -192,7 +192,9 @@
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 
-;; ACP Events (Slice 3: append chunks to assistant message)
+;; TODO: refactor to tidy up this big fn. SRP
+;;
+;; Append response chunks to assistant message
 (nxr/register-action! :acp.events/session-update
   (fn [state {:keys [update]}]
     (when (= (:session-update update) :agent-message-chunk)

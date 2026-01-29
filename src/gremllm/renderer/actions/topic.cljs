@@ -63,6 +63,7 @@
   "Set the active topic and initialize its ACP session."
   [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]
+   ;; TODO: check for saved acp-session-id and resume
    [:acp.actions/new-session topic-id]])
 
 (defn begin-rename [state topic-id]

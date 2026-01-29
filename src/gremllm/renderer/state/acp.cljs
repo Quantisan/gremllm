@@ -2,8 +2,7 @@
 
 (def acp-path [:acp])
 
-;; Simplified state: only loading indicator
-;; Session IDs now live in topics, chunks go directly to messages
+;; TODO: loading what? it's not clear
 (def loading-path (conj acp-path :loading?))
 
 (defn loading? [state]
