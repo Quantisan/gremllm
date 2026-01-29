@@ -128,7 +128,7 @@
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.effects/prompt session-id text]]))))
+                       [[:acp.effects/send-prompt session-id text]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")
