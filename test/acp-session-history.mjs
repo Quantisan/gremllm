@@ -5,12 +5,24 @@ import * as acp from "@agentclientprotocol/sdk";
 
 let response = "";
 
+let historyUpdates = [];
+
 const client = {
   async sessionUpdate(params) {
-    if (params.update.sessionUpdate === "agent_message_chunk") {
+    const updateType = params.update.sessionUpdate;
+
+    // Track all update types during resume
+    if (updateType === "user_message_chunk" || updateType === "agent_message_chunk") {
+      historyUpdates.push(updateType);
+    }
+
+    if (updateType === "agent_message_chunk") {
       const text = params.update.content?.text || "";
       response += text;
       process.stdout.write(text);
+    } else if (updateType === "user_message_chunk") {
+      const text = params.update.content?.text || "";
+      process.stdout.write(`[USER: ${text}]`);
     }
   },
   async requestPermission(params) {
@@ -66,45 +78,56 @@ async function main() {
   const supportsResume = initResult.agentCapabilities?.sessionCapabilities?.resume !== undefined;
   const supportsLoad = initResult.agentCapabilities?.loadSession === true;
 
-  if (!supportsResume && !supportsLoad) {
-    console.log("\n--- Result ---");
-    console.log("✗ Agent does NOT support session resumption");
-    console.log("Sessions cannot persist across connection restarts with this agent.");
-    proc.kill("SIGTERM");
-    return;
-  }
+  console.log(`Capabilities: resume=${supportsResume}, loadSession=${supportsLoad}`);
+  console.log("Testing sessionId:", sessionId);
 
-  console.log(`✓ Agent supports: ${supportsResume ? 'resume' : ''} ${supportsLoad ? 'load' : ''}`);
-  console.log("Attempting to resume sessionId:", sessionId);
-
-  try {
-    if (supportsResume) {
-      console.log("\n--- Resuming session (unstable_resumeSession) ---");
+  // Test unstable_resumeSession
+  if (supportsResume) {
+    console.log("\n--- Testing unstable_resumeSession ---");
+    try {
+      historyUpdates = [];
       await conn.unstable_resumeSession({
         sessionId,
         cwd: process.cwd(),
         mcpServers: []
       });
-    } else {
-      console.log("\n--- Loading session (loadSession) ---");
-      await conn.loadSession({
-        sessionId,
-        cwd: process.cwd(),
-        mcpServers: []
-      });
-    }
+      console.log("✓ unstable_resumeSession succeeded");
+      console.log("  History updates received:", historyUpdates.length ? historyUpdates.join(", ") : "none");
 
-    console.log("\n--- Prompt 2: What is my name? ---");
+      response = "";
+      await conn.prompt({ sessionId, prompt: [{ type: "text", text: "What is my name?" }] });
+      console.log("\n✓ Response mentions Alice?", response.toLowerCase().includes("alice"));
+    } catch (err) {
+      console.log("✗ unstable_resumeSession failed:", err.message);
+      if (err.data) console.log("  Details:", err.data);
+    }
+  }
+
+  // Test loadSession (need a fresh connection since we already resumed)
+  console.log("\n--- Testing loadSession (fresh connection) ---");
+  proc.kill("SIGTERM");
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  console.log("=== CONNECTION 3 ===");
+  ({ conn, proc, initResult } = await createConnection());
+
+  try {
+    console.log("Calling loadSession...");
+    historyUpdates = [];
+    await conn.loadSession({
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: []
+    });
+    console.log("✓ loadSession succeeded");
+    console.log("  History updates received:", historyUpdates.length ? historyUpdates.join(", ") : "none");
+
     response = "";
     await conn.prompt({ sessionId, prompt: [{ type: "text", text: "What is my name?" }] });
-
-    console.log("\n\n--- Result ---");
-    console.log("✓ Session resumed successfully!");
-    console.log("If response mentions 'Alice', history persists across connections.");
+    console.log("\n✓ Response mentions Alice?", response.toLowerCase().includes("alice"));
   } catch (err) {
-    console.log("\n\n--- Result ---");
-    console.log("✗ Could not resume session:", err.message);
-    if (err.data) console.log("Error details:", err.data);
+    console.log("✗ loadSession failed:", err.message);
+    if (err.data) console.log("  Details:", err.data);
   }
 
   proc.kill("SIGTERM");
