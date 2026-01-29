@@ -204,12 +204,15 @@ renderer/ui/chat.cljs
 
 **Goal:** Determine if ACP sessions persist across connection restarts (process crashes, app restarts).
 
+**TL;DR:** Agent context persists and can be resumed, but conversation history is NOT streamed to client. Gremllm must persist messages independently.
+
 **Key Learnings:**
 
-1. **✅ Sessions DO persist across connection restarts:**
+1. **✅ Agent context persists across connection restarts:**
    - ACP agent maintains session state independently of client connection
    - After killing and restarting the agent process, sessions can be resumed using stored sessionId
-   - Conversation history is preserved—agent remembers previous context
+   - Agent remembers previous conversation context (can answer follow-up questions)
+   - But: client receives NO historical messages on resume (see point 3)
 
 2. **⚠️ Check `sessionCapabilities.resume`, NOT `loadSession`:**
    - Claude Code ACP advertises: `agentCapabilities.sessionCapabilities.resume: {}`
@@ -281,4 +284,4 @@ renderer/ui/chat.cljs
 
 ---
 
-**Last Updated:** 2026-01-29 (Session persistence investigation complete)
+**Last Updated:** 2026-01-29 (Session persistence: resume works, but loadSession/history loading NOT supported)
