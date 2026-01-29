@@ -194,15 +194,19 @@
 (nxr/register-action! :acp.events/session-update
   (fn [state {:keys [update]}]
     (when (= (:session-update update) :agent-message-chunk)
-      (let [topic-id (topic-state/get-active-topic-id state)
-            messages (topic-state/get-messages state)
-            last-idx (dec (count messages))
-            last-msg (get messages last-idx)]
-        (if (and last-msg (= :assistant (:type last-msg)))
-          (let [new-text (str (:text last-msg) (get-in update [:content :text]))
+      (let [topic-id  (topic-state/get-active-topic-id state)
+            messages  (topic-state/get-messages state)
+            last-msg  (peek messages)
+            chunk-text (get-in update [:content :text])]
+        (if (= :assistant (:type last-msg))
+          ;; Append to existing assistant message
+          (let [last-idx (dec (count messages))
+                new-text (str (:text last-msg) chunk-text)
                 msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
             [[:effects/save acp-state/loading-path false]
              [:effects/save msg-path new-text]])
-          (do
-            (js/console.error "[ACP] No assistant message to append chunk to")
-            [[:effects/save acp-state/loading-path false]]))))))
+          ;; Create new assistant message with chunk text
+          [[:effects/save acp-state/loading-path false]
+           [:messages.actions/add-to-chat {:id   (.now js/Date)
+                                           :type :assistant
+                                           :text chunk-text}]])))))
