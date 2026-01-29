@@ -2,18 +2,9 @@
 
 (def acp-path [:acp])
 
-;; {:acp {:session-id "..."
-;;        :chunks     []        ;; vector of text strings
-;;        :loading?   false)
-(def session-id-path (conj acp-path :session-id))
-(def chunks-path (conj acp-path :chunks))
+;; Simplified state: only loading indicator
+;; Session IDs now live in topics, chunks go directly to messages
 (def loading-path (conj acp-path :loading?))
-
-(defn get-session-id [state]
-  (get-in state session-id-path))
-
-(defn get-chunks [state]
-  (get-in state chunks-path []))
 
 (defn loading? [state]
   (get-in state loading-path false))
