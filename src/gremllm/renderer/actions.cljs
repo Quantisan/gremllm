@@ -9,7 +9,9 @@
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.loading :as loading-state]))
+            [gremllm.renderer.state.loading :as loading-state]
+            [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.acp :as acp-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -188,11 +190,19 @@
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 
-;; ACP Events (Slice 2: accumulate chunks)
+;; ACP Events (Slice 3: append chunks to assistant message)
 (nxr/register-action! :acp.events/session-update
   (fn [state {:keys [update]}]
     (when (= (:session-update update) :agent-message-chunk)
-      (let [chunks    (get-in state [:acp :chunks] [])
-            prev-text (get-in update [:content :text])]
-        [[:effects/save [:acp :chunks] (conj chunks prev-text)]
-         [:effects/save [:acp :loading?] false]]))))
+      (let [topic-id (topic-state/get-active-topic-id state)
+            messages (topic-state/get-messages state)
+            last-idx (dec (count messages))
+            last-msg (get messages last-idx)]
+        (if (and last-msg (= :assistant (:type last-msg)))
+          (let [new-text (str (:text last-msg) (get-in update [:content :text]))
+                msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
+            [[:effects/save acp-state/loading-path false]
+             [:effects/save msg-path new-text]])
+          (do
+            (js/console.error "[ACP] No assistant message to append chunk to")
+            [[:effects/save acp-state/loading-path false]]))))))
