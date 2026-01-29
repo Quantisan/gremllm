@@ -200,6 +200,77 @@ renderer/ui/chat.cljs
 - Persist complete conversations (user + assistant) to topic files
 - Handle conversation history context for subsequent prompts
 
+## Session Persistence Investigation
+
+**Goal:** Determine if ACP sessions persist across connection restarts (process crashes, app restarts).
+
+**TL;DR:** Agent context persists and can be resumed, but conversation history is NOT streamed to client. Gremllm must persist messages independently.
+
+**Key Learnings:**
+
+1. **✅ Agent context persists across connection restarts:**
+   - ACP agent maintains session state independently of client connection
+   - After killing and restarting the agent process, sessions can be resumed using stored sessionId
+   - Agent remembers previous conversation context (can answer follow-up questions)
+   - But: client receives NO historical messages on resume (see point 3)
+
+2. **⚠️ Check `sessionCapabilities.resume`, NOT `loadSession`:**
+   - Claude Code ACP advertises: `agentCapabilities.sessionCapabilities.resume: {}`
+   - Does NOT advertise: `agentCapabilities.loadSession: true`
+   - This is the modern ACP approach (as of protocol updates in late 2025/early 2026)
+
+3. **⚠️ CRITICAL: Claude Code ACP does NOT support loading conversation history:**
+   - ACP protocol spec defines `session/load` to stream full conversation history via `sessionUpdate` notifications
+   - Claude Code ACP only implements `unstable_resumeSession()` - restores agent's internal context WITHOUT replaying message history
+   - Calling `connection.loadSession()` returns error: `"Method not found": session/load`
+   - After resume: agent remembers context, but client receives **zero historical messages**
+   - Client UI remains empty—must persist and restore messages separately
+
+4. **Why `loadSession` isn't available:**
+   - Claude Agent SDK doesn't expose API to retrieve historical messages (as of 2026-01-29)
+   - SDK stores transcripts in `~/.claude/projects/{project-slug}/{session-id}.jsonl` but no programmatic access
+   - Technical challenges: ACP session IDs (UUIDv7) differ from Claude's internal session IDs (UUIDv4)
+
+5. **Workaround options:**
+   - **Option A (recommended):** Store messages in Gremllm topic files, use `unstable_resumeSession()` for agent context only
+   - **Option B (fragile):** Parse Claude's JSONL transcripts manually
+     - Path: `~/.claude/projects/{cwd.replace(/\//g, '-')}/{session-id}.jsonl`
+     - Undocumented format, may break between versions
+     - Not recommended for production
+
+6. **Implementation pattern for resume (context only, no history):**
+   ```javascript
+   // Check capability during initialization
+   const supportsResume = initResult.agentCapabilities?.sessionCapabilities?.resume !== undefined;
+
+   // On reconnect, resume agent context (no message history)
+   if (supportsResume && hasStoredSessionId) {
+     await connection.unstable_resumeSession({
+       sessionId: storedSessionId,
+       cwd: workspaceDir,
+       mcpServers: []
+     });
+   }
+   ```
+
+7. **Storage implications for Gremllm:**
+   - Must persist messages ourselves in topic files for UI display
+   - Can use `unstable_resumeSession()` to restore agent's memory across restarts
+   - Agent remembers previous conversation context for continuity
+   - But we still need our own message storage to populate the UI
+
+8. **⚠️ MONITOR THESE ISSUES:**
+   - [anthropics/claude-agent-sdk-typescript#14](https://github.com/anthropics/claude-agent-sdk-typescript/issues/14) - "Feature Request: API to retrieve historical messages" (OPEN)
+   - [zed-industries/claude-code-acp#64](https://github.com/zed-industries/claude-code-acp/issues/64) - "Feature Request: Add loadSession support" (OPEN)
+   - If implemented, could eliminate need for custom message persistence in Gremllm
+   - As of 2026-01-29: both issues open, no implementation timeline
+
+**Test:** `test/acp-session-history.mjs` verifies session resumption across process restarts.
+
+**References:**
+- [ACP SDK ClientSideConnection](https://agentclientprotocol.github.io/typescript-sdk/classes/ClientSideConnection.html)
+- [ACP Protocol Schema](https://agentclientprotocol.com/protocol/schema)
+
 ## Resources
 
 - [ACP Protocol Spec](https://agentclientprotocol.org/)
@@ -213,4 +284,4 @@ renderer/ui/chat.cljs
 
 ---
 
-**Last Updated:** 2026-01-27 (Slice 2 complete - ACP chat UI integration working end-to-end)
+**Last Updated:** 2026-01-29 (Session persistence: resume works, but loadSession/history loading NOT supported)
