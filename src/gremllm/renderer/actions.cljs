@@ -129,6 +129,7 @@
 ;; TODO: this can be an Action
 (nxr/register-effect! :effects/send-llm-messages
   (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
+    ;; TODO: we should set :loading.actions/set-loading?
     (dispatch
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage

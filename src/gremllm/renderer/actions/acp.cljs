@@ -6,7 +6,8 @@
   "Session created successfully. Save session-id to topic."
   [_state topic-id session-id]
   (js/console.log "[ACP] Session ready:" session-id "for topic:" topic-id)
-  [[:effects/save (topic-state/session-id-path topic-id) session-id]])
+  [[:loading.actions/set-loading? topic-id false]
+   [:effects/save (topic-state/session-id-path topic-id) session-id]])
 
 (defn session-error
   "ACP session initialization failed."
@@ -14,7 +15,8 @@
   (js/console.error "[ACP] Session init failed:" error))
 
 (defn new-session [_state topic-id]
-  [[:effects/promise
+  [[:loading.actions/set-loading? topic-id true]
+   [:effects/promise
     {:promise    (.acpNewSession js/window.electronAPI)
      :on-success [[:acp.actions/session-ready topic-id]]
      :on-error   [[:acp.actions/session-error]]}]])
