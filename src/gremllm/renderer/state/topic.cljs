@@ -29,3 +29,9 @@
 (defn get-topic-field [state topic-id field]
   (get-in state (topic-field-path topic-id field)))
 
+(defn get-session-id [state]
+  (:session-id (get-active-topic state)))
+
+(defn session-id-path [topic-id]
+  (topic-field-path topic-id :session-id))
+
