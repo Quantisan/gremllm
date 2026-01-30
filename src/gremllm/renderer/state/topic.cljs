@@ -29,11 +29,9 @@
 (defn get-topic-field [state topic-id field]
   (get-in state (topic-field-path topic-id field)))
 
-;; TODO: rename to get-acp-session-id
-;; TODO: add topic-id as arg so it's explicit
-(defn get-session-id [state]
-  (:session-id (get-active-topic state)))
+(defn get-acp-session-id [state]
+  (:acp-session-id (get-active-topic state)))
 
-(defn session-id-path [topic-id]
-  (topic-field-path topic-id :session-id))
+(defn acp-session-id-path [topic-id]
+  (topic-field-path topic-id :acp-session-id))
 

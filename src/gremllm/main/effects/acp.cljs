@@ -16,9 +16,9 @@
 
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."
-  [session-id text]
-  (js/console.log "[acp] invoking prompt, session-id:" session-id)
-  (acp-js/prompt session-id text))
+  [acp-session-id text]
+  (js/console.log "[acp] invoking prompt, acp-session-id:" acp-session-id)
+  (acp-js/prompt acp-session-id text))
 
 (defn shutdown
   "Terminate ACP subprocess."
