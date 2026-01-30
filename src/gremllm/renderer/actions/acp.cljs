@@ -15,7 +15,7 @@
   (js/console.error "[ACP] Session init failed:" error))
 
 (defn new-session [_state topic-id]
-  [[:loading.actions/set-loading? topic-id true]
+  [[:loading.actions/set-loading? topic-id true] ;; TODO: this is confusingly overlapping with state.acp/loading-path
    [:effects/promise
     {:promise    (.acpNewSession js/window.electronAPI)
      :on-success [[:acp.actions/session-ready topic-id]]
