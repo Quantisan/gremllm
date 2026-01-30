@@ -9,9 +9,7 @@
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.loading :as loading-state]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.acp :as acp-state]))
+            [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
 (nxr/register-system->state! deref)
@@ -191,26 +189,4 @@
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
-
-;; TODO: refactor to tidy up this big fn. SRP
-;;
-;; Append response chunks to assistant message
-(nxr/register-action! :acp.events/session-update
-  (fn [state {:keys [update]}]
-    (when (= (:session-update update) :agent-message-chunk)
-      (let [topic-id  (topic-state/get-active-topic-id state)
-            messages  (topic-state/get-messages state)
-            last-msg  (peek messages)
-            chunk-text (get-in update [:content :text])]
-        (if (= :assistant (:type last-msg))
-          ;; Append to existing assistant message
-          (let [last-idx (dec (count messages))
-                new-text (str (:text last-msg) chunk-text)
-                msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
-            [[:effects/save acp-state/loading-path false]
-             [:effects/save msg-path new-text]])
-          ;; Create new assistant message with chunk text
-          [[:effects/save acp-state/loading-path false]
-           [:messages.actions/add-to-chat {:id   (.now js/Date)
-                                           :type :assistant
-                                           :text chunk-text}]])))))
+(nxr/register-action! :acp.events/session-update acp/session-update)
