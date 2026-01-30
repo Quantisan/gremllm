@@ -401,11 +401,16 @@
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
   [:map
-   [:session-id :string]
+   [:acp-session-id :string]
    [:update AcpUpdate]])
 
-(def ^:private camel->kebab-key-transformer
-  (mt/key-transformer {:decode csk/->kebab-case-keyword}))
+(def ^:private acp-key-transformer
+  "Maps sessionId → :acp-session-id, otherwise camel→kebab."
+  (mt/key-transformer
+    {:decode (fn [k]
+               (if (= k "sessionId")
+                 :acp-session-id
+                 (csk/->kebab-case-keyword k)))}))
 
 (def ^:private session-update-value-transformer
   "Transforms :session-update string values to kebab-case keywords."
@@ -423,7 +428,7 @@
   (m/coerce AcpSessionUpdate
             (js->clj js-data)
             (mt/transformer
-              camel->kebab-key-transformer
+              acp-key-transformer
               session-update-value-transformer
               mt/json-transformer)))
 

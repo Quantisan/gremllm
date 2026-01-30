@@ -105,7 +105,7 @@
                        :update #js {:content #js {:text "Hello" :type "text"}
                                     :sessionUpdate "agent_message_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
-      (is (= "e0eb7ced-4b3f-45af-b911-6b9de025788b" (:session-id result)))
+      (is (= "e0eb7ced-4b3f-45af-b911-6b9de025788b" (:acp-session-id result)))
 
       (when (and (is (contains? (set (keys (:update result))) :session-update))
                  (is (contains? (set (keys (:update result))) :content)))
@@ -117,7 +117,7 @@
                        :update #js {:content #js {:text "The user wants" :type "text"}
                                     :sessionUpdate "agent_thought_chunk"}}
           result (schema/acp-session-update-from-js js-data)]
-      (is (= "abc-123" (:session-id result)))
+      (is (= "abc-123" (:acp-session-id result)))
 
       (when (is (contains? (set (keys (:update result))) :session-update))
         (is (= :agent-thought-chunk (get-in result [:update :session-update]))))))
@@ -127,7 +127,7 @@
                        :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
                                     :sessionUpdate "available_commands_update"}}
           result (schema/acp-session-update-from-js js-data)]
-      (is (= "xyz-789" (:session-id result)))
+      (is (= "xyz-789" (:acp-session-id result)))
 
       (when (and (is (contains? (set (keys (:update result))) :session-update))
                  (is (contains? (set (keys (:update result))) :available-commands)))
