@@ -22,8 +22,8 @@
      :on-error   [[:acp.actions/session-error]]}]])
 
 (defn send-prompt [state text]
-  (let [acp-session-id (topic-state/get-acp-session-id state)
-        topic-id       (topic-state/get-active-topic-id state)]
+  (let [topic-id       (topic-state/get-active-topic-id state)
+        acp-session-id (topic-state/get-acp-session-id state topic-id)]
     (if acp-session-id
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
