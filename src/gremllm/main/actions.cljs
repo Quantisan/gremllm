@@ -134,9 +134,9 @@
 ;; which triggers these actions.
 
 (nxr/register-action! :acp.events/session-update
-  (fn [_state {:keys [session-id update] :as event-data}]
+  (fn [_state {:keys [acp-session-id _update] :as event-data}]
     ;; WIP: Push to renderer for observability
-    (js/console.log "[ACP→IPC] Pushing session update:" session-id)
+    (js/console.log "[ACP→IPC] Pushing session update to acp-session-id:" acp-session-id)
     [[:ipc.effects/send-to-renderer "acp:session-update" event-data]]))
 
 ;; ACP Effects Registration
@@ -150,6 +150,6 @@
   (fn [{:keys [dispatch]} _ cwd]
     (dispatch [[:ipc.effects/promise->reply (acp-effects/new-session cwd)]])))
 
-(nxr/register-effect! :acp.effects/prompt
-  (fn [{:keys [dispatch]} _ session-id text]
-    (dispatch [[:ipc.effects/promise->reply (acp-effects/prompt session-id text)]])))
+(nxr/register-effect! :acp.effects/send-prompt
+  (fn [{:keys [dispatch]} _ acp-session-id text]
+    (dispatch [[:ipc.effects/promise->reply (acp-effects/prompt acp-session-id text)]])))

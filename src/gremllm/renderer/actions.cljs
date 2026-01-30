@@ -124,8 +124,10 @@
   (fn [_state]
     [[:effects/save [:assistant-errors] nil]]))
 
+;; TODO: this can be an Action
 (nxr/register-effect! :effects/send-llm-messages
   (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
+    ;; TODO: we should set :loading.actions/set-loading?
     (dispatch
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage
@@ -183,16 +185,8 @@
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
 ;; ACP
-(nxr/register-action! :acp.actions/init-session acp/init-session)
+(nxr/register-action! :acp.actions/new-session acp/new-session)
+(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
-(nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
-
-;; ACP Events (Slice 2: accumulate chunks)
-(nxr/register-action! :acp.events/session-update
-  (fn [state {:keys [update]}]
-    (when (= (:session-update update) :agent-message-chunk)
-      (let [chunks    (get-in state [:acp :chunks] [])
-            prev-text (get-in update [:content :text])]
-        [[:effects/save [:acp :chunks] (conj chunks prev-text)]
-         [:effects/save [:acp :loading?] false]]))))
+(nxr/register-action! :acp.events/session-update acp/session-update)

@@ -92,7 +92,7 @@ Slice 1 (SDK) → Slice 1b (IPC) → Slice 2 (streaming) + Slice 3 (sessions) �
 
 2. **Sessions required:** ACP protocol requires sessions scoped to working directory. API is `prompt(sessionId, text)`, not `prompt(text)`.
 
-3. **Key casing boundary:** JS sends camelCase (`sessionId`), CLJS expects kebab-case (`:session-id`). Coercion needed at boundary.
+3. **Key casing boundary:** JS sends camelCase (`sessionId`), CLJS expects kebab-case (`:acp-session-id`). Coercion needed at boundary.
 
 ## Phase 3.2: IPC Wiring ✅
 

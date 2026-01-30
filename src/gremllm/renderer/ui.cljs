@@ -36,7 +36,6 @@
       ;; TODO: we have `topics-map` already. Why are we getting from state below? What's more
       ;; readable and simple?
       (chat-ui/render-chat-area (topic-state/get-messages state)
-                                (acp-state/get-chunks state)
                                 (acp-state/loading? state)
                                 (loading-state/get-assistant-errors state))
 

@@ -124,11 +124,11 @@
                        [[:acp.effects/new-session (state/get-workspace-dir @store)]])))
 
   (.on ipcMain "acp/prompt"
-       (fn [event ipc-correlation-id session-id text]
+       (fn [event ipc-correlation-id acp-session-id text]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.effects/prompt session-id text]]))))
+                       [[:acp.effects/send-prompt acp-session-id text]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")

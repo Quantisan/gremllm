@@ -267,6 +267,7 @@
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
    [:model {:default "gemini-3-flash-preview"} Model] ;; defaulting to Flash because is cheap and fast
+   [:acp-session-id {:optional true} :string]         ;; TODO: refator to :uuid type
    [:reasoning? {:default true} :boolean]
    [:messages {:default []} [:vector Message]]])
 
@@ -365,7 +366,9 @@
   "Schema for text content in ACP chunks."
   [:map
    [:type [:= "text"]]
-   [:text :string]])
+   [:text :string]
+   [:annotations {:optional true} [:maybe :any]]
+   [:_meta {:optional true} [:maybe [:map-of :keyword :any]]]])
 
 (def AcpUpdate
   "Discriminated union of ACP session update types.
@@ -399,11 +402,16 @@
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
   [:map
-   [:session-id :string]
+   [:acp-session-id :string] ;; TODO: :uuid type
    [:update AcpUpdate]])
 
-(def ^:private camel->kebab-key-transformer
-  (mt/key-transformer {:decode csk/->kebab-case-keyword}))
+(def ^:private acp-key-transformer
+  "Maps sessionId → :acp-session-id, otherwise camel→kebab."
+  (mt/key-transformer
+    {:decode (fn [k]
+               (if (= k "sessionId")
+                 :acp-session-id
+                 (csk/->kebab-case-keyword k)))}))
 
 (def ^:private session-update-value-transformer
   "Transforms :session-update string values to kebab-case keywords."
@@ -421,7 +429,7 @@
   (m/coerce AcpSessionUpdate
             (js->clj js-data)
             (mt/transformer
-              camel->kebab-key-transformer
+              acp-key-transformer
               session-update-value-transformer
               mt/json-transformer)))
 
