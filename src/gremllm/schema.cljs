@@ -366,7 +366,9 @@
   "Schema for text content in ACP chunks."
   [:map
    [:type [:= "text"]]
-   [:text :string]])
+   [:text :string]
+   [:annotations {:optional true} [:maybe :any]]
+   [:_meta {:optional true} [:maybe [:map-of :keyword :any]]]])
 
 (def AcpUpdate
   "Discriminated union of ACP session update types.
