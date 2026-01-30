@@ -6,29 +6,40 @@
 (defn- assistant-message? [message]
   (= :assistant (:type message)))
 
-(defn agent-message-chunk-effects
-  "Builds effects for appending or creating an assistant message from a chunk."
-  [state chunk-text message-id]
+(defn- append-to-response
+  "Appends chunk to the last assistant message (streaming continuation)."
+  [state chunk-text]
   (let [topic-id (topic-state/get-active-topic-id state)
         messages (topic-state/get-messages state)
-        last-msg (peek messages)]
-    (if (assistant-message? last-msg)
-      ;; TODO: refactor out the two branches into domain-obvious fns
-      (let [last-idx (dec (count messages))
-            new-text (str (:text last-msg) chunk-text)
-            msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
-        [[:effects/save acp-state/loading-path false]
-         [:effects/save msg-path new-text]])
-      [[:effects/save acp-state/loading-path false]
-       [:messages.actions/add-to-chat {:id   message-id
-                                       :type :assistant
-                                       :text chunk-text}]])))
+        last-idx (dec (count messages))
+        new-text (str (:text (peek messages)) chunk-text)
+        msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
+    [:effects/save msg-path new-text]))
 
-(defn session-update [state {:keys [update]}]
-    (when (= (:session-update update) :agent-message-chunk)
-      (let [chunk-text (get-in update [:content :text]) ;; TODO: refactor and add test
-            message-id (.now js/Date)]
-        (agent-message-chunk-effects state chunk-text message-id))))
+(defn- start-response
+  "Creates a new assistant message (first chunk of a new turn)."
+  [chunk-text message-id]
+  [:messages.actions/add-to-chat {:id   message-id
+                                  :type :assistant
+                                  :text chunk-text}])
+
+(defn streaming-chunk-effects
+  "Builds effects for an incoming assistant message chunk.
+   Appends to existing response or starts a new one."
+  [state chunk-text message-id]
+  (let [continuing? (assistant-message? (peek (topic-state/get-messages state)))]
+    [[:effects/save acp-state/loading-path false]
+     (if continuing?
+       (append-to-response state chunk-text)
+       (start-response chunk-text message-id))]))
+
+(defn session-update
+  "Handles incoming ACP session updates (streaming chunks, errors, etc)."
+  [state {:keys [update]}]
+  (when (= (:session-update update) :agent-message-chunk)
+    (let [chunk-text (get-in update [:content :text]) ;; TODO: refactor and link with integration test to ensure data schema
+          message-id (.now js/Date)]
+      (streaming-chunk-effects state chunk-text message-id))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."
