@@ -401,7 +401,7 @@
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
   [:map
-   [:acp-session-id :string]
+   [:acp-session-id :string] ;; TODO: :uuid type
    [:update AcpUpdate]])
 
 (def ^:private acp-key-transformer

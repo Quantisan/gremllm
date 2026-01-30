@@ -100,36 +100,37 @@
              {:type :assistant :text "Hi there"}])))))
 
 (deftest test-acp-session-update-from-js
-  (testing "coerces agent_message_chunk from JS with kebab-case keywords"
-    (let [js-data #js {:sessionId "e0eb7ced-4b3f-45af-b911-6b9de025788b"
-                       :update #js {:content #js {:text "Hello" :type "text"}
-                                    :sessionUpdate "agent_message_chunk"}}
-          result (schema/acp-session-update-from-js js-data)]
-      (is (= "e0eb7ced-4b3f-45af-b911-6b9de025788b" (:acp-session-id result)))
+  (let [acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b"]
+    (testing "coerces agent_message_chunk from JS with kebab-case keywords"
+      (let [js-data #js {:sessionId acp-session-id
+                         :update #js {:content #js {:text "Hello" :type "text"}
+                                      :sessionUpdate "agent_message_chunk"}}
+            result (schema/acp-session-update-from-js js-data)]
+        (is (= acp-session-id (:acp-session-id result)))
 
-      (when (and (is (contains? (set (keys (:update result))) :session-update))
-                 (is (contains? (set (keys (:update result))) :content)))
-        (is (= :agent-message-chunk (get-in result [:update :session-update])))
-        (is (= "Hello" (get-in result [:update :content :text]))))))
+        (when (and (is (contains? (set (keys (:update result))) :session-update))
+                  (is (contains? (set (keys (:update result))) :content)))
+          (is (= :agent-message-chunk (get-in result [:update :session-update])))
+          (is (= "Hello" (get-in result [:update :content :text]))))))
 
-  (testing "coerces agent_thought_chunk from JS with kebab-case keywords"
-    (let [js-data #js {:sessionId "abc-123"
-                       :update #js {:content #js {:text "The user wants" :type "text"}
-                                    :sessionUpdate "agent_thought_chunk"}}
-          result (schema/acp-session-update-from-js js-data)]
-      (is (= "abc-123" (:acp-session-id result)))
+    (testing "coerces agent_thought_chunk from JS with kebab-case keywords"
+      (let [js-data #js {:sessionId acp-session-id
+                         :update #js {:content #js {:text "The user wants" :type "text"}
+                                      :sessionUpdate "agent_thought_chunk"}}
+            result (schema/acp-session-update-from-js js-data)]
+        (is (= acp-session-id (:acp-session-id result)))
 
-      (when (is (contains? (set (keys (:update result))) :session-update))
-        (is (= :agent-thought-chunk (get-in result [:update :session-update]))))))
+        (when (is (contains? (set (keys (:update result))) :session-update))
+          (is (= :agent-thought-chunk (get-in result [:update :session-update]))))))
 
-  (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
-    (let [js-data #js {:sessionId "xyz-789"
-                       :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
-                                    :sessionUpdate "available_commands_update"}}
-          result (schema/acp-session-update-from-js js-data)]
-      (is (= "xyz-789" (:acp-session-id result)))
+    (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
+      (let [js-data #js {:sessionId acp-session-id
+                         :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
+                                      :sessionUpdate "available_commands_update"}}
+            result (schema/acp-session-update-from-js js-data)]
+        (is (= acp-session-id (:acp-session-id result)))
 
-      (when (and (is (contains? (set (keys (:update result))) :session-update))
-                 (is (contains? (set (keys (:update result))) :available-commands)))
-        (is (= :available-commands-update (get-in result [:update :session-update])))
-        (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
+        (when (and (is (contains? (set (keys (:update result))) :session-update))
+                  (is (contains? (set (keys (:update result))) :available-commands)))
+          (is (= :available-commands-update (get-in result [:update :session-update])))
+          (is (= "commit" (get-in result [:update :available-commands 0 :name]))))))))
