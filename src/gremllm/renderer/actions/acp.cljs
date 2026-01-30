@@ -6,7 +6,7 @@
 (defn- assistant-message? [message]
   (= :assistant (:type message)))
 
-(defn- append-to-response
+(defn append-to-response
   "Appends chunk to the last assistant message (streaming continuation)."
   [state chunk-text]
   (let [topic-id (topic-state/get-active-topic-id state)
