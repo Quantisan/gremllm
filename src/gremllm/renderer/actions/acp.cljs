@@ -9,6 +9,7 @@
 (defn append-to-response
   "Appends chunk to the last assistant message (streaming continuation)."
   [state chunk-text]
+  ;; TODO: check that acp-session-id of the chunk is same as that of the topic's
   (let [topic-id (topic-state/get-active-topic-id state)
         messages (topic-state/get-messages state)
         last-idx (dec (count messages))
@@ -67,6 +68,8 @@
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
         {:promise    (.acpPrompt js/window.electronAPI acp-session-id text)
+         ;; We receive `#js {stopReason "end_turn"}` on-success.
+         ;; TODO: refactor out as a dedicated handler and include an auto-save
          :on-success [[:loading.actions/set-loading? topic-id false]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))
