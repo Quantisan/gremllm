@@ -1,6 +1,8 @@
 (ns gremllm.renderer.actions.acp
   "Actions for managing ACP (Agent Client Protocol) sessions."
-  (:require [gremllm.renderer.state.acp :as acp-state]
+  (:require [malli.core :as m]
+            [gremllm.schema :as schema]
+            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- assistant-message? [message]
@@ -20,8 +22,10 @@
 (defn- start-response
   "Creates a new assistant message (first chunk of a new turn)."
   [chunk-text message-id]
-  [[:messages.actions/add-to-chat-no-save
-    {:id message-id :type :assistant :text chunk-text}]])
+  (let [message {:id message-id :type :assistant :text chunk-text}]
+    (when-not (m/validate schema/Message message)
+      (throw (js/Error. (str "Invalid Message: " (pr-str (m/explain schema/Message message))))))
+    [[:messages.actions/add-to-chat-no-save message]]))
 
 (defn streaming-chunk-effects
   "Builds effects for an incoming assistant message chunk.
