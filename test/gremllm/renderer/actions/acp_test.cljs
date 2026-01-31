@@ -27,7 +27,7 @@
                  :active-topic-id "t1"}
           effects (acp/streaming-chunk-effects state "Hi!" 456)]
       (is (= [[:effects/save acp-state/loading-path false]
-              [:messages.actions/add-to-chat {:id 456
-                                              :type :assistant
-                                              :text "Hi!"}]]
+              [:messages.actions/add-to-chat-no-save {:id 456
+                                                      :type :assistant
+                                                      :text "Hi!"}]]
              effects)))))

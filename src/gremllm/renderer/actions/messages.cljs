@@ -2,12 +2,18 @@
   (:require [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.form :as form-state]))
 
-(defn add-message [_state message]
+(defn- base-add-message-effects [message]
   [[:messages.actions/append-to-state message]
    [:topic.actions/mark-active-unsaved]
-   [:ui.actions/scroll-chat-to-bottom]
-   ;; TODO: we should not save if the last message was an Error
-   [:topic.actions/auto-save]])
+   [:ui.actions/scroll-chat-to-bottom]])
+
+(defn add-message [_state message]
+  (into (base-add-message-effects message)
+        [;; TODO: we should not save if the last message was an Error
+         [:topic.actions/auto-save]]))
+
+(defn add-message-no-save [_state message]
+  (base-add-message-effects message))
 
 (defn build-conversation-with-new-message
   "Builds complete conversation history including the new user message.
