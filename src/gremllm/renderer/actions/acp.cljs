@@ -20,19 +20,21 @@
 (defn- start-response
   "Creates a new assistant message (first chunk of a new turn)."
   [chunk-text message-id]
-  [:messages.actions/add-to-chat {:id   message-id
-                                  :type :assistant
-                                  :text chunk-text}])
+  ;; TODO: DRY with actions.messages/add-message
+  [[:messages.actions/append-to-state {:id message-id :type :assistant :text chunk-text}]
+   [:topic.actions/mark-active-unsaved]
+   [:ui.actions/scroll-chat-to-bottom]])
 
 (defn streaming-chunk-effects
   "Builds effects for an incoming assistant message chunk.
    Appends to existing response or starts a new one."
   [state chunk-text message-id]
   (let [continuing? (assistant-message? (peek (topic-state/get-messages state)))]
-    [[:effects/save acp-state/loading-path false]
-     (if continuing?
-       (append-to-response state chunk-text)
-       (start-response chunk-text message-id))]))
+    (if continuing?
+      [[:effects/save acp-state/loading-path false]
+       (append-to-response state chunk-text)]
+      (into [[:effects/save acp-state/loading-path false]]
+            (start-response chunk-text message-id)))))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc)."
@@ -68,8 +70,7 @@
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
         {:promise    (.acpPrompt js/window.electronAPI acp-session-id text)
-         ;; We receive `#js {stopReason "end_turn"}` on-success.
-         ;; TODO: refactor out as a dedicated handler and include an auto-save
-         :on-success [[:loading.actions/set-loading? topic-id false]]
+         :on-success [[:loading.actions/set-loading? topic-id false]
+                      [:topic.actions/auto-save topic-id]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))
