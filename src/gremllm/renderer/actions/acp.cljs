@@ -20,10 +20,8 @@
 (defn- start-response
   "Creates a new assistant message (first chunk of a new turn)."
   [chunk-text message-id]
-  ;; TODO: DRY with actions.messages/add-message
-  [[:messages.actions/append-to-state {:id message-id :type :assistant :text chunk-text}]
-   [:topic.actions/mark-active-unsaved]
-   [:ui.actions/scroll-chat-to-bottom]])
+  [[:messages.actions/add-to-chat-no-save
+    {:id message-id :type :assistant :text chunk-text}]])
 
 (defn streaming-chunk-effects
   "Builds effects for an incoming assistant message chunk.
