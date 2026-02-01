@@ -5,8 +5,12 @@
             [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
-(defn- assistant-message? [message]
-  (= :assistant (:type message)))
+(def session-update->message-type
+  {:agent-message-chunk :assistant
+   :agent-thought-chunk :reasoning})
+
+(defn- continuing? [state message-type]
+  (= message-type (:type (peek (topic-state/get-messages state)))))
 
 (defn append-to-response
   "Appends chunk to the last assistant message (streaming continuation)."
@@ -21,8 +25,8 @@
 
 (defn- start-response
   "Creates a new assistant message (first chunk of a new turn)."
-  [chunk-text message-id]
-  (let [message {:id message-id :type :assistant :text chunk-text}]
+  [message-type chunk-text message-id]
+  (let [message {:id message-id :type message-type :text chunk-text}]
     (when-not (m/validate schema/Message message)
       (throw (js/Error. (str "Invalid Message: " (pr-str (m/explain schema/Message message))))))
     [[:messages.actions/add-to-chat-no-save message]]))
@@ -30,21 +34,21 @@
 (defn streaming-chunk-effects
   "Builds effects for an incoming assistant message chunk.
    Appends to existing response or starts a new one."
-  [state chunk-text message-id]
-  (let [continuing? (assistant-message? (peek (topic-state/get-messages state)))]
+  [state message-type chunk-text message-id]
+  (let [continuing? (continuing? state message-type)]
     (if continuing?
       [[:effects/save acp-state/loading-path false]
        (append-to-response state chunk-text)]
       (into [[:effects/save acp-state/loading-path false]]
-            (start-response chunk-text message-id)))))
+            (start-response message-type chunk-text message-id)))))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc)."
   [state {:keys [update]}]
-  (when (= (:session-update update) :agent-message-chunk)
+  (when-let [message-type (get session-update->message-type (:session-update update))]
     (let [chunk-text (get-in update [:content :text]) ;; TODO: refactor and link with integration test to ensure data schema
           message-id (.now js/Date)]
-      (streaming-chunk-effects state chunk-text message-id))))
+      (streaming-chunk-effects state message-type chunk-text message-id))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."

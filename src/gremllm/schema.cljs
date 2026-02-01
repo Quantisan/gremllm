@@ -50,7 +50,7 @@
 (def Message
   [:map
    [:id :int]
-   [:type [:enum :user :assistant]]
+   [:type [:enum :user :assistant :reasoning]]
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]])
 
@@ -89,6 +89,7 @@
   Chat API: {:role 'user'|'assistant', :content, :attachments?}"
   [messages]
   (mapv (fn [{:keys [type text attachments]}]
+          ;; TODO: do we need to include :reasoning messages from outbound history?
           (cond-> {:role (if (= type :user) "user" "assistant")
                    :content text}
             attachments (assoc :attachments attachments)))
