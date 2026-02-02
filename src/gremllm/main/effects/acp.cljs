@@ -14,6 +14,12 @@
   (js/console.log "[acp] invoking new-session, cwd:" cwd)
   (acp-js/newSession cwd))
 
+(defn resume-session
+  "Resume existing ACP session by ID."
+  [cwd acp-session-id]
+  (js/console.log "[acp] invoking resume-session, cwd:" cwd "acp-session-id:" acp-session-id)
+  (acp-js/resumeSession cwd acp-session-id))
+
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."
   [acp-session-id text]
