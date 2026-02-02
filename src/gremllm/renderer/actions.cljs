@@ -172,18 +172,13 @@
 (nxr/register-action! :topic.actions/delete-success topic/delete-topic-success)
 (nxr/register-action! :topic.actions/delete-error topic/delete-topic-error)
 
-;; Auto-save effect - reads live state to check if messages exist before saving
+;; Auto-save effect - reads live state to check if messages exist before saving.
 ;; This must be an effect (not an action) to avoid stale state when called from async promises.
 ;; Actions receive immutable snapshots from dispatch time, but effects can @store for current state.
 (nxr/register-effect! :topic.effects/auto-save
   (fn [{:keys [dispatch]} store topic-id]
-    (let [state  @store
-          ;; Handle optional topic-id (nil means use active topic)
-          result (if topic-id
-                   (topic/auto-save state topic-id)
-                   (topic/auto-save state))]
-      (when result
-        (dispatch result)))))
+    (when-let [effects (topic/auto-save @store topic-id)]
+      (dispatch effects))))
 
 (nxr/register-action! :system.actions/request-info system/request-info)
 (nxr/register-action! :system.actions/set-info system/set-info)

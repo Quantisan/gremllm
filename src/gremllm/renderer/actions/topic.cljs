@@ -42,13 +42,12 @@
     [[:topic.actions/mark-unsaved active-id]]))
 
 (defn auto-save
-  ([state]
-   (auto-save state (topic-state/get-active-topic-id state)))
-  ([state topic-id]
-   (when (-> (topic-state/get-topic state topic-id)
-             (:messages)
-             (seq))
-     [[:topic.effects/save-topic topic-id]])))
+  [state topic-id]
+  (let [topic-id (or topic-id (topic-state/get-active-topic-id state))
+        messages (when topic-id
+                   (topic-state/get-topic-field state topic-id :messages))]
+    (when (seq messages)
+      [[:topic.effects/save-topic topic-id]])))
 
 (defn set-active
   "Set the active topic and initialize its ACP session."
@@ -114,4 +113,3 @@
        {:promise    (.deleteTopic js/window.electronAPI topic-id)
         :on-success [[:topic.actions/delete-success topic-id]]
         :on-error   [[:topic.actions/delete-error topic-id]]}]])))
-
