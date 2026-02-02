@@ -52,7 +52,7 @@
         (is (= :topic.actions/set-name (ffirst actions)))
         (is (= "New Name" (nth (first actions) 2)))
         (is (= :ui.actions/exit-topic-rename-mode (first (second actions))))
-        (is (= :topic.actions/auto-save (first (nth actions 2))))))))
+        (is (= :topic.effects/auto-save (first (nth actions 2))))))))
 
 (deftest auto-save-test
   (let [topic-id       "topic-123"

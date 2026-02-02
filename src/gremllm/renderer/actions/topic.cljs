@@ -74,7 +74,7 @@
       :else
       [[:topic.actions/set-name topic-id new-name]
        [:ui.actions/exit-topic-rename-mode topic-id]
-       [:topic.actions/auto-save topic-id]])))
+       [:topic.effects/auto-save topic-id]])))
 
 (defn handle-rename-keys [_state topic-id {:keys [key]} value]
   (case key
