@@ -24,8 +24,9 @@
   [e/assistant-message
     [:div {:innerHTML (markdown->html (:text message))}]])
 
-;; TODO:
-(def render-reasoning-message render-assistant-message)
+(defn- render-reasoning-message [message]
+  [e/reasoning-message {}
+   [:div {:innerHTML (markdown->html (:text message))}]])
 
 (defn- render-message [message]
   (case (:type message)
