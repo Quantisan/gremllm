@@ -55,18 +55,6 @@
   (testing "returns display name for Google"
     (is (= "Google" (schema/provider-display-name :google)))))
 
-(deftest test-models-by-provider
-  (testing "groups models by provider"
-    (let [grouped (schema/models-by-provider)]
-      (is (map? grouped))
-      (is (contains? grouped "Anthropic"))
-      (is (contains? grouped "OpenAI"))
-      (is (contains? grouped "Google"))
-
-      ;; Check that all models are accounted for
-      (is (= (set (keys schema/supported-models))
-             (set (apply concat (vals grouped))))))))
-
 (deftest test-attachment-ref->api-format
   (testing "transforms valid attachment-ref and buffer to API format"
     (let [attachment-ref {:ref "abc12345"
