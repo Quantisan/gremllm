@@ -15,7 +15,7 @@
 
 
 (defn- render-workspace [state]
-  (let [has-any-api-key?          (system-state/has-any-api-key? state)
+  (let [has-any-api-key?      (system-state/has-any-api-key? state)
         workspace             (workspace-state/get-workspace state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
@@ -41,9 +41,6 @@
 
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
-         :selected-model       (:model (topic-state/get-active-topic state))
-         :reasoning?           (:reasoning? (topic-state/get-active-topic state))
-         :has-messages?        (seq (topic-state/get-messages state))
          :loading?             (loading-state/loading? state)
          :has-any-api-key?     has-any-api-key?
          :pending-attachments  (form-state/get-pending-attachments state)})
