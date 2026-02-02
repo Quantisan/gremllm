@@ -105,17 +105,10 @@
                :let [display-name (get schema/supported-models model-id)]]
            [:option {:value model-id} display-name])])]]))
 
-(defn render-input-form [{:keys [input-value selected-model reasoning? has-messages? loading? has-any-api-key? pending-attachments]}]
+(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
-    [:div {:style {:display "flex"
-                   :gap "0.5rem"
-                   :align-items "center"
-                   :margin-bottom "0.5rem"}}
-     [:div {:style {:flex "1"}}
-      (render-model-selector selected-model has-messages?)]
-     (render-reasoning-toggle reasoning? has-messages?)]
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"
