@@ -68,6 +68,15 @@
      :on-success [[:acp.actions/session-ready topic-id]]
      :on-error   [[:acp.actions/session-error]]}]])
 
+(defn resume-session
+  "Resume existing ACP session for topic."
+  [_state topic-id acp-session-id]
+  [[:loading.actions/set-loading? topic-id true]
+   [:effects/promise
+    {:promise    (.acpResumeSession js/window.electronAPI acp-session-id)
+     :on-success [[:acp.actions/session-ready topic-id]]
+     :on-error   [[:acp.actions/session-error]]}]])
+
 (defn send-prompt [state text]
   (let [topic-id       (topic-state/get-active-topic-id state)
         acp-session-id (topic-state/get-acp-session-id state topic-id)]

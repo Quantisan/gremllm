@@ -187,6 +187,7 @@
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
+(nxr/register-action! :acp.actions/resume-session acp/resume-session)
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
