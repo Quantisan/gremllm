@@ -39,12 +39,15 @@
             (start-response message-type chunk-text message-id)))))
 
 (defn session-update
-  "Handles incoming ACP session updates (streaming chunks, errors, etc)."
+  "Handles incoming ACP session updates (streaming chunks, errors, etc).
+
+  update: schema/AcpUpdate"
   [state {:keys [update]}]
   (when-let [message-type (get schema/acp-chunk->message-type (:session-update update))]
-    (let [chunk-text (get-in update [:content :text]) ;; TODO: refactor and link with integration test to ensure data schema
-          message-id (.now js/Date)]
-      (streaming-chunk-effects state message-type chunk-text message-id))))
+    (streaming-chunk-effects state
+                             message-type
+                             (schema/acp-update-text update)
+                             (.now js/Date))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."

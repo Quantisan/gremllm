@@ -1,5 +1,6 @@
 (ns gremllm.schema-test
   (:require [cljs.test :refer [deftest is testing]]
+            [clojure.string]
             [gremllm.schema :as schema]))
 
 (deftest test-provider->api-key-keyword
@@ -99,38 +100,50 @@
             [{:type :user :text "Hello"}
              {:type :assistant :text "Hi there"}])))))
 
+;; ACP test fixtures
+(def test-acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b")
+(def test-content-chunks
+  {:agent-message-chunk {:text "Hello" :type "text"}
+   :agent-thought-chunk {:text "The user wants" :type "text"}})
+
 (deftest test-acp-session-update-from-js
-  (let [acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b"]
-    (testing "coerces agent_message_chunk from JS with kebab-case keywords"
-      (let [js-data #js {:sessionId acp-session-id
-                         :update #js {:content #js {:text "Hello" :type "text"}
-                                      :sessionUpdate "agent_message_chunk"}}
+  ;; Test content chunks derived from schema/acp-chunk->message-type
+  (doseq [chunk-type (keys schema/acp-chunk->message-type)]
+    (testing (str "coerces " (name chunk-type) " from JS with kebab-case keywords")
+      (let [content (get test-content-chunks chunk-type)
+            js-data #js {:sessionId test-acp-session-id
+                         :update #js {:content (clj->js content)
+                                      :sessionUpdate (-> chunk-type name (clojure.string/replace #"-" "_"))}}
             result (schema/acp-session-update-from-js js-data)]
-        (is (= acp-session-id (:acp-session-id result)))
+        (is (= test-acp-session-id (:acp-session-id result)))
 
         (when (and (is (contains? (set (keys (:update result))) :session-update))
-                  (is (contains? (set (keys (:update result))) :content)))
-          (is (= :agent-message-chunk (get-in result [:update :session-update])))
-          (is (= "Hello" (get-in result [:update :content :text]))))))
+                   (is (contains? (set (keys (:update result))) :content)))
+          (is (= chunk-type (get-in result [:update :session-update])))
+          (is (= (:text content) (get-in result [:update :content :text])))))))
 
-    (testing "coerces agent_thought_chunk from JS with kebab-case keywords"
-      (let [js-data #js {:sessionId acp-session-id
-                         :update #js {:content #js {:text "The user wants" :type "text"}
-                                      :sessionUpdate "agent_thought_chunk"}}
-            result (schema/acp-session-update-from-js js-data)]
-        (is (= acp-session-id (:acp-session-id result)))
+  (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
+                                    :sessionUpdate "available_commands_update"}}
+          result (schema/acp-session-update-from-js js-data)]
+      (is (= test-acp-session-id (:acp-session-id result)))
 
-        (when (is (contains? (set (keys (:update result))) :session-update))
-          (is (= :agent-thought-chunk (get-in result [:update :session-update]))))))
+      (when (and (is (contains? (set (keys (:update result))) :session-update))
+                 (is (contains? (set (keys (:update result))) :available-commands)))
+        (is (= :available-commands-update (get-in result [:update :session-update])))
+        (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
 
-    (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
-      (let [js-data #js {:sessionId acp-session-id
-                         :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
-                                      :sessionUpdate "available_commands_update"}}
-            result (schema/acp-session-update-from-js js-data)]
-        (is (= acp-session-id (:acp-session-id result)))
+(deftest test-acp-update-text
+  ;; Test content chunks derived from schema/acp-chunk->message-type
+  (doseq [chunk-type (keys schema/acp-chunk->message-type)]
+    (testing (str "extracts text from " (name chunk-type) " update")
+      (let [content (get test-content-chunks chunk-type)
+            update {:session-update chunk-type
+                    :content content}]
+        (is (= (:text content) (schema/acp-update-text update))))))
 
-        (when (and (is (contains? (set (keys (:update result))) :session-update))
-                  (is (contains? (set (keys (:update result))) :available-commands)))
-          (is (= :available-commands-update (get-in result [:update :session-update])))
-          (is (= "commit" (get-in result [:update :available-commands 0 :name]))))))))
+  (testing "returns nil for updates without content"
+    (let [update {:session-update :available-commands-update
+                  :available-commands []}]
+      (is (nil? (schema/acp-update-text update))))))

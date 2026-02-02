@@ -360,6 +360,16 @@
   {:agent-message-chunk :assistant
    :agent-thought-chunk :reasoning})
 
+(defn acp-update-text
+  "Extracts text content from an ACP update chunk.
+
+   update: AcpUpdate
+
+   Returns nil for update types without text content.
+   TODO: If AcpUpdate becomes a Record, convert to protocol getter."
+  [update]
+  (get-in update [:content :text]))
+
 ;; ACP Update sub-schemas
 (def AcpCommandInput
   "Optional input schema for ACP commands."
