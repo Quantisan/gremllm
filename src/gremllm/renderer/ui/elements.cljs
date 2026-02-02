@@ -58,3 +58,12 @@
 (defalias assistant-message [attrs & body]
   [:div.message-container
    (into [:article attrs] body)])
+
+(defalias reasoning-message [attrs & body]
+  [:div.message-container
+   [:article.reasoning-bubble
+    [:details (merge {:open true} attrs)
+     [:summary {:style {:cursor "pointer"
+                        :color "var(--pico-muted-color)"}}
+      "Reasoning ..."]
+     (into [:div] body)]]])

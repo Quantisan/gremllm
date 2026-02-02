@@ -24,10 +24,15 @@
   [e/assistant-message
     [:div {:innerHTML (markdown->html (:text message))}]])
 
+(defn- render-reasoning-message [message]
+  [e/reasoning-message {}
+   [:div {:innerHTML (markdown->html (:text message))}]])
+
 (defn- render-message [message]
   (case (:type message)
     :user      (render-user-message message)
     :assistant (render-assistant-message message)
+    :reasoning (render-reasoning-message message)
     ;; Default fallback
     [:div "Unknown message type:" (:type message)]))
 
