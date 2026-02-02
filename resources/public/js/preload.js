@@ -53,5 +53,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getFilePath: (file) => webUtils.getPathForFile(file),
 	// ACP API
 	acpNewSession: createIPCBoundary("acp/new-session"),
+	acpResumeSession: createIPCBoundary("acp/resume-session"),
 	acpPrompt: createIPCBoundary("acp/prompt"),
 });
