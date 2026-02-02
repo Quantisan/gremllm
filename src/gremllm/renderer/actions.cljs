@@ -9,6 +9,7 @@
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
@@ -188,8 +189,13 @@
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
 (nxr/register-action! :acp.actions/resume-session acp/resume-session)
-(nxr/register-action! :acp.actions/init-session acp/init-session)
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 (nxr/register-action! :acp.events/session-update acp/session-update)
+
+(nxr/register-effect! :acp.effects/init-session
+  (fn [{:keys [dispatch]} store topic-id]
+    (if-let [existing-acp-session-id (topic-state/get-topic-field @store topic-id :acp-session-id)]
+      (dispatch [[:acp.actions/resume-session topic-id existing-acp-session-id]])
+      (dispatch [[:acp.actions/new-session topic-id]]))))
