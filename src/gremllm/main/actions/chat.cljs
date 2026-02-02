@@ -1,4 +1,5 @@
 (ns gremllm.main.actions.chat
+  ;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
   "Pure action functions for chat domain operations in the main process."
   (:require [gremllm.main.state :as state]
             [gremllm.schema :as schema]))

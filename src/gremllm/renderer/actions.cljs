@@ -111,6 +111,7 @@
 (nxr/register-action! :messages.actions/append-to-state msg/append-to-state)
 (nxr/register-action! :llm.actions/response-received msg/llm-response-received)
 (nxr/register-action! :llm.actions/response-error msg/llm-response-error)
+;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
 (nxr/register-action! :llm.actions/send-messages msg/send-messages)
 
 (nxr/register-action! :loading.actions/set-loading?
@@ -125,6 +126,7 @@
   (fn [_state]
     [[:effects/save [:assistant-errors] nil]]))
 
+;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
 ;; TODO: this can be an Action
 (nxr/register-effect! :effects/send-llm-messages
   (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
