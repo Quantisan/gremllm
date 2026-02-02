@@ -17,7 +17,7 @@
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}
                                            {:type :assistant :text "Hi "}]}}
                  :active-topic-id "t1"}
-          effects (acp/streaming-chunk-effects state "there!" 123)]
+          effects (acp/streaming-chunk-effects state :assistant "there!" 123)]
       (is (= [[:effects/save acp-state/loading-path false]
               [:effects/save [:topics "t1" :messages 1 :text] "Hi there!"]]
              effects))))
@@ -25,7 +25,7 @@
   (testing "starts new assistant message when last is user"
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
                  :active-topic-id "t1"}
-          effects (acp/streaming-chunk-effects state "Hi!" 456)]
+          effects (acp/streaming-chunk-effects state :assistant "Hi!" 456)]
       (is (= [[:effects/save acp-state/loading-path false]
               [:messages.actions/add-to-chat-no-save {:id 456
                                                       :type :assistant

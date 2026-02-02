@@ -20,6 +20,10 @@
 ;; Messages
 ;; ========================================
 
+(def MessageType
+  "Valid message type identifiers."
+  [:enum :user :assistant :reasoning])
+
 (def AttachmentRef
   "Reference to a stored attachment file.
    Persisted in topic EDN, not the actual file content."
@@ -50,7 +54,7 @@
 (def Message
   [:map
    [:id :int]
-   [:type [:enum :user :assistant]]
+   [:type MessageType]
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]])
 
@@ -89,7 +93,8 @@
   Chat API: {:role 'user'|'assistant', :content, :attachments?}"
   [messages]
   (mapv (fn [{:keys [type text attachments]}]
-          (cond-> {:role (if (= type :user) "user" "assistant")
+          ;; TODO: do we need to include :reasoning messages from outbound history? If so, how?
+          (cond-> {:role    (name type)
                    :content text}
             attachments (assoc :attachments attachments)))
         messages))
@@ -348,6 +353,22 @@
 ;; ========================================
 ;; ACP Session Updates
 ;; ========================================
+
+(def acp-chunk->message-type
+  "Maps ACP content chunk session-update types to internal MessageType.
+   Only includes session updates that produce chat messages."
+  {:agent-message-chunk :assistant
+   :agent-thought-chunk :reasoning})
+
+(defn acp-update-text
+  "Extracts text content from an ACP update chunk.
+
+   update: AcpUpdate
+
+   Returns nil for update types without text content.
+   TODO: If AcpUpdate becomes a Record, convert to protocol getter."
+  [update]
+  (get-in update [:content :text]))
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput
