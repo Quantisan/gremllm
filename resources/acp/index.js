@@ -68,6 +68,17 @@ async function newSession(cwd) {
   return result.sessionId;
 }
 
+async function resumeSession(cwd, sessionId) {
+  if (!connection) await initialize();
+  console.log("[acp] resuming session:", sessionId, "cwd:", cwd);
+  await connection.unstable_resumeSession({
+    sessionId,
+    cwd,
+    mcpServers: []
+  });
+  return sessionId;
+}
+
 async function prompt(sessionId, text) {
   // PITFALL: Unlike newSession, this throws rather than lazy-initializing.
   // If subprocess crashes mid-session, callers must create a new session.
@@ -92,6 +103,7 @@ module.exports = {
   setDispatcher,
   initialize,
   newSession,
+  resumeSession,
   prompt,
   shutdown
 };

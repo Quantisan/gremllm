@@ -173,6 +173,7 @@ Framework and library documentation is available in the `context/` directory:
 
 **State & UI:**
 - `context/nexus.md` - State management core concepts
+- `context/nexus_addendum.md` - Nexus gotchas and edge cases (state capture timing, etc.)
 - `context/nexus_placeholder_resolve.md` - Dynamic placeholder resolution
 - `context/replicant_guide.md` - UI framework overview and patterns
 - `context/replicant_concept.md` - Conceptual model and architecture

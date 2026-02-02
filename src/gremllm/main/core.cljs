@@ -124,6 +124,13 @@
                               :channel "acp/new-session"}
                        [[:acp.effects/new-session (state/get-workspace-dir @store)]])))
 
+  (.on ipcMain "acp/resume-session"
+       (fn [event ipc-correlation-id acp-session-id]
+         (nxr/dispatch store {:ipc-event event
+                              :ipc-correlation-id ipc-correlation-id
+                              :channel "acp/resume-session"}
+                       [[:acp.effects/resume-session (state/get-workspace-dir @store) acp-session-id]])))
+
   (.on ipcMain "acp/prompt"
        (fn [event ipc-correlation-id acp-session-id text]
          (nxr/dispatch store {:ipc-event event

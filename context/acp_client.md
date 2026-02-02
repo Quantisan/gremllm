@@ -340,19 +340,25 @@ Terminals can embed in tool calls: `{ type: "terminal", terminalId: "..." }`. Di
 
 ## Session Persistence
 
-If `agentCapabilities.loadSession` is true:
+**Check `agentCapabilities.sessionCapabilities.resume` for resume support:**
 
 ```typescript
-// Resume existing session
-const loadResult = await connection.loadSession({
-  sessionId: previousSessionId,
-  cwd: "/path/to/workspace",
-  mcpServers: []
-});
+// Check capability during initialization
+const supportsResume = initResult.agentCapabilities?.sessionCapabilities?.resume !== undefined;
 
-// Agent streams history via sessionUpdate notifications:
-// user_message_chunk -> agent_message_chunk -> ...
+// Resume existing session (restores agent context, NOT message history)
+if (supportsResume) {
+  await connection.unstable_resumeSession({
+    sessionId: previousSessionId,
+    cwd: "/path/to/workspace",
+    mcpServers: []
+  });
+}
 ```
+
+**IMPORTANT:** Claude Code ACP implements `unstable_resumeSession()` which restores the agent's internal context but does NOT stream conversation history to the client. The `loadSession()` method is NOT implemented and will return "Method not found" error. Clients must persist and restore message history separately.
+
+**Tracking:** [zed-industries/claude-code-acp#64](https://github.com/zed-industries/claude-code-acp/issues/64) - Feature request for loadSession support
 
 ## Cancellation
 
@@ -470,7 +476,7 @@ interface Client {
 |-----------|--------|-----------|
 | Start connection | `initialize` | Client → Agent |
 | Create session | `newSession` | Client → Agent |
-| Resume session | `loadSession` | Client → Agent |
+| Resume session | `unstable_resumeSession` | Client → Agent |
 | Send prompt | `prompt` | Client → Agent |
 | Cancel operation | `cancel` | Client → Agent (notification) |
 | Progress updates | `sessionUpdate` | Agent → Client (notification) |
