@@ -92,3 +92,11 @@
                       [:topic.actions/auto-save topic-id]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))
+
+(defn init-session
+  "Initialize ACP session for topic - resumes existing or creates new."
+  [state topic-id]
+  (let [existing-id (topic-state/get-topic-field state topic-id :acp-session-id)]
+    (if existing-id
+      [[:acp.actions/resume-session topic-id existing-id]]
+      [[:acp.actions/new-session topic-id]])))
