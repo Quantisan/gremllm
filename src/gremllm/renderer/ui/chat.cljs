@@ -75,36 +75,6 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn- render-reasoning-toggle [enabled? has-messages?]
-  (when (or (not has-messages?) enabled?)
-    [:button {:type "button"
-              :class (when-not enabled? "outline")
-              :aria-pressed enabled?
-              :disabled has-messages?
-              :style {:padding "0.25rem 0.75rem"
-                      :font-size "0.875rem"}
-              :on {:click [[:topic.actions/toggle-reasoning]]}}
-     "Reasoning"]))
-
-(defn- render-model-selector [selected-model has-messages?]
-  (if has-messages?
-    ;; Read-only: show model as static text
-    [:small {:style {:color "#666"
-                     :display "block"
-                     :margin-bottom "0.5rem"}}
-     (get schema/supported-models selected-model selected-model)]
-
-    ;; Editable: show model selector dropdown
-    [:label {:style {:display "block"}}
-     [:small "Model:"]
-     [:select {:value selected-model ;; FIX: this doesn't seem to work. UI defaults to the first item on list instead of selected-model
-               :on {:change [[:topic.actions/update-model [:event.target/value]]]}}
-      (for [[provider-name model-ids] (schema/models-by-provider)]
-        [:optgroup {:label provider-name}
-         (for [model-id model-ids
-               :let [display-name (get schema/supported-models model-id)]]
-           [:option {:value model-id} display-name])])]]))
-
 (defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
