@@ -133,7 +133,7 @@
       [[:effects/promise
         {:promise    (js/window.electronAPI.sendMessage
                        (schema/messages-to-ipc messages)
-                       (schema/model-to-ipc model)
+                       (clj->js model)
                        (schema/attachment-paths-to-ipc file-paths)
                        reasoning?)
          :on-success on-success

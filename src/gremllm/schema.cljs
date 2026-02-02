@@ -6,16 +6,6 @@
             [malli.transform :as mt]
             [malli.util :as mu]))
 
-(def supported-models
-  "Canonical map of supported LLM models. Keys are model IDs, values are display names."
-  {"claude-sonnet-4-5-20250929" "Claude 4.5 Sonnet"
-   "claude-opus-4-1-20250805"   "Claude 4.1 Opus"
-   "claude-haiku-4-5-20251001"  "Claude 4.5 Haiku"
-   "gpt-5"                      "GPT-5"
-   "gpt-5-mini"                 "GPT-5 Mini"
-   "gemini-3-flash-preview"     "Gemini 3 Flash"
-   "gemini-3-pro-preview"       "Gemini 3 Pro"})
-
 ;; ========================================
 ;; Messages
 ;; ========================================
@@ -73,10 +63,6 @@
 (def Messages
   [:vector Message])
 
-(def Model
-  "Valid LLM model identifier"
-  (into [:enum] (keys supported-models)))
-
 (def AttachmentPaths
   "Vector of absolute file path strings for attachments"
   [:vector [:string {:min 1}]])
@@ -99,10 +85,6 @@
             attachments (assoc :attachments attachments)))
         messages))
 
-(defn model-from-ipc
-  [model-js]
-  (m/coerce Model (js->clj model-js) mt/json-transformer))
-
 (defn attachment-paths-from-ipc
   [attachment-paths-js]
   (when attachment-paths-js
@@ -114,12 +96,6 @@
   "Validates messages and converts to JS for IPC transmission. Throws if invalid."
   [messages]
   (-> (m/coerce Messages messages mt/json-transformer)
-      (clj->js)))
-
-(defn model-to-ipc
-  "Validates model and converts to JS for IPC transmission. Throws if invalid."
-  [model]
-  (-> (m/coerce Model model mt/json-transformer)
       (clj->js)))
 
 ;; TODO: Attachment MIME types are lost at this boundary
@@ -183,16 +159,6 @@
   [storage-keyword]
   (or (get (set/map-invert provider-storage-key-map) storage-keyword)
       (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
-
-(defn models-by-provider
-  "Groups supported-models by provider. Returns map of {provider-name [model-ids]}."
-  []
-  (->> supported-models
-       keys
-       (group-by model->provider)
-       (map (fn [[provider models]]
-              [(provider-display-name provider) (vec models)]))
-       (into (sorted-map))))
 
 ;; ========================================
 ;; Secrets
@@ -271,9 +237,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
-   [:model {:default "gemini-3-flash-preview"} Model] ;; defaulting to Flash because is cheap and fast
    [:acp-session-id {:optional true} :string]         ;; TODO: refator to :uuid type
-   [:reasoning? {:default true} :boolean]
    [:messages {:default []} [:vector Message]]])
 
 (def Topic

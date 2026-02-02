@@ -46,7 +46,7 @@
   (.on ipcMain "chat/send-message"
        (fn [event ipc-correlation-id messages model attachment-paths reasoning]
          (let [messages-clj         (schema/messages-from-ipc messages)
-               model-clj            (schema/model-from-ipc model)
+               model-clj            (js->clj model)
                attachment-paths-clj (schema/attachment-paths-from-ipc attachment-paths)
                reasoning-clj        (boolean reasoning)]
            (js/console.log "[chat:recv]"
