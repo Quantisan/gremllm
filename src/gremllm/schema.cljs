@@ -20,6 +20,10 @@
 ;; Messages
 ;; ========================================
 
+(def MessageType
+  "Valid message type identifiers."
+  [:enum :user :assistant :reasoning])
+
 (def AttachmentRef
   "Reference to a stored attachment file.
    Persisted in topic EDN, not the actual file content."
@@ -50,7 +54,7 @@
 (def Message
   [:map
    [:id :int]
-   [:type [:enum :user :assistant :reasoning]]
+   [:type MessageType]
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]])
 
@@ -349,6 +353,12 @@
 ;; ========================================
 ;; ACP Session Updates
 ;; ========================================
+
+(def acp-chunk->message-type
+  "Maps ACP content chunk session-update types to internal MessageType.
+   Only includes session updates that produce chat messages."
+  {:agent-message-chunk :assistant
+   :agent-thought-chunk :reasoning})
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput

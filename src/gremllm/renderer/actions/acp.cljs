@@ -5,10 +5,6 @@
             [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
-(def session-update->message-type
-  {:agent-message-chunk :assistant
-   :agent-thought-chunk :reasoning})
-
 (defn- continuing? [state message-type]
   (= message-type (:type (peek (topic-state/get-messages state)))))
 
@@ -45,7 +41,7 @@
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc)."
   [state {:keys [update]}]
-  (when-let [message-type (get session-update->message-type (:session-update update))]
+  (when-let [message-type (get schema/acp-chunk->message-type (:session-update update))]
     (let [chunk-text (get-in update [:content :text]) ;; TODO: refactor and link with integration test to ensure data schema
           message-id (.now js/Date)]
       (streaming-chunk-effects state message-type chunk-text message-id))))
