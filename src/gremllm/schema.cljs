@@ -89,8 +89,8 @@
   Chat API: {:role 'user'|'assistant', :content, :attachments?}"
   [messages]
   (mapv (fn [{:keys [type text attachments]}]
-          ;; TODO: do we need to include :reasoning messages from outbound history?
-          (cond-> {:role (if (= type :user) "user" "assistant")
+          ;; TODO: do we need to include :reasoning messages from outbound history? If so, how?
+          (cond-> {:role    (name type)
                    :content text}
             attachments (assoc :attachments attachments)))
         messages))
