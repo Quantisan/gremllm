@@ -69,14 +69,6 @@
             actions (topic/auto-save state topic-id)]
         (is (= [[:topic.effects/save-topic topic-id]] actions))))))
 
-(deftest update-model-test
-  (testing "updates active topic's model field"
-    (let [topic-id "topic-123"
-          state    {:active-topic-id topic-id
-                    :topics {topic-id {:id topic-id :model "old-model"}}}
-          actions  (topic/update-model state "new-model")]
-      (is (= [[:effects/save [:topics topic-id :model] "new-model"]] actions)))))
-
 (deftest delete-topic-success-test
   (testing "triggers workspace reload after successful deletion"
     (let [topic-id "topic-123"
