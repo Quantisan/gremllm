@@ -46,6 +46,7 @@
    [:llm.actions/set-error assistant-id
     (str "Failed to get response: " (or (.-message error) "Network error"))]])
 
+;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
 ;; Action for sending messages to LLM
 ;; Note: new-user-message passed explicitly because submit-messages action chain
 ;; writes message to state and calls this simultaneously - can't read from state reliably

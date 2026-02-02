@@ -40,6 +40,7 @@
    Domains: Chat (LLM), Topics (save/load), Workspace (bulk ops),
             Secrets (config), System (capabilities)"
   [store secrets-filepath]
+  ;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
   ;; Chat - async pattern: dispatches to action registry, response flows via events
   ;; NOTE: ipc-correlation-id is IPC infrastructure, injected by preload.js:createIPCBoundary
   ;; to match async responses. Not passed by renderer - see resources/public/js/preload.js:34

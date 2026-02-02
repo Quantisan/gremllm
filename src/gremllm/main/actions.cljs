@@ -95,11 +95,13 @@
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
+;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
 ;; Chat Actions/Effects Registration
 (nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
 (nxr/register-action! :chat.actions/send-message-with-attachments chat-actions/send-message-with-attachments)
 (nxr/register-action! :chat.actions/attach-and-send chat-actions/attach-and-send)
 
+;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
 (nxr/register-effect! :chat.effects/send-message
   (fn [{:keys [dispatch]} _ api-messages model api-key reasoning]
     (dispatch [[:ipc.effects/promise->reply
