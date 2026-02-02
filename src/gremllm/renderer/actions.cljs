@@ -158,8 +158,6 @@
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
 (nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
 (nxr/register-action! :topic.actions/set-name topic/set-name)
-(nxr/register-action! :topic.actions/update-model topic/update-model)
-(nxr/register-action! :topic.actions/toggle-reasoning topic/toggle-reasoning)
 (nxr/register-action! :ui.actions/exit-topic-rename-mode
   (fn [_state _topic-id]
     [[:effects/save ui-state/renaming-topic-id-path nil]]))
