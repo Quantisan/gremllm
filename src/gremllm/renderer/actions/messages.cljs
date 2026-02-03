@@ -10,7 +10,7 @@
 (defn add-message [_state message]
   (into (base-add-message-effects message)
         [;; TODO: we should not save if the last message was an Error
-         [:topic.actions/auto-save]]))
+         [:topic.effects/auto-save]]))
 
 (defn add-message-no-save [_state message]
   (base-add-message-effects message))

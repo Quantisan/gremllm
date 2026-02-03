@@ -84,11 +84,7 @@
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
         {:promise    (.acpPrompt js/window.electronAPI acp-session-id text)
-         ;; BUG: on-success receives stale state from when promise was created,
-         ;; not current state with streamed messages. Auto-save sees empty messages.
-         ;; Streaming chunks arrive via session-update and update state correctly,
-         ;; but on-success handlers don't see those updates.
          :on-success [[:loading.actions/set-loading? topic-id false]
-                      [:topic.actions/auto-save topic-id]]
+                      [:topic.effects/auto-save topic-id]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))
