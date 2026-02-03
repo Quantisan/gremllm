@@ -4,7 +4,7 @@ Gremllm-specific guidance for Claude Code.
 
 ## Overview
 
-Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
+Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. All user-AI interactions flow through Agent Client Protocol (ACP). Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
 
 ## Architecture
 
@@ -19,10 +19,15 @@ Gremllm is a cognitive workspace desktop app built with Electron and ClojureScri
 |--------|--------------|------------------|
 | Core | `main.core` - entry, window mgmt | `renderer.core` - entry, bootstrap |
 | Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings, topic, workspace |
-| State | - | `renderer.state.*` - form, messages, UI, system, topic |
+| State | - | `renderer.state.*` - ACP, form, messages, UI, system, topic |
 | UI | - | `renderer.ui.*` - chat, settings, topics |
-| Effects | `main.effects.*` - LLM, file I/O | (handled in actions) |
+| Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
 | Schema | `schema` - data models, validation | (shared) |
+
+**ACP Integration (current implementation):**
+- One ACP session per topic; the topic stores the `acp-session-id`
+- Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
+- Streaming session updates flow main → renderer via IPC events
 
 ## Development
 
@@ -64,8 +69,8 @@ This principle ensures that the solution space (the code) directly corresponds t
 
 **How this manifests:**
 - **Namespaces:** Organized by domain concepts like `messages`, `topics`, or `ui` (e.g., `renderer.actions.topics`).
-- **State Actions:** Keywords like `:llm.actions/response-received` are namespaced by the part of the system they affect.
-- **IPC Channels:** Named for the domain action they perform, such as `chat/send-message` or `topic/save`.
+- **State Actions:** Keywords like `:topic.actions/set-active` are namespaced by the part of the system they affect.
+- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt` or `topic/save`.
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
@@ -95,43 +100,43 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ;; Async operations via promises
 [[:effects/promise
-  {:promise    (js/window.electronAPI.sendMessage messages)
-   :on-success [[:llm.actions/response-received]
-   :on-error   [[:llm.actions/response-error]}]]
+  {:promise    (.acpNewSession js/window.electronAPI)
+    :on-success [[:acp.actions/session-ready topic-id]]
+    :on-error   [[:acp.actions/session-error]]}]]
 ```
 
 **Conventions:**
 - Domain namespacing: `form.actions/submit`, `ui.effects/save`
 - Always dispatch as vectors: `[[:action-name args]]`
-- Dynamic placeholders: `:event.target/value`, `:env/anthropic-api-key`
+- Dynamic placeholders: `:event.target/value`, `:event.target/checked`
 
 ## IPC & Data
 
 **IPC Channels:**
-- `chat/send-message` - LLM API calls
+- `acp/new-session` - Start a new ACP session
+- `acp/prompt` - Send a user prompt to ACP
+- `acp/resume-session` - Resume a topic-bound ACP session
+- `acp:session-update` - Stream ACP session updates to renderer
 - `topic/save` - Persist topic to disk
 - `topic/delete` - Remove topic file from disk
 - `workspace/pick-folder` - Folder picker dialog
 - `workspace/reload` - Request refreshed workspace data
 - `workspace:opened` - Broadcast refreshed workspace payload (`onWorkspaceOpened`)
 - `system/get-info` - System capabilities
-- `secrets/save`, `secrets/delete` - Secure storage
 - Menu commands via `onMenuCommand`
 
-Explicit renderer listeners like `onWorkspaceOpened` wrap domain events so the preload boundary exposes intent-driven APIs instead of raw channel strings.
+Explicit renderer listeners like `onWorkspaceOpened` and `onAcpSessionUpdate` wrap domain events so the preload boundary exposes intent-driven APIs instead of raw channel strings.
 
 **Data Storage:**
 ```
 <userData>/User/             # System data (Electron userData)
-├── secrets.edn              # Encrypted API keys
 
 <workspace-folder>/          # User-selected folder (anywhere)
 └── topics/                  # Topic files (.edn)
 ```
 
 - **Workspaces:** Portable folders, like git repos - can live anywhere
-- **Topics:** Individual EDN files in `topics/` subdirectory
-- **Secrets:** Encrypted via Electron's safeStorage
+- **Topics:** Individual EDN files in `topics/` subdirectory (includes `acp-session-id` and local message history)
 - **Schemas:** See `schema.cljs` for data structures
 - **File I/O:** See `main/io.cljs` for paths and operations
 
@@ -147,20 +152,6 @@ Explicit renderer listeners like `onWorkspaceOpened` wrap domain events so the p
 - **PicoCSS only** - Use semantic HTML and PicoCSS defaults. No custom styling unless essential for functionality (e.g., chat bubbles)
 - **No polish** - MVP means functional, not fancy. Resist the urge to beautify
 - **Minimal custom CSS** - The few custom styles in index.html are enough. Don't add more
-
-## API Key Management
-
-Gremllm supports multiple LLM providers: Anthropic (Claude), OpenAI (GPT), and Google (Gemini).
-
-**Production (End Users):**
-- Settings UI with secure storage (encrypted via Electron's safeStorage)
-- Per-provider configuration - users can configure any combination of providers
-- Redacted display shows which providers are configured
-- Graceful degradation when encryption unavailable (session-only storage)
-
-**Development:**
-- Environment variables override secure storage: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`
-- Useful for testing without configuring through UI
 
 ## Reference Documentation
 
