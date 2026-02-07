@@ -4,7 +4,32 @@ Gremllm-specific guidance for Claude Code.
 
 ## Overview
 
-Gremllm is a cognitive workspace desktop app built with Electron and ClojureScript. It's a topic-based AI chat interface designed for organizing conversations with context inheritance. All user-AI interactions flow through Agent Client Protocol (ACP). Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
+Gremllm is an Idea Development Environment for verified knowledge work. It helps knowledge workers produce artifacts that carry their own proof—stakeholders can see the methodology, evidence, and expert judgment that produced the deliverable. **The artifact is portable; the proof lives in the platform.**
+
+Built with Electron and ClojureScript. All user-AI interactions flow through Agent Client Protocol (ACP). Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
+
+## Design Principles
+
+These principles guide every implementation decision:
+
+1. **Document-first, not chat-first** - The artifact is the center of gravity, not the conversation history
+2. **Expert judgment and taste are elevated, not hidden** - Where human expertise made the difference is visible and valued
+3. **AI assists through specialized agents you can steer** - Not one generic assistant, but specialized agents for specific tasks
+4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale
+5. **Simple by default, powerful when needed** - Core workflows are straightforward; advanced capabilities available when required
+
+## Target User
+
+**PE due diligence teams** (initial beachhead)
+
+Why PE due diligence:
+- High-stakes artifacts where methodology matters (investment memos, target assessments)
+- Decades of established process: market analysis, financial review, management assessment, risk evaluation
+- Expert judgment is critical—numbers don't tell the whole story
+- Clear stakeholders who need to trust the work (partners, investment committee, LPs)
+- Scrutiny is the norm—these documents get challenged
+
+**Broader hypothesis:** Other domains with established expert processes (consulting, legal, policy) have similar needs. PE is the beachhead.
 
 ## Architecture
 
@@ -28,6 +53,7 @@ Gremllm is a cognitive workspace desktop app built with Electron and ClojureScri
 - One ACP session per topic; the topic stores the `acp-session-id`
 - Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
 - Streaming session updates flow main → renderer via IPC events
+- **Note:** Current implementation uses a single generic ACP session per topic. Product direction: specialized agents for different tasks (research, analysis, synthesis, etc.). This is a known gap to be addressed.
 
 ## Development
 
@@ -40,8 +66,13 @@ npm run repl       # ClojureScript REPL
 
 ## Design Philosophy
 
-### Pragmatic Evolution: From Skateboard to Scooter
-We follow the "skateboard → scooter → bicycle → motorcycle → car" MVP evolution. The **Skateboard** is complete: a functional, end-to-end chat interface. We are now building the **Scooter**, refining our core organizational model and document-centric interface. Every stage delivers a more capable, yet complete, product.
+### Pragmatic Evolution: From Skateboard to Motorcycle
+We follow the "skateboard → scooter → bicycle → motorcycle" MVP evolution. Every stage delivers a complete, functional product:
+
+- **Skateboard (complete):** Functional end-to-end AI interaction—proved we could ship a working product with ACP integration and topic-based organization.
+- **Scooter (current):** Document-first interface with basic proof capture—the artifact becomes the center of gravity; minimal raw data (e.g., user annotations) captured alongside the work.
+- **Bicycle (next):** Specialized agents and managed context—AI works through steerable agents for specific tasks; context is progressively disclosed per task rather than dumped wholesale.
+- **Motorcycle (future):** Full proof and methodology capture—evidence, methodology, and expert judgment become visible and verifiable.
 
 ### Strict FCIS (Functional Core, Imperative Shell)
 We maintain a strict separation between pure functions and side effects:
@@ -74,16 +105,18 @@ This principle ensures that the solution space (the code) directly corresponds t
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
-### Vision: An IDE for Thought
+### Vision: An Idea Development Environment for Verified Knowledge Work
 
-Gremllm is an **Idea Development Environment**—a structured workspace for complex cognitive tasks like strategic planning, analysis, and creative exploration. Unlike flat chat interfaces, Gremllm organizes thinking hierarchically with context inheritance.
+Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The six pillars:
 
-**UI Design (under exploration):** We're pursuing a Document-First Interface—reimagining what a writing tool becomes when users orchestrate agentic flows rather than composing word-by-word. The document is the center of gravity; AI participates as collaborator, not just responder.
+1. **The artifact is the center of gravity** - Document-first, not chat-first. The deliverable is what matters.
+2. **Expert judgment is elevated** - Taste, experience, and intuition are first-class, not hidden. Where the human made the difference is visible and valued.
+3. **AI works through specialized agents** - Not one generic assistant, but steerable agents for specific tasks (research, analysis, synthesis, verification).
+4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale into a prompt.
+5. **Process is captured as you work** - Evidence, methodology, and reasoning are captured alongside the artifact itself.
+6. **Deliverables carry proof** - Stakeholders can verify the work by examining the methodology, evidence, and expert judgment that produced it.
 
-This design direction may evolve. The invariants are:
-- Structured organization (not flat history)
-- Context flows between related work
-- User controls narrative; AI assists execution
+**The core insight:** The artifact is portable (exported, shared, presented). The proof lives in the platform (methodology, evidence, reasoning, expert judgment).
 
 ## State Management with Nexus
 
