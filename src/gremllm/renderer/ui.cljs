@@ -11,6 +11,7 @@
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.welcome :as welcome-ui]
+            [gremllm.renderer.ui.document :as document-ui]
             [gremllm.renderer.ui.elements :as e]))
 
 
@@ -19,22 +20,30 @@
         workspace             (workspace-state/get-workspace state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
-        renaming-topic-id     (ui-state/renaming-topic-id state)]
+        renaming-topic-id     (ui-state/renaming-topic-id state)
+        nav-expanded?         (ui-state/nav-expanded? state)]
     [e/app-layout
-     [e/left-panel
-      (topics-ui/render-left-panel-content
-        {:workspace             workspace
-         :active-topic-id       active-topic-id
-         :topics-map            topics-map
-         :renaming-topic-id     renaming-topic-id})]
+     ;; Zone 1: Nav strip
+     [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}
+      [:span {:style {:font-size "1.5rem"}} "📁"]]
 
-     [e/main-panel
+     ;; Zone 2: Document panel
+     [e/document-panel
+      (when nav-expanded?
+        [e/nav-overlay
+         (topics-ui/render-left-panel-content
+           {:workspace         workspace
+            :active-topic-id   active-topic-id
+            :topics-map        topics-map
+            :renaming-topic-id renaming-topic-id})])
+      (document-ui/render-document-stub)]
+
+     ;; Zone 3: Chat panel
+     [e/chat-panel
       [e/top-bar
        (when-not has-any-api-key?
          (settings-ui/render-api-key-warning))]
 
-      ;; TODO: we have `topics-map` already. Why are we getting from state below? What's more
-      ;; readable and simple?
       (chat-ui/render-chat-area (topic-state/get-messages state)
                                 (acp-state/loading? state)
                                 (loading-state/get-assistant-errors state))

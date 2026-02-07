@@ -8,21 +8,17 @@
                      attrs)]
         body))
 
-(defalias left-panel [attrs & body]
-  (into [:aside (merge {:style {:flex "1"
-                                :border-right "1px solid var(--pico-muted-border-color)"
-                                :overflow-y "auto"
-                                :padding "var(--pico-spacing)"}}
-                       attrs)]
-        body))
+(defalias nav-strip [attrs & body]
+  (into [:nav.nav-strip (merge {} attrs)] body))
 
-(defalias main-panel [attrs & body]
-  (into [:main (merge {:style {:flex "3"
-                               :display "flex"
-                               :flex-direction "column"
-                               :overflow "hidden"}}
-                      attrs)]
-        body))
+(defalias nav-overlay [attrs & body]
+  (into [:aside.nav-overlay (merge {} attrs)] body))
+
+(defalias document-panel [attrs & body]
+  (into [:section.document-panel (merge {} attrs)] body))
+
+(defalias chat-panel [attrs & body]
+  (into [:section.chat-panel (merge {} attrs)] body))
 
 (defalias modal [attrs body]
   (let [{:keys [open? on-close]} attrs
