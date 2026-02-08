@@ -1,4 +1,5 @@
-(ns gremllm.renderer.ui.topics)
+(ns gremllm.renderer.ui.topics
+  (:require [gremllm.renderer.ui.elements :as e]))
 
 (defn- focus-and-select-on-mount
   "On-mount hook for rename input; focuses and selects all text (typical rename UX)."
@@ -22,7 +23,7 @@
      (let [label (str (if (= id active-topic-id) "✓ " "• ")
                       name
                       (when unsaved? " *"))]
-       [:div {:class "topic-item"}
+       [e/topic-item {}
         [:a {:href         "#"
              :aria-current (when (= id active-topic-id) "page")
              :title        "Double-click to rename topic"

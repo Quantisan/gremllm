@@ -9,6 +9,72 @@
     <style>
         :root {
             --pico-font-size: 14px;
+
+            /* TVA/Brutalist Palette Tokens */
+            --tva-parchment: #E8DCC4;
+            --tva-cocoa: #2B1B17;
+            --tva-orange: #F47920;
+            --tva-amber: #D45B12;
+            --tva-concrete: #8C8C8C;
+            --tva-teal: #004B49;
+        }
+
+        /* Light Scope — Document Panel, Welcome Screen */
+        :root[data-theme=light] {
+            /* Surface */
+            --pico-background-color: var(--tva-parchment);
+            --pico-color: var(--tva-cocoa);
+
+            /* Primary accent */
+            --pico-primary: var(--tva-orange);
+            --pico-primary-hover: var(--tva-amber);
+
+            /* Muted tones (warm cocoa-alpha) */
+            --pico-muted-color: rgba(43, 27, 23, 0.55);
+            --pico-muted-border-color: rgba(43, 27, 23, 0.15);
+
+            /* Cards and forms */
+            --pico-card-background-color: rgba(232, 220, 196, 0.4);
+            --pico-card-border-color: rgba(43, 27, 23, 0.1);
+            --pico-form-element-background-color: rgba(232, 220, 196, 0.5);
+            --pico-form-element-border-color: rgba(43, 27, 23, 0.2);
+
+            /* Headings */
+            --pico-h1-color: var(--tva-cocoa);
+            --pico-h2-color: var(--tva-cocoa);
+            --pico-h3-color: var(--tva-cocoa);
+            --pico-h4-color: var(--tva-cocoa);
+            --pico-h5-color: var(--tva-cocoa);
+            --pico-h6-color: var(--tva-cocoa);
+        }
+
+        /* Dark Scope — Nav Strip, Nav Overlay, Chat Panel */
+        [data-theme=dark] {
+            /* Surface */
+            --pico-background-color: var(--tva-cocoa);
+            --pico-color: var(--tva-parchment);
+
+            /* Primary accent */
+            --pico-primary: var(--tva-orange);
+            --pico-primary-hover: var(--tva-amber);
+
+            /* Muted tones (parchment-alpha) */
+            --pico-muted-color: rgba(232, 220, 196, 0.55);
+            --pico-muted-border-color: rgba(232, 220, 196, 0.15);
+
+            /* Cards and forms */
+            --pico-card-background-color: rgba(232, 220, 196, 0.08);
+            --pico-card-border-color: rgba(232, 220, 196, 0.15);
+            --pico-form-element-background-color: rgba(232, 220, 196, 0.08);
+            --pico-form-element-border-color: rgba(232, 220, 196, 0.2);
+
+            /* Headings */
+            --pico-h1-color: var(--tva-parchment);
+            --pico-h2-color: var(--tva-parchment);
+            --pico-h3-color: var(--tva-parchment);
+            --pico-h4-color: var(--tva-parchment);
+            --pico-h5-color: var(--tva-parchment);
+            --pico-h6-color: var(--tva-parchment);
         }
 
         body {
@@ -18,6 +84,30 @@
             margin: 0 auto;
         }
 
+        .app-layout {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reasoning-summary {
+            cursor: pointer;
+            color: var(--pico-muted-color);
+        }
+
+        /* Structural background rule — dark-scoped elements need explicit backgrounds */
+        .nav-strip[data-theme=dark],
+        .chat-panel[data-theme=dark] {
+            background-color: var(--pico-background-color);
+            color: var(--pico-color);
+        }
+
         .chat-area {
             flex: 1;
             overflow-y: auto;
@@ -25,14 +115,19 @@
         }
 
         .user-bubble {
-            background: var(--pico-primary-background);
-            color: var(--pico-primary-inverse);
+            background: rgba(232, 220, 196, 0.15);
+            border-left: 3px solid rgba(232, 220, 196, 0.3);
             margin-left: auto;
             max-width: 70%;
         }
 
+        .assistant-bubble {
+            background: rgba(232, 220, 196, 0.08);
+            border-left: 3px solid var(--tva-teal);
+        }
+
         .reasoning-bubble {
-            background: var(--pico-muted-background);
+            background: rgba(232, 220, 196, 0.05);
             opacity: 0.85;
             border-left: 3px solid var(--pico-muted-border-color);
         }
@@ -59,9 +154,9 @@
         .topic-item > button {
             /* Tighten button spacing inside list */
             margin: 0;
-            /* Lean on Pico palette but fall back to subtle gray */
-            border-color: var(--pico-color-muted-border, rgba(0, 0, 0, 0.12));
-            color: var(--pico-muted-color, rgba(0, 0, 0, 0.12));
+            /* Lean on Pico palette */
+            border-color: var(--pico-muted-border-color);
+            color: var(--pico-muted-color);
 
             /* Show delete button only on hover */
             opacity: 0;

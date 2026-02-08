@@ -182,9 +182,9 @@ Explicit renderer listeners like `onWorkspaceOpened` and `onAcpSessionUpdate` wr
 - `src/gremllm/schema.cljs` - Data models and validation
 
 ## UI Approach
-- **PicoCSS only** - Use semantic HTML and PicoCSS defaults. No custom styling unless essential for functionality (e.g., chat bubbles)
-- **No polish** - MVP means functional, not fancy. Resist the urge to beautify
-- **Minimal custom CSS** - The few custom styles in index.html are enough. Don't add more
+- **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.
+- **No hardcoded colors** - Use `var(--pico-*)` properties or the six `var(--tva-*)` tokens defined in `index.html`. Never use hex/rgb literals in components.
+- **Minimal custom CSS** - Custom styles live in `index.html`. Add new classes there only when PicoCSS has no semantic equivalent.
 
 ## Reference Documentation
 

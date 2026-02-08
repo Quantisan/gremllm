@@ -2,23 +2,19 @@
   (:require [replicant.alias :refer [defalias]]))
 
 (defalias app-layout [attrs body]
-  (into [:div (merge {:style {:display "flex"
-                              :flex-direction "row"
-                              :height "100vh"}}
-                     attrs)]
-        body))
+  (into [:div.app-layout (merge {} attrs)] body))
 
 (defalias nav-strip [attrs & body]
-  (into [:nav.nav-strip (merge {} attrs)] body))
+  (into [:nav.nav-strip (merge {:data-theme "dark"} attrs)] body))
 
 (defalias nav-overlay [attrs & body]
-  (into [:aside.nav-overlay (merge {} attrs)] body))
+  (into [:aside.nav-overlay (merge {:data-theme "dark"} attrs)] body))
 
 (defalias document-panel [attrs & body]
   (into [:section.document-panel (merge {} attrs)] body))
 
 (defalias chat-panel [attrs & body]
-  (into [:section.chat-panel (merge {} attrs)] body))
+  (into [:section.chat-panel (merge {:data-theme "dark"} attrs)] body))
 
 (defalias modal [attrs body]
   (let [{:keys [open? on-close]} attrs
@@ -31,35 +27,25 @@
       body]]))
 
 (defalias top-bar [attrs & body]
-  (into [:header (merge {:class "top-bar"
-                         :style {:display "flex"
-                                 :justify-content "space-between"
-                                 :align-items "center"}}
-                        attrs)]
-        body))
+  (into [:header.top-bar (merge {} attrs)] body))
 
 (defalias alert [attrs & body]
   (into [:article (merge {:role "alert"} attrs)] body))
 
 (defalias chat-area [attrs & body]
-  (into [:div.chat-area (merge {:id "chat-messages-container"
-                                :style {:overflow-y "auto" :flex "1"}}
-                               attrs)]
-        body))
+  (into [:div.chat-area (merge {:id "chat-messages-container"} attrs)] body))
 
 (defalias user-message [attrs & body]
-  [:div.message-container
-   (into [:article.user-bubble attrs] body)])
+  (into [:article.user-bubble attrs] body))
 
 (defalias assistant-message [attrs & body]
-  [:div.message-container
-   (into [:article attrs] body)])
+  (into [:article.assistant-bubble attrs] body))
 
 (defalias reasoning-message [attrs & body]
-  [:div.message-container
-   [:article.reasoning-bubble
-    [:details (merge {:open true} attrs)
-     [:summary {:style {:cursor "pointer"
-                        :color "var(--pico-muted-color)"}}
-      "Reasoning ..."]
-     (into [:div] body)]]])
+  [:article.reasoning-bubble
+   [:details (merge {:open true} attrs)
+    [:summary.reasoning-summary "Reasoning ..."]
+    (into [:div] body)]])
+
+(defalias topic-item [attrs & body]
+  (into [:div.topic-item (merge {} attrs)] body))
