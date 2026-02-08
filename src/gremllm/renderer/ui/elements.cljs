@@ -9,16 +9,16 @@
         body))
 
 (defalias nav-strip [attrs & body]
-  (into [:nav.nav-strip (merge {} attrs)] body))
+  (into [:nav.nav-strip (merge {:data-theme "dark"} attrs)] body))
 
 (defalias nav-overlay [attrs & body]
-  (into [:aside.nav-overlay (merge {} attrs)] body))
+  (into [:aside.nav-overlay (merge {:data-theme "dark"} attrs)] body))
 
 (defalias document-panel [attrs & body]
   (into [:section.document-panel (merge {} attrs)] body))
 
 (defalias chat-panel [attrs & body]
-  (into [:section.chat-panel (merge {} attrs)] body))
+  (into [:section.chat-panel (merge {:data-theme "dark"} attrs)] body))
 
 (defalias modal [attrs body]
   (let [{:keys [open? on-close]} attrs
@@ -53,7 +53,7 @@
 
 (defalias assistant-message [attrs & body]
   [:div.message-container
-   (into [:article attrs] body)])
+   (into [:article.assistant-bubble attrs] body)])
 
 (defalias reasoning-message [attrs & body]
   [:div.message-container

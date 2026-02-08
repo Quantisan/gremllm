@@ -38,7 +38,7 @@
 
 (defn- render-loading-indicator []
   [e/assistant-message
-    [:p {:style {:color "#666"
+    [:p {:style {:color "var(--pico-muted-color)"
                  :font-style "italic"}}
      [:span {:style {:display "inline-block"
                      :animation "spin 1s linear infinite"
@@ -66,7 +66,7 @@
   (when (seq pending-attachments)
     [:div {:style {:margin-bottom "0.5rem"
                    :font-size "0.875rem"
-                   :color "#666"}}
+                   :color "var(--pico-muted-color)"}}
      [:span "📎 " (count pending-attachments) " file" (when (> (count pending-attachments) 1) "s") " attached"]
      [:button {:type "button"
                :style {:margin-left "0.5rem"
