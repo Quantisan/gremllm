@@ -48,7 +48,7 @@
 
 (defn- render-error-message [errors]
   (when-let [error (first (vals errors))]
-    [:div.assistant-error "⚠️ " error]))
+    [:div "⚠️ " error]))
 
 (defn render-chat-area [messages acp-loading? errors]
   [e/chat-area {}

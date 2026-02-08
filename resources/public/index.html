@@ -84,6 +84,23 @@
             margin: 0 auto;
         }
 
+        .app-layout {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reasoning-summary {
+            cursor: pointer;
+            color: var(--pico-muted-color);
+        }
+
         /* Structural background rule — dark-scoped elements need explicit backgrounds */
         .nav-strip[data-theme=dark],
         .chat-panel[data-theme=dark] {
