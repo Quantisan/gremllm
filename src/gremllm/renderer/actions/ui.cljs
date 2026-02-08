@@ -69,3 +69,7 @@
   [[:system.actions/request-info]
    [:effects/save ui-state/showing-settings-path false]])
 
+(defn toggle-nav [state]
+  (let [expanded? (ui-state/nav-expanded? state)]
+    [[:effects/save ui-state/nav-expanded-path (not expanded?)]]))
+

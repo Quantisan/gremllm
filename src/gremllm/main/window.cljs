@@ -3,21 +3,23 @@
             ["electron/main" :refer [app BrowserWindow screen]]))
 
 (def window-dimension-specs
-  {:width-scale  0.60
-   :max-width    1400
+  {:width-scale  0.75
+   :min-width    1200
+   :max-width    1800
    :height-scale 0.80
    :max-height   1000})
 
-(defn- calculate-dimension [value scale max-value]
+(defn- calculate-dimension [value scale min-value max-value]
   (-> value
       (* scale)
+      (max min-value)
       (min max-value)
       long))
 
-(defn calculate-window-dimensions [{:keys [width-scale max-width height-scale max-height]}]
+(defn calculate-window-dimensions [{:keys [width-scale min-width max-width height-scale max-height]}]
   (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
-    {:width (calculate-dimension (.-width work-area) width-scale max-width)
-     :height (calculate-dimension (.-height work-area) height-scale max-height)}))
+    {:width (calculate-dimension (.-width work-area) width-scale min-width max-width)
+     :height (calculate-dimension (.-height work-area) height-scale 0 max-height)}))
 
 (defn- handle-app-quit
   "Intercept app quit to close window first (for future unsaved changes check)."

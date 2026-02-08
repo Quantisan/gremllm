@@ -73,6 +73,48 @@
             opacity: 1;
         }
 
+        /* Three-zone layout */
+        .nav-strip {
+            flex: 0 0 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: var(--pico-spacing);
+            border-right: 1px solid var(--pico-muted-border-color);
+            cursor: pointer;
+        }
+
+        .nav-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            z-index: 10;
+            background: var(--pico-background-color);
+            border-right: 1px solid var(--pico-muted-border-color);
+            overflow-y: auto;
+            padding: var(--pico-spacing);
+        }
+
+        .document-panel {
+            flex: 3;
+            min-width: 50%;
+            position: relative;
+            overflow-y: auto;
+            padding: var(--pico-spacing);
+            transition: flex 0.3s ease;
+        }
+
+        .chat-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-left: 1px solid var(--pico-muted-border-color);
+            transition: flex 0.3s ease;
+        }
+
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }

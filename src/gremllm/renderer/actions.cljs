@@ -105,6 +105,7 @@
 (nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
 (nxr/register-action! :ui.actions/focus-chat-input ui/focus-chat-input)
+(nxr/register-action! :ui.actions/toggle-nav ui/toggle-nav)
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
