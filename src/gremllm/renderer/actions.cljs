@@ -111,37 +111,10 @@
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
 (nxr/register-action! :messages.actions/add-to-chat-no-save msg/add-message-no-save)
 (nxr/register-action! :messages.actions/append-to-state msg/append-to-state)
-(nxr/register-action! :llm.actions/response-received msg/llm-response-received)
-(nxr/register-action! :llm.actions/response-error msg/llm-response-error)
-;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
-(nxr/register-action! :llm.actions/send-messages msg/send-messages)
 
 (nxr/register-action! :loading.actions/set-loading?
   (fn [_state id loading?]
     [[:effects/save (loading-state/loading-path id) loading?]]))
-
-(nxr/register-action! :llm.actions/set-error
-  (fn [_state assistant-id error-message]
-    [[:effects/save (loading-state/assistant-errors-path assistant-id) error-message]]))
-
-(nxr/register-action! :llm.actions/unset-all-errors
-  (fn [_state]
-    [[:effects/save [:assistant-errors] nil]]))
-
-;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
-;; TODO: this can be an Action
-(nxr/register-effect! :effects/send-llm-messages
-  (fn [{:keys [dispatch]} _store {:keys [messages model reasoning? file-paths on-success on-error]}]
-    ;; TODO: we should set :loading.actions/set-loading?
-    (dispatch
-      [[:effects/promise
-        {:promise    (js/window.electronAPI.sendMessage
-                       (schema/messages-to-ipc messages)
-                       (clj->js model)
-                       (schema/attachment-paths-to-ipc file-paths)
-                       reasoning?)
-         :on-success on-success
-         :on-error   on-error}]])))
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
