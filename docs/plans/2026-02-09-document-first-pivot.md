@@ -160,16 +160,18 @@ TrackedChange = [:map
 
 ## Namespace Rename Map
 
+**Note:** The renames below happen in Scooter v1a as a clean mechanical refactor, not interleaved with new functionality.
+
 | Current | Proposed |
 |---------|----------|
 | `renderer.state.topic` | `renderer.state.document` |
 | `renderer.actions.topic` | `renderer.actions.document` |
 | `renderer.ui.topics` | `renderer.ui.documents` |
 | `main.actions.topic` | `main.actions.document` |
-| — | `renderer.state.annotation` (new) |
-| — | `renderer.actions.annotation` (new) |
-| — | `renderer.actions.change` (new) |
-| — | `renderer.ui.document` (existing stub → real) |
+| — | `renderer.state.annotation` (new, later) |
+| — | `renderer.actions.annotation` (new, later) |
+| — | `renderer.actions.change` (new, later) |
+| — | `renderer.ui.document` (existing stub → real in v1b) |
 
 ---
 
@@ -187,11 +189,25 @@ TrackedChange = [:map
 
 Each version ships a working app. Spikes de-risk the hardest unknown before the version that depends on it.
 
-### Scooter v1: "The document is real"
-- Clean sweep rename (Topic → Document) across codebase
+### Scooter v1a: "Clean sweep rename"
+- Topic → Document rename across entire codebase
+- Files, namespaces, state keys, action/effect keywords, IPC channels, preload JS, CSS, filesystem paths, schema, docs
+- App works identically to skateboard — just new names
+- No backward compatibility, no migration (per existing plan)
+- **Learns:** Nothing product-wise. De-risks the mechanical refactor so v1b changes are clearly about content, not naming.
+
+### Spike 0: Content extraction from AI responses
+- Not shipped. Research spike.
+- AI responses mix conversational text with document content. How do we separate them?
+- Explore: Does ACP support structured output, tool use, or artifacts that let the agent return document content separately from chat text?
+- Explore: What do other ACP clients (Zed, etc.) do?
+- Explore: Can we control this via system prompt / agent configuration?
+- **Informs:** The content model for v1b — how `:content` gets populated, whether it's streamed or post-processed, what the data shape looks like.
+
+### Scooter v1b: "The document is real"
 - Document gets `:content` field (markdown string)
-- Latest AI response populates `:content`
-- Document panel renders live formatted markdown (replaces static stub)
+- Content population mechanism informed by Spike 0
+- Document panel renders formatted markdown (replaces static stub)
 - Chat works exactly as before, secondary to document
 - **Learns:** Does the two-panel model feel right? Is markdown the right content format? What does "AI generates a document" look like in practice?
 
