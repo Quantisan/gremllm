@@ -23,24 +23,6 @@
    [:mime-type :string]  ; MIME type (e.g., 'image/png')
    [:size :int]])        ; File size in bytes
 
-(def APIAttachment
-  "Internal canonical attachment format. Contains all fields needed
-   by any provider. Provider-specific transforms extract what they need."
-  [:map
-   [:mime-type :string]
-   [:data :string]                            ; base64-encoded content
-   [:filename {:optional true} :string]])     ; original filename (needed by OpenAI)
-
-(defn attachment-ref->api-format
-  "Transform AttachmentRef + content to validated API format.
-   Takes AttachmentRef and Node Buffer, returns validated APIAttachment.
-   Throws if schema invalid."
-  [attachment-ref content-buffer]
-  (let [api-attachment {:mime-type (:mime-type attachment-ref)
-                        :data (.toString content-buffer "base64")
-                        :filename (:name attachment-ref)}]
-    (m/coerce APIAttachment api-attachment mt/json-transformer)))
-
 (def Message
   [:map
    [:id :int]
@@ -48,70 +30,14 @@
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]])
 
-(def LLMResponse
-  "Normalized LLM response shape, independent of provider.
-   Main process transforms provider responses to this format before IPC."
-  [:map
-   [:text :string]
-   [:reasoning {:optional true} :string]
-   [:usage [:map
-            [:input-tokens :int]
-            [:output-tokens :int]
-            [:total-tokens :int]
-            [:reasoning-tokens {:optional true} :int]]]])
-
 (def Messages
   [:vector Message])
-
-(def AttachmentPaths
-  "Vector of absolute file path strings for attachments"
-  [:vector [:string {:min 1}]])
 
 (defn messages-from-ipc
   [messages-js]
   (as-> messages-js $
     (js->clj $ :keywordize-keys true)
     (m/coerce Messages $ mt/json-transformer)))
-
-(defn messages->chat-api-format
-  "Converts internal message format to Chat API format for LLM providers.
-  Internal: {:id, :type :user|:assistant, :text, :attachments?}
-  Chat API: {:role 'user'|'assistant', :content, :attachments?}"
-  [messages]
-  (mapv (fn [{:keys [type text attachments]}]
-          ;; TODO: do we need to include :reasoning messages from outbound history? If so, how?
-          (cond-> {:role    (name type)
-                   :content text}
-            attachments (assoc :attachments attachments)))
-        messages))
-
-(defn attachment-paths-from-ipc
-  [attachment-paths-js]
-  (when attachment-paths-js
-    (as-> attachment-paths-js $
-      (js->clj $)
-      (m/coerce AttachmentPaths $ mt/json-transformer))))
-
-(defn messages-to-ipc
-  "Validates messages and converts to JS for IPC transmission. Throws if invalid."
-  [messages]
-  (-> (m/coerce Messages messages mt/json-transformer)
-      (clj->js)))
-
-;; TODO: Attachment MIME types are lost at this boundary
-;;
-;; The browser File API provides accurate MIME types via content sniffing, but
-;; we only transmit file paths here. The main process must guess MIME types from
-;; extensions, which fails for uncommon types (defaults to application/octet-stream).
-;; This causes runtime failures with APIs that reject unknown MIME types (e.g., Gemini).
-;;
-;; See also: main/effects/attachment.cljs mime-type-from-extension
-(defn attachment-paths-to-ipc
-  "Validates attachment paths and converts to JS for IPC transmission. Throws if invalid."
-  [attachment-paths]
-  (when attachment-paths
-    (-> (m/coerce AttachmentPaths attachment-paths mt/json-transformer)
-        (clj->js))))
 
 ;; ========================================
 ;; Providers
