@@ -31,40 +31,15 @@
    ASYNC HANDLERS (fire-and-forget, return #js {}):
    - Dispatch to registered Nexus actions (not effects directly)
    - Flow: Dispatch action → Return empty → Effects execute → Events notify renderer
-   - Examples: chat/send-message, workspace/reload, workspace/pick-folder
+   - Examples: acp/prompt, workspace/reload, workspace/pick-folder
    - Why: Action registry provides discoverability and instrumentation points
 
    Both patterns maintain FCIS: sync handlers pipeline through pure functions;
    async handlers route through registered actions that return effect descriptions.
 
-   Domains: Chat (LLM), Topics (save/load), Workspace (bulk ops),
-            Secrets (config), System (capabilities)"
+   Domains: Topics (save/load), Workspace (bulk ops), Secrets (config),
+            System (capabilities), ACP (agent sessions)"
   [store secrets-filepath]
-  ;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
-  ;; Chat - async pattern: dispatches to action registry, response flows via events
-  ;; NOTE: ipc-correlation-id is IPC infrastructure, injected by preload.js:createIPCBoundary
-  ;; to match async responses. Not passed by renderer - see resources/public/js/preload.js:34
-  (.on ipcMain "chat/send-message"
-       (fn [event ipc-correlation-id messages model attachment-paths reasoning]
-         (let [messages-clj         (schema/messages-from-ipc messages)
-               model-clj            (js->clj model)
-               attachment-paths-clj (schema/attachment-paths-from-ipc attachment-paths)
-               reasoning-clj        (boolean reasoning)]
-           (js/console.log "[chat:recv]"
-                           (clj->js {:messages-count (count messages-clj)
-                                     :model model-clj
-                                     :attachments-count (count (or attachment-paths-clj []))
-                                     :reasoning reasoning-clj}))
-           (nxr/dispatch store {:ipc-event event
-                                :ipc-correlation-id ipc-correlation-id
-                                :channel "chat/send-message"}
-                         [[:chat.actions/send-message-from-ipc
-                           {:messages messages-clj
-                            :model model-clj
-                            :api-key [:env/api-key-for-model model-clj]
-                            :attachment-paths attachment-paths-clj
-                            :reasoning reasoning-clj}]]))))
-
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]

@@ -46,21 +46,14 @@
       "⠿"]
      "Computing..."]])
 
-(defn- render-error-message [errors]
-  (when-let [error (first (vals errors))]
-    [:div "⚠️ " error]))
-
-(defn render-chat-area [messages acp-loading? errors]
+(defn render-chat-area [messages acp-loading?]
   [e/chat-area {}
    (for [message messages]
      (render-message message))
 
    ;; Show loading indicator while waiting for first chunk
    (when acp-loading?
-     (render-loading-indicator))
-
-   ;; Show any errors
-   (render-error-message errors)])
+     (render-loading-indicator))])
 
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)

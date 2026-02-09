@@ -14,17 +14,17 @@
     (let [sent (atom nil)
           ctx {:dispatch-data {:ipc-event (mock-event #(reset! sent [%1 %2]))
                                :ipc-correlation-id "123"
-                               :channel "chat/send-message"}}]
+                               :channel "acp/prompt"}}]
 
       (ipc/reply ctx nil "result")
 
-      (is (= ["chat/send-message-success-123" "result"] @sent))))
+      (is (= ["acp/prompt-success-123" "result"] @sent))))
 
   (testing "no-op when ipc-event missing"
     ;; Not all actions come from IPC. Don't crash if there's no event to reply to.
     (let [sent (atom nil)
           ctx {:dispatch-data {:ipc-correlation-id "123"
-                               :channel "chat/send-message"}}]
+                               :channel "acp/prompt"}}]
 
       (ipc/reply ctx nil "result")
 

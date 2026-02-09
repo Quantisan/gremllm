@@ -45,8 +45,7 @@
          (settings-ui/render-api-key-warning))]
 
       (chat-ui/render-chat-area (topic-state/get-messages state)
-                                (acp-state/loading? state)
-                                (loading-state/get-assistant-errors state))
+                                (acp-state/loading? state))
 
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
