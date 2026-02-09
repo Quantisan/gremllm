@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+// Minimal ACP Spike 0: request a reviewable diff for a document update without editing files.
+//
+// References:
+// docs/plans/2026-02-09-document-first-pivot.md
+// docs/acp-client-agent-interaction-research-2026-02-09.md
+
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
@@ -10,16 +16,20 @@ import * as acp from "@agentclientprotocol/sdk";
 const PROJECT_ROOT = process.cwd();
 const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "docs/plans/2026-02-09-document-first-pivot.md");
 
-const DOC_PATH = process.argv[2] ? path.resolve(PROJECT_ROOT, process.argv[2]) : DEFAULT_DOC;
+const DOC_PATH = process.env.ACP_DOC_PATH
+  ? path.resolve(PROJECT_ROOT, process.env.ACP_DOC_PATH)
+  : process.argv[2]
+    ? path.resolve(PROJECT_ROOT, process.argv[2])
+    : DEFAULT_DOC;
 const DOC_URI = pathToFileURL(DOC_PATH).toString();
 
-const LOCAL_AGENT_ROOT = "/Users/paul/Projects/claude-code-acp";
-const LOCAL_AGENT_DIST = path.join(LOCAL_AGENT_ROOT, "dist/index.js");
-
-const AGENT_CMD = process.env.ACP_AGENT_CMD || "claude-code-acp";
-const AGENT_ARGS = process.env.ACP_AGENT_ARGS ? process.env.ACP_AGENT_ARGS.split(" ") : [];
+const AGENT_CMD = process.env.ACP_AGENT_CMD || "npx";
+const AGENT_ARGS = process.env.ACP_AGENT_ARGS
+  ? process.env.ACP_AGENT_ARGS.split(" ")
+  : ["@zed-industries/claude-code-acp"];
 
 const DRY_RUN = true; // Do not write any files.
+const FS_MODE = (process.env.ACP_CLIENT_FS || "readwrite").toLowerCase();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,34 +94,28 @@ class MinimalClient {
     await fs.writeFile(filePath, content, "utf8");
     return {};
   }
+
+  async requestPermission(params) {
+    const firstOption = params.options?.[0];
+    return {
+      outcome: {
+        outcome: "selected",
+        optionId: firstOption?.optionId ?? 0,
+      },
+    };
+  }
 }
 
 async function main() {
-  let resolvedCmd = AGENT_CMD;
-  let resolvedArgs = AGENT_ARGS;
-
-  if (resolvedCmd === "claude-code-acp") {
-    try {
-      await fs.access(LOCAL_AGENT_DIST);
-      resolvedCmd = "node";
-      resolvedArgs = [LOCAL_AGENT_DIST, ...AGENT_ARGS];
-    } catch {
-      // Keep default command and let spawn error provide next-step hints.
-    }
-  }
-
-  const agentProcess = spawn(resolvedCmd, resolvedArgs, {
+  const agentProcess = spawn(AGENT_CMD, AGENT_ARGS, {
     stdio: ["pipe", "pipe", "inherit"],
     env: { ...process.env },
   });
 
   agentProcess.on("error", (err) => {
-    console.error(`Failed to spawn agent (${resolvedCmd}):`, err);
-    if (resolvedCmd === "claude-code-acp") {
-      console.error(
-        `Hint: build local agent at ${LOCAL_AGENT_ROOT} (npm install && npm run build) or set ACP_AGENT_CMD/ACP_AGENT_ARGS.`,
-      );
-    }
+    console.error(`Failed to spawn agent (${AGENT_CMD}):`, err);
+    console.error("Tip: default uses `npx @zed-industries/claude-code-acp`.");
+    console.error("Override via ACP_AGENT_CMD and ACP_AGENT_ARGS if needed.");
     process.exit(1);
   });
 
@@ -122,10 +126,19 @@ async function main() {
   const stream = acp.ndJsonStream(input, output);
   const connection = new acp.ClientSideConnection(() => client, stream);
 
+  const fsCaps =
+    FS_MODE === "none"
+      ? {}
+      : FS_MODE === "read"
+        ? { readTextFile: true, writeTextFile: false }
+        : FS_MODE === "write"
+          ? { readTextFile: false, writeTextFile: true }
+          : { readTextFile: true, writeTextFile: true };
+
   const init = await connection.initialize({
     protocolVersion: acp.PROTOCOL_VERSION,
     clientCapabilities: {
-      fs: { readTextFile: true, writeTextFile: true },
+      fs: fsCaps,
       terminal: false,
     },
     clientInfo: {
@@ -157,6 +170,7 @@ async function main() {
   console.log(`Agent protocol: ${init.protocolVersion}`);
   console.log(`Stop reason: ${promptResult.stopReason}`);
   console.log(`Diff updates: ${client.diffUpdates.length}`);
+  console.log(`Client fs mode: ${FS_MODE}`);
 
   if (client.diffUpdates.length > 0) {
     for (const update of client.diffUpdates) {
