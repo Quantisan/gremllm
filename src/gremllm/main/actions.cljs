@@ -1,44 +1,15 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
             [gremllm.main.effects.ipc :as ipc-effects]
-            [gremllm.main.actions.chat :as chat-actions]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
-            [gremllm.main.llm :as llm]
-            [gremllm.main.effects.llm :as llm-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
-            [gremllm.main.effects.attachment :as attachment-effects]
             [gremllm.main.effects.acp :as acp-effects]
-            [gremllm.main.io :as io]
             [gremllm.main.window :as window]
-            [gremllm.schema :as schema]
-            ["electron/main" :refer [app]]))
+            [gremllm.schema :as schema]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
-
-;; Environment Variable Placeholders
-;; ==================================
-;; PRAGMATIC FCIS EXCEPTION: This placeholder performs synchronous file I/O
-;; to support safeStorage fallback. This is the only exception to strict FCIS
-;; in the codebase. Acceptable because: (1) reading env state is conceptually
-;; like process.env access, (2) synchronous/deterministic, (3) isolated to API
-;; key resolution only.
-
-(nxr/register-placeholder! :env/api-key-for-model
-  (fn [_dispatch-data model]
-    (try
-      (let [provider (schema/model->provider model)
-            env-var-name (llm/provider->env-var-name provider)
-            storage-key (schema/provider->api-key-keyword provider)]
-        (or (aget (.-env js/process) env-var-name)
-            (some-> (.getPath app "userData")
-                    (io/secrets-file-path)
-                    (secrets-actions/load storage-key)
-                    :ok)))
-      (catch :default e
-        (js/console.error "Error resolving API key for model" model ":" e)
-        (throw e)))))
 
 ;; Menu Actions Registration
 ;; =========================
@@ -94,31 +65,6 @@
 (nxr/register-effect! :ipc.effects/reply ipc-effects/reply)
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
-
-;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
-;; Chat Actions/Effects Registration
-(nxr/register-action! :chat.actions/send-message-from-ipc chat-actions/send-message-from-ipc)
-(nxr/register-action! :chat.actions/send-message-with-attachments chat-actions/send-message-with-attachments)
-(nxr/register-action! :chat.actions/attach-and-send chat-actions/attach-and-send)
-
-;; DEPRECATED [pre-acp] - direct LLM flow replaced by ACP
-(nxr/register-effect! :chat.effects/send-message
-  (fn [{:keys [dispatch]} _ api-messages model api-key reasoning]
-    (dispatch [[:ipc.effects/promise->reply
-                (llm-effects/query-llm-provider api-messages model api-key reasoning)]])))
-
-(nxr/register-effect! :attachment.effects/prepare-for-send
-  (fn [{:keys [dispatch]} _store {:keys [workspace-dir file-paths messages model api-key reasoning]}]
-    ;; Consolidated I/O: store + load is one domain operation.
-    ;; Pure transformation delegated to :chat.actions/attach-and-send.
-    (let [refs (attachment-effects/store-all workspace-dir file-paths)
-          loaded-pairs (attachment-effects/load-all-content workspace-dir refs)]
-      (dispatch [[:chat.actions/attach-and-send
-                  {:loaded-pairs loaded-pairs
-                   :messages messages
-                   :model model
-                   :api-key api-key
-                   :reasoning reasoning}]]))))
 
 ;; Workspace Actions/Effects Registration
 (nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
