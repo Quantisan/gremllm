@@ -6,7 +6,6 @@
             [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.state.workspace :as workspace-state]
-            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
@@ -44,8 +43,10 @@
        (when-not has-any-api-key?
          (settings-ui/render-api-key-warning))]
 
-      (chat-ui/render-chat-area (topic-state/get-messages state)
-                                (acp-state/loading? state))
+      (let [messages (topic-state/get-messages state)
+            awaiting-response? (and (loading-state/loading? state)
+                                    (not= :assistant (:type (peek messages))))]
+        (chat-ui/render-chat-area messages awaiting-response?))
 
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
