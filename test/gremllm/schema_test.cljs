@@ -55,39 +55,6 @@
   (testing "returns display name for Google"
     (is (= "Google" (schema/provider-display-name :google)))))
 
-(deftest test-attachment-ref->api-format
-  (testing "transforms valid attachment-ref and buffer to API format"
-    (let [attachment-ref {:ref "abc12345"
-                          :name "test.png"
-                          :mime-type "image/png"
-                          :size 1024}
-          buffer (js/Buffer.from "test-content" "utf-8")
-          result (schema/attachment-ref->api-format attachment-ref buffer)]
-      (is (= "image/png" (:mime-type result)))
-      (is (= (.toString buffer "base64") (:data result)))))
-
-  (testing "validates mime-type is present"
-    (let [attachment-ref {:ref "abc12345"
-                          :name "test.png"
-                          :size 1024}
-          buffer (js/Buffer.from "test-content" "utf-8")]
-      (is (thrown? js/Error (schema/attachment-ref->api-format attachment-ref buffer)))))
-
-  (testing "validates data is a string"
-    (let [attachment-ref {:ref "abc12345"
-                          :name "test.png"
-                          :mime-type "image/png"
-                          :size 1024}]
-      (is (thrown? js/Error (schema/attachment-ref->api-format attachment-ref nil))))))
-
-(deftest test-messages->chat-api-format
-  (testing "converts internal message format to Chat API format"
-    (is (= [{:role "user" :content "Hello"}
-            {:role "assistant" :content "Hi there"}]
-           (schema/messages->chat-api-format
-            [{:type :user :text "Hello"}
-             {:type :assistant :text "Hi there"}])))))
-
 ;; ACP test fixtures
 (def test-acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b")
 (def test-content-chunks
