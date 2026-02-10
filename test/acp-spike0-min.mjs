@@ -1,10 +1,32 @@
 #!/usr/bin/env node
 
-// Minimal ACP Spike 0: request a reviewable diff for a document update without editing files.
+// ============================================================================
+// ACP Spike 0: Document-First Interaction Pattern Reference
+// ============================================================================
+//
+// This spike demonstrates the core document-first interaction pattern that
+// Gremllm will use for verified knowledge work:
+//
+// 1. User works in a document (the artifact)
+// 2. User requests AI assistance for a specific edit
+// 3. Agent receives a resource_link to the document (not full content)
+// 4. Agent calls readTextFile to demand-read the document
+// 5. Agent proposes changes as reviewable diffs
+// 6. Client captures diffs WITHOUT writing to disk (dry-run mode)
+// 7. User reviews and approves/rejects proposed changes
+//
+// KEY RESEARCH QUESTION ANSWERED:
+// Can we get reviewable diffs from the agent without the agent writing to disk?
+// YES - by setting DRY_RUN=true and blocking writeTextFile, we capture proposed
+// edits in tool_call_update sessionUpdates before any mutation occurs.
+//
+// ACP LIFECYCLE EXERCISED:
+// spawn agent → initialize (capability negotiation) → newSession →
+// prompt (text + resource_link) → observe sessionUpdates (streaming) → cleanup
 //
 // References:
-// docs/plans/2026-02-09-document-first-pivot.md
-// docs/acp-client-agent-interaction-research-2026-02-09.md
+// - docs/plans/2026-02-09-document-first-pivot.md
+// - docs/acp-client-agent-interaction-research-2026-02-09.md
 
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
@@ -13,9 +35,14 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import * as acp from "@agentclientprotocol/sdk";
 
+// ============================================================================
+// Configuration
+// ============================================================================
+
 const PROJECT_ROOT = process.cwd();
 const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "docs/plans/2026-02-09-document-first-pivot.md");
 
+// Document to edit - configurable via env var, CLI arg, or default
 const DOC_PATH = process.env.ACP_DOC_PATH
   ? path.resolve(PROJECT_ROOT, process.env.ACP_DOC_PATH)
   : process.argv[2]
@@ -23,37 +50,49 @@ const DOC_PATH = process.env.ACP_DOC_PATH
     : DEFAULT_DOC;
 const DOC_URI = pathToFileURL(DOC_PATH).toString();
 
+// Agent command - default uses npx to run Claude Code ACP
 const AGENT_CMD = process.env.ACP_AGENT_CMD || "npx";
 const AGENT_ARGS = process.env.ACP_AGENT_ARGS
   ? process.env.ACP_AGENT_ARGS.split(" ")
   : ["@zed-industries/claude-code-acp"];
 
-const DRY_RUN = true; // Do not write any files.
+// Dry-run mode: Block writeTextFile to capture proposed edits without mutation
+const DRY_RUN = true;
+
+// Filesystem capabilities: none, read, write, or readwrite
 const FS_MODE = (process.env.ACP_CLIENT_FS || "readwrite").toLowerCase();
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// ============================================================================
+// MinimalClient - ACP Client Callback Interface Implementation
+// ============================================================================
+//
+// Implements the callbacks the ACP SDK expects from a client. This is where
+// we observe agent behavior and respond to its requests.
 
 class MinimalClient {
   constructor() {
-    this.toolCalls = new Map();
     this.diffUpdates = [];
   }
 
+  // sessionUpdate - The streaming observation point for all agent activity.
+  // This is called repeatedly as the agent works. We handle three update types:
+  //
+  // 1. agent_message_chunk - Text the agent is streaming back to the user
+  // 2. tool_call_update - Tool execution results, including proposed diffs
+  //
+  // The key insight: tool_call_update with type=diff contains the proposed edit
+  // BEFORE writeTextFile is called. This is our chance to capture and review.
   async sessionUpdate({ sessionId, update }) {
     switch (update.sessionUpdate) {
       case "agent_message_chunk": {
+        // Stream agent's text output to stdout
         if (update.content?.type === "text") {
           process.stdout.write(update.content.text);
         }
         break;
       }
-      case "tool_call": {
-        this.toolCalls.set(update.toolCallId, update);
-        break;
-      }
       case "tool_call_update": {
+        // Capture diff proposals - these are the reviewable edits we want
         if (Array.isArray(update.content)) {
           const diffs = update.content.filter((item) => item.type === "diff");
           if (diffs.length > 0) {
@@ -73,6 +112,10 @@ class MinimalClient {
     }
   }
 
+  // readTextFile - Agent calls this to fetch document content.
+  // This implements the demand-read pattern: we sent a resource_link,
+  // agent calls this to get the actual content. Supports line/limit for
+  // partial reads (useful for large files).
   async readTextFile({ path: filePath, line, limit }) {
     const content = await fs.readFile(filePath, "utf8");
     if (line == null && limit == null) {
@@ -85,6 +128,10 @@ class MinimalClient {
     return { content: lines.slice(start, end).join("\n") };
   }
 
+  // writeTextFile - Agent calls this to mutate files.
+  // In dry-run mode, we block this to prevent mutation. This lets us capture
+  // the proposed edit (from tool_call_update) without applying it.
+  // In production, this would be where we prompt the user for approval.
   async writeTextFile({ path: filePath, content }) {
     if (DRY_RUN) {
       console.error(`[dry-run] writeTextFile blocked: ${filePath} (bytes: ${content.length})`);
@@ -95,6 +142,9 @@ class MinimalClient {
     return {};
   }
 
+  // requestPermission - Agent calls this to ask for approval.
+  // Auto-accepts by selecting the first option. In production, this would
+  // present choices to the user and wait for their decision.
   async requestPermission(params) {
     const firstOption = params.options?.[0];
     return {
@@ -106,7 +156,21 @@ class MinimalClient {
   }
 }
 
+// ============================================================================
+// Main - ACP Lifecycle
+// ============================================================================
+//
+// Executes the complete ACP interaction:
+// 1. Spawn the agent subprocess
+// 2. Set up streaming communication (stdin/stdout as NDJSON)
+// 3. Initialize with capability negotiation
+// 4. Create a new session
+// 5. Send prompt with text instruction + resource_link to document
+// 6. Observe streaming updates (agent reads doc, proposes diff)
+// 7. Output summary and cleanup
+
 async function main() {
+  // Spawn agent subprocess - stdio config lets us communicate via stdin/stdout
   const agentProcess = spawn(AGENT_CMD, AGENT_ARGS, {
     stdio: ["pipe", "pipe", "inherit"],
     env: { ...process.env },
@@ -119,6 +183,7 @@ async function main() {
     process.exit(1);
   });
 
+  // Set up ACP connection over agent's stdin/stdout
   const input = Writable.toWeb(agentProcess.stdin);
   const output = Readable.toWeb(agentProcess.stdout);
 
@@ -126,15 +191,16 @@ async function main() {
   const stream = acp.ndJsonStream(input, output);
   const connection = new acp.ClientSideConnection(() => client, stream);
 
-  const fsCaps =
-    FS_MODE === "none"
-      ? {}
-      : FS_MODE === "read"
-        ? { readTextFile: true, writeTextFile: false }
-        : FS_MODE === "write"
-          ? { readTextFile: false, writeTextFile: true }
-          : { readTextFile: true, writeTextFile: true };
+  // Filesystem capability lookup - determines what file operations we expose
+  const FS_CAPS = {
+    none:      {},
+    read:      { readTextFile: true,  writeTextFile: false },
+    write:     { readTextFile: false, writeTextFile: true },
+    readwrite: { readTextFile: true,  writeTextFile: true },
+  };
+  const fsCaps = FS_CAPS[FS_MODE] || FS_CAPS.readwrite;
 
+  // Initialize - capability negotiation happens here
   const init = await connection.initialize({
     protocolVersion: acp.PROTOCOL_VERSION,
     clientCapabilities: {
@@ -148,12 +214,15 @@ async function main() {
     },
   });
 
+  // Create a new session - this is where we'd configure model, tools, etc.
   const session = await connection.newSession({
     cwd: PROJECT_ROOT,
     mcpServers: [],
     model: "claude-haiku-4-5-20251001",
   });
 
+  // Send prompt - text instruction + resource_link (not full document content)
+  // The agent will call readTextFile to demand-read the document
   const promptText =
     "Read the linked document, then propose a single edit: update the front-matter Date field to 2026-02-10. Do not change anything else.";
 
@@ -165,19 +234,25 @@ async function main() {
     ],
   });
 
-  await sleep(500);
-
+  // Output summary - show what we captured
   console.log("\n\n=== Summary ===");
   console.log(`Agent protocol: ${init.protocolVersion}`);
   console.log(`Stop reason: ${promptResult.stopReason}`);
-  console.log(`Diff updates: ${client.diffUpdates.length}`);
+  console.log(`Diff updates captured: ${client.diffUpdates.length}`);
   console.log(`Client fs mode: ${FS_MODE}`);
 
+  // Display captured diffs in readable format
   if (client.diffUpdates.length > 0) {
     for (const update of client.diffUpdates) {
-      console.log("\n--- Diff ---");
-      console.log(`ToolCall: ${update.toolCallId} Status: ${update.status}`);
-      console.log(JSON.stringify(update.content, null, 2));
+      console.log("\n--- Captured Diff ---");
+      console.log(`Tool Call: ${update.toolCallId}`);
+      console.log(`Status: ${update.status}`);
+
+      for (const diff of update.content) {
+        console.log(`\nFile: ${diff.path}`);
+        console.log(`Old text: ${diff.oldText?.substring(0, 100) || "(none)"}${diff.oldText?.length > 100 ? "..." : ""}`);
+        console.log(`New text: ${diff.newText?.substring(0, 100) || "(none)"}${diff.newText?.length > 100 ? "..." : ""}`);
+      }
     }
   }
 
