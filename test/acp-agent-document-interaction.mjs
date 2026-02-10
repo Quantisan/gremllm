@@ -25,7 +25,7 @@
 // prompt (text + resource_link) → observe sessionUpdates (streaming) → cleanup
 //
 // USAGE:
-//   node test/acp-spike0-min.mjs [document-path]
+//   node test/acp-agent-document-interaction.mjs [document-path]
 //
 // CONFIGURATION (via environment variables):
 //   ACP_DOC_PATH          Document to edit (overrides CLI arg)
@@ -313,3 +313,110 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+
+// ============================================================================
+// OUTPUT
+// ============================================================================
+//
+// $ node test/acp-agent-document-interaction.mjs
+//
+// [available_commands_update] Agent advertised 30 commands
+// The user wants me to:
+// 1. Read the linked document at `/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md`
+// 2. Update the front-matter Date field to 2026-02-10
+// 3. Don't change anything else
+//
+// Let me read the file first to see its contents.I'll read the document and update the Date field in the front-matter.
+// [tool_call] mcp__acp__Read - Read /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md
+//   Input: {
+//   "file_path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md"
+// }
+// Now I need to update the Date field in the front-matter from `2026-02-09` to `2026-02-10`. The front-matter is at the top of the file:
+//
+// ```markdown
+// **Date:** 2026-02-09 (revised)
+// ```
+//
+// I'll use the Edit tool to change this to:
+//
+// ```markdown
+// **Date:** 2026-02-10 (revised)
+// ```
+//
+// I should make sure to keep the "(revised)" part and only change the date.
+// [tool_call] mcp__acp__Edit - Edit `/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md`
+//   Input: {
+//   "file_path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md",
+//   "old_string": "**Date:** 2026-02-09 (revised)",
+//   "new_string": "**Date:** 2026-02-10 (revised)"
+// }
+// [dry-run] writeTextFile blocked: /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md (bytes: 13646)
+//
+// [tool_call_update] Captured 1 diff(s) (id: toolu_01LccXqJjxpfBLwXBy5K9CLR)
+// Perfect, the edit has been applied. The Date field is now updated to 2026-02-10 while keeping everything else, including the "(revised)" suffix, intact.Done. Updated the Date field from 2026-02-09 to 2026-02-10.
+//
+// === Summary ===
+// Agent protocol: 1
+// Stop reason: end_turn
+// Diff updates captured: 1
+// Client fs mode: readwrite
+// Verbose mode: disabled (set VERBOSE=1 to enable)
+//
+// --- Captured Diffs ---
+// [
+//   {
+//     "toolCallId": "toolu_01LccXqJjxpfBLwXBy5K9CLR",
+//     "status": "completed",
+//     "content": [
+//       {
+//         "newText": "# Document-First Pivot — Master Architectural Plan\n\n**Date:** 2026-02-10 (revised)\n**References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n\n## Context\n",
+//         "oldText": "# Document-First Pivot — Master Architectural Plan\n\n**Date:** 2026-02-09 (revised)\n**References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n\n## Context\n",
+//         "path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md",
+//         "type": "diff"
+//       }
+//     ],
+//     "locations": [
+//       {
+//         "line": 1,
+//         "path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md"
+//       }
+//     ],
+//     "rawOutput": [
+//       {
+//         "type": "text",
+//         "text": "Index: /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n===================================================================\n--- /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n+++ /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n@@ -1,7 +1,7 @@\n # Document-First Pivot — Master Architectural Plan\n \n-**Date:** 2026-02-09 (revised)\n+**Date:** 2026-02-10 (revised)\n **References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n \n ## Context\n \n"
+//       }
+//     ],
+//     "rawUpdate": {
+//       "_meta": {
+//         "claudeCode": {
+//           "toolName": "mcp__acp__Edit"
+//         }
+//       },
+//       "content": [
+//         {
+//           "newText": "# Document-First Pivot — Master Architectural Plan\n\n**Date:** 2026-02-10 (revised)\n**References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n\n## Context\n",
+//           "oldText": "# Document-First Pivot — Master Architectural Plan\n\n**Date:** 2026-02-09 (revised)\n**References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n\n## Context\n",
+//           "path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md",
+//           "type": "diff"
+//         }
+//       ],
+//       "locations": [
+//         {
+//           "line": 1,
+//           "path": "/Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md"
+//         }
+//       ],
+//       "rawOutput": [
+//         {
+//           "type": "text",
+//           "text": "Index: /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n===================================================================\n--- /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n+++ /Users/paul/Projects/gremllm/docs/plans/2026-02-09-document-first-pivot.md\n@@ -1,7 +1,7 @@\n # Document-First Pivot — Master Architectural Plan\n \n-**Date:** 2026-02-09 (revised)\n+**Date:** 2026-02-10 (revised)\n **References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`\n \n ## Context\n \n"
+//         }
+//       ],
+//       "status": "completed",
+//       "toolCallId": "toolu_01LccXqJjxpfBLwXBy5K9CLR",
+//       "sessionUpdate": "tool_call_update"
+//     }
+//   }
+// ]
