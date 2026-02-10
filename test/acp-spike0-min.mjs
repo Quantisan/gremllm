@@ -24,6 +24,16 @@
 // spawn agent → initialize (capability negotiation) → newSession →
 // prompt (text + resource_link) → observe sessionUpdates (streaming) → cleanup
 //
+// USAGE:
+//   node test/acp-spike0-min.mjs [document-path]
+//
+// CONFIGURATION (via environment variables):
+//   ACP_DOC_PATH          Document to edit (overrides CLI arg)
+//   ACP_AGENT_CMD         Agent command (default: npx)
+//   ACP_AGENT_ARGS        Agent args (default: @zed-industries/claude-code-acp)
+//   ACP_CLIENT_FS         Filesystem caps: none, read, write, readwrite (default: readwrite)
+//   VERBOSE               Set to 1 for full JSON dump of all sessionUpdates
+//
 // References:
 // - docs/plans/2026-02-09-document-first-pivot.md
 // - docs/acp-client-agent-interaction-research-2026-02-09.md
@@ -112,16 +122,15 @@ class MinimalClient {
         break;
       }
       case "tool_call": {
-        // Agent is invoking a tool - extract tool name from metadata or title
+        // Agent sends two tool_call updates per invocation: first with empty
+        // rawInput (pending), then with actual parameters. Skip the empty one.
+        if (!update.rawInput || Object.keys(update.rawInput).length === 0) break;
+
         const toolName = update._meta?.claudeCode?.toolName || update.kind || "unknown";
         const title = update.title || toolName;
 
-        console.error(`\n\x1b[1m[tool_call] ${toolName}\x1b[0m - ${title} (id: ${update.toolCallId})`);
-
-        // Show input parameters if available
-        if (update.rawInput && Object.keys(update.rawInput).length > 0) {
-          console.error(`  Input: ${JSON.stringify(update.rawInput, null, 2)}`);
-        }
+        console.error(`\n\x1b[1m[tool_call] ${toolName}\x1b[0m - ${title}`);
+        console.error(`  Input: ${JSON.stringify(update.rawInput, null, 2)}`);
         break;
       }
       case "tool_call_update": {
@@ -136,6 +145,7 @@ class MinimalClient {
               content: diffs,
               locations: update.locations || [],
               rawOutput: update.rawOutput,
+              rawUpdate: update, // Store full update for debugging
             });
           }
         }
@@ -143,7 +153,11 @@ class MinimalClient {
       }
       case "available_commands_update": {
         // Agent capabilities update - usually happens at session start
-        console.error(`\n[available_commands_update] Agent advertised ${update.commands?.length || 0} commands`);
+        // (commands list is often empty in basic setups)
+        const cmdCount = update.commands?.length || update.availableCommands?.length || 0;
+        if (cmdCount > 0) {
+          console.error(`\n[available_commands_update] Agent advertised ${cmdCount} commands`);
+        }
         break;
       }
       default:
@@ -210,9 +224,10 @@ class MinimalClient {
 // 7. Output summary and cleanup
 
 async function main() {
-  // Spawn agent subprocess - stdio config lets us communicate via stdin/stdout
+  // Spawn agent subprocess
+  // stdio: [stdin=pipe, stdout=pipe, stderr=ignore] to silence agent's debug output
   const agentProcess = spawn(AGENT_CMD, AGENT_ARGS, {
-    stdio: ["pipe", "pipe", "inherit"],
+    stdio: ["pipe", "pipe", "ignore"],
     env: { ...process.env },
   });
 
@@ -283,19 +298,12 @@ async function main() {
   console.log(`Verbose mode: ${VERBOSE ? "enabled" : "disabled (set VERBOSE=1 to enable)"}`);
 
 
-  // Display captured diffs in readable format
+  // Display captured diffs - the key proof that we got reviewable edits
+  // Structure: diffUpdates[].content[].{path, oldText, newText, type: "diff"}
+  // To parse: iterate content array, compare oldText vs newText line-by-line
   if (client.diffUpdates.length > 0) {
-    for (const update of client.diffUpdates) {
-      console.log("\n--- Captured Diff ---");
-      console.log(`Tool Call: ${update.toolCallId}`);
-      console.log(`Status: ${update.status}`);
-
-      for (const diff of update.content) {
-        console.log(`\nFile: ${diff.path}`);
-        console.log(`Old text: ${diff.oldText?.substring(0, 100) || "(none)"}${diff.oldText?.length > 100 ? "..." : ""}`);
-        console.log(`New text: ${diff.newText?.substring(0, 100) || "(none)"}${diff.newText?.length > 100 ? "..." : ""}`);
-      }
-    }
+    console.log("\n--- Captured Diffs ---");
+    console.log(JSON.stringify(client.diffUpdates, null, 2));
   }
 
   agentProcess.kill();
