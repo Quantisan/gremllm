@@ -154,13 +154,13 @@ async function main() {
   });
 
   const promptText =
-    "Please read the document at the resource link using ACP Read, then propose a change via ACP Edit: update the head matter Date field to Feb 10, 2026. Do not change anything else. Return edits via the ACP Edit tool so I can review diffs.";
+    "Read the linked document, then propose a single edit: update the front-matter Date field to 2026-02-10. Do not change anything else.";
 
   const promptResult = await connection.prompt({
     sessionId: session.sessionId,
     prompt: [
       { type: "text", text: promptText },
-      { type: "resource_link", uri: DOC_URI },
+      { type: "resource_link", uri: DOC_URI, name: path.basename(DOC_PATH) },
     ],
   });
 
