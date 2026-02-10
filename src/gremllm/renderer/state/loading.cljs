@@ -1,12 +1,9 @@
 (ns gremllm.renderer.state.loading)
 
 ;; Path constants
-(defn loading-path [id] [:loading id])
+(defn loading-path [topic-id] [:loading topic-id])
 
 ;; State accessor functions
-(defn get-loading [state]
-  (get state :loading {}))
-
-(defn loading? [state]
-  (some true? (vals (get-loading state))))
+(defn loading? [state topic-id]
+  (get-in state [:loading topic-id] false))
 

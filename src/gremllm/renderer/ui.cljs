@@ -44,13 +44,13 @@
          (settings-ui/render-api-key-warning))]
 
       (let [messages (topic-state/get-messages state)
-            awaiting-response? (and (loading-state/loading? state)
+            awaiting-response? (and (loading-state/loading? state active-topic-id)
                                     (not= :assistant (:type (peek messages))))]
         (chat-ui/render-chat-area messages awaiting-response?))
 
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
-         :loading?             (loading-state/loading? state)
+         :loading?             (loading-state/loading? state active-topic-id)
          :has-any-api-key?     has-any-api-key?
          :pending-attachments  (form-state/get-pending-attachments state)})
 

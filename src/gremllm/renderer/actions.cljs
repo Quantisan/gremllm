@@ -113,8 +113,8 @@
 (nxr/register-action! :messages.actions/append-to-state msg/append-to-state)
 
 (nxr/register-action! :loading.actions/set-loading?
-  (fn [_state id loading?]
-    [[:effects/save (loading-state/loading-path id) loading?]]))
+  (fn [_state topic-id loading?]
+    [[:effects/save (loading-state/loading-path topic-id) loading?]]))
 
 ;; Workspace
 (nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
