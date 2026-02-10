@@ -2,7 +2,6 @@
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [malli.core :as m]
             [gremllm.schema :as schema]
-            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- continuing? [state message-type]
@@ -33,10 +32,8 @@
   [state message-type chunk-text message-id]
   (let [continuing? (continuing? state message-type)]
     (if continuing?
-      [[:effects/save acp-state/loading-path false]
-       (append-to-response state chunk-text)]
-      (into [[:effects/save acp-state/loading-path false]]
-            (start-response message-type chunk-text message-id)))))
+      [(append-to-response state chunk-text)]
+      (start-response message-type chunk-text message-id))))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
@@ -58,15 +55,16 @@
 
 (defn session-error
   "ACP session initialization failed."
-  [_state error]
-  (js/console.error "[ACP] Session init failed:" error))
+  [_state topic-id error]
+  (js/console.error "[ACP] Session init failed:" error)
+  [[:loading.actions/set-loading? topic-id false]])
 
 (defn new-session [_state topic-id]
-  [[:loading.actions/set-loading? topic-id true] ;; TODO: this is confusingly overlapping with state.acp/loading-path
+  [[:loading.actions/set-loading? topic-id true]
    [:effects/promise
     {:promise    (.acpNewSession js/window.electronAPI)
      :on-success [[:acp.actions/session-ready topic-id]]
-     :on-error   [[:acp.actions/session-error]]}]])
+     :on-error   [[:acp.actions/session-error topic-id]]}]])
 
 (defn resume-session
   "Resume existing ACP session for topic."
@@ -75,7 +73,7 @@
    [:effects/promise
     {:promise    (.acpResumeSession js/window.electronAPI acp-session-id)
      :on-success [[:acp.actions/session-ready topic-id]]
-     :on-error   [[:acp.actions/session-error]]}]])
+     :on-error   [[:acp.actions/session-error topic-id]]}]])
 
 (defn send-prompt [state text]
   (let [topic-id       (topic-state/get-active-topic-id state)

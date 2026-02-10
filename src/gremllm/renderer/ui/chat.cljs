@@ -46,13 +46,13 @@
       "⠿"]
      "Computing..."]])
 
-(defn render-chat-area [messages acp-loading?]
+(defn render-chat-area [messages awaiting-response?]
   [e/chat-area {}
    (for [message messages]
      (render-message message))
 
    ;; Show loading indicator while waiting for first chunk
-   (when acp-loading?
+   (when awaiting-response?
      (render-loading-indicator))])
 
 (defn- render-attachment-indicator [pending-attachments]
