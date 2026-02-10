@@ -163,14 +163,35 @@ All unchanged for scooter. When `:content` is added in v1b, it persists alongsid
 
 Each version ships a working app. Spikes de-risk the hardest unknown before the version that depends on it.
 
-### Spike 0: Content extraction from AI responses
+### Spike 0: Document-Agent interaction patterns with ACP
+
+**Core question:** What interaction patterns does ACP support for a document-centric client where the agent proposes changes and the user reviews them?
+
 - **Not shipped.** Research spike.
-- AI responses mix conversational text with document content. How do we separate them?
-- Explore: Does ACP support structured output, tool use, or artifacts that let the agent return document content separately from chat text?
-- Explore: What do other ACP clients (Zed, etc.) do?
-- Explore: Can we control this via system prompt / agent configuration?
-- Explore: Is this a post-processing step (parse from response), a streaming concern, or an agent-side tool call?
-- **Informs:** How `:content` gets populated in v1b — streamed vs post-processed, data shape, extraction logic.
+
+**Research questions:**
+
+**1. Context delivery patterns**
+- How do ACP clients typically provide document context to agents? (System prompt? Per-message context? Sampling parameters?)
+- What's the pattern for "here's the current document state"?
+- How do clients handle partial context (e.g., "here's the paragraph the user commented on")?
+
+**2. Structured response patterns**
+- What mechanisms does ACP provide for structured agent output? (Tool use? Artifacts? Response format conventions?)
+- Can agents return multiple "types" of content in one response (chat text + document changes)?
+- What do other ACP clients (Zed, Cursor, etc.) do for similar "propose changes" workflows?
+
+**3. Round-trip interaction model**
+- What's the idiomatic ACP pattern for: user provides context → agent proposes changes → client renders changes → user accepts/rejects?
+- Is there a "suggested changes" or "diff proposal" pattern in the ACP ecosystem?
+- How do we maintain conversation continuity when the agent is both chatting AND proposing document edits?
+
+**4. Practical exploration**
+- Build a minimal prototype: send document snippet + annotation → receive structured change proposal
+- Test: Can we get the agent to return changes in a parseable format?
+- Learn: What does the response structure actually look like?
+
+**Informs:** The interaction architecture for v1b — how `:content` gets populated, how annotations become context, how changes flow back from agent to client.
 
 ### Scooter v1b: "The document is real"
 - PersistedTopic gets `:content` field (markdown string)
