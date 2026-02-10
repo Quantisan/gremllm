@@ -11,6 +11,11 @@ The current architecture is chat-centric — `Topic` is a named chat thread with
 
 **Why this revision:** The original plan treated the pivot as a naming change — Topic → Document across the codebase, then build new features. But Topic is a chat thread. Document is an artifact. These are structurally different concepts and we don't yet know what Topics become in the document-first model. A mechanical rename would create false confidence in a mapping we haven't validated. This revision punts the naming question and focuses on the thing that matters: making the document panel real.
 
+**Conceptual model (after v1a planning):**
+- **One main document per workspace** — each workspace has a primary deliverable. No explicit "main" designation in the system — just UI convenience (e.g., reopen last-opened doc). The workspace folder can contain other markdown files as supporting documents in the future.
+- **Topics serve the Document** — topics are conversations in service of the document, not owners of documents.
+- **Topics ≈ Named ACP Sessions** — for v1a purposes, a Topic is a named ACP session with locally-cached messages. No schema changes to Topic in v1a.
+
 ## What We Want
 
 - **The document is the center of gravity.** The artifact is what the user sees first and cares about most. Chat is secondary — a collaboration space that serves the document.
@@ -30,7 +35,7 @@ The current architecture is chat-centric — `Topic` is a named chat thread with
 - **Don't over-engineer the content model.** Scooter content is a markdown string. No structured blocks, no stable paragraph IDs, no rich text.
 - **Don't build process trail capture.** Comment history, change history, provenance — all motorcycle.
 - **Don't persist change history.** Only `:pending` changes are persisted. Accepted changes merge into content. Rejected changes are discarded.
-- **Don't build document creation flows in v1a/v1b.** AI document generation is v1c scope.
+- **Don't build AI document generation in v1a/v1b.** v1a creates empty stub files (`# Document\n\n`). AI document generation is v1c scope.
 - **Don't build multi-thread per document yet.** Eventually want branching and multiple chat threads, but not in scooter.
 
 ---
@@ -71,22 +76,13 @@ Rejected → quick feedback prompt → fed back to AI → retry
  [:messages {:default []} [:vector Message]]]
 ```
 
-This schema stays. No renames, no restructuring. Sidebar lists Topics. Persistence writes to `<workspace>/topics/<topic-id>.edn`.
+This schema stays. No renames, no restructuring, **no schema changes in v1a**. Sidebar lists Topics. Persistence writes to `<workspace>/topics/<topic-id>.edn`.
 
-### Scooter addition: `:document-path` field
+### Scooter v1a: No Topic schema changes
 
-The only schema change for v1a — an optional `:document-path` field on PersistedTopic:
+**v1a does NOT add `:document-path` to PersistedTopic.** The document is workspace-level, not topic-level. The conceptual relationship is: Topics serve the Document.
 
-```clojure
-[:map
- [:id :string]
- [:name :string]
- [:acp-session-id {:optional true} :string]
- [:document-path {:optional true} :string]        ; path to markdown file on disk
- [:messages {:default []} [:vector Message]]]
-```
-
-**Note:** Storage pattern (separate directories vs co-located vs convention-based) is a v1a design decision. The document file lives on disk; the topic stores a reference (or derives by convention).
+**Default convention:** `<workspace>/document.md` — a sensible default for "Create Document", not a system-enforced constraint. Future versions will support opening any `.md` file in the workspace.
 
 ### Directional: Annotation (subject to Spike A findings)
 
@@ -135,12 +131,19 @@ These are directional. Do not build to them until their corresponding spike comp
 
 ## Persistence, IPC, Workspace
 
-Two file types for scooter:
-- **Topic EDN:** `<workspace>/topics/<topic-id>.edn` (includes `:document-path` or derives by convention)
-- **Document markdown:** Path stored on topic or derived by convention (v1a design decision)
+**Workspace file structure:**
+```
+<workspace>/
+├── topics/
+│   ├── topic-123.edn
+│   └── topic-456.edn
+└── document.md          # Default main document (v1a convention)
+```
 
-- **IPC:** `topic/save`, `topic/delete` — unchanged (will need document file operations in v1a)
-- **Workspace:** Keep as-is. Folder of topics (plus documents).
+- **Topic EDN:** `<workspace>/topics/<topic-id>.edn` — unchanged schema
+- **Document markdown:** `<workspace>/document.md` by default (v1a convention). Multi-doc discovery in future versions.
+- **IPC:** `topic/save`, `topic/delete` unchanged. New in v1a: `document/create`, `document/read`
+- **WorkspaceSyncData:** Gains optional `:document` field with `{:exists? :path}` metadata
 
 ---
 
@@ -178,20 +181,24 @@ Each version ships a working app. Spikes de-risk the hardest unknown before the 
 **Informs:** v1b ACP wiring (resource links, tool call update handling, diff rendering).
 
 ### v1a: "Documents on disk"
-- Major refactor: topics reference standalone markdown files
-- PersistedTopic gains `:document-path` field (or convention-based — TBD in v1a)
-- Workspace structure supports documents as first-class files
-- Document CRUD at the file level
-- Storage pattern design decision (separate directories vs co-located vs convention-based)
-- **Learns:** What storage pattern makes sense? How do document files relate to topic files?
+- Document infrastructure: file creation, read, existence checks
+- WorkspaceSyncData includes document metadata (`{:exists? :path}`)
+- Renderer document state: knows if document exists, tracks path
+- Minimal UI: empty state with "Create Document" button, or shows document exists
+- Default convention: `<workspace>/document.md`
+- **No schema changes to PersistedTopic** — topics remain unchanged
+- **Learns:** Document as workspace-level concept (not topic-level). Infrastructure for v1b markdown rendering.
 
 ### v1b: "The document is real"
-- Document panel renders formatted markdown from the file on disk
+- Document panel renders formatted markdown from `<workspace>/document.md`
+- Markdown rendering library integration (marked or similar)
+- Read document content on workspace open, update panel
+- Multi-doc discovery: list all `.md` files in workspace, allow opening any
 - ACP client gains `readTextFile` callback (reads document from disk on demand)
 - Prompts include `resource_link` pointing to the document file
 - `tool_call_update` handling added to schema/streaming pipeline
 - Diff display and accept/reject UI deferred to v3
-- **Learns:** Does the ACP integration work as expected? Is the two-panel model right?
+- **Learns:** Does the ACP integration work as expected? Is the two-panel model right? How does multi-doc discovery feel?
 
 ### v1c: "AI creates the document"
 - AI generates initial document content from chat conversation
@@ -248,19 +255,22 @@ Explicitly deferred. Should not influence scooter implementation decisions.
 | Topic → Document rename | Premature. The mapping is structural, not cosmetic. | After domain relationship is understood |
 | Sidebar/workspace restructuring | No value until document model is proven | After v2 at earliest |
 | Multiple chat threads per document | Interesting but speculative | Bicycle |
-| Document creation flows | v1c scope — AI generates document from chat | After v1b validates file-based model |
+| Multi-document discovery | v1a uses default convention (`document.md`). Full multi-doc support is future work. | v1b+ |
+| Document creation flows (AI-generated) | v1c scope — AI generates document from chat | After v1b validates file-based model |
 
 ---
 
 ## Hard Problems (ranked by architectural impact)
 
-1. **Topic-document file association pattern** — How to store/derive document file paths (v1a design decision).
-2. **Structured output parsing** — Bridging ACP `tool_call_update` → TrackedChange records. Format proven by Spike 0.
-3. **Content extraction from AI responses** — How to separate document content from conversational text in ACP responses (v1c scope).
-4. **Annotation anchoring** — Mapping DOM text selection to markdown source offsets (Spike A).
-5. **Offset recomputation** — When a change is accepted, all downstream offsets shift. Pure function needed.
-6. **Document rendering with overlays** — Markdown + highlights + margin comments + inline diffs.
-7. **Text selection → annotation flow** — Capturing selection, popover UI, draft state management.
+1. **Structured output parsing** — Bridging ACP `tool_call_update` → TrackedChange records. Format proven by Spike 0.
+2. **Content extraction from AI responses** — How to separate document content from conversational text in ACP responses (v1c scope).
+3. **Annotation anchoring** — Mapping DOM text selection to markdown source offsets (Spike A).
+4. **Offset recomputation** — When a change is accepted, all downstream offsets shift. Pure function needed.
+5. **Document rendering with overlays** — Markdown + highlights + margin comments + inline diffs.
+6. **Text selection → annotation flow** — Capturing selection, popover UI, draft state management.
+
+**Resolved (v1a):**
+- ~~Topic-document file association pattern~~ → Document is workspace-level, default convention `<workspace>/document.md`
 
 ---
 
