@@ -1,7 +1,13 @@
 # Document-First Pivot — Master Architectural Plan
 
+**SUPERSEDED by:** `2026-02-11-scooter-vertical-slices.md`
+
 **Date:** 2026-02-10 (revised after Spike 0 completion — architecture clarified: documents as files on disk)
 **References:** `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining.md`, `/Users/paul/Google Drive/My Drive/Qintaur shared/!Explorations/ide_for_knowledge_workers/experiments/red-lining-mockup.html`
+
+---
+
+**NOTE:** This plan divided work by abstraction level (v1a = infrastructure, v1b = rendering, etc.). The revised plan uses vertical slices instead — each slice delivers a complete, testable capability. See `2026-02-11-scooter-vertical-slices.md` for current direction.
 
 ## Context
 
