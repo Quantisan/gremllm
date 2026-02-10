@@ -151,6 +151,7 @@ async function main() {
   const session = await connection.newSession({
     cwd: PROJECT_ROOT,
     mcpServers: [],
+    model: "claude-haiku-4-5-20251001",
   });
 
   const promptText =
