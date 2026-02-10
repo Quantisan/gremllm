@@ -62,6 +62,9 @@ const DRY_RUN = true;
 // Filesystem capabilities: none, read, write, or readwrite
 const FS_MODE = (process.env.ACP_CLIENT_FS || "readwrite").toLowerCase();
 
+// Verbose mode: Print detailed agent interaction (reasoning, tool calls, etc.)
+const VERBOSE = process.env.VERBOSE === "true" || process.env.VERBOSE === "1";
+
 // ============================================================================
 // MinimalClient - ACP Client Callback Interface Implementation
 // ============================================================================
@@ -75,19 +78,44 @@ class MinimalClient {
   }
 
   // sessionUpdate - The streaming observation point for all agent activity.
-  // This is called repeatedly as the agent works. We handle three update types:
+  // This is called repeatedly as the agent works. We handle these update types:
   //
-  // 1. agent_message_chunk - Text the agent is streaming back to the user
-  // 2. tool_call_update - Tool execution results, including proposed diffs
+  // - agent_message_chunk: Text the agent is streaming back to the user
+  // - agent_thought_chunk: Agent's internal reasoning (thinking process)
+  // - tool_call: Agent is about to invoke a tool
+  // - tool_call_update: Tool execution results, including proposed diffs
   //
   // The key insight: tool_call_update with type=diff contains the proposed edit
   // BEFORE writeTextFile is called. This is our chance to capture and review.
   async sessionUpdate({ sessionId, update }) {
-    switch (update.sessionUpdate) {
+    const updateType = update.sessionUpdate;
+
+    // Verbose mode: print all update types with full JSON
+    if (VERBOSE) {
+      console.error(`\n[${updateType}]`, JSON.stringify(update, null, 2));
+      return; // Skip normal processing in verbose mode
+    }
+
+    switch (updateType) {
       case "agent_message_chunk": {
-        // Stream agent's text output to stdout
+        // Stream agent's text output to stdout (user-facing response)
         if (update.content?.type === "text") {
           process.stdout.write(update.content.text);
+        }
+        break;
+      }
+      case "agent_thought_chunk": {
+        // Stream agent's reasoning to stderr (thinking process)
+        if (update.content?.type === "text") {
+          process.stderr.write(`\x1b[2m${update.content.text}\x1b[0m`); // Dim text
+        }
+        break;
+      }
+      case "tool_call": {
+        // Agent is invoking a tool - print the tool name and parameters
+        console.error(`\n\x1b[1m[tool_call] ${update.tool || "unknown"}\x1b[0m (id: ${update.toolCallId})`);
+        if (update.parameters) {
+          console.error(`  Parameters: ${JSON.stringify(update.parameters, null, 2)}`);
         }
         break;
       }
@@ -96,6 +124,7 @@ class MinimalClient {
         if (Array.isArray(update.content)) {
           const diffs = update.content.filter((item) => item.type === "diff");
           if (diffs.length > 0) {
+            console.error(`\n\x1b[32m[tool_call_update] Captured ${diffs.length} diff(s)\x1b[0m (id: ${update.toolCallId})`);
             this.diffUpdates.push({
               toolCallId: update.toolCallId,
               status: update.status,
@@ -107,7 +136,13 @@ class MinimalClient {
         }
         break;
       }
+      case "available_commands_update": {
+        // Agent capabilities update - usually happens at session start
+        console.error(`\n[available_commands_update] Agent advertised ${update.commands?.length || 0} commands`);
+        break;
+      }
       default:
+        console.error(`\n[${updateType}] (unhandled)`);
         break;
     }
   }
@@ -240,6 +275,8 @@ async function main() {
   console.log(`Stop reason: ${promptResult.stopReason}`);
   console.log(`Diff updates captured: ${client.diffUpdates.length}`);
   console.log(`Client fs mode: ${FS_MODE}`);
+  console.log(`Verbose mode: ${VERBOSE ? "enabled" : "disabled (set VERBOSE=1 to enable)"}`);
+
 
   // Display captured diffs in readable format
   if (client.diffUpdates.length > 0) {
