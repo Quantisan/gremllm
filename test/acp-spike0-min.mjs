@@ -112,10 +112,15 @@ class MinimalClient {
         break;
       }
       case "tool_call": {
-        // Agent is invoking a tool - print the tool name and parameters
-        console.error(`\n\x1b[1m[tool_call] ${update.tool || "unknown"}\x1b[0m (id: ${update.toolCallId})`);
-        if (update.parameters) {
-          console.error(`  Parameters: ${JSON.stringify(update.parameters, null, 2)}`);
+        // Agent is invoking a tool - extract tool name from metadata or title
+        const toolName = update._meta?.claudeCode?.toolName || update.kind || "unknown";
+        const title = update.title || toolName;
+
+        console.error(`\n\x1b[1m[tool_call] ${toolName}\x1b[0m - ${title} (id: ${update.toolCallId})`);
+
+        // Show input parameters if available
+        if (update.rawInput && Object.keys(update.rawInput).length > 0) {
+          console.error(`  Input: ${JSON.stringify(update.rawInput, null, 2)}`);
         }
         break;
       }
