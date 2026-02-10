@@ -133,7 +133,7 @@ async function main() {
         ? { readTextFile: true, writeTextFile: false }
         : FS_MODE === "write"
           ? { readTextFile: false, writeTextFile: true }
-          : { readTextFile: true, writeTextFile: false };
+          : { readTextFile: true, writeTextFile: true };
 
   const init = await connection.initialize({
     protocolVersion: acp.PROTOCOL_VERSION,
