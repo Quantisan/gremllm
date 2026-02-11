@@ -130,11 +130,17 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Workspace Sync Operations
 
+(defn- read-document [workspace-path]
+  (let [doc-path (io/document-file-path workspace-path)]
+    (when (io/file-exists? doc-path)
+      {:content (io/read-file doc-path)})))
+
 (defn load-and-sync
   "Load topics and workspace metadata, then send sync payload to renderer."
   [{:keys [dispatch]} _ workspace-path]
   (let [workspace-name (io/path-basename workspace-path)
         workspace-meta (schema/create-workspace-meta workspace-name)
+        document       (read-document workspace-path)
         topics         (-> workspace-path io/topics-dir-path load-topics)
-        sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta)]
+        sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta document)]
     (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))
