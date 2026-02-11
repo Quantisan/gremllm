@@ -5,6 +5,7 @@
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.actions.workspace :as workspace]
+            [gremllm.renderer.actions.document :as document]
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
@@ -125,6 +126,9 @@
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 (nxr/register-action! :workspace.actions/set workspace/set-workspace)
 (nxr/register-action! :workspace.actions/pick-folder workspace/pick-folder)
+
+;; Document
+(nxr/register-action! :document.actions/set-content document/set-content)
 
 ;; Topic
 
