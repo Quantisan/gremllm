@@ -20,18 +20,20 @@
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
   (let [{topics    :topics
-         workspace :workspace} (schema/workspace-sync-from-ipc workspace-data-js)
+         workspace :workspace
+         document  :document} (schema/workspace-sync-from-ipc workspace-data-js)
         ;; TODO: save last active topic id so that user can continue where they left off
-        active-topic-id (first (keys topics))]
-
+        active-topic-id (first (keys topics))
+        base-effects [[:workspace.actions/set workspace]]
+        document-effects (when document
+                           [[:document.actions/set-content document]])]
     (if (empty? topics)
-      [[:workspace.actions/set workspace]
-       [:workspace.actions/initialize-empty]]
-
-      [[:workspace.actions/set workspace]
-       [:workspace.actions/restore-with-topics
-        {:topics          topics
-         :active-topic-id active-topic-id}]])))
+      (into (vec (concat base-effects document-effects))
+            [[:workspace.actions/initialize-empty]])
+      (into (vec (concat base-effects document-effects))
+            [[:workspace.actions/restore-with-topics
+              {:topics          topics
+               :active-topic-id active-topic-id}]]))))
 
 (defn restore-with-topics
   "Restore a workspace that has existing topics."
