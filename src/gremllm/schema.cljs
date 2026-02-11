@@ -200,6 +200,7 @@
   [:map
    [:workspace [:map [:name :string]]]
    [:topics {:default {}} WorkspaceTopics]
+   ;; TODO: required field. defaults to {}?
    [:document {:optional true} [:map [:content :string]]]])
 
 (defn create-workspace-meta

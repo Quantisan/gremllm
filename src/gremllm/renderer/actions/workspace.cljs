@@ -27,6 +27,7 @@
         base-effects [[:workspace.actions/set workspace]]
         document-effects (when document
                            [[:document.actions/set-content document]])]
+    ;; TODO: reads a bit dense, refactor for S(domain)RP
     (if (empty? topics)
       (into (vec (concat base-effects document-effects))
             [[:workspace.actions/initialize-empty]])

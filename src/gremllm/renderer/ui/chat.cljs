@@ -1,8 +1,7 @@
 (ns gremllm.renderer.ui.chat
   (:require [clojure.string :as str]
             [gremllm.renderer.ui.elements :as e]
-            [gremllm.renderer.ui.markdown :as md]
-            [gremllm.schema :as schema]))
+            [gremllm.renderer.ui.markdown :as md]))
 
 (defn- render-user-message [message]
   [e/user-message
