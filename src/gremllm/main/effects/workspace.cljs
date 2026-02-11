@@ -132,8 +132,8 @@
 
 (defn- read-document [workspace-path]
   (let [doc-path (io/document-file-path workspace-path)]
-    (when (io/file-exists? doc-path)
-      {:content (io/read-file doc-path)})))
+    {:content (when (io/file-exists? doc-path)
+                (io/read-file doc-path))}))
 
 (defn load-and-sync
   "Load topics and workspace metadata, then send sync payload to renderer."

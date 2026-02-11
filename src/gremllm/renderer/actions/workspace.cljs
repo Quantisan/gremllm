@@ -20,8 +20,8 @@
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
   (let [{:keys [topics workspace document]} (schema/workspace-sync-from-ipc workspace-data-js)]
-    (cond-> [[:workspace.actions/set workspace]]
-      document        (conj [:document.actions/set-content document])
+    (cond-> [[:workspace.actions/set workspace]
+             [:document.actions/set-content document]]
       (empty? topics) (conj [:workspace.actions/initialize-empty])
       (seq topics)    (conj [:workspace.actions/restore-with-topics
                               {:topics          topics

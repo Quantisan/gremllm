@@ -200,8 +200,7 @@
   [:map
    [:workspace [:map [:name :string]]]
    [:topics {:default {}} WorkspaceTopics]
-   ;; TODO: required field. defaults to {}?
-   [:document {:optional true} [:map [:content :string]]]])
+   [:document {:default {:content nil}} [:map [:content [:maybe :string]]]]])
 
 (defn create-workspace-meta
   "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
@@ -230,8 +229,7 @@
   "Validates and prepares workspace sync data for IPC transmission. Throws if invalid."
   [topics workspace document]
   (m/coerce WorkspaceSyncData
-            (cond-> {:topics topics :workspace workspace}
-              document (assoc :document document))
+            {:topics topics :workspace workspace :document document}
             mt/strip-extra-keys-transformer))
 
 (def topic-from-disk

@@ -125,4 +125,5 @@
           (let [[[effect-key channel data]] @dispatched]
             (is (= :ipc.effects/send-to-renderer effect-key))
             (is (= "workspace:opened" channel))
-            (is (contains? data :topics))))))))
+            (is (contains? data :topics))
+            (is (contains? data :document))))))))

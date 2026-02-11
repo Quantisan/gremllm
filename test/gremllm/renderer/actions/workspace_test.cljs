@@ -29,6 +29,7 @@
     (let [workspace-data (create-workspace-data-js)
           effects (workspace/opened {} workspace-data)]
       (is (has-action? effects :workspace.actions/set))
+      (is (has-action? effects :document.actions/set-content))
       (is (has-action? effects :workspace.actions/initialize-empty))))
 
   (testing "Workspace with topics restores them"
@@ -37,8 +38,16 @@
           effects (workspace/opened {} workspace-data)
           [_ restore-params] (get-action effects :workspace.actions/restore-with-topics)]
       (is (has-action? effects :workspace.actions/set))
+      (is (has-action? effects :document.actions/set-content))
       (is (= "tid" (:active-topic-id restore-params)))
-      (is (contains? (:topics restore-params) "tid")))))
+      (is (contains? (:topics restore-params) "tid"))))
+
+  (testing "Workspace with document content dispatches set-content"
+    (let [workspace-data (create-workspace-data-js {:document {:content "# Test Document"}})
+          effects (workspace/opened {} workspace-data)
+          [_ document] (get-action effects :document.actions/set-content)]
+      (is (has-action? effects :document.actions/set-content))
+      (is (= "# Test Document" (:content document))))))
 
 (deftest restore-with-topics-test
   (testing "Sets active topic without model param"
