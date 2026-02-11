@@ -6,6 +6,7 @@
             [gremllm.renderer.state.system :as system-state]
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.state.workspace :as workspace-state]
+            [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
@@ -17,6 +18,7 @@
 (defn- render-workspace [state]
   (let [has-any-api-key?      (system-state/has-any-api-key? state)
         workspace             (workspace-state/get-workspace state)
+        document-content      (document-state/get-content state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)
@@ -35,7 +37,7 @@
             :active-topic-id   active-topic-id
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
-      (document-ui/render-document-stub)]
+      (document-ui/render-document document-content)]
 
      ;; Zone 3: Chat panel
      [e/chat-panel

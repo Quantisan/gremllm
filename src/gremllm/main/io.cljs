@@ -5,6 +5,7 @@
 
 (def ^:private user-subdir "User")
 (def ^:private topics-subdir "topics")
+(def ^:private document-filename "document.md")
 
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
@@ -85,4 +86,7 @@
 
 (defn topics-dir-path [workspace-dir]
   (path-join workspace-dir topics-subdir))
+
+(defn document-file-path [workspace-dir]
+  (path-join workspace-dir document-filename))
 

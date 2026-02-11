@@ -186,6 +186,7 @@
 (defn create-topic []
   (m/decode Topic {} mt/default-value-transformer))
 
+;; TODO: rename to DocumentTopics
 (def WorkspaceTopics
   "Map of Topics keyed by Topic ID"
   [:map-of :string Topic])
@@ -198,7 +199,8 @@
    Used when loading a workspace folder from disk."
   [:map
    [:workspace [:map [:name :string]]]
-   [:topics {:default {}} WorkspaceTopics]])
+   [:topics {:default {}} WorkspaceTopics]
+   [:document {:default {:content nil}} [:map [:content [:maybe :string]]]]])
 
 (defn create-workspace-meta
   "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
@@ -225,10 +227,9 @@
 
 (defn workspace-sync-for-ipc
   "Validates and prepares workspace sync data for IPC transmission. Throws if invalid."
-  [topics workspace]
+  [topics workspace document]
   (m/coerce WorkspaceSyncData
-            {:topics topics
-             :workspace workspace}
+            {:topics topics :workspace workspace :document document}
             mt/strip-extra-keys-transformer))
 
 (def topic-from-disk
