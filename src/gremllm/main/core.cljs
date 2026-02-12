@@ -7,7 +7,7 @@
             [gremllm.main.menu :as menu]
             [gremllm.main.io :as io]
             [gremllm.main.state :as state]
-            [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
@@ -45,7 +45,7 @@
            (fn [_event topic-data]
              (let [workspace-dir (state/get-workspace-dir @store)]
                (-> (js->clj topic-data :keywordize-keys true)
-                   (schema/topic-from-ipc)
+                   (codec/topic-from-ipc)
                    (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
                    (workspace-effects/save-topic)))))
 
@@ -54,7 +54,7 @@
              (let [workspace-dir (state/get-workspace-dir @store)
                    topics-dir    (io/topics-dir-path workspace-dir)]
                (-> topic-id
-                   (schema/topic-id-from-ipc)
+                   (codec/topic-id-from-ipc)
                    (topic-actions/topic->delete-plan topics-dir)
                    (workspace-effects/delete-topic-with-confirmation)))))
 
@@ -88,7 +88,7 @@
              (-> (system-info
                    (secrets/load-all secrets-filepath)
                    (secrets/check-availability))
-                 (schema/system-info-to-ipc)
+                 (codec/system-info-to-ipc)
                  (clj->js))))
 
   ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
@@ -124,7 +124,7 @@
     ;; (silently ignored by Nexus). Add a whitelist if this causes debugging pain.
     (acp-effects/set-dispatcher!
       (fn [event-type data]
-        (let [coerced (schema/acp-session-update-from-js data)]
+        (let [coerced (codec/acp-session-update-from-js data)]
           (nxr/dispatch store {} [[(keyword event-type) coerced]]))))))
 
 (defn- initialize-app [store]

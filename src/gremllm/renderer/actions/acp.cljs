@@ -2,6 +2,7 @@
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [malli.core :as m]
             [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- continuing? [state message-type]
@@ -38,12 +39,12 @@
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
 
-  update: schema/AcpUpdate"
+  update: codec/AcpUpdate"
   [state {:keys [update]}]
-  (when-let [message-type (get schema/acp-chunk->message-type (:session-update update))]
+  (when-let [message-type (get codec/acp-chunk->message-type (:session-update update))]
     (streaming-chunk-effects state
                              message-type
-                             (schema/acp-update-text update)
+                             (codec/acp-update-text update)
                              (.now js/Date))))
 
 (defn session-ready

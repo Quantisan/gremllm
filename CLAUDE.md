@@ -48,6 +48,7 @@ Why PE due diligence:
 | UI | - | `renderer.ui.*` - chat, settings, topics |
 | Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
 | Schema | `schema` - data models, validation | (shared) |
+| Codec | `schema.codec` - IPC/JS/ACP adaptation and codecs | (shared) |
 
 **ACP Integration (current implementation):**
 - One ACP session per topic; the topic stores the `acp-session-id`
@@ -170,7 +171,7 @@ Explicit renderer listeners like `onWorkspaceOpened` and `onAcpSessionUpdate` wr
 
 - **Workspaces:** Portable folders, like git repos - can live anywhere
 - **Topics:** Individual EDN files in `topics/` subdirectory (includes `acp-session-id` and local message history)
-- **Schemas:** See `schema.cljs` for data structures
+- **Schemas:** See `schema.cljs` for data structures; transport/IPC codecs live in `schema/codec.cljs`
 - **File I/O:** See `main/io.cljs` for paths and operations
 
 ## Entry Points
@@ -180,6 +181,7 @@ Explicit renderer listeners like `onWorkspaceOpened` and `onAcpSessionUpdate` wr
 - `src/gremllm/renderer/ui.cljs` - Main UI components
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
 - `src/gremllm/schema.cljs` - Data models and validation
+- `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
 
 ## UI Approach
 - **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.

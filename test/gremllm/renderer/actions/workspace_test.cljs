@@ -2,6 +2,7 @@
   (:require [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.test-utils :refer [with-console-error-silenced]]
             [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [cljs.test :refer [deftest is testing]]
             [malli.core :as m]
             [malli.transform :as mt]))
@@ -9,7 +10,7 @@
 (defn create-workspace-data-js
   "Create workspace data with Malli defaults, optionally overriding fields"
   [& [overrides]]
-  (-> (m/decode schema/WorkspaceSyncData
+  (-> (m/decode codec/WorkspaceSyncData
                 {:workspace {:name "Test Workspace"}}
                 mt/default-value-transformer)
       (merge overrides)
@@ -84,4 +85,3 @@
     (with-console-error-silenced
       (let [effects (workspace/load-error {} (js/Error. "Test error"))]
         (is (empty? effects))))))
-

@@ -5,7 +5,8 @@
   ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
             [clojure.edn :as edn]
-            [gremllm.schema :as schema]))
+            [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Private Helpers
@@ -142,5 +143,5 @@
         workspace-meta (schema/create-workspace-meta workspace-name)
         document       (read-document workspace-path)
         topics         (-> workspace-path io/topics-dir-path load-topics)
-        sync-payload   (schema/workspace-sync-for-ipc topics workspace-meta document)]
+        sync-payload   (codec/workspace-sync-for-ipc topics workspace-meta document)]
     (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))
