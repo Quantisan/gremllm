@@ -1,7 +1,8 @@
 (ns gremllm.schema-test
   (:require [cljs.test :refer [deftest is testing]]
             [clojure.string]
-            [gremllm.schema :as schema]))
+            [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]))
 
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
@@ -62,14 +63,14 @@
    :agent-thought-chunk {:text "The user wants" :type "text"}})
 
 (deftest test-acp-session-update-from-js
-  ;; Test content chunks derived from schema/acp-chunk->message-type
-  (doseq [chunk-type (keys schema/acp-chunk->message-type)]
+  ;; Test content chunks derived from codec/acp-chunk->message-type
+  (doseq [chunk-type (keys codec/acp-chunk->message-type)]
     (testing (str "coerces " (name chunk-type) " from JS with kebab-case keywords")
       (let [content (get test-content-chunks chunk-type)
             js-data #js {:sessionId test-acp-session-id
                          :update #js {:content (clj->js content)
                                       :sessionUpdate (-> chunk-type name (clojure.string/replace #"-" "_"))}}
-            result (schema/acp-session-update-from-js js-data)]
+            result (codec/acp-session-update-from-js js-data)]
         (is (= test-acp-session-id (:acp-session-id result)))
 
         (when (and (is (contains? (set (keys (:update result))) :session-update))
@@ -81,7 +82,7 @@
     (let [js-data #js {:sessionId test-acp-session-id
                        :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
                                     :sessionUpdate "available_commands_update"}}
-          result (schema/acp-session-update-from-js js-data)]
+          result (codec/acp-session-update-from-js js-data)]
       (is (= test-acp-session-id (:acp-session-id result)))
 
       (when (and (is (contains? (set (keys (:update result))) :session-update))
@@ -90,15 +91,15 @@
         (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
 
 (deftest test-acp-update-text
-  ;; Test content chunks derived from schema/acp-chunk->message-type
-  (doseq [chunk-type (keys schema/acp-chunk->message-type)]
+  ;; Test content chunks derived from codec/acp-chunk->message-type
+  (doseq [chunk-type (keys codec/acp-chunk->message-type)]
     (testing (str "extracts text from " (name chunk-type) " update")
       (let [content (get test-content-chunks chunk-type)
             update {:session-update chunk-type
                     :content content}]
-        (is (= (:text content) (schema/acp-update-text update))))))
+        (is (= (:text content) (codec/acp-update-text update))))))
 
   (testing "returns nil for updates without content"
     (let [update {:session-update :available-commands-update
                   :available-commands []}]
-      (is (nil? (schema/acp-update-text update))))))
+      (is (nil? (codec/acp-update-text update))))))

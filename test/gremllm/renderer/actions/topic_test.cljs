@@ -4,6 +4,7 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
@@ -29,7 +30,7 @@
         expected     (assoc expected-new-topic
                             :messages [{:id 1 :type :user :text "test"}
                                        {:id 2 :type :assistant :text "response"}])]
-    (is (= expected (schema/topic-from-ipc denormalized))
+    (is (= expected (codec/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
 (deftest commit-rename-test
@@ -86,4 +87,3 @@
             actions  (topic/delete-topic-error state topic-id error)]
         (is (= [] actions)
             "should return empty actions vector")))))
-

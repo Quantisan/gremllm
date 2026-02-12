@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.workspace
-  (:require [gremllm.schema :as schema]
+  (:require [gremllm.schema.codec :as codec]
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
@@ -19,7 +19,7 @@
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{:keys [topics workspace document]} (schema/workspace-sync-from-ipc workspace-data-js)]
+  (let [{:keys [topics workspace document]} (codec/workspace-sync-from-ipc workspace-data-js)]
     (cond-> [[:workspace.actions/set workspace]
              [:document.actions/set-content document]]
       (empty? topics) (conj [:workspace.actions/initialize-empty])
@@ -52,4 +52,3 @@
   [[:effects/promise
     {:promise (.pickWorkspaceFolder js/window.electronAPI)}]])
      ;; No handlers needed - workspace data arrives via workspace:opened IPC event
-
