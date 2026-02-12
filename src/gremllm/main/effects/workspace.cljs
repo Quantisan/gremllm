@@ -56,7 +56,7 @@
   (when (io/file-exists? filepath)
     (throw (js/Error. (str "Document already exists at " filepath))))
   (io/write-file filepath content)
-  #js {:content content})
+  {:content content})
 
 ;;; ---------------------------------------------------------------------------
 ;;; Topic Collection Operations

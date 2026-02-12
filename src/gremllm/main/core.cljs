@@ -64,7 +64,8 @@
            (fn [_event]
              (let [workspace-dir (state/get-workspace-dir @store)]
                (-> (document-actions/create-plan workspace-dir)
-                   (workspace-effects/create-document)))))
+                   (workspace-effects/create-document)
+                   (clj->js)))))
 
   ;; Workspace - async pattern: dispatch to actions, results broadcast via workspace:opened
   (.handle ipcMain "workspace/reload"
