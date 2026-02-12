@@ -1,6 +1,5 @@
 (ns gremllm.renderer.actions
   (:require [nexus.registry :as nxr]
-            [gremllm.schema :as schema]
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
@@ -128,6 +127,9 @@
 (nxr/register-action! :workspace.actions/pick-folder workspace/pick-folder)
 
 ;; Document
+(nxr/register-action! :document.actions/create document/create)
+(nxr/register-action! :document.actions/create-success document/create-success)
+(nxr/register-action! :document.actions/create-error document/create-error)
 (nxr/register-action! :document.actions/set-content document/set-content)
 
 ;; Topic

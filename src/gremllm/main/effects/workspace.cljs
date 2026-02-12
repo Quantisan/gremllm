@@ -48,6 +48,17 @@
   filepath)
 
 ;;; ---------------------------------------------------------------------------
+;;; Document Operations
+
+(defn create-document
+  "Create a new document file in the workspace."
+  [{:keys [filepath content]}]
+  (when (io/file-exists? filepath)
+    (throw (js/Error. (str "Document already exists at " filepath))))
+  (io/write-file filepath content)
+  {:content content})
+
+;;; ---------------------------------------------------------------------------
 ;;; Topic Collection Operations
 
 (defn enumerate

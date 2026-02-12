@@ -46,9 +46,9 @@
   (testing "Workspace with document content dispatches set-content"
     (let [workspace-data (create-workspace-data-js {:document {:content "# Test Document"}})
           effects (workspace/opened {} workspace-data)
-          [_ document] (get-action effects :document.actions/set-content)]
+          [_ content] (get-action effects :document.actions/set-content)]
       (is (has-action? effects :document.actions/set-content))
-      (is (= "# Test Document" (:content document))))))
+      (is (= "# Test Document" content)))))
 
 (deftest restore-with-topics-test
   (testing "Sets active topic without model param"

@@ -39,6 +39,7 @@ const createIPCBoundary = (channel) => {
 contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	deleteTopic: (topicId) => ipcRenderer.invoke("topic/delete", topicId),
+	createDocument: () => ipcRenderer.invoke("document/create"),
 	pickWorkspaceFolder: () => ipcRenderer.invoke("workspace/pick-folder"),
 	reloadWorkspace: () => ipcRenderer.invoke("workspace/reload"),
 	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
