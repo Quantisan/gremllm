@@ -21,7 +21,7 @@
   [_state workspace-data-js]
   (let [{:keys [topics workspace document]} (codec/workspace-sync-from-ipc workspace-data-js)]
     (cond-> [[:workspace.actions/set workspace]
-             [:document.actions/set-content document]]
+             [:document.actions/set-content (:content document)]]
       (empty? topics) (conj [:workspace.actions/initialize-empty])
       (seq topics)    (conj [:workspace.actions/restore-with-topics
                               {:topics          topics

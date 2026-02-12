@@ -8,10 +8,10 @@
      :on-error   [[:document.actions/create-error]]}]])
 
 (defn create-success [_state result-js]
-  [[:effects/save document-state/content-path (.-content result-js)]])
+  [[:document.actions/set-content (.-content result-js)]])
 
 (defn create-error [_state error]
   [[:ui.effects/console-error "Failed to create document:" error]])
 
-(defn set-content [_state document]
-  [[:effects/save document-state/content-path (:content document)]])
+(defn set-content [_state content]
+  [[:effects/save document-state/content-path content]])
