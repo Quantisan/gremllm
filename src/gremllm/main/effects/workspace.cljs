@@ -48,6 +48,15 @@
   filepath)
 
 ;;; ---------------------------------------------------------------------------
+;;; Document Operations
+
+(defn create-document
+  "Create a new document file in the workspace."
+  [{:keys [filepath content]}]
+  (io/write-file filepath content)
+  #js {:content content})
+
+;;; ---------------------------------------------------------------------------
 ;;; Topic Collection Operations
 
 (defn enumerate

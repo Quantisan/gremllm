@@ -1,6 +1,7 @@
 (ns gremllm.main.core
   (:require [gremllm.main.actions]
             [gremllm.main.actions.secrets :as secrets]
+            [gremllm.main.actions.document :as document-actions]
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
@@ -57,6 +58,13 @@
                    (codec/topic-id-from-ipc)
                    (topic-actions/topic->delete-plan topics-dir)
                    (workspace-effects/delete-topic-with-confirmation)))))
+
+  ;; Document - sync pattern: create new document file and return content
+  (.handle ipcMain "document/create"
+           (fn [_event]
+             (let [workspace-dir (state/get-workspace-dir @store)]
+               (-> (document-actions/create-plan workspace-dir)
+                   (workspace-effects/create-document)))))
 
   ;; Workspace - async pattern: dispatch to actions, results broadcast via workspace:opened
   (.handle ipcMain "workspace/reload"

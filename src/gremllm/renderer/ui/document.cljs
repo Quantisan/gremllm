@@ -8,4 +8,6 @@
     [:article
      [:p {:style {:color "var(--pico-muted-color)"
                   :font-style "italic"}}
-      "No document in this workspace."]]))
+      "No document in this workspace."]
+     [:button {:on {:click [[:document.actions/create]]}}
+      "Create Document"]]))

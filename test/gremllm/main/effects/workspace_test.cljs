@@ -51,6 +51,16 @@
               loaded (get all-topics (:id topic))]
           (is (= topic loaded)))))))
 
+(deftest test-create-document
+  (testing "creates document file and returns content"
+    (with-temp-dir "create-document"
+      (fn [temp-dir]
+        (let [content  "# Untitled Document\n"
+              filepath (io/document-file-path temp-dir)
+              result   (workspace/create-document {:filepath filepath :content content})]
+          (is (= content (.-content result)))
+          (is (= content (io/read-file filepath))))))))
+
 (deftest test-enumerate-topics
   (testing "enumerate returns only topic files, sorted, with filename and filepath"
     (with-temp-dir "list"
