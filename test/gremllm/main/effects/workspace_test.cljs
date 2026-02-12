@@ -58,7 +58,7 @@
         (let [content  "# Untitled Document\n"
               filepath (io/document-file-path temp-dir)
               result   (workspace/create-document {:filepath filepath :content content})]
-          (is (= content (.-content result)))
+          (is (= content (:content result)))
           (is (= content (io/read-file filepath))))))))
 
 (deftest test-enumerate-topics
