@@ -13,6 +13,50 @@ function setDispatcher(fn) {
   dispatcher = fn;
 }
 
+function selectOptionByKind(options, preferredKinds, fallback) {
+  for (const kind of preferredKinds) {
+    const match = options.find((option) => option?.kind === kind);
+    if (match) return match;
+  }
+
+  return fallback(options);
+}
+
+function resolvePermissionOutcome(params) {
+  const options = Array.isArray(params?.options) ? params.options : [];
+  const toolKind = params?.toolCall?.kind || null;
+
+  if (options.length === 0) {
+    return { outcome: { outcome: "cancelled" } };
+  }
+
+  if (toolKind === "read") {
+    const approveOption = selectOptionByKind(
+      options,
+      ["allow_once", "allow_always"],
+      (list) => list[0]
+    );
+    return {
+      outcome: {
+        outcome: "selected",
+        optionId: approveOption.optionId
+      }
+    };
+  }
+
+  const rejectOption = selectOptionByKind(
+    options,
+    ["reject_once", "reject_always"],
+    (list) => list[list.length - 1]
+  );
+  return {
+    outcome: {
+      outcome: "selected",
+      optionId: rejectOption.optionId
+    }
+  };
+}
+
 // Client implementation that dispatches to CLJS
 const client = {
   async sessionUpdate(params) {
@@ -25,31 +69,42 @@ const client = {
   },
 
   async requestPermission(params) {
-    const toolName = params.toolCall?.title || "";
-    const options = params.options || [];
-    const isRead = toolName === "Read";
+    const toolKind = params?.toolCall?.kind || "missing";
+    const toolTitle = params?.toolCall?.title || "";
+    const outcome = resolvePermissionOutcome(params);
 
-    if (isRead) {
-      const approveOption = options[0];
-      console.log("[ACP] Auto-approved read permission");
-      return {
-        outcome: {
-          outcome: "selected",
-          optionId: approveOption?.optionId ?? 0
-        }
-      };
+    if (outcome.outcome.outcome === "cancelled") {
+      console.log("[ACP] Cancelled permission request (no options)", {
+        kind: toolKind,
+        title: toolTitle
+      });
+      return outcome;
     }
 
-    const rejectOption =
-      options.find((option) => /reject|deny/i.test(option.label || "")) ||
-      options[options.length - 1];
-    console.log("[ACP] Rejected non-read permission:", toolName);
-    return {
-      outcome: {
-        outcome: "selected",
-        optionId: rejectOption?.optionId ?? 0
-      }
-    };
+    const options = Array.isArray(params?.options) ? params.options : [];
+    const selectedOption = options.find(
+      (option) => option?.optionId === outcome.outcome.optionId
+    );
+    const selectedKind = selectedOption?.kind || "unknown";
+    const isReadApproval =
+      toolKind === "read" &&
+      (selectedKind === "allow_once" || selectedKind === "allow_always");
+
+    if (isReadApproval) {
+      console.log("[ACP] Auto-approved read permission", {
+        kind: toolKind,
+        title: toolTitle,
+        option: selectedKind
+      });
+    } else {
+      console.log("[ACP] Rejected non-read permission", {
+        kind: toolKind,
+        title: toolTitle,
+        option: selectedKind
+      });
+    }
+
+    return outcome;
   }
 };
 
@@ -121,5 +176,8 @@ module.exports = {
   newSession,
   resumeSession,
   prompt,
-  shutdown
+  shutdown,
+  __test__: {
+    resolvePermissionOutcome
+  }
 };
