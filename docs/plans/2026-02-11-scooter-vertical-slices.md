@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-11
 **Supersedes:** `2026-02-09-document-first-pivot.md`
-**References:** `test/acp-agent-document-interaction.mjs` (Spike 0 output)
+**References:** `test/acp-native-tools-spike.mjs` (read behavior), `test/acp-agent-document-interaction.mjs` (write/diff behavior)
 
 ## Vision
 
@@ -76,14 +76,14 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 | Layer | Work |
 |-------|------|
-| ACP | Register `readTextFile` callback in main process |
-| File I/O | Read file content when ACP subprocess requests it |
-| IPC | Wire callback response through main ↔ ACP subprocess |
-| ACP | Include `resource_link` pointing to document file in prompts |
+| ACP | Include `resource_link` pointing to `document.md` in prompts |
+| Prompt context | Pass file URI/path context so the agent can invoke native read tools on demand |
+| Observability | Capture native tool usage (`Read` tool calls, permission events, and success/failure) for debugging |
+| Error handling | Return explicit assistant-visible failure context when document link is missing or inaccessible |
 
-**Testable result:** Chat with AI, ask about document content. AI reads it via `readTextFile` callback and answers accurately.
+**Testable result:** Chat with AI, ask about document content. AI answers accurately by reading the linked document on demand via native tools, without pasting full file content into the prompt body.
 
-**Research folded in:** Spike 0 already proved this pattern works. Implementation follows Spike 0 findings: `resource_link` + `readTextFile` callback enables demand-read.
+**Research folded in:** `test/acp-native-tools-spike.mjs` proved read-on-demand works with `resource_link` + native agent tools (`Read` call observed) even with `clientCapabilities.fs = {}`. S3 adopts this path for read-only access. Write behavior remains covered in S4.
 
 ---
 
@@ -195,15 +195,15 @@ These carry forward from the original plan:
 - Three-zone layout (nav strip, document panel, chat panel)
 - Message schema, Settings/secrets, FCIS discipline
 
-## Spike 0 Findings (Reference)
+## Spike Findings (Reference)
 
 Complete. Key findings for implementation:
 
-1. `resource_link` + `readTextFile` callback enables demand-read (no upfront context dumping)
-2. `tool_call_update` events with `type: "diff"` provide structured change proposals: `{oldText, newText, path}`
-3. `writeTextFile` with dry-run mode blocks disk writes while capturing proposed edits
-4. Both structured diff and unified diff format available in `rawOutput`
-5. File-on-disk is source of truth
+1. Native read path: `resource_link` enables demand-read through native agent tools (no upfront context dumping), with `Read` tool invocation observed in `test/acp-native-tools-spike.mjs`.
+2. Structured write/diff path: `tool_call_update` events with `type: "diff"` provide structured change proposals (`{oldText, newText, path}`) in `test/acp-agent-document-interaction.mjs`.
+3. `writeTextFile` with dry-run mode blocks disk writes while capturing proposed edits (write-path reference spike).
+4. Both structured diff and unified diff format are available in `rawOutput` for tracked-change rendering.
+5. File-on-disk is source of truth.
 
 ## Domain Model
 
@@ -253,7 +253,7 @@ These are directional. Final schemas are informed by implementation experience i
 | Problem | Slice | Notes |
 |---------|-------|-------|
 | Markdown rendering in document panel | S1 | Library choice, styling integration with PicoCSS |
-| ACP readTextFile callback wiring | S3 | Spike 0 proved the pattern; implementation is plumbing |
+| Native read-tool mediation (`resource_link` + permissions + observability) | S3 | Ensure reliable on-demand reads and clear failure handling when access is denied/unavailable |
 | Content extraction from AI responses | S4 | Separating document content from conversation |
 | Annotation anchoring | S5 | DOM selection → markdown position mapping |
 | Offset recomputation | S7 | Accepted changes shift downstream offsets |
