@@ -106,10 +106,9 @@
 
 (nxr/register-effect! :acp.effects/send-prompt
   (fn [{:keys [dispatch]} _ acp-session-id text workspace-dir]
-    (let [document-path (when workspace-dir
-                          (let [path (io/document-file-path workspace-dir)]
-                            (when (io/file-exists? path)
-                              path)))
-          content-blocks (acp-actions/prompt-content-blocks text document-path)]
+    (let [maybe-document-path (some-> workspace-dir io/document-file-path)
+          maybe-document-path (when (and maybe-document-path (io/file-exists? maybe-document-path))
+                                maybe-document-path)
+          content-blocks (acp-actions/prompt-content-blocks text maybe-document-path)]
       (dispatch [[:ipc.effects/promise->reply
                   (acp-effects/prompt acp-session-id content-blocks)]]))))
