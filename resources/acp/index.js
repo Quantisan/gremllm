@@ -25,13 +25,29 @@ const client = {
   },
 
   async requestPermission(params) {
-    // For Slice 1: auto-approve all
-    console.log("[ACP] Permission requested:", params.toolCall?.title);
-    const firstOption = params.options?.[0];
+    const toolName = params.toolCall?.title || "";
+    const options = params.options || [];
+    const isRead = toolName === "Read";
+
+    if (isRead) {
+      const approveOption = options[0];
+      console.log("[ACP] Auto-approved read permission");
+      return {
+        outcome: {
+          outcome: "selected",
+          optionId: approveOption?.optionId ?? 0
+        }
+      };
+    }
+
+    const rejectOption =
+      options.find((option) => /reject|deny/i.test(option.label || "")) ||
+      options[options.length - 1];
+    console.log("[ACP] Rejected non-read permission:", toolName);
     return {
       outcome: {
         outcome: "selected",
-        optionId: firstOption?.optionId ?? 0
+        optionId: rejectOption?.optionId ?? 0
       }
     };
   }
