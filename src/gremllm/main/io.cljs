@@ -1,6 +1,7 @@
 (ns gremllm.main.io
   (:require ["path" :as path]
             ["fs" :as fs]
+            ["node:url" :as node-url]
             [cljs.reader :as edn]))
 
 (def ^:private user-subdir "User")
@@ -22,6 +23,12 @@
   "Return the basename (final path segment) of a path using Node's path.basename."
   [p]
   (.basename path p))
+
+(defn path->file-uri
+  "Convert a filesystem path to a properly encoded file:// URI."
+  [p]
+  (-> (node-url/pathToFileURL p)
+      (.toString)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn user-dir-path
@@ -89,4 +96,3 @@
 
 (defn document-file-path [workspace-dir]
   (path-join workspace-dir document-filename))
-

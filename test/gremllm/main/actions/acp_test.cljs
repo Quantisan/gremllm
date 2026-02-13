@@ -1,6 +1,7 @@
 (ns gremllm.main.actions.acp-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.actions.acp :as acp-actions]))
+            [gremllm.main.actions.acp :as acp-actions]
+            [gremllm.main.io :as io]))
 
 (deftest test-prompt-content-blocks
   (testing "returns only text block when document path is nil"
@@ -11,6 +12,14 @@
     (let [document-path "/tmp/workspace/document.md"]
       (is (= [{:type "text" :text "what is in my doc?"}
               {:type "resource_link"
-               :uri  "file:///tmp/workspace/document.md"
+               :uri  (io/path->file-uri document-path)
                :name "document.md"}]
-             (acp-actions/prompt-content-blocks "what is in my doc?" document-path))))))
+             (acp-actions/prompt-content-blocks "what is in my doc?" document-path)))))
+
+  (testing "encodes spaces and unicode in resource_link URI"
+    (let [document-path "/tmp/my notes naïve.md"]
+      (is (= [{:type "text" :text "summarize this doc"}
+              {:type "resource_link"
+               :uri  (io/path->file-uri document-path)
+               :name "document.md"}]
+             (acp-actions/prompt-content-blocks "summarize this doc" document-path))))))
