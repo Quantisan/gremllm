@@ -79,14 +79,14 @@ async function resumeSession(cwd, sessionId) {
   return sessionId;
 }
 
-async function prompt(sessionId, text) {
+async function prompt(sessionId, contentBlocks) {
   // PITFALL: Unlike newSession, this throws rather than lazy-initializing.
   // If subprocess crashes mid-session, callers must create a new session.
   // Consider adding auto-recovery or lazy init if this becomes a pain point.
   if (!connection) throw new Error("Not initialized");
   const result = await connection.prompt({
     sessionId,
-    prompt: [{ type: "text", text }]
+    prompt: contentBlocks
   });
   return result;
 }

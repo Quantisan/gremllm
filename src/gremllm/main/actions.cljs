@@ -1,10 +1,12 @@
 (ns gremllm.main.actions
   (:require [nexus.registry :as nxr]
+            [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.effects.acp :as acp-effects]
+            [gremllm.main.io :as io]
             [gremllm.main.window :as window]
             [gremllm.schema :as schema]))
 
@@ -103,5 +105,12 @@
     (dispatch [[:ipc.effects/promise->reply (acp-effects/resume-session cwd acp-session-id)]])))
 
 (nxr/register-effect! :acp.effects/send-prompt
-  (fn [{:keys [dispatch]} _ acp-session-id text]
-    (dispatch [[:ipc.effects/promise->reply (acp-effects/prompt acp-session-id text)]])))
+  (fn [{:keys [dispatch]} _ acp-session-id text workspace-dir]
+    (let [document-path (when workspace-dir
+                          (io/document-file-path workspace-dir))
+          content-blocks (acp-actions/prompt-content-blocks
+                           text
+                           (when (and document-path (io/file-exists? document-path))
+                             document-path))]
+      (dispatch [[:ipc.effects/promise->reply
+                  (acp-effects/prompt acp-session-id content-blocks)]]))))
