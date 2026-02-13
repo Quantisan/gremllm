@@ -250,7 +250,7 @@ async function main() {
     }));
 
     const promptText =
-      "Read the linked document, then propose a single edit: update the front-matter Date field to 2026-02-11. Do not change anything else.";
+      "Read the linked document, then make exactly one edit: replace the first line '# PE Due Diligence Report (Lorem Ipsum)' with '# PE Due Diligence Report (Lorem Ipsum, Revised)'. Do not change anything else.";
 
     const promptResult = await withAgentLiveness("prompt", connection.prompt({
       sessionId: session.sessionId,
