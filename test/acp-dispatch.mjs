@@ -26,7 +26,7 @@ async function runTest() {
 
     // 3. Send prompt
     console.log("3. Sending prompt...");
-    const result = await acp.prompt(sessionId, "Say only: Hello");
+    const result = await acp.prompt(sessionId, [{ type: "text", text: "Say only: Hello" }]);
     console.log(`   ✓ Prompt completed: stopReason=${result.stopReason}\n`);
 
     // 4. Verify events were dispatched

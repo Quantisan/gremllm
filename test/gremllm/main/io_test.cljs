@@ -51,6 +51,23 @@
    (is (= "/app/data/User/workspaces/default/topics"
          (io/topics-dir-path workspace-dir)))))
 
+(deftest test-path->file-uri
+  (testing "returns file URI for a filesystem path"
+    (let [uri (io/path->file-uri "/tmp/workspace/document.md")]
+      (is (clojure.string/starts-with? uri "file://"))))
+
+  (testing "encodes spaces and unicode"
+    (let [uri (io/path->file-uri "/tmp/my notes naïve.md")]
+      (is (clojure.string/includes? uri "%20"))
+      (is (clojure.string/includes? uri "%C3%AF"))))
+
+  (testing "normalizes windows-style separators in URI output"
+    (let [uri (io/path->file-uri "C:\\Users\\Paul\\My Doc\\document.md")]
+      (is (not (clojure.string/includes? uri "\\")))
+      (if (= "win32" js/process.platform)
+        (is (clojure.string/starts-with? uri "file:///C:/"))
+        (is (clojure.string/includes? uri "%5C"))))))
+
 (deftest test-file-timestamps
   (testing "returns created-at and last-accessed-at (ms)"
     (with-temp-dir "timestamps"
