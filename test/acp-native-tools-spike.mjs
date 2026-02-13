@@ -23,6 +23,114 @@
 //   ACP_AGENT_CMD     Agent command (default: npx)
 //   ACP_AGENT_ARGS    Agent args (default: @zed-industries/claude-code-acp)
 //   VERBOSE           Set to 1/true for full JSON dump of all session updates
+//
+// ============================================================================
+// OUTPUT
+// ============================================================================
+//
+// $ node test/acp-native-tools-spike.mjs
+//
+// [available_commands_update] commands=30
+//
+// [thought] The user wants me to:
+// [thought] 1.
+// [thought] Read the linked document at
+// [thought] `/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md`
+// [thought] 2.
+// [thought] Replace the first line '
+// [thought] # PE Due Diligence Report (Lorem Ipsum)' with '# PE Due Diligence Report (Lorem Ipsum, Revised)'
+// [thought] 3.
+// [thought] Don
+// [thought] 't change anything else
+// [thought] This
+// [thought] is a straightforward task.
+// [thought] I need to:
+// [thought] 1.
+// [thought] Read the file
+// [thought] to see its contents
+// [thought] 2.
+// [thought] Use
+// [thought] the Edit tool to replace just that first line
+// [thought] Let
+// [thought] me start by reading the file.I'll read the document and make that specific edit.
+// [tool_call] Read - Read File
+//   Input: {"file_path":"/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md"}
+//
+// [request_permission] options=3 selectedOptionId=allow_always
+//
+// [tool_call_update] id=toolu_01EfPCv64eayPc6JXMRNxkDB status=unknown diffCount=0 contentTypes=(none)
+//
+// [tool_call_update] id=toolu_01EfPCv64eayPc6JXMRNxkDB status=completed diffCount=0 contentTypes=content
+//
+// [thought] Good, I can see the file content.
+// [thought] The
+// [thought] first line is:
+// [thought] ```
+// [thought] #
+// [thought] PE Due Diligence Report (Lorem Ipsum)
+// [thought] ```
+// [thought] I
+// [thought] need to change it to:
+// [thought] ```
+// [thought] # PE Due
+// [thought] Diligence Report (Lorem Ipsum, Revised)
+// [thought] ```
+// [thought] I
+// [thought] 'll use the Edit tool to make this change.
+// [tool_call] Edit - Edit `/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md`
+//   Input: {"replace_all":false,"file_path":"/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md","old_string":"# PE Due Diligence Report (Lorem Ipsum)","new_string":"# PE Due Diligence Report (Lorem…
+//
+// [request_permission] options=3 selectedOptionId=allow_always
+//                                                                                                                                                                [tool_call_update] id=toolu_01YGDPwHNXVDADzRA1n76x7z status=unknown diffCount=0 contentTypes=(none)
+//
+// [tool_call_update] id=toolu_01YGDPwHNXVDADzRA1n76x7z status=completed diffCount=0 contentTypes=(none)
+//
+// [thought] Perfect!
+// [thought] The edit
+// [thought] was successful.
+// [thought] The
+// [thought] first line has been changed from "# PE Due Diligence Report (Lorem Ipsum)" to "# PE Due Diligence Report (Lorem Ipsum, …Done. The first line has been updated to "# PE Due Diligence Report (Lorem Ipsum, Revised)" with no other changes to the document.
+// === Native Tools Verdict ===
+// stopReason: end_turn
+// toolNamesCalled: Edit, Read
+// resourceLinkReadObserved: yes
+// diffInToolCallUpdate: no
+// diskMutationObserved: yes
+// firstChangedLine: 1
+//
+// === Native Tools Observability ===
+// verboseMode: disabled (set VERBOSE=1 to enable)
+// assistantMessageChunks: 17
+// assistantTextBytes: 181
+// reasoningSamplesCaptured: 8
+// permissionRequests: 2
+//
+// eventCounts:
+//   agent_message_chunk: 17
+//   agent_thought_chunk: 76
+//   available_commands_update: 1
+//   tool_call: 4
+//   tool_call_update: 4
+//
+// toolCalls:
+//   1. Read (id: toolu_01EfPCv64eayPc6JXMRNxkDB) input={"file_path":"/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md"}
+//   2. Edit (id: toolu_01YGDPwHNXVDADzRA1n76x7z) input={"replace_all":false,"file_path":"/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md","old_string":"# PE Due Diligence Report (…
+//
+// toolCallUpdates:
+//   1. id=toolu_01EfPCv64eayPc6JXMRNxkDB status=unknown diffCount=0 contentTypes=(none)
+//   2. id=toolu_01EfPCv64eayPc6JXMRNxkDB status=completed diffCount=0 contentTypes=content
+//   3. id=toolu_01YGDPwHNXVDADzRA1n76x7z status=unknown diffCount=0 contentTypes=(none)
+//   4. id=toolu_01YGDPwHNXVDADzRA1n76x7z status=completed diffCount=0 contentTypes=(none)
+//
+// reasoningSamples:
+//   1. The user wants me to:
+//   2. 1.
+//   3. Read the linked document at
+//   4. `/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-acp-native-tools-q1h3Q1/pe-dd-report-lorem.md`
+//   5. 2.
+//   6. Replace the first line '
+//   7. # PE Due Diligence Report (Lorem Ipsum)' with '# PE Due Diligence Report (Lorem Ipsum, Revised)'
+//   8. 3.
 
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
