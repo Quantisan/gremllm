@@ -116,6 +116,7 @@
                        [[:acp.effects/resume-session (state/get-workspace-dir @store) acp-session-id]])))
 
   (.on ipcMain "acp/prompt"
+       ;; TODO: we should pass the document path from Renderer to here
        (fn [event ipc-correlation-id acp-session-id text]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id

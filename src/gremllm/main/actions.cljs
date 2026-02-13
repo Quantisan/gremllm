@@ -104,6 +104,7 @@
   (fn [{:keys [dispatch]} _ cwd acp-session-id]
     (dispatch [[:ipc.effects/promise->reply (acp-effects/resume-session cwd acp-session-id)]])))
 
+;; TODO: minor refactor for readability
 (nxr/register-effect! :acp.effects/send-prompt
   (fn [{:keys [dispatch]} _ acp-session-id text workspace-dir]
     (let [document-path (when workspace-dir
