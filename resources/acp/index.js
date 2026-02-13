@@ -30,6 +30,9 @@ function resolvePermissionOutcome(params) {
     return { outcome: { outcome: "cancelled" } };
   }
 
+  // TODO(security): Do not auto-approve all "read" tool calls.
+  // Restrict reads to an allowlist (for example, workspace root and explicitly linked files);
+  // otherwise reject/cancel to avoid exposing sensitive local files.
   if (toolKind === "read") {
     const approveOption = selectOptionByKind(
       options,
