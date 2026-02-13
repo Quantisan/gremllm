@@ -9,5 +9,4 @@
 
     document-path (conj {:type "resource_link"
                          :uri  (io/path->file-uri document-path)
-                         ;; TODO: parse file name from document-path
-                         :name "document.md"})))
+                         :name (io/path-basename document-path)})))

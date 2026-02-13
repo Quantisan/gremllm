@@ -21,5 +21,13 @@
       (is (= [{:type "text" :text "summarize this doc"}
               {:type "resource_link"
                :uri  (io/path->file-uri document-path)
-               :name "document.md"}]
+               :name "my notes naïve.md"}]
+             (acp-actions/prompt-content-blocks "summarize this doc" document-path)))))
+
+  (testing "uses document basename as resource_link name"
+    (let [document-path "/tmp/workspace/notes/final-brief-v2.md"]
+      (is (= [{:type "text" :text "summarize this doc"}
+              {:type "resource_link"
+               :uri  (io/path->file-uri document-path)
+               :name "final-brief-v2.md"}]
              (acp-actions/prompt-content-blocks "summarize this doc" document-path))))))

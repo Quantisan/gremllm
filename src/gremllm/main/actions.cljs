@@ -104,14 +104,12 @@
   (fn [{:keys [dispatch]} _ cwd acp-session-id]
     (dispatch [[:ipc.effects/promise->reply (acp-effects/resume-session cwd acp-session-id)]])))
 
-;; TODO: minor refactor for readability
 (nxr/register-effect! :acp.effects/send-prompt
   (fn [{:keys [dispatch]} _ acp-session-id text workspace-dir]
     (let [document-path (when workspace-dir
-                          (io/document-file-path workspace-dir))
-          content-blocks (acp-actions/prompt-content-blocks
-                           text
-                           (when (and document-path (io/file-exists? document-path))
-                             document-path))]
+                          (let [path (io/document-file-path workspace-dir)]
+                            (when (io/file-exists? path)
+                              path)))
+          content-blocks (acp-actions/prompt-content-blocks text document-path)]
       (dispatch [[:ipc.effects/promise->reply
                   (acp-effects/prompt acp-session-id content-blocks)]]))))
