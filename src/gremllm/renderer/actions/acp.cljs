@@ -41,11 +41,22 @@
 
   update: codec/AcpUpdate"
   [state {:keys [update]}]
-  (when-let [message-type (get codec/acp-chunk->message-type (:session-update update))]
-    (streaming-chunk-effects state
-                             message-type
-                             (codec/acp-update-text update)
-                             (.now js/Date))))
+  (let [update-type (:session-update update)]
+    (cond
+      ;; Streaming text chunks (assistant, reasoning)
+      (#{:agent-message-chunk :agent-thought-chunk} update-type)
+      (streaming-chunk-effects state
+                               (get codec/acp-chunk->message-type update-type)
+                               (codec/acp-update-text update)
+                               (.now js/Date))
+
+      ;; Tool call — discrete message
+      (= :tool-call update-type)
+      (start-response :tool-use (codec/acp-tool-call-text update) (.now js/Date))
+
+      ;; Tool call update — log only
+      (= :tool-call-update update-type)
+      (js/console.log "[ACP] tool-call-update:" (:tool-call-id update) (:status update)))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."
