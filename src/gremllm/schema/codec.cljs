@@ -103,7 +103,8 @@
   "Maps ACP content chunk session-update types to internal MessageType.
    Only includes session updates that produce chat messages."
   {:agent-message-chunk :assistant
-   :agent-thought-chunk :reasoning})
+   :agent-thought-chunk :reasoning
+   :tool-call           :tool-use})
 
 (defn acp-update-text
   "Extracts text content from an ACP update chunk.
@@ -114,6 +115,16 @@
    TODO: If AcpUpdate becomes a Record, convert to protocol getter."
   [update]
   (get-in update [:content :text]))
+
+(defn acp-tool-call-text
+  "Composes display text from a tool_call update.
+   Returns 'Title — path' when locations exist, otherwise just 'Title'."
+  [update]
+  (let [title (:title update)
+        location (some-> (:locations update) first :path)]
+    (if location
+      (str title " — " location)
+      title)))
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput
@@ -136,99 +147,6 @@
    [:annotations {:optional true} [:maybe :any]]
    [:_meta {:optional true} [:maybe [:map-of :keyword :any]]]])
 
-;; TODO: handle `tool_call` in AcpUpdate
-;;
-;; [1] Error handling notification {
-;; [1]   jsonrpc: '2.0',
-;; [1]   method: 'session/update',
-;; [1]   params: {
-;; [1]     sessionId: '1cb299e5-0a18-434b-aa64-1fef2734fbfa',
-;; [1]     update: {
-;; [1]       _meta: [Object],
-;; [1]       toolCallId: 'toolu_01X6TWRNKjkE9G4NfeJ5YhC6',
-;; [1]       sessionUpdate: 'tool_call',
-;; [1]       rawInput: {},
-;; [1]       status: 'pending',
-;; [1]       title: 'Read File',
-;; [1]       kind: 'read',
-;; [1]       content: [],
-;; [1]       locations: []
-;; [1]     }
-;; [1]   }
-;; [1] } {
-;; [1]   code: -32603,
-;; [1]   message: 'Internal error',
-;; [1]   data: { details: ':malli.core/coercion' }
-;; [1] }
-;; [1] Error handling notification {
-;; [1]   jsonrpc: '2.0',
-;; [1]   method: 'session/update',
-;; [1]   params: {
-;; [1]     sessionId: '1cb299e5-0a18-434b-aa64-1fef2734fbfa',
-;; [1]     update: {
-;; [1]       _meta: [Object],
-;; [1]       toolCallId: 'toolu_01X6TWRNKjkE9G4NfeJ5YhC6',
-;; [1]       sessionUpdate: 'tool_call',
-;; [1]       rawInput: [Object],
-;; [1]       status: 'pending',
-;; [1]       title: 'Read File',
-;; [1]       kind: 'read',
-;; [1]       content: [],
-;; [1]       locations: [Array]
-;; [1]     }
-;; [1]   }
-;; [1] } {
-;; [1]   code: -32603,
-;; [1]   message: 'Internal error',
-;; [1]   data: { details: ':malli.core/coercion' }
-;; [1] }
-;; [1] Error handling notification {
-;; [1]   jsonrpc: '2.0',
-;; [1]   method: 'session/update',
-;; [1]   params: {
-;; [1]     sessionId: '1cb299e5-0a18-434b-aa64-1fef2734fbfa',
-;; [1]     update: {
-;; [1]       _meta: [Object],
-;; [1]       toolCallId: 'toolu_01X6TWRNKjkE9G4NfeJ5YhC6',
-;; [1]       sessionUpdate: 'tool_call_update'
-;; [1]     }
-;; [1]   }
-;; [1] } {
-;; [1]   code: -32603,
-;; [1]   message: 'Internal error',
-;; [1]   data: { details: ':malli.core/coercion' }
-;; [1] }
-;; [1] Error handling notification {
-;; [1]   jsonrpc: '2.0',
-;; [1]   method: 'session/update',
-;; [1]   params: {
-;; [1]     sessionId: '1cb299e5-0a18-434b-aa64-1fef2734fbfa',
-;; [1]     update: {
-;; [1]       _meta: [Object],
-;; [1]       toolCallId: 'toolu_01X6TWRNKjkE9G4NfeJ5YhC6',
-;; [1]       sessionUpdate: 'tool_call_update',
-;; [1]       status: 'completed',
-;; [1]       rawOutput: '     1→# PE Due Diligence Report (Lorem Ipsum)\n' +
-;; [1]         '     2→\n' +
-;; [1]         '     3→## Executive Summary\n' +
-;; [1]         '     4→Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n' +
-;; [1]         '     5→\n' +
-;; [1]         '     6→## Investment Thesis\n' +
-;; [1]         '     7→Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.\n' +
-;; [1]         '     8→\n' +
-;; [1]         '    37→\n' +
-;; [1]         '\n' +
-;; [1]         '<system-reminder>\n' +
-;; [1]         'Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.\n' +
-;; [1]         '</system-reminder>\n',
-;; [1]       content: [Array]
-;; [1]     }
-;; [1]   }
-;; [1] } {
-;; [1]   code: -32603,
-;; [1]   message: 'Internal error',
-;; [1]   data: { details: ':malli.core/coercion' }
-;; [1] }
 (def AcpUpdate
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
@@ -256,7 +174,26 @@
    [:agent-message-chunk
     [:map
      [:session-update [:= :agent-message-chunk]]
-     [:content AcpTextContent]]]])
+     [:content AcpTextContent]]]
+
+   [:tool-call
+    [:map
+     [:session-update [:= :tool-call]]
+     [:tool-call-id :string]
+     [:title :string]
+     [:kind :string]
+     [:status :string]
+     [:raw-input :any]
+     [:content [:vector :any]]
+     [:locations [:vector :any]]]]
+
+   [:tool-call-update
+    [:map
+     [:session-update [:= :tool-call-update]]
+     [:tool-call-id :string]
+     [:status {:optional true} :string]
+     [:raw-output {:optional true} :string]
+     [:content {:optional true} [:vector :any]]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."

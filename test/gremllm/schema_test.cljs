@@ -63,8 +63,8 @@
    :agent-thought-chunk {:text "The user wants" :type "text"}})
 
 (deftest test-acp-session-update-from-js
-  ;; Test content chunks derived from codec/acp-chunk->message-type
-  (doseq [chunk-type (keys codec/acp-chunk->message-type)]
+  ;; Text chunks produce streaming content updates.
+  (doseq [chunk-type (keys test-content-chunks)]
     (testing (str "coerces " (name chunk-type) " from JS with kebab-case keywords")
       (let [content (get test-content-chunks chunk-type)
             js-data #js {:sessionId test-acp-session-id
@@ -77,6 +77,43 @@
                    (is (contains? (set (keys (:update result))) :content)))
           (is (= chunk-type (get-in result [:update :session-update])))
           (is (= (:text content) (get-in result [:update :content :text])))))))
+
+  (testing "coerces tool_call with kebab-case keys"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:toolCallId "toolu_abc123"
+                                    :title "Read File"
+                                    :kind "read"
+                                    :status "pending"
+                                    :rawInput #js {}
+                                    :content #js []
+                                    :locations #js [#js {:path "src/gremllm/schema.cljs"}]
+                                    :sessionUpdate "tool_call"}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= :tool-call (get-in result [:update :session-update])))
+      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))
+      (is (= "Read File" (get-in result [:update :title])))))
+
+  (testing "coerces tool_call_update with kebab-case keys"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:toolCallId "toolu_abc123"
+                                    :status "completed"
+                                    :rawOutput "done"
+                                    :content #js []
+                                    :sessionUpdate "tool_call_update"}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= :tool-call-update (get-in result [:update :session-update])))
+      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))
+      (is (= "completed" (get-in result [:update :status])))))
+
+  (testing "coerces partial tool_call_update payload"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:toolCallId "toolu_abc123"
+                                    :sessionUpdate "tool_call_update"}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= :tool-call-update (get-in result [:update :session-update])))
+      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))))
 
   (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
     (let [js-data #js {:sessionId test-acp-session-id
@@ -91,8 +128,8 @@
         (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
 
 (deftest test-acp-update-text
-  ;; Test content chunks derived from codec/acp-chunk->message-type
-  (doseq [chunk-type (keys codec/acp-chunk->message-type)]
+  ;; Text chunks produce streaming text.
+  (doseq [chunk-type (keys test-content-chunks)]
     (testing (str "extracts text from " (name chunk-type) " update")
       (let [content (get test-content-chunks chunk-type)
             update {:session-update chunk-type
@@ -103,3 +140,15 @@
     (let [update {:session-update :available-commands-update
                   :available-commands []}]
       (is (nil? (codec/acp-update-text update))))))
+
+(deftest test-acp-tool-call-text
+  (testing "returns title and first location path when location exists"
+    (let [update {:title "Read File"
+                  :locations [{:path "src/gremllm/schema.cljs"}]}]
+      (is (= "Read File — src/gremllm/schema.cljs"
+             (codec/acp-tool-call-text update)))))
+
+  (testing "returns title when no locations exist"
+    (let [update {:title "List Files"
+                  :locations []}]
+      (is (= "List Files" (codec/acp-tool-call-text update))))))

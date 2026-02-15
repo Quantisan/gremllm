@@ -11,7 +11,7 @@
 
 (def MessageType
   "Valid message type identifiers."
-  [:enum :user :assistant :reasoning])
+  [:enum :user :assistant :reasoning :tool-use])
 
 (def AttachmentRef
   "Reference to a stored attachment file.
