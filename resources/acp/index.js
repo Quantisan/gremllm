@@ -71,6 +71,7 @@ const client = {
     }
   },
 
+  // TODO: JS module should be a thin wrapper
   async requestPermission(params) {
     const toolKind = params?.toolCall?.kind || "missing";
     const toolTitle = params?.toolCall?.title || "";
