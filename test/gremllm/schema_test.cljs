@@ -84,15 +84,37 @@
                                     :title "Read File"
                                     :kind "read"
                                     :status "pending"
-                                    :rawInput #js {}
+                                    :rawInput #js {:filePath "src/gremllm/schema.cljs"}
+                                    :meta #js {:claudeCode #js {:toolName "Read"}}
                                     :content #js []
-                                    :locations #js [#js {:path "src/gremllm/schema.cljs"}]
+                                    :locations #js [#js {:path "src/gremllm/schema.cljs"
+                                                         :line 0}]
                                     :sessionUpdate "tool_call"}}
           result (codec/acp-session-update-from-js js-data)]
       (is (= test-acp-session-id (:acp-session-id result)))
       (is (= :tool-call (get-in result [:update :session-update])))
       (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))
-      (is (= "Read File" (get-in result [:update :title])))))
+      (is (= "Read File" (get-in result [:update :title])))
+      (is (= "src/gremllm/schema.cljs" (get-in result [:update :raw-input :file-path])))
+      (is (= "Read" (get-in result [:update :meta :claude-code :tool-name])))
+      (is (= "src/gremllm/schema.cljs" (get-in result [:update :locations 0 :path])))
+      (is (= 0 (get-in result [:update :locations 0 :line])))))
+
+  (testing "rejects tool_call when location line is not an int"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:toolCallId "toolu_abc123"
+                                    :title "Read File"
+                                    :kind "read"
+                                    :status "pending"
+                                    :rawInput #js {:filePath "src/gremllm/schema.cljs"}
+                                    :content #js []
+                                    :locations #js [#js {:path "src/gremllm/schema.cljs"
+                                                         :line "0"}]
+                                    :sessionUpdate "tool_call"}}]
+      (is (try
+            (codec/acp-session-update-from-js js-data)
+            false
+            (catch :default _ true)))))
 
   (testing "coerces tool_call_update with kebab-case keys"
     (let [js-data #js {:sessionId test-acp-session-id
