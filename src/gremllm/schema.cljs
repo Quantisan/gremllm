@@ -32,6 +32,11 @@
 (def Messages
   [:vector Message])
 
+(defn generate-message-id
+  "Generates numeric message IDs for chat messages."
+  []
+  (js/Date.now))
+
 ;; ========================================
 ;; Providers
 ;; ========================================

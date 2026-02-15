@@ -59,11 +59,11 @@
       (streaming-chunk-effects state
                                (get codec/acp-chunk->message-type update-type)
                                (codec/acp-update-text update)
-                               (.now js/Date))
+                               (schema/generate-message-id))
 
       ;; Tool updates (call + status)
       (#{:tool-call :tool-call-update} update-type)
-      (handle-tool-event state update (.now js/Date)))))
+      (handle-tool-event state update (schema/generate-message-id)))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."
