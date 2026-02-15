@@ -1,5 +1,6 @@
 (ns gremllm.schema.codec
   (:require [camel-snake-kebab.core :as csk]
+            [clojure.walk :as walk]
             [gremllm.schema :as schema]
             [malli.core :as m]
             [malli.transform :as mt]))
@@ -145,15 +146,42 @@
    [:annotations {:optional true} [:maybe :any]]
    [:_meta {:optional true} [:maybe [:map-of :keyword :any]]]])
 
+(def AcpToolLocation
+  "Schema for ACP tool call file locations."
+  [:map {:closed true}
+   [:path :string]
+   [:line {:optional true} :int]])
+
+(def AcpToolMetaClaudeCode
+  "Schema for ACP metadata emitted by Claude Code tools."
+  [:map {:closed true}
+   [:tool-name {:optional true} :string]])
+
+(def AcpToolMeta
+  "Schema for ACP tool call metadata."
+  [:map {:closed true}
+   [:claude-code {:optional true} AcpToolMetaClaudeCode]])
+
+(def AcpToolRawInput
+  "Schema for read-focused ACP tool call raw input."
+  [:map {:closed true}
+   [:file-path {:optional true} :string]])
+
+(def AcpToolCallContentItem
+  "Schema for ACP tool call content blocks."
+  AcpTextContent)
+
+(def AcpToolCallContent
+  "Schema for ACP tool call content."
+  [:vector AcpToolCallContentItem])
+
 (def AcpUpdate
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
   [:multi {:dispatch (fn [m]
-                       ;; Convert raw string/keyword to kebab-case keyword for dispatch.
-                       ;; Dispatch runs BEFORE transformers, expects raw keys:
-                       ;; - \"sessionUpdate\" from ACP JS module (camelCase string)
-                       ;; - \"session-update\" over IPC from main (kebab string via clj->js)
-                       ;; - :session-update when data already in CLJS form (internal validation, tests)
+                       ;; Accept both normalized and raw bridge keys.
+                       ;; Most paths normalize keys before coercion, but tests and
+                       ;; internal callers may pass pre-coerced CLJS maps directly.
                        (some-> (or (:session-update m)
                                    (get m "sessionUpdate")
                                    (get m "session-update"))
@@ -175,15 +203,16 @@
      [:content AcpTextContent]]]
 
    [:tool-call
-    [:map
+    [:map {:closed true}
      [:session-update [:= :tool-call]]
      [:tool-call-id :string]
      [:title :string]
-     [:kind :string]
+     [:kind :string]  ;; TODO: should be enum
      [:status :string]
-     [:raw-input :any]
-     [:content [:vector :any]]
-     [:locations [:vector :any]]]]
+     [:raw-input AcpToolRawInput]
+     [:meta {:optional true} AcpToolMeta]
+     [:content AcpToolCallContent]
+     [:locations [:vector AcpToolLocation]]]]
 
    [:tool-call-update
     [:map
@@ -199,31 +228,66 @@
    [:acp-session-id :string] ;; TODO: :uuid type
    [:update AcpUpdate]])
 
-(def ^:private acp-key-transformer
-  "Maps sessionId → :acp-session-id, otherwise camel→kebab."
-  (mt/key-transformer
-    {:decode (fn [k]
-               (if (= k "sessionId")
-                 :acp-session-id
-                 (csk/->kebab-case-keyword k)))}))
+(defn- normalize-acp-keyword
+  "Converts ACP keys to kebab-case keywords and maps sessionId to :acp-session-id."
+  [k]
+  (cond
+    (or (= k "sessionId")
+        (= k "session-id")
+        (= k :sessionId)
+        (= k :session-id))
+    :acp-session-id
+
+    (string? k)
+    (csk/->kebab-case-keyword k)
+
+    (keyword? k)
+    (let [key-name (csk/->kebab-case (name k))]
+      (if-let [key-ns (namespace k)]
+        (keyword key-ns key-name)
+        (keyword key-name)))
+
+    :else
+    k))
+
+(defn- normalize-acp-keys-deep
+  "Recursively transforms nested ACP map keys into kebab-case keywords."
+  [x]
+  (walk/postwalk
+    (fn [node]
+      (if (map? node)
+        (into {} (map (fn [[k v]] [(normalize-acp-keyword k) v])) node)
+        node))
+    x))
 
 (def ^:private session-update-value-transformer
-  "Transforms :session-update string values to kebab-case keywords."
+  "Transforms :session-update values to kebab-case keywords."
   (mt/transformer
     {:name :session-update
      :decoders {:map (fn [x]
-                       (if (and (map? x) (string? (:session-update x)))
-                         (update x :session-update (comp keyword csk/->kebab-case))
+                       (if (map? x)
+                         (let [session-update (:session-update x)]
+                           (cond
+                             (string? session-update)
+                             (update x :session-update (comp keyword csk/->kebab-case))
+
+                             (keyword? session-update)
+                             (assoc x :session-update
+                                    (-> session-update name csk/->kebab-case keyword))
+
+                             :else
+                             x))
                          x))}}))
 
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
-  ;; Keep this pure Malli; dispatch handles raw keys before transformer runs.
+  ;; Normalize keys first so nested payload maps inside dynamic sections stay idiomatic.
   (m/coerce AcpSessionUpdate
-            (js->clj js-data)
+            (-> js-data
+                (js->clj)
+                (normalize-acp-keys-deep))
             (mt/transformer
-              acp-key-transformer
               session-update-value-transformer
               mt/json-transformer)))
 
