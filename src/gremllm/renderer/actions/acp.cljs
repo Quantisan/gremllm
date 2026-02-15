@@ -36,6 +36,17 @@
       [(append-to-response state chunk-text)]
       (start-response message-type chunk-text message-id))))
 
+(defn handle-tool-event
+  "Handles ACP tool-related session updates.
+   Returns chat effects for :tool-call and logs :tool-call-update."
+  [_state {:keys [session-update tool-call-id status] :as update} message-id]
+  (cond
+    (= :tool-call session-update)
+    (start-response :tool-use (codec/acp-tool-call-text update) message-id)
+
+    (= :tool-call-update session-update)
+    (js/console.log "[ACP] tool-call-update:" tool-call-id status)))
+
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
 
@@ -50,13 +61,9 @@
                                (codec/acp-update-text update)
                                (.now js/Date))
 
-      ;; Tool call — discrete message
-      (= :tool-call update-type)
-      (start-response :tool-use (codec/acp-tool-call-text update) (.now js/Date))
-
-      ;; Tool call update — log only
-      (= :tool-call-update update-type)
-      (js/console.log "[ACP] tool-call-update:" (:tool-call-id update) (:status update)))))
+      ;; Tool updates (call + status)
+      (#{:tool-call :tool-call-update} update-type)
+      (handle-tool-event state update (.now js/Date)))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."

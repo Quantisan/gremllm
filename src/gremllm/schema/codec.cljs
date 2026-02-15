@@ -119,12 +119,10 @@
 (defn acp-tool-call-text
   "Composes display text from a tool_call update.
    Returns 'Title — path' when locations exist, otherwise just 'Title'."
-  [update]
-  (let [title (:title update)
-        location (some-> (:locations update) first :path)]
-    (if location
-      (str title " — " location)
-      title)))
+  [{:keys [title locations]}]
+  (if-let [location (some-> locations first :path)]
+    (str title " — " location)
+    title))
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput
