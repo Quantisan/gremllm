@@ -47,5 +47,8 @@
     [:summary.reasoning-summary "Reasoning ..."]
     (into [:div] body)]])
 
+(defalias tool-use-message [attrs & body]
+  (into [:div.tool-use-indicator attrs] body))
+
 (defalias topic-item [attrs & body]
   (into [:div.topic-item (merge {} attrs)] body))

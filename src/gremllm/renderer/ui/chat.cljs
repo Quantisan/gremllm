@@ -15,11 +15,16 @@
   [e/reasoning-message {}
    [:div {:innerHTML (md/markdown->html (:text message))}]])
 
+(defn- render-tool-use-message [message]
+  [e/tool-use-message
+   [:span (:text message)]])
+
 (defn- render-message [message]
   (case (:type message)
     :user      (render-user-message message)
     :assistant (render-assistant-message message)
     :reasoning (render-reasoning-message message)
+    :tool-use  (render-tool-use-message message)
     ;; Default fallback
     [:div "Unknown message type:" (:type message)]))
 
