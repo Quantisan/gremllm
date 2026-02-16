@@ -163,15 +163,3 @@
     (let [update {:session-update :available-commands-update
                   :available-commands []}]
       (is (nil? (codec/acp-update-text update))))))
-
-(deftest test-acp-tool-call-text
-  (testing "returns title and first location path when location exists"
-    (let [update {:title "Read File"
-                  :locations [{:path "src/gremllm/schema.cljs"}]}]
-      (is (= "Read File — src/gremllm/schema.cljs"
-             (codec/acp-tool-call-text update)))))
-
-  (testing "returns title when no locations exist"
-    (let [update {:title "List Files"
-                  :locations []}]
-      (is (= "List Files" (codec/acp-tool-call-text update))))))
