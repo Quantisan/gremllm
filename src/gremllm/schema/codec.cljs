@@ -148,24 +148,24 @@
 
 (def AcpToolLocation
   "Schema for ACP tool call file locations."
-  [:map {:closed true}
+  [:map
    [:path :string]
-   [:line {:optional true} :int]])
+   [:line :int]])
 
 (def AcpToolMetaClaudeCode
   "Schema for ACP metadata emitted by Claude Code tools."
-  [:map {:closed true}
-   [:tool-name {:optional true} :string]])
+  [:map
+   [:tool-name :string]])
 
 (def AcpToolMeta
   "Schema for ACP tool call metadata."
-  [:map {:closed true}
-   [:claude-code {:optional true} AcpToolMetaClaudeCode]])
+  [:map
+   [:claude-code AcpToolMetaClaudeCode]])
 
 (def AcpToolRawInput
   "Schema for read-focused ACP tool call raw input."
-  [:map {:closed true}
-   [:file-path {:optional true} :string]])
+  [:map
+   [:file-path :string]])
 
 (def AcpToolCallContentItem
   "Schema for ACP tool call content blocks."
@@ -203,24 +203,24 @@
      [:content AcpTextContent]]]
 
    [:tool-call
-    [:map {:closed true}
+    [:map
      [:session-update [:= :tool-call]]
-     [:tool-call-id :string]
-     [:title :string]
-     [:kind :string]  ;; TODO: should be enum
-     [:status :string]
-     [:raw-input AcpToolRawInput]
-     [:meta {:optional true} AcpToolMeta]
-     [:content AcpToolCallContent]
-     [:locations [:vector AcpToolLocation]]]]
+     [:tool-call-id   :string]
+     [:title          :string]
+     [:kind           [:enum "read"]]  ;; TODO: should be keywords
+     [:status         :string]
+     [:raw-input      AcpToolRawInput]
+     [:meta           AcpToolMeta]
+     [:content        AcpToolCallContent]
+     [:locations      [:vector AcpToolLocation]]]]
 
    [:tool-call-update
     [:map
      [:session-update [:= :tool-call-update]]
-     [:tool-call-id :string]
-     [:status {:optional true} :string]
-     [:raw-output {:optional true} :string]
-     [:content {:optional true} [:vector :any]]]]])
+     [:tool-call-id   :string]
+     [:status         :string]
+     [:raw-output     :string]
+     [:content        [:vector :any]]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
