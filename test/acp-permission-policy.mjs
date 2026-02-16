@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import acpModule from "../resources/acp/index.js";
+import acpModule from "../resources/acp/permission.js";
 
 const resolvePermissionOutcome = acpModule.__test__?.resolvePermissionOutcome;
 
