@@ -78,6 +78,7 @@
           (is (= chunk-type (get-in result [:update :session-update])))
           (is (= (:text content) (get-in result [:update :content :text])))))))
 
+  ;; TODO: consider removing this and other non-critical test cases. Tighten overall.
   (testing "coerces tool_call with kebab-case keys"
     (let [js-data #js {:sessionId test-acp-session-id
                        :update #js {:toolCallId "toolu_abc123"

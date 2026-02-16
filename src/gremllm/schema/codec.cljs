@@ -243,6 +243,7 @@
      :decoders {:map (fn [x]
                        (if (map? x)
                          (let [session-update (:session-update x)]
+                           ;; TODO: not sure if this branching is needed...
                            (cond
                              (string? session-update)
                              (update x :session-update (comp keyword csk/->kebab-case))

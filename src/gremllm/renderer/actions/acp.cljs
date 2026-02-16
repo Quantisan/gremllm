@@ -42,6 +42,7 @@
   [_state {:keys [session-update tool-call-id status] :as update} message-id]
   (cond
     (= :tool-call session-update)
+    ;; TODO: `:tool-use` should come from schema instead of hardcoded deeply here
     (start-response :tool-use (codec/acp-tool-call-text update) message-id)
 
     (= :tool-call-update session-update)
