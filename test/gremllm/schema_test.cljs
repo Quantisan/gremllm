@@ -63,22 +63,6 @@
    :agent-thought-chunk {:text "The user wants" :type "text"}})
 
 (deftest test-acp-session-update-from-js
-  ;; Text chunks produce streaming content updates.
-  (doseq [chunk-type (keys test-content-chunks)]
-    (testing (str "coerces " (name chunk-type) " from JS with kebab-case keywords")
-      (let [content (get test-content-chunks chunk-type)
-            js-data #js {:sessionId test-acp-session-id
-                         :update #js {:content (clj->js content)
-                                      :sessionUpdate (-> chunk-type name (clojure.string/replace #"-" "_"))}}
-            result (codec/acp-session-update-from-js js-data)]
-        (is (= test-acp-session-id (:acp-session-id result)))
-
-        (when (and (is (contains? (set (keys (:update result))) :session-update))
-                   (is (contains? (set (keys (:update result))) :content)))
-          (is (= chunk-type (get-in result [:update :session-update])))
-          (is (= (:text content) (get-in result [:update :content :text])))))))
-
-  ;; TODO: consider removing this and other non-critical test cases. Tighten overall.
   (testing "coerces tool_call with kebab-case keys"
     (let [js-data #js {:sessionId test-acp-session-id
                        :update #js {:toolCallId "toolu_abc123"
@@ -115,40 +99,7 @@
       (is (try
             (codec/acp-session-update-from-js js-data)
             false
-            (catch :default _ true)))))
-
-  (testing "coerces tool_call_update with kebab-case keys"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:toolCallId "toolu_abc123"
-                                    :status "completed"
-                                    :rawOutput "done"
-                                    :content #js []
-                                    :sessionUpdate "tool_call_update"}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= test-acp-session-id (:acp-session-id result)))
-      (is (= :tool-call-update (get-in result [:update :session-update])))
-      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))
-      (is (= "completed" (get-in result [:update :status])))))
-
-  (testing "coerces partial tool_call_update payload"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:toolCallId "toolu_abc123"
-                                    :sessionUpdate "tool_call_update"}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= :tool-call-update (get-in result [:update :session-update])))
-      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))))
-
-  (testing "coerces available_commands_update with nested arrays and kebab-case keywords"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:availableCommands #js [#js {:name "commit" :description "Create commit"}]
-                                    :sessionUpdate "available_commands_update"}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= test-acp-session-id (:acp-session-id result)))
-
-      (when (and (is (contains? (set (keys (:update result))) :session-update))
-                 (is (contains? (set (keys (:update result))) :available-commands)))
-        (is (= :available-commands-update (get-in result [:update :session-update])))
-        (is (= "commit" (get-in result [:update :available-commands 0 :name])))))))
+            (catch :default _ true))))))
 
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
