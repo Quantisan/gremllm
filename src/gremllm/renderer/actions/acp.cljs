@@ -36,16 +36,35 @@
       [(append-to-response state chunk-text)]
       (start-response message-type chunk-text message-id))))
 
+(defn handle-tool-event
+  "Handles ACP tool-related session updates.
+   Returns chat effects for :tool-call and logs :tool-call-update."
+  [_state {:keys [session-update tool-call-id status] :as update} message-id]
+  (cond
+    (= :tool-call session-update)
+    ;; TODO: `:tool-use` should come from schema instead of hardcoded deeply here
+    (start-response :tool-use (codec/acp-tool-call-text update) message-id)
+
+    (= :tool-call-update session-update)
+    (js/console.log "[ACP] tool-call-update:" tool-call-id status)))
+
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
 
   update: codec/AcpUpdate"
   [state {:keys [update]}]
-  (when-let [message-type (get codec/acp-chunk->message-type (:session-update update))]
-    (streaming-chunk-effects state
-                             message-type
-                             (codec/acp-update-text update)
-                             (.now js/Date))))
+  (let [update-type (:session-update update)]
+    (cond
+      ;; Streaming text chunks (assistant, reasoning)
+      (#{:agent-message-chunk :agent-thought-chunk} update-type)
+      (streaming-chunk-effects state
+                               (get codec/acp-chunk->message-type update-type)
+                               (codec/acp-update-text update)
+                               (schema/generate-message-id))
+
+      ;; Tool updates (call + status)
+      (#{:tool-call :tool-call-update} update-type)
+      (handle-tool-event state update (schema/generate-message-id)))))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."

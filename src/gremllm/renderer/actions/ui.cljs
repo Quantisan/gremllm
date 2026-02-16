@@ -1,5 +1,6 @@
 (ns gremllm.renderer.actions.ui
-  (:require [gremllm.renderer.state.form :as form-state]
+  (:require [gremllm.schema :as schema]
+            [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
 ;; UI Actions
@@ -21,7 +22,7 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when-not (empty? text)
-      (let [new-user-message {:id   (.now js/Date)
+      (let [new-user-message {:id   (schema/generate-message-id)
                               :type :user
                               :text text}]
         [[:messages.actions/add-to-chat new-user-message]
@@ -72,4 +73,3 @@
 (defn toggle-nav [state]
   (let [expanded? (ui-state/nav-expanded? state)]
     [[:effects/save ui-state/nav-expanded-path (not expanded?)]]))
-

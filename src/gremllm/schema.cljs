@@ -11,7 +11,7 @@
 
 (def MessageType
   "Valid message type identifiers."
-  [:enum :user :assistant :reasoning])
+  [:enum :user :assistant :reasoning :tool-use])
 
 (def AttachmentRef
   "Reference to a stored attachment file.
@@ -31,6 +31,11 @@
 
 (def Messages
   [:vector Message])
+
+(defn generate-message-id
+  "Generates numeric message IDs for chat messages."
+  []
+  (js/Date.now))
 
 ;; ========================================
 ;; Providers

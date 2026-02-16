@@ -11,9 +11,13 @@
   (testing "submits message with valid input, reads model from active topic"
     (let [effects (ui/submit-messages {:form            {:user-input "Hello"}
                                        :active-topic-id "t1"
-                                       :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})]
+                                       :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})
+          message (nth (first effects) 1)]
       (is (= 5 (count effects)))
       (is (= :messages.actions/add-to-chat (ffirst effects)))
+      (is (number? (:id message)))
+      (is (= :user (:type message)))
+      (is (= "Hello" (:text message)))
       (is (= :form.actions/clear-input (first (second effects))))
       (is (= :acp.actions/send-prompt (first (last effects)))))))
 
