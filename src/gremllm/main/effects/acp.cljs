@@ -11,8 +11,8 @@
   [on-session-update]
   (if @state
     (js/Promise.resolve nil)
-    (let [result (acp-factory/createConnection
-                   #js {:onSessionUpdate on-session-update})
+    (let [^js result (acp-factory/createConnection
+                       #js {:onSessionUpdate on-session-update})
           conn   (.-connection result)]
       (reset! state {:connection conn
                      :subprocess (.-subprocess result)})
@@ -23,7 +23,7 @@
                                       :title "Gremllm"
                                       :version "0.1.0"}}))))
 
-(defn- conn! []
+(defn- ^js conn! []
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
@@ -50,6 +50,6 @@
 (defn shutdown
   "Terminate ACP subprocess."
   []
-  (when-let [{:keys [subprocess]} @state]
+  (when-let [^js subprocess (:subprocess @state)]
     (.kill subprocess "SIGTERM")
     (reset! state nil)))
