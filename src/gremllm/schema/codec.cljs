@@ -1,6 +1,5 @@
 (ns gremllm.schema.codec
   (:require [camel-snake-kebab.core :as csk]
-            [clojure.walk :as walk]
             [gremllm.schema :as schema]
             [malli.core :as m]
             [malli.transform :as mt]))
@@ -228,37 +227,14 @@
    [:acp-session-id :string] ;; TODO: :uuid type
    [:update AcpUpdate]])
 
-(defn- normalize-acp-keyword
-  "Converts ACP keys to kebab-case keywords and maps sessionId to :acp-session-id."
-  [k]
-  (cond
-    (or (= k "sessionId")
-        (= k "session-id")
-        (= k :sessionId)
-        (= k :session-id))
-    :acp-session-id
-
-    (string? k)
-    (csk/->kebab-case-keyword k)
-
-    (keyword? k)
-    (let [key-name (csk/->kebab-case (name k))]
-      (if-let [key-ns (namespace k)]
-        (keyword key-ns key-name)
-        (keyword key-name)))
-
-    :else
-    k))
-
-(defn- normalize-acp-keys-deep
-  "Recursively transforms nested ACP map keys into kebab-case keywords."
-  [x]
-  (walk/postwalk
-    (fn [node]
-      (if (map? node)
-        (into {} (map (fn [[k v]] [(normalize-acp-keyword k) v])) node)
-        node))
-    x))
+(def ^:private acp-key-transformer
+  "Transforms ACP keys from camelCase to kebab-case keywords.
+   Specially handles sessionId → :acp-session-id."
+  (mt/key-transformer
+    {:decode (fn [k]
+               (if (= k "sessionId")
+                 :acp-session-id
+                 (csk/->kebab-case-keyword k)))}))
 
 (def ^:private session-update-value-transformer
   "Transforms :session-update values to kebab-case keywords."
@@ -282,12 +258,10 @@
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
-  ;; Normalize keys first so nested payload maps inside dynamic sections stay idiomatic.
   (m/coerce AcpSessionUpdate
-            (-> js-data
-                (js->clj)
-                (normalize-acp-keys-deep))
+            (js->clj js-data)
             (mt/transformer
+              acp-key-transformer
               session-update-value-transformer
               mt/json-transformer)))
 
