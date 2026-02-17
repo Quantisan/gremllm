@@ -39,6 +39,16 @@
      {:calls calls
       :result result})))
 
+(defn- make-rotating-create
+  "Returns a fake create-connection fn that yields successive env :result values.
+   Also returns a :create-count atom for assertions."
+  [envs]
+  (let [create-count (atom 0)]
+    {:create-count create-count
+     :fake-create  (fn [_]
+                     (let [i (swap! create-count inc)]
+                       (:result (nth envs (dec i)))))}))
+
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
     (async done
@@ -120,11 +130,8 @@
       (let [failing-env  (make-fake-env {:initialize-result
                                          (js/Promise.reject (js/Error. "init failed"))})
             recovery-env (make-fake-env {:session-id "s-456"})
-            create-count (atom 0)
-            envs         [failing-env recovery-env]
-            fake-create  (fn [_]
-                           (let [i (swap! create-count inc)]
-                             (:result (nth envs (dec i)))))]
+            {:keys [create-count fake-create]}
+            (make-rotating-create [failing-env recovery-env])]
         (with-redefs [acp/create-connection fake-create]
           (-> (acp/initialize (fn [_] nil))
               (.then (fn [_]
@@ -134,6 +141,8 @@
                         (is (= ["SIGTERM"] (:kill @(:calls failing-env))))
                         (is (thrown-with-msg? js/Error #"ACP not initialized"
                               (acp/new-session "/tmp/ws")))
+                        ;; Re-bind for retry because async Promise callbacks run
+                        ;; after the outer with-redefs scope has unwound.
                         (with-redefs [acp/create-connection fake-create]
                           (acp/initialize (fn [_] nil)))))
               (.then (fn [_] (acp/new-session "/tmp/ws")))
