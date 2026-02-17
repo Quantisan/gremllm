@@ -134,7 +134,43 @@ Decisions that S4 learning will inform:
 
 ---
 
-### S5: User selects text and adds annotations
+### S5: AI proposes tracked changes
+
+**Builds on architectural decisions made in S4. The interception strategy, accept/reject granularity, and edit anchoring approach are determined by S4 spike findings.**
+
+**Capability:** AI suggests edits as inline diffs. User sees deletions/insertions in the document flow and can accept or reject each block.
+
+| Layer | Work |
+|-------|------|
+| ACP | Parse `tool_call_update` type:"diff" into structured change objects |
+| State | Store pending changes (`{:original-text :proposed-text :anchor :status}`) |
+| UI | Unified diff blocks embedded in document flow (deletion/insertion per block) |
+| UI | Accept/reject controls per change block |
+| File I/O | Apply accepted changes to disk, recompute offsets |
+| Schema | TrackedChange data model (informed by ACP response shape and S4 findings) |
+
+**Testable result:** Ask AI to "make the executive summary more concise." AI proposes a shorter version as a tracked change. See the diff block inline in the document. Accept it — content updates. Reject it — change disappears.
+
+**Research folded in:** S4 spike findings determine interception strategy and anchoring approach. Key questions to resolve during S5: offset recomputation on accept, multiple simultaneous changes.
+
+---
+
+### S6: Rejection feedback loop
+
+**Capability:** Rejecting a change prompts for quick feedback. Feedback is auto-sent to AI. AI retries.
+
+| Layer | Work |
+|-------|------|
+| UI | Rejection triggers feedback input (quick options + custom text) |
+| State | Format rejection + feedback as structured context |
+| ACP | Auto-send feedback to AI |
+| State | Track retry cycle |
+
+**Testable result:** Reject a tracked change with feedback "too formal." AI automatically retries with a less formal version.
+
+---
+
+### S7: User selects text and adds annotations
 
 **Capability:** Select text in the rendered document, type a note, see it in the margin.
 
@@ -152,7 +188,7 @@ Decisions that S4 learning will inform:
 
 ---
 
-### S6: Annotations become AI context
+### S8: Annotations become AI context
 
 **Capability:** Annotations are bundled into the next chat message as structured context. AI responds with awareness of the annotations.
 
@@ -164,42 +200,6 @@ Decisions that S4 learning will inform:
 | State | Annotation status transitions (`:queued` → `:active`) |
 
 **Testable result:** Add annotation "this claim needs evidence." Send a chat message. AI response references the annotation and addresses it.
-
----
-
-### S7: AI proposes tracked changes
-
-**S7 builds on architectural decisions made in S4. The interception strategy, accept/reject granularity, and edit anchoring approach are determined by S4 spike findings.**
-
-**Capability:** AI suggests edits as inline diffs. User sees insertions/deletions in the document and can accept or reject each one.
-
-| Layer | Work |
-|-------|------|
-| ACP | Parse `tool_call_update` type:"diff" into structured change objects |
-| State | Store pending changes (`{:original-text :proposed-text :anchor :status}`) |
-| UI | Inline diff rendering (strikethrough deletions, highlighted insertions) |
-| UI | Accept/reject controls per change block |
-| File I/O | Apply accepted changes to disk, recompute offsets |
-| Schema | TrackedChange data model (informed by ACP response shape) |
-
-**Testable result:** Annotate "too verbose." Chat with AI. AI proposes a shorter version as a tracked change. See the diff inline in the document. Accept it — content updates. Reject it — change disappears.
-
-**Research folded in:** What was Spike B (ACP response shape for tracked changes) happens during implementation. Spike 0 already proved the `tool_call_update` format. Key questions to resolve: offset recomputation on accept, multiple simultaneous changes.
-
----
-
-### S8: Rejection feedback loop
-
-**Capability:** Rejecting a change prompts for quick feedback. Feedback is auto-sent to AI. AI retries.
-
-| Layer | Work |
-|-------|------|
-| UI | Rejection triggers feedback input (quick options + custom text) |
-| State | Format rejection + feedback as structured context |
-| ACP | Auto-send feedback to AI |
-| State | Track retry cycle |
-
-**Testable result:** Reject a tracked change with feedback "too formal." AI automatically retries with a less formal version.
 
 ---
 
@@ -291,20 +291,20 @@ These are directional. Final schemas are informed by implementation experience i
 | Content extraction from AI responses | S4 | Separating document content from conversation |
 | Dry-run interception reliability through real app plumbing | S4 | Spike proved mechanism; need to verify end-to-end |
 | Edit granularity (agent-controlled vs post-processed) | S4 | Determines UX of change review |
-| Content-addressed anchoring ambiguity in repetitive prose | S4/S7 | `oldText` may match multiple locations in PE documents |
-| Markdown source↔DOM offset divergence for inline tracked changes | S4/S7 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
-| Annotation anchoring | S5 | DOM selection → markdown position mapping |
-| Offset recomputation | S7 | Accepted changes shift downstream offsets |
-| Document rendering with overlays | S7 | Markdown + highlights + inline diffs simultaneously |
-| Structured output parsing | S7 | `tool_call_update` → TrackedChange records |
+| Content-addressed anchoring ambiguity in repetitive prose | S4/S5 | `oldText` may match multiple locations in PE documents |
+| Markdown source↔DOM offset divergence for inline tracked changes | S4/S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
+| Annotation anchoring | S7 | DOM selection → markdown position mapping |
+| Offset recomputation | S5 | Accepted changes shift downstream offsets |
+| Document rendering with overlays | S5 | Markdown + highlights + inline diffs simultaneously |
+| Structured output parsing | S5 | `tool_call_update` → TrackedChange records |
 
 ## Punted Questions
 
 | Question | When to revisit |
 |----------|-----------------|
-| What do Topics become? | After S4 — when document + chat interaction is real |
+| What do Topics become? | After S5 — when document + chat interaction is real |
 | Topic → Document rename | After domain relationship is understood through building |
-| Sidebar/workspace restructuring | After S6 at earliest |
+| Sidebar/workspace restructuring | After S8 at earliest |
 | Multiple chat threads per document | Bicycle |
 | Multi-document support | After S1 proves single-doc model |
 
