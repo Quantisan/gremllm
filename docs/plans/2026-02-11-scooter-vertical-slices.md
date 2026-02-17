@@ -87,50 +87,55 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 ---
 
-### S4: Intercept AI edit proposals as reviewable data
+### S4a: ACP behavior spikes
 
-**Capability:** AI proposes document edits via ACP. Edits are captured as structured diff data without touching disk. Diffs are surfaced in the renderer as proof-of-concept.
-
-**Goal: Learning, not shipping.** S4 is a series of focused spikes that answer architectural questions before we build the production edit flow (S7).
-
-| Layer | Work |
-|-------|------|
-| ACP | Wire `tool_call_update` events with `type: "diff"` through real app plumbing (main → IPC → renderer) |
-| ACP | Block `writeTextFile` callback (dry-run mode) to prevent disk mutation |
-| Schema | Expand `AcpUpdate` codec to model diff content items (`{type, path, oldText, newText}`) and edit tool kinds |
-| State | Store captured diffs as pending proposals in renderer state |
-| UI | Minimal proof: display captured diffs in console or basic list (not final UX) |
+**Goal: Learning, not shipping.** S4a runs targeted experiments in the spike harness to answer architectural questions before production wiring. No production code is touched.
 
 **Learning unknowns to resolve:**
 
 | # | Unknown | Spike approach |
 |---|---------|----------------|
-| L1 | Dry-run end-to-end reliability | Wire interception through real app, verify diffs flow ACP → main → IPC → renderer |
-| L2 | Edit granularity | Test what the agent naturally produces. Try prompt instructions for logical chunks. Try post-processing `rawOutput` unified diff into sub-hunks |
 | L3 | Ambiguous anchoring | Test with a document containing repeated text. Determine if `oldText` + `locations[].line` reliably identifies the target |
-| L4 | Multi-edit composition | Prompt agent for multi-edit responses. Observe: independent or sequential-dependent? Does partial accept require dependency tracking? |
 | L5 | Shadow document need | Observe whether agent re-reads between edits in one response. If so, evaluate serving post-edit state from in-memory shadow |
-| L6 | Diff anchoring in rendered view | Determine how to locate `oldText`/`newText` regions within rendered DOM so inline tracked changes can be shown in the unified document view (no split view) |
 
-**Testable result:** Ask AI to edit a document. Diff data appears in renderer state (visible via Dataspex). No file mutation occurs. Learning unknowns L1–L6 have documented findings.
+**Testable result:** Documented findings for L3 and L5 recorded in "Architectural Decisions from S4a" below.
 
 **Research context:**
 - Spike (`test/acp-agent-document-interaction.mjs`) proved dry-run interception works: `tool_call_update` with `{oldText, newText, path}` arrives before/concurrent with `writeTextFile`. Blocking `writeTextFile` (return `{}`) captures the edit without disk mutation.
 - Expert analysis identified key risks: ambiguous content-addressed anchoring in repetitive prose, compound edit incoherence when agent re-reads stale state, partial accept of semantically coupled edits, and no back-channel for rejection communication.
-- IDE refactoring analysis flagged that markdown rendering destroys edit addressability — source offsets (`oldText` position in markdown string) do not map trivially to DOM positions in the rendered view. Rendering markdown through a formatter like snarkdown collapses formatting characters, restructures list/table markup, and produces a DOM whose text offsets diverge from source offsets. Inline tracked changes in a unified view require a strategy to bridge this gap. Options to spike: (a) text-search `oldText` in the rendered DOM's text content to locate the containing node(s) and wrap them; (b) use a renderer that attaches source-position metadata to DOM nodes; (c) render diff regions outside the markdown pipeline (split the source into unchanged markdown chunks and change-region chunks, render unchanged chunks as markdown, render change regions as raw diff markup).
+
+---
+
+### S4b: Production wiring
+
+**Capability:** AI proposes document edits via ACP. Edits are captured as structured diff data without touching disk. Diffs are visible in renderer state via Dataspex.
+
+| Layer | Work |
+|-------|------|
+| ACP | Implement `readTextFile`/`writeTextFile` callbacks in JS adapter |
+| ACP | Block `writeTextFile` (dry-run mode) to prevent disk mutation |
+| ACP | Set `clientCapabilities.fs` to `{ readTextFile: true, writeTextFile: true }` to enable fs callback path |
+| Schema | Expand `AcpUpdate` codec to model diff content items (`{type, path, oldText, newText}`) and edit tool kinds |
+| State | Route `tool-call-update` diff events into renderer state (currently just `console.log`) |
+| State | Store captured diffs as pending proposals at `[:document :pending-diffs]` |
+
+**Testable result:** Ask AI to edit a document. Diff data appears in Dataspex at `[:document :pending-diffs]`. No file written to disk. (Verifies L1: end-to-end reliability through real app plumbing.)
 
 ---
 
 ### Architectural Decisions from S4 (to be filled after spikes)
 
-Decisions that S4 learning will inform:
+Decisions that S4a learning will inform:
 
-- **Interception strategy:** Dry-run confirmed or shadow document needed?
-- **Accept/reject granularity:** Per-edit or per-batch (all edits in one response)?
-- **Edit anchoring:** Content-addressed (`oldText`) sufficient, or need `locations[].line` + content verification?
-- **Edit granularity control:** Prompt-driven, post-processed, or both?
-- **Change identity:** How to assign stable IDs to proposed changes for S8 rejection feedback?
-- **Diff rendering strategy:** How to anchor `oldText`/`newText` regions in the rendered document for inline tracked changes? Text-search in DOM, source-position-aware renderer, or chunked rendering (markdown chunks interleaved with raw diff regions)?
+- **Interception strategy:** Dry-run confirmed or shadow document needed? (L5)
+- **Edit anchoring:** Content-addressed (`oldText`) sufficient, or need `locations[].line` + content verification? (L3)
+
+Decisions deferred to S5 (require a working pipeline to experiment against):
+
+- **Accept/reject granularity:** Per-edit or per-batch (all edits in one response)? (L4)
+- **Edit granularity control:** Prompt-driven, post-processed, or both? (L2)
+- **Diff rendering strategy:** How to anchor `oldText`/`newText` regions in the rendered document for inline tracked changes? (L6)
+- **Change identity:** How to assign stable IDs to proposed changes for S6 rejection feedback?
 
 ---
 
@@ -151,7 +156,12 @@ Decisions that S4 learning will inform:
 
 **Testable result:** Ask AI to "make the executive summary more concise." AI proposes a shorter version as a tracked change. See the diff block inline in the document. Accept it — content updates. Reject it — change disappears.
 
-**Research folded in:** S4 spike findings determine interception strategy and anchoring approach. Key questions to resolve during S5: offset recomputation on accept, multiple simultaneous changes.
+**Research folded in:** S4 spike findings determine interception strategy and anchoring approach. Key questions to resolve during S5:
+
+- **Edit granularity (L2):** What the agent naturally produces; whether prompt instructions or `rawOutput` post-processing yields better change boundaries. Try prompt instructions for logical chunks. Try post-processing unified diff into sub-hunks.
+- **Multi-edit composition (L4):** Observe independent vs. sequential-dependent edits. Does partial accept require dependency tracking? Implications for S6 rejection handling when edits are coupled.
+- **Diff anchoring in rendered view (L6):** Locate `oldText`/`newText` regions in the rendered DOM. Options to spike: (a) text-search `oldText` in DOM text content to locate containing nodes and wrap them; (b) renderer that attaches source-position metadata to DOM nodes; (c) chunked rendering — split source into unchanged markdown chunks and change-region chunks, render unchanged as markdown, render change regions as raw diff markup. Note: markdown rendering destroys source addressability — formatting chars are collapsed, list/table markup is restructured, and DOM text offsets diverge from source offsets.
+- Offset recomputation on accept; multiple simultaneous changes.
 
 ---
 
@@ -235,7 +245,7 @@ Complete. Key findings for implementation:
 3. `writeTextFile` with dry-run mode blocks disk writes while capturing proposed edits (write-path reference spike).
 4. Both structured diff and unified diff format are available in `rawOutput` for tracked-change rendering.
 5. File-on-disk is source of truth.
-6. **Prompt-scoped interaction loop:** The edit cycle is prompt-scoped — agent reads real file at prompt start, proposes edits, user accepts/rejects, accepted changes hit disk, next prompt sees updated file. Agent does not re-read within a prompt cycle (to be verified in S4/L5).
+6. **Prompt-scoped interaction loop:** The edit cycle is prompt-scoped — agent reads real file at prompt start, proposes edits, user accepts/rejects, accepted changes hit disk, next prompt sees updated file. Agent does not re-read within a prompt cycle (to be verified in S4a/L5).
 7. **Change display approach:** Unified diff blocks embedded in document flow (not side-by-side panels, not inline tracked changes in rendered HTML). Surrounding content renders as markdown; change regions show deletion/insertion with accept/reject controls.
 8. **Expert-identified risks:** Ambiguous content-addressed anchoring, compound edit incoherence, partial accept of coupled edits, no rejection back-channel to agent, no change identity across cycles.
 
@@ -288,11 +298,11 @@ These are directional. Final schemas are informed by implementation experience i
 |---------|-------|-------|
 | Markdown rendering in document panel | S1 | Library choice, styling integration with PicoCSS |
 | Native read-tool mediation (`resource_link` + permissions + observability) | S3 | Ensure reliable on-demand reads and clear failure handling when access is denied/unavailable |
-| Content extraction from AI responses | S4 | Separating document content from conversation |
-| Dry-run interception reliability through real app plumbing | S4 | Spike proved mechanism; need to verify end-to-end |
-| Edit granularity (agent-controlled vs post-processed) | S4 | Determines UX of change review |
-| Content-addressed anchoring ambiguity in repetitive prose | S4/S5 | `oldText` may match multiple locations in PE documents |
-| Markdown source↔DOM offset divergence for inline tracked changes | S4/S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
+| Content extraction from AI responses | S4b | Separating document content from conversation |
+| Dry-run interception reliability through real app plumbing | S4b | Spike proved mechanism; S4b verifies end-to-end in real app |
+| Content-addressed anchoring ambiguity in repetitive prose | S4a/S5 | Spiked in S4a; anchoring strategy applied in S5 |
+| Edit granularity (agent-controlled vs post-processed) | S5 | Determines UX of change review |
+| Markdown source↔DOM offset divergence for inline tracked changes | S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
 | Annotation anchoring | S7 | DOM selection → markdown position mapping |
 | Offset recomputation | S5 | Accepted changes shift downstream offsets |
 | Document rendering with overlays | S5 | Markdown + highlights + inline diffs simultaneously |
