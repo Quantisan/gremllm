@@ -5,25 +5,49 @@
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
+(defonce ^:private initialize-in-flight (atom nil))
 
-;; TODO: add integration tests
+(defn- create-connection
+  "Thin wrapper for testability via with-redefs."
+  [opts]
+  (acp-factory/createConnection opts))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK."
   [on-session-update]
-  (if @state
+  (cond
+    @state
     (js/Promise.resolve nil)
-    (let [^js result (acp-factory/createConnection
+
+    @initialize-in-flight
+    (:promise @initialize-in-flight)
+
+    :else
+    (let [^js result (create-connection
                        #js {:onSessionUpdate on-session-update})
-          conn   (.-connection result)]
-      (reset! state {:connection conn
-                     :subprocess (.-subprocess result)})
-      (.initialize conn
-        #js {:protocolVersion   (.-protocolVersion result)
-             :clientCapabilities #js {:fs #js {} :terminal false}
-             :clientInfo         #js {:name "gremllm"
-                                      :title "Gremllm"
-                                      :version "0.1.0"}}))))
+          conn       (.-connection result)
+          subprocess (.-subprocess result)
+          init-promise
+          (-> (.initialize conn
+                #js {:protocolVersion    (.-protocolVersion result)
+                     :clientCapabilities #js {:fs #js {} :terminal false}
+                     :clientInfo         #js {:name "gremllm"
+                                              :title "Gremllm"
+                                              :version "0.1.0"}})
+              (.then (fn [_]
+                       (reset! state {:connection conn
+                                      :subprocess subprocess})
+                       nil))
+              (.catch (fn [err]
+                        (when subprocess
+                          (.kill subprocess "SIGTERM"))
+                        (throw err)))
+              (.finally (fn []
+                          (reset! initialize-in-flight nil))))]
+      (reset! initialize-in-flight {:promise init-promise
+                                    :subprocess subprocess})
+      init-promise)))
 
 (defn- ^js conn! []
   (or (:connection @state)
@@ -52,6 +76,12 @@
 (defn shutdown
   "Terminate ACP subprocess."
   []
-  (when-let [^js subprocess (:subprocess @state)]
-    (.kill subprocess "SIGTERM")
+  (let [^js initialized-subprocess (:subprocess @state)
+        ^js inflight-subprocess    (:subprocess @initialize-in-flight)]
+    (when initialized-subprocess
+      (.kill initialized-subprocess "SIGTERM"))
+    (when (and inflight-subprocess
+               (not (identical? inflight-subprocess initialized-subprocess)))
+      (.kill inflight-subprocess "SIGTERM"))
+    (reset! initialize-in-flight nil)
     (reset! state nil)))
