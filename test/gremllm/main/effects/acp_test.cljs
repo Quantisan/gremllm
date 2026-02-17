@@ -42,13 +42,13 @@
       (let [{:keys [calls result]} (make-fake-env)
             captured-callback (atom nil)]
         (with-redefs [acp/create-connection
-                      (fn [opts]
+                      (fn [^js opts]
                         (reset! captured-callback (.-onSessionUpdate opts))
                         result)]
           (-> (acp/initialize (fn [_] nil))
               (.then (fn [_]
                        (is (fn? @captured-callback))
-                       (let [payload (first (:initialize @calls))]
+                       (let [^js payload (first (:initialize @calls))]
                          (is (= "test-protocol" (.-protocolVersion payload)))
                          (is (= "gremllm" (.. payload -clientInfo -name)))
                          (is (= "Gremllm" (.. payload -clientInfo -title)))
@@ -73,17 +73,17 @@
                        (is (= "s-123" resume-id))
                        (acp/prompt resume-id [{:type "text"
                                                :text "Say only: Hello"}])))
-              (.then (fn [prompt-result]
+              (.then (fn [^js prompt-result]
                        (is (= "end_turn" (.-stopReason prompt-result)))
-                       (let [new-session-arg (first (:new-session @calls))
-                             resume-arg (first (:resume-session @calls))
-                             prompt-arg (first (:prompt @calls))]
+                       (let [^js new-session-arg (first (:new-session @calls))
+                             ^js resume-arg (first (:resume-session @calls))
+                             ^js prompt-arg (first (:prompt @calls))]
                          (is (= cwd (.-cwd new-session-arg)))
                          (is (= 0 (alength (.-mcpServers new-session-arg))))
                          (is (= "s-123" (.-sessionId resume-arg)))
                          (is (= cwd (.-cwd resume-arg)))
                          (is (= "s-123" (.-sessionId prompt-arg)))
-                         (let [first-block (aget (.-prompt prompt-arg) 0)]
+                         (let [^js first-block (aget (.-prompt prompt-arg) 0)]
                            (is (= "text" (.-type first-block)))
                            (is (= "Say only: Hello" (.-text first-block)))))))
               (.finally (fn []
