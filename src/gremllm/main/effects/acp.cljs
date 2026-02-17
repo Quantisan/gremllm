@@ -6,14 +6,18 @@
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 
-;; TODO: add integration tests
+(defn- create-connection
+  "Thin wrapper for testability via with-redefs."
+  [opts]
+  (acp-factory/createConnection opts))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK."
   [on-session-update]
   (if @state
     (js/Promise.resolve nil)
-    (let [^js result (acp-factory/createConnection
+    (let [^js result (create-connection
                        #js {:onSessionUpdate on-session-update})
           conn   (.-connection result)]
       (reset! state {:connection conn
