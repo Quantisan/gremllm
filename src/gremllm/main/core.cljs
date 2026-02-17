@@ -130,9 +130,13 @@
         secrets-filepath (io/secrets-file-path user-data-dir)]
     (register-domain-handlers store secrets-filepath)
     (menu/create-menu store)
+    ;; TODO: refactor for Modelarity and readability
+    ;;
     ;; Initialize ACP connection eagerly - subprocess starts at launch.
     ;; Session update callback receives raw JS params from SDK, coerces
     ;; via codec, and dispatches as a Nexus action.
+    ;;
+    ;; TODO: should `acp-effects/initialize` be a Nexus effect?
     (acp-effects/initialize
       (fn [params]
         (let [coerced (codec/acp-session-update-from-js params)]

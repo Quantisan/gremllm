@@ -3,8 +3,10 @@
    JS module is a thin factory; CLJS manages state and public API."
   (:require ["acp" :as acp-factory]))
 
+;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 
+;; TODO: add integration tests
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK."

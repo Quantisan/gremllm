@@ -9,6 +9,7 @@ function selectOptionByKind(options, preferredKinds, fallback) {
   return fallback(options);
 }
 
+// TODO: integration tests
 function resolvePermissionOutcome(params) {
   const options = Array.isArray(params?.options) ? params.options : [];
   const toolKind = params?.toolCall?.kind || null;
