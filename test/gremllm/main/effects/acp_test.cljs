@@ -89,3 +89,24 @@
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))
+
+(deftest test-lifecycle-guardrails
+  (testing "double initialize is idempotent, shutdown kills subprocess, post-shutdown throws"
+    (async done
+      (let [{:keys [calls result]} (make-fake-env)
+            create-count (atom 0)]
+        (with-redefs [acp/create-connection
+                      (fn [_]
+                        (swap! create-count inc)
+                        result)]
+          (-> (acp/initialize (fn [_] nil))
+              (.then (fn [_] (acp/initialize (fn [_] nil))))
+              (.then (fn [_]
+                       (is (= 1 @create-count))
+                       (acp/shutdown)
+                       (is (= ["SIGTERM"] (:kill @calls)))
+                       (is (thrown-with-msg? js/Error #"ACP not initialized"
+                             (acp/new-session "/tmp/ws")))))
+              (.finally (fn []
+                          (acp/shutdown)
+                          (done)))))))))
