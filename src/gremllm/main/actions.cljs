@@ -92,10 +92,6 @@
 ;; ACP Effects Registration
 ;; ========================
 
-(nxr/register-effect! :acp.effects/initialize
-  (fn [_ _ _]
-    (acp-effects/initialize)))
-
 (nxr/register-effect! :acp.effects/new-session
   (fn [{:keys [dispatch]} _ cwd]
     (dispatch [[:ipc.effects/promise->reply (acp-effects/new-session cwd)]])))

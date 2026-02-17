@@ -1,38 +1,57 @@
 (ns gremllm.main.effects.acp
-  "ACP effect handlers - thin wrappers around JS module.
-   These perform I/O; business logic lives in actions."
-  (:require ["acp" :as acp-js]))
+  "ACP effect handlers - owns connection lifecycle.
+   JS module is a thin factory; CLJS manages state and public API."
+  (:require ["acp" :as acp-factory]))
 
+;; TODO: consider adopting https://github.com/stuartsierra/component
+(defonce ^:private state (atom nil))
+
+;; TODO: add integration tests
 (defn initialize
-  "Initialize ACP connection. Idempotent."
-  []
-  (acp-js/initialize))
+  "Initialize ACP connection eagerly. Idempotent.
+   on-session-update: callback receiving raw JS session update params from SDK."
+  [on-session-update]
+  (if @state
+    (js/Promise.resolve nil)
+    (let [^js result (acp-factory/createConnection
+                       #js {:onSessionUpdate on-session-update})
+          conn   (.-connection result)]
+      (reset! state {:connection conn
+                     :subprocess (.-subprocess result)})
+      (.initialize conn
+        #js {:protocolVersion   (.-protocolVersion result)
+             :clientCapabilities #js {:fs #js {} :terminal false}
+             :clientInfo         #js {:name "gremllm"
+                                      :title "Gremllm"
+                                      :version "0.1.0"}}))))
+
+(defn- ^js conn! []
+  (or (:connection @state)
+      (throw (js/Error. "ACP not initialized"))))
 
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
-  (js/console.log "[acp] invoking new-session, cwd:" cwd)
-  (acp-js/newSession cwd))
+  (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js []})
+      (.then (fn [result] (.-sessionId result)))))
 
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
-  (js/console.log "[acp] invoking resume-session, cwd:" cwd "acp-session-id:" acp-session-id)
-  (acp-js/resumeSession cwd acp-session-id))
+  (-> (.unstable_resumeSession (conn!)
+        #js {:sessionId acp-session-id :cwd cwd :mcpServers #js []})
+      (.then (fn [_] acp-session-id))))
 
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."
   [acp-session-id content-blocks]
-  (js/console.log "[acp] invoking prompt, acp-session-id:" acp-session-id
-                  "content-types:" (mapv :type content-blocks))
-  (acp-js/prompt acp-session-id (clj->js content-blocks)))
+  (.prompt (conn!)
+    #js {:sessionId acp-session-id
+         :prompt    (clj->js content-blocks)}))
 
 (defn shutdown
   "Terminate ACP subprocess."
   []
-  (acp-js/shutdown))
-
-(defn set-dispatcher!
-  "Wire CLJS dispatch function into JS module."
-  [dispatch-fn]
-  (acp-js/setDispatcher dispatch-fn))
+  (when-let [^js subprocess (:subprocess @state)]
+    (.kill subprocess "SIGTERM")
+    (reset! state nil)))
