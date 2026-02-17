@@ -57,3 +57,35 @@
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))
+
+(deftest test-session-and-prompt-delegation
+  (testing "delegates new-session, resume-session, and prompt to connection"
+    (async done
+      (let [{:keys [calls result]} (make-fake-env)
+            cwd "/tmp/ws"]
+        (with-redefs [acp/create-connection (fn [_] result)]
+          (-> (acp/initialize (fn [_] nil))
+              (.then (fn [_] (acp/new-session cwd)))
+              (.then (fn [session-id]
+                       (is (= "s-123" session-id))
+                       (acp/resume-session cwd session-id)))
+              (.then (fn [resume-id]
+                       (is (= "s-123" resume-id))
+                       (acp/prompt resume-id [{:type "text"
+                                               :text "Say only: Hello"}])))
+              (.then (fn [prompt-result]
+                       (is (= "end_turn" (.-stopReason prompt-result)))
+                       (let [new-session-arg (first (:new-session @calls))
+                             resume-arg (first (:resume-session @calls))
+                             prompt-arg (first (:prompt @calls))]
+                         (is (= cwd (.-cwd new-session-arg)))
+                         (is (= 0 (alength (.-mcpServers new-session-arg))))
+                         (is (= "s-123" (.-sessionId resume-arg)))
+                         (is (= cwd (.-cwd resume-arg)))
+                         (is (= "s-123" (.-sessionId prompt-arg)))
+                         (let [first-block (aget (.-prompt prompt-arg) 0)]
+                           (is (= "text" (.-type first-block)))
+                           (is (= "Say only: Hello" (.-text first-block)))))))
+              (.finally (fn []
+                          (acp/shutdown)
+                          (done)))))))))
