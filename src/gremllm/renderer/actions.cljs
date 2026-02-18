@@ -131,6 +131,7 @@
 (nxr/register-action! :document.actions/create-success document/create-success)
 (nxr/register-action! :document.actions/create-error document/create-error)
 (nxr/register-action! :document.actions/set-content document/set-content)
+(nxr/register-action! :document.actions/append-pending-diffs document/append-pending-diffs)
 
 ;; Topic
 
