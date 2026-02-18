@@ -96,7 +96,7 @@ Research that the old plan handled via standalone spikes is folded into the slic
 | # | Unknown | Spike approach |
 |---|---------|----------------|
 | L3 | Ambiguous anchoring | Test with a document containing repeated text. Determine if `oldText` + `locations[].line` reliably identifies the target |
-| L5 | Shadow document need | Observe whether agent re-reads between edits in one response. If so, evaluate serving post-edit state from in-memory shadow |
+| L5 | Re-read hint effectiveness | Run a multi-turn spike where each prompt includes `resource_link` plus a fixed re-read hint. Between prompts, apply accepted edits to disk and verify the agent performs a fresh read and proposes diffs against latest file state |
 
 **Testable result:** Documented findings for L3 and L5 recorded in "Architectural Decisions from S4a" below.
 
@@ -127,7 +127,7 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 Decisions that S4a learning will inform:
 
-- **Interception strategy:** Dry-run confirmed or shadow document needed? (L5)
+- **Prompt refresh strategy:** Is explicit re-read hinting (with `resource_link`) sufficient for reliable fresh reads on subsequent prompts after disk changes? (L5)
 - **Edit anchoring:** Content-addressed (`oldText`) sufficient, or need `locations[].line` + content verification? (L3)
 
 Decisions deferred to S5 (require a working pipeline to experiment against):
@@ -141,7 +141,7 @@ Decisions deferred to S5 (require a working pipeline to experiment against):
 
 ### S5: AI proposes tracked changes
 
-**Builds on architectural decisions made in S4. The interception strategy, accept/reject granularity, and edit anchoring approach are determined by S4 spike findings.**
+**Builds on architectural decisions made in S4. The prompt refresh strategy, accept/reject granularity, and edit anchoring approach are determined by S4 spike findings.**
 
 **Capability:** AI suggests edits as inline diffs. User sees deletions/insertions in the document flow and can accept or reject each block.
 
@@ -245,7 +245,7 @@ Complete. Key findings for implementation:
 3. `writeTextFile` with dry-run mode blocks disk writes while capturing proposed edits (write-path reference spike).
 4. Both structured diff and unified diff format are available in `rawOutput` for tracked-change rendering.
 5. File-on-disk is source of truth.
-6. **Prompt-scoped interaction loop:** The edit cycle is prompt-scoped — agent reads real file at prompt start, proposes edits, user accepts/rejects, accepted changes hit disk, next prompt sees updated file. Agent does not re-read within a prompt cycle (to be verified in S4a/L5).
+6. **Prompt-scoped interaction loop:** The edit cycle is prompt-scoped — agent reads real file at prompt start, proposes edits, user accepts/rejects, accepted changes hit disk, next prompt sees updated file. S4a/L5 verifies whether explicit re-read hinting on each prompt reliably triggers fresh reads after file changes.
 7. **Change display approach:** Unified diff blocks embedded in document flow (not side-by-side panels, not inline tracked changes in rendered HTML). Surrounding content renders as markdown; change regions show deletion/insertion with accept/reject controls.
 8. **Expert-identified risks:** Ambiguous content-addressed anchoring, compound edit incoherence, partial accept of coupled edits, no rejection back-channel to agent, no change identity across cycles.
 
@@ -300,6 +300,7 @@ These are directional. Final schemas are informed by implementation experience i
 | Native read-tool mediation (`resource_link` + permissions + observability) | S3 | Ensure reliable on-demand reads and clear failure handling when access is denied/unavailable |
 | Content extraction from AI responses | S4b | Separating document content from conversation |
 | Dry-run interception reliability through real app plumbing | S4b | Spike proved mechanism; S4b verifies end-to-end in real app |
+| Re-read reliability after between-prompt disk changes | S4a/S4b | S4a validates always-on hint behavior in spike harness; production may later optimize to change-aware hinting |
 | Content-addressed anchoring ambiguity in repetitive prose | S4a/S5 | Spiked in S4a; anchoring strategy applied in S5 |
 | Edit granularity (agent-controlled vs post-processed) | S5 | Determines UX of change review |
 | Markdown source↔DOM offset divergence for inline tracked changes | S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
