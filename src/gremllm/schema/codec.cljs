@@ -174,27 +174,39 @@
    keys (e.g. read sends file-path; edit sends old-string, new-string, file-path)."
   [:map])
 
-(def AcpToolCallContentItem
-  "Schema for ACP tool call content blocks."
-  AcpTextContent)
+(def AcpWrappedContent
+  "Wrapped text content block as sent by ACP in tool call content arrays."
+  [:map
+   [:type [:= "content"]]
+   [:content AcpTextContent]])
+
+(def AcpTerminalContent
+  "Terminal output content in ACP tool call content arrays."
+  [:map
+   [:type [:= "terminal"]]
+   [:terminal-id :string]])
 
 (def AcpDiffItem
-  "Structured diff content from a tool-call-update write operation."
+  "Structured diff content from a tool-call-update write operation.
+   old-text is optional — absent when ACP creates a new file."
   [:map
    [:type [:= "diff"]]
    [:path :string]
-   [:old-text :string]
+   [:old-text {:optional true} :string]
    [:new-text :string]])
 
-(def AcpToolCallUpdateContentItem
-  "Content items in tool-call-update. Text for read results, diff for write results."
+(def AcpToolCallContentItem
+  "Discriminated union of ACP tool call content blocks.
+   Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
+   Both tool-call and tool-call-update share this content type."
   [:multi {:dispatch (fn [m]
                        (let [item-type (or (:type m) (get m "type"))]
                          (if (keyword? item-type)
                            (name item-type)
                            item-type)))}
-   ["text" AcpTextContent]
-   ["diff" AcpDiffItem]])
+   ["content"  AcpWrappedContent]
+   ["diff"     AcpDiffItem]
+   ["terminal" AcpTerminalContent]])
 
 (def AcpRawOutputItem
   "Raw output items in tool-call-update (unified diff text blocks)."
@@ -249,7 +261,7 @@
      [:tool-call-id                :string]
      [:status {:optional true}     :string]
      [:raw-output {:optional true} [:or :string [:vector AcpRawOutputItem]]]
-     [:content {:optional true}    [:vector AcpToolCallUpdateContentItem]]
+     [:content {:optional true}    [:vector AcpToolCallContentItem]]
      [:locations {:optional true}  [:vector AcpToolLocation]]
      [:meta {:optional true}       AcpToolMeta]]]])
 
