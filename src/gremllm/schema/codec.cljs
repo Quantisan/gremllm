@@ -124,6 +124,14 @@
     (str title " — " location)
     title))
 
+(defn acp-tool-call-update-diffs
+  "Extracts diff items from a tool-call-update's content.
+   Returns a vector of diff maps or nil if none present."
+  [{:keys [content]}]
+  (when (seq content)
+    (let [diffs (filterv #(= "diff" (:type %)) content)]
+      (when (seq diffs) diffs))))
+
 ;; ACP Update sub-schemas
 (def AcpCommandInput
   "Optional input schema for ACP commands."
@@ -170,6 +178,28 @@
   "Schema for ACP tool call content blocks."
   AcpTextContent)
 
+(def AcpDiffItem
+  "Structured diff content from a tool-call-update write operation."
+  [:map
+   [:type [:= "diff"]]
+   [:path :string]
+   [:old-text :string]
+   [:new-text :string]])
+
+(def AcpToolCallUpdateContentItem
+  "Content items in tool-call-update. Text for read results, diff for write results."
+  [:multi {:dispatch (fn [m]
+                       (let [item-type (or (:type m) (get m "type"))]
+                         (if (keyword? item-type)
+                           (name item-type)
+                           item-type)))}
+   ["text" AcpTextContent]
+   ["diff" AcpDiffItem]])
+
+(def AcpRawOutputItem
+  "Raw output items in tool-call-update (unified diff text blocks)."
+  AcpTextContent)
+
 (def AcpToolCallContent
   "Schema for ACP tool call content."
   [:vector AcpToolCallContentItem])
@@ -206,7 +236,7 @@
      [:session-update        [:= :tool-call]]
      [:tool-call-id          :string]
      [:title                 :string]
-     [:kind                  [:enum "read"]]  ;; TODO: should be keywords
+     [:kind                  [:enum "read" "edit"]]
      [:status                :string]
      [:raw-input             AcpToolRawInput]
      [:meta {:optional true} AcpToolMeta]
@@ -218,8 +248,10 @@
      [:session-update              [:= :tool-call-update]]
      [:tool-call-id                :string]
      [:status {:optional true}     :string]
-     [:raw-output {:optional true} :string]
-     [:content {:optional true}    [:vector :any]]]]])
+     [:raw-output {:optional true} [:vector AcpRawOutputItem]]
+     [:content {:optional true}    [:vector AcpToolCallUpdateContentItem]]
+     [:locations {:optional true}  [:vector AcpToolLocation]]
+     [:meta {:optional true}       AcpToolMeta]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
