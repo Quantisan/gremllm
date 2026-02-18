@@ -170,9 +170,9 @@
    [:claude-code {:optional true} AcpToolMetaClaudeCode]])
 
 (def AcpToolRawInput
-  "Schema for read-focused ACP tool call raw input."
-  [:map
-   [:file-path {:optional true} :string]])
+  "Schema for ACP tool call raw input. Open map — different tools send different
+   keys (e.g. read sends file-path; edit sends old-string, new-string, file-path)."
+  [:map])
 
 (def AcpToolCallContentItem
   "Schema for ACP tool call content blocks."
@@ -233,22 +233,22 @@
 
    [:tool-call
     [:map
-     [:session-update        [:= :tool-call]]
-     [:tool-call-id          :string]
-     [:title                 :string]
-     [:kind                  [:enum "read" "edit"]]
-     [:status                :string]
-     [:raw-input             AcpToolRawInput]
-     [:meta {:optional true} AcpToolMeta]
-     [:content               AcpToolCallContent]
-     [:locations             [:vector AcpToolLocation]]]]
+     [:session-update                    [:= :tool-call]]
+     [:tool-call-id                      :string]
+     [:title                             :string]
+     [:kind                              [:enum "read" "edit"]]
+     [:status                            :string]
+     [:raw-input                         AcpToolRawInput]
+     [:meta {:optional true}             AcpToolMeta]
+     [:content                           AcpToolCallContent]
+     [:locations {:optional true}        [:vector AcpToolLocation]]]]
 
    [:tool-call-update
     [:map
      [:session-update              [:= :tool-call-update]]
      [:tool-call-id                :string]
      [:status {:optional true}     :string]
-     [:raw-output {:optional true} [:vector AcpRawOutputItem]]
+     [:raw-output {:optional true} [:or :string [:vector AcpRawOutputItem]]]
      [:content {:optional true}    [:vector AcpToolCallUpdateContentItem]]
      [:locations {:optional true}  [:vector AcpToolLocation]]
      [:meta {:optional true}       AcpToolMeta]]]])

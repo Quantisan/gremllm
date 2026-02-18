@@ -140,7 +140,7 @@
       (is (nil? (:locations update))))))
 
 (deftest test-acp-session-update-tool-call-edit-kind
-  (testing "coerces tool_call with kind 'edit'"
+  (testing "coerces tool_call with kind 'edit' and locations"
     (let [js-data #js {:sessionId test-acp-session-id
                        :update #js {:sessionUpdate "tool_call"
                                     :toolCallId "toolu_03"
@@ -151,7 +151,38 @@
                                     :content #js []
                                     :locations #js [#js {:path "/tmp/test.md" :line 5}]}}
           result (codec/acp-session-update-from-js js-data)]
-      (is (= "edit" (get-in result [:update :kind]))))))
+      (is (= "edit" (get-in result [:update :kind])))))
+
+  (testing "coerces pending tool_call without locations"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_04"
+                                    :title "Edit File"
+                                    :kind "edit"
+                                    :status "pending"
+                                    :rawInput #js {:filePath "/tmp/test.md"
+                                                   :oldString "foo"
+                                                   :newString "bar"}
+                                    :content #js []}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call (:session-update update)))
+      (is (= "edit" (:kind update)))
+      (is (nil? (:locations update)))
+      (is (= "foo" (get-in update [:raw-input :old-string])))
+      (is (= "bar" (get-in update [:raw-input :new-string])))))
+
+  (testing "coerces tool_call_update with string rawOutput"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_05"
+                                    :status "failed"
+                                    :rawOutput "Error: file not found"}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= "failed" (:status update)))
+      (is (= "Error: file not found" (:raw-output update))))))
 
 (deftest test-acp-tool-call-update-diffs
   (testing "extracts diff items from content"
