@@ -19,6 +19,35 @@
 //   node test/spike-l3-anchoring.mjs
 //   VERBOSE=1 node test/spike-l3-anchoring.mjs
 
+// ============================================================================
+// OUTPUT
+// ============================================================================
+//
+// $ node test/spike-l3-anchoring.mjs
+// [spike-l3] Temp doc: /var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-spike-l3-ggGRKL/market-analysis.md
+//
+// [spike-l3] readTextFile calls: 2
+//
+// === L3 Verdict ===
+// expectedThirdParagraphLines: 15-18
+// readTextFile calls: 2
+// [read 1] path=/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-spike-l3-ggGRKL/market-analysis.md line=1 limit=2000 returnedLines=24
+// [read 2] path=/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-spike-l3-ggGRKL/market-analysis.md line=none limit=none returnedLines=24
+// diffCount: 1
+// [diff-update 1] toolCallId=toolu_01AfGzx6UbLbdRFjQJwjGKA8 status=completed diffItems=1 locations=1
+// [diff-item 1.1] path=/var/folders/4s/vmpqkb8564j_vxjf8wvqnc8r0000gn/T/gremllm-spike-l3-ggGRKL/market-analysis.md oldTextOccurrences=1 oldTextUnique=yes locationLine=11 locationInExpectedRange=no targetedThird=yes avoidedOthers=yes anchoringStrategy=content-only
+// oldText (first 150 chars): "The underlying metrics indicate sustained performance above benchmark expectations.\nRisk-adjusted returns remain within acceptable parameters for this"
+//
+// diffItemCount: 1
+// oldTextUniqueCount: 1/1
+// targetedThirdCount: 1/1
+// locationChecksInRange: 0/1
+// contentOnlyItems: 1
+// contentPlusLineItems: 0
+// ambiguousItems: 0
+// anchoringStrategy: content-only (oldText disambiguates all diff items)
+// [spike-l3] agent exit code=none signal=SIGTERM
+
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
