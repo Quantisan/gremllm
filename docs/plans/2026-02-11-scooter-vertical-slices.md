@@ -122,9 +122,9 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 | Layer | Work |
 |-------|------|
-| ACP | Implement `readTextFile`/`writeTextFile` callbacks in JS adapter |
+| ACP | Implement `writeTextFile` callback in JS adapter (no ACP `readTextFile` callback) |
 | ACP | Block `writeTextFile` (dry-run mode) to prevent disk mutation |
-| ACP | Set `clientCapabilities.fs` to `{ readTextFile: true, writeTextFile: true }` to enable fs callback path |
+| ACP | Set `clientCapabilities.fs` to write-only (`{ writeTextFile: true }`) for dry-run interception |
 | Schema | Expand `AcpUpdate` codec to model diff content items (`{type, path, oldText, newText}`) and edit tool kinds |
 | State | Route `tool-call-update` diff events into renderer state (currently just `console.log`) |
 | State | Store captured diffs as pending proposals at `[:document :pending-diffs]` |
