@@ -26,7 +26,6 @@
 //
 // USAGE:
 //   node test/spike-l5-reread.mjs
-
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
@@ -67,18 +66,71 @@ function simpleHash(str) {
   return hash;
 }
 
+function extractToolAction(update) {
+  if (typeof update.title === "string" && update.title.trim().length > 0) {
+    return update.title.trim().split(/\s+/)[0];
+  }
+  const toolName = update._meta?.claudeCode?.toolName || update.kind || "";
+  if (toolName.includes("__")) {
+    return toolName.split("__").pop();
+  }
+  return toolName || "unknown";
+}
+
+function extractToolPath(update, fallbackPath = null) {
+  const rawInput = update.rawInput || {};
+  const candidate =
+    rawInput.path ||
+    rawInput.file_path ||
+    rawInput.filePath ||
+    rawInput.target_path ||
+    rawInput.targetPath;
+  if (typeof candidate === "string" && candidate.length > 0) {
+    return candidate;
+  }
+  if (Array.isArray(update.locations)) {
+    const locationWithPath = update.locations.find((loc) => typeof loc?.path === "string");
+    if (locationWithPath) return locationWithPath.path;
+  }
+  if (Array.isArray(update.content)) {
+    const diffWithPath = update.content.find((item) => typeof item?.path === "string");
+    if (diffWithPath) return diffWithPath.path;
+  }
+  return fallbackPath;
+}
+
+function logToolEvent(eventType, action, filePath) {
+  const summary = {
+    action: action || "unknown",
+    path: filePath || "unknown",
+  };
+  console.error(`[${eventType}] ${JSON.stringify(summary)}`);
+}
+
 // ============================================================================
 // ACP client factory — fresh per condition
 // ============================================================================
 function createClient(docPath) {
   // Track each readTextFile call: { contentHash, contentSnippet }
   const readCalls = [];
+  const toolCallsById = new Map();
 
   const client = {
     readCalls,
 
-    async sessionUpdate() {
-      // No special handling needed for this spike
+    async sessionUpdate({ update }) {
+      const updateType = update.sessionUpdate;
+
+      if (updateType === "tool_call") {
+        if (!update.rawInput || Object.keys(update.rawInput).length === 0) return;
+        const action = extractToolAction(update);
+        const filePath = extractToolPath(update, docPath);
+        if (update.toolCallId) {
+          toolCallsById.set(update.toolCallId, { action, path: filePath });
+        }
+        logToolEvent("tool_call", action, filePath);
+        return;
+      }
     },
 
     async readTextFile({ path: filePath, line, limit }) {
@@ -284,4 +336,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
