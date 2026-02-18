@@ -104,6 +104,16 @@ Research that the old plan handled via standalone spikes is folded into the slic
 - Spike (`test/acp-agent-document-interaction.mjs`) proved dry-run interception works: `tool_call_update` with `{oldText, newText, path}` arrives before/concurrent with `writeTextFile`. Blocking `writeTextFile` (return `{}`) captures the edit without disk mutation.
 - Expert analysis identified key risks: ambiguous content-addressed anchoring in repetitive prose, compound edit incoherence when agent re-reads stale state, partial accept of semantically coupled edits, and no back-channel for rejection communication.
 
+**Takeaway findings (L3 spike `test/spike-l3-anchoring.mjs`, 2026-02-18):**
+- Observed run classified as `content-only`: one diff item, `oldTextOccurrences=1`, `targetedThird=yes`, and only the intended paragraph content was edited.
+- `locations[].line` did not validate the target in that run (`locationLine=11` vs expected third-paragraph range `15-18`), so line metadata looked noisy.
+- Provisional decision for S4b: treat `oldText` as the primary anchor and `locations[].line` as advisory; keep L3 open until repeated runs and varied fixtures confirm reliability.
+
+**Takeaway findings (L5 spike `test/spike-l5-reread.mjs`, 2026-02-18):**
+- In one A/B run, both conditions (`with hint`, `without hint`) performed fresh reads in turn 2 (`turn2ReadCount=2`) and read post-turn-1 disk state (`turn2SawUpdatedContent=yes`).
+- Turn-1 writes were confirmed in both conditions (`turn1WroteNewContent=yes`), so the turn-2 freshness check was valid.
+- Provisional decision for S4b: keep `resource_link` on each prompt; treat explicit re-read hint text as optional/redundant for now, pending repeated runs across varied fixtures/models.
+
 ---
 
 ### S4b: Production wiring
@@ -112,9 +122,9 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 | Layer | Work |
 |-------|------|
-| ACP | Implement `readTextFile`/`writeTextFile` callbacks in JS adapter |
+| ACP | Implement `writeTextFile` callback in JS adapter (no ACP `readTextFile` callback) |
 | ACP | Block `writeTextFile` (dry-run mode) to prevent disk mutation |
-| ACP | Set `clientCapabilities.fs` to `{ readTextFile: true, writeTextFile: true }` to enable fs callback path |
+| ACP | Set `clientCapabilities.fs` to write-only (`{ writeTextFile: true }`) for dry-run interception |
 | Schema | Expand `AcpUpdate` codec to model diff content items (`{type, path, oldText, newText}`) and edit tool kinds |
 | State | Route `tool-call-update` diff events into renderer state (currently just `console.log`) |
 | State | Store captured diffs as pending proposals at `[:document :pending-diffs]` |
