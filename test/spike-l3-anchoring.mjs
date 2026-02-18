@@ -17,6 +17,7 @@
 //
 // USAGE:
 //   node test/spike-l3-anchoring.mjs
+//   VERBOSE=1 node test/spike-l3-anchoring.mjs
 
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
@@ -25,6 +26,8 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import os from "node:os";
 import * as acp from "@agentclientprotocol/sdk";
+
+const VERBOSE = process.env.VERBOSE === "1";
 
 // ============================================================================
 // Synthetic document: 4 near-identical paragraphs, one word differs per para
@@ -67,17 +70,49 @@ function countOccurrences(haystack, needle) {
   return count;
 }
 
+function findThirdParagraphLineRange(docContent) {
+  const lines = docContent.split("\n");
+  const startIndex = lines.findIndex((line) => line.includes("The **third** analysis"));
+  if (startIndex === -1) return null;
+
+  let endIndex = startIndex;
+  while (endIndex + 1 < lines.length && lines[endIndex + 1].trim() !== "") {
+    endIndex++;
+  }
+
+  return { start: startIndex + 1, end: endIndex + 1 };
+}
+
+function isLineInRange(line, range) {
+  return line != null && range != null && line >= range.start && line <= range.end;
+}
+
+function rangeToString(range) {
+  if (!range) return "unknown";
+  return `${range.start}-${range.end}`;
+}
+
 // ============================================================================
 // ACP client
 // ============================================================================
 class SpikeL3Client {
-  constructor(docContent) {
+  constructor(docContent, options = {}) {
     this.docContent = docContent;
     this.diffUpdates = [];
     this.readCalls = 0;
+    this.readCallDetails = [];
+    this.verbose = options.verbose === true;
   }
 
   async sessionUpdate({ sessionId, update }) {
+    if (this.verbose && update.sessionUpdate === "tool_call_update") {
+      const contentCount = Array.isArray(update.content) ? update.content.length : 0;
+      const locationCount = Array.isArray(update.locations) ? update.locations.length : 0;
+      console.error(
+        `[spike-l3][verbose] tool_call_update id=${update.toolCallId} status=${update.status} contentItems=${contentCount} locations=${locationCount}`
+      );
+    }
+
     if (update.sessionUpdate === "tool_call_update" && Array.isArray(update.content)) {
       const diffs = update.content.filter((item) => item.type === "diff");
       if (diffs.length > 0) {
@@ -94,11 +129,27 @@ class SpikeL3Client {
   async readTextFile({ path: filePath, line, limit }) {
     this.readCalls++;
     const content = this.docContent;
-    if (line == null && limit == null) return { content };
+    if (line == null && limit == null) {
+      this.readCallDetails.push({
+        path: filePath,
+        line: null,
+        limit: null,
+        returnedLines: content.split("\n").length,
+      });
+      return { content };
+    }
+
     const lines = content.split("\n");
     const start = Math.max(0, (line ?? 1) - 1);
     const end = limit != null ? start + limit : lines.length;
-    return { content: lines.slice(start, end).join("\n") };
+    const slice = lines.slice(start, end).join("\n");
+    this.readCallDetails.push({
+      path: filePath,
+      line: line ?? null,
+      limit: limit ?? null,
+      returnedLines: slice.length === 0 ? 0 : slice.split("\n").length,
+    });
+    return { content: slice };
   }
 
   async writeTextFile() {
@@ -115,47 +166,100 @@ class SpikeL3Client {
 // ============================================================================
 // Verdict
 // ============================================================================
-function printVerdict(docContent, diffUpdates) {
+function printVerdict(docContent, diffUpdates, readCallDetails) {
   console.error("\n=== L3 Verdict ===");
+  const expectedRange = findThirdParagraphLineRange(docContent);
+  console.error(`expectedThirdParagraphLines: ${rangeToString(expectedRange)}`);
+  console.error(`readTextFile calls: ${readCallDetails.length}`);
+  for (let i = 0; i < readCallDetails.length; i++) {
+    const call = readCallDetails[i];
+    console.error(
+      `[read ${i + 1}] path=${call.path} line=${call.line ?? "none"} limit=${call.limit ?? "none"} returnedLines=${call.returnedLines}`
+    );
+  }
 
   if (diffUpdates.length === 0) {
     console.error("diffCount: 0");
     console.error("ERROR: No diff updates captured. Cannot evaluate anchoring.");
-    console.error("Tip: try running with VERBOSE=1 to see all sessionUpdate events.");
+    console.error("Tip: try running with VERBOSE=1 for more event visibility.");
     return;
   }
 
-  const diff = diffUpdates[0];
-  const item = diff.content[0];
-  const { oldText, newText } = item;
-  const location = diff.locations[0];
-
-  const occurrences = countOccurrences(docContent, oldText);
-  const oldTextUnique = occurrences === 1;
-
-  // Verify the diff targets paragraph 3, not 1/2/4
-  const targetedThird = (oldText + newText).includes("third");
-  const avoidedOthers =
-    !oldText.includes("**first**") &&
-    !oldText.includes("**second**") &&
-    !oldText.includes("**fourth**");
+  let diffItemCount = 0;
+  let oldTextUniqueCount = 0;
+  let targetedThirdCount = 0;
+  let ambiguousCount = 0;
+  let contentOnlyCount = 0;
+  let contentPlusLineCount = 0;
+  let locationCheckedCount = 0;
+  let locationInRangeCount = 0;
 
   console.error(`diffCount: ${diffUpdates.length}`);
-  console.error(`oldTextOccurrences: ${occurrences} (in full document)`);
-  console.error(`oldTextUnique: ${oldTextUnique ? "yes" : "no"}`);
-  console.error(`locationLine: ${location?.line ?? "none"}`);
-  console.error(`targetedThird: ${targetedThird ? "yes" : "no"}`);
-  console.error(`avoidedOthers: ${avoidedOthers ? "yes" : "no"}`);
+  for (let updateIndex = 0; updateIndex < diffUpdates.length; updateIndex++) {
+    const update = diffUpdates[updateIndex];
+    console.error(
+      `[diff-update ${updateIndex + 1}] toolCallId=${update.toolCallId} status=${update.status} diffItems=${update.content.length} locations=${update.locations.length}`
+    );
 
-  if (oldTextUnique && targetedThird) {
-    console.error("anchoringStrategy: content-only (oldText alone disambiguates)");
-  } else if (location?.line != null && targetedThird && avoidedOthers) {
-    console.error("anchoringStrategy: content+line (line number needed to disambiguate)");
-  } else {
-    console.error("anchoringStrategy: ambiguous (unreliable anchoring observed)");
+    for (let itemIndex = 0; itemIndex < update.content.length; itemIndex++) {
+      diffItemCount++;
+      const item = update.content[itemIndex];
+      const oldText = item.oldText ?? "";
+      const newText = item.newText ?? "";
+      const location = update.locations[itemIndex] ?? update.locations[0] ?? null;
+      const locationLine = location?.line ?? null;
+      const locationInRange = isLineInRange(locationLine, expectedRange);
+      const occurrences = countOccurrences(docContent, oldText);
+      const oldTextUnique = occurrences === 1;
+      const targetedThird = (oldText + newText).includes("third");
+      const avoidedOthers =
+        !oldText.includes("**first**") &&
+        !oldText.includes("**second**") &&
+        !oldText.includes("**fourth**");
+
+      if (oldTextUnique) oldTextUniqueCount++;
+      if (targetedThird) targetedThirdCount++;
+      if (locationLine != null && expectedRange != null) {
+        locationCheckedCount++;
+        if (locationInRange) locationInRangeCount++;
+      }
+
+      let strategy;
+      if (oldTextUnique && targetedThird) {
+        strategy = "content-only";
+        contentOnlyCount++;
+      } else if (locationLine != null && locationInRange && targetedThird && avoidedOthers) {
+        strategy = "content+line";
+        contentPlusLineCount++;
+      } else {
+        strategy = "ambiguous";
+        ambiguousCount++;
+      }
+
+      console.error(
+        `[diff-item ${updateIndex + 1}.${itemIndex + 1}] path=${item.path ?? "unknown"} oldTextOccurrences=${occurrences} oldTextUnique=${oldTextUnique ? "yes" : "no"} locationLine=${locationLine ?? "none"} locationInExpectedRange=${locationInRange ? "yes" : "no"} targetedThird=${targetedThird ? "yes" : "no"} avoidedOthers=${avoidedOthers ? "yes" : "no"} anchoringStrategy=${strategy}`
+      );
+      console.error(
+        `oldText (first 150 chars): ${JSON.stringify(oldText.slice(0, 150))}`
+      );
+    }
   }
 
-  console.error("\noldText (first 150 chars):", JSON.stringify(oldText?.slice(0, 150)));
+  const finalStrategy =
+    ambiguousCount > 0
+      ? "ambiguous (at least one diff item unreliable)"
+      : contentPlusLineCount > 0
+        ? "content+line (line verification required in at least one diff item)"
+        : "content-only (oldText disambiguates all diff items)";
+
+  console.error(`\ndiffItemCount: ${diffItemCount}`);
+  console.error(`oldTextUniqueCount: ${oldTextUniqueCount}/${diffItemCount}`);
+  console.error(`targetedThirdCount: ${targetedThirdCount}/${diffItemCount}`);
+  console.error(`locationChecksInRange: ${locationInRangeCount}/${locationCheckedCount}`);
+  console.error(`contentOnlyItems: ${contentOnlyCount}`);
+  console.error(`contentPlusLineItems: ${contentPlusLineCount}`);
+  console.error(`ambiguousItems: ${ambiguousCount}`);
+  console.error(`anchoringStrategy: ${finalStrategy}`);
 }
 
 // ============================================================================
@@ -171,7 +275,7 @@ async function main() {
   console.error(`[spike-l3] Temp doc: ${tempDocPath}`);
 
   const agentProcess = spawn("npx", ["@zed-industries/claude-code-acp"], {
-    stdio: ["pipe", "pipe", "ignore"],
+    stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env },
   });
 
@@ -179,8 +283,21 @@ async function main() {
     console.error("Failed to spawn agent:", err);
     process.exit(1);
   });
+  agentProcess.on("exit", (code, signal) => {
+    if (VERBOSE || code !== 0) {
+      console.error(`[spike-l3] agent exit code=${code ?? "none"} signal=${signal ?? "none"}`);
+    }
+  });
+  if (VERBOSE && agentProcess.stderr) {
+    agentProcess.stderr.on("data", (chunk) => {
+      const text = chunk.toString().trimEnd();
+      if (text.length > 0) {
+        console.error(`[spike-l3][agent-stderr] ${text}`);
+      }
+    });
+  }
 
-  const client = new SpikeL3Client(docContent);
+  const client = new SpikeL3Client(docContent, { verbose: VERBOSE });
   const stream = acp.ndJsonStream(
     Writable.toWeb(agentProcess.stdin),
     Readable.toWeb(agentProcess.stdout)
@@ -216,7 +333,7 @@ async function main() {
 
   console.error(`\n[spike-l3] readTextFile calls: ${client.readCalls}`);
 
-  printVerdict(docContent, client.diffUpdates);
+  printVerdict(docContent, client.diffUpdates, client.readCallDetails);
 
   agentProcess.kill();
   await fs.rm(tempDir, { recursive: true, force: true });
@@ -226,4 +343,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
