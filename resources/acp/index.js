@@ -18,6 +18,10 @@ function createConnection(callbacks) {
     },
     async requestPermission(params) {
       return resolvePermissionOutcome(params);
+    },
+    // Hardcoded dry-run: acknowledge write requests without mutating disk.
+    async writeTextFile(_params) {
+      return {};
     }
   };
 
