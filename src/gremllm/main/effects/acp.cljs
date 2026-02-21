@@ -31,7 +31,9 @@
           init-promise
           (-> (.initialize conn
                 #js {:protocolVersion    (.-protocolVersion result)
-                     :clientCapabilities #js {:fs #js {:writeTextFile true} :terminal false}
+                     :clientCapabilities #js {:fs #js {:readTextFile true,
+                                                       :writeTextFile true}
+                                              :terminal false}
                      :clientInfo         #js {:name "gremllm"
                                               :title "Gremllm"
                                               :version "0.1.0"}})
