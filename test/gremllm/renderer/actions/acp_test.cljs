@@ -44,7 +44,21 @@
       (is (= "Read File — src/gremllm/schema.cljs" (:text message)))
       (is (= 789 (:id message)))))
 
-  (testing "logs tool-call-update without chat effects"
+  (testing "dispatches pending diffs from tool-call-update with diff content"
+    (let [effects (acp/handle-tool-event
+                    {}
+                    {:session-update :tool-call-update
+                     :tool-call-id "toolu_1"
+                     :status "completed"
+                     :content [{:type "diff" :path "/tmp/test.md"
+                                :old-text "old" :new-text "new"}]}
+                    123)]
+      (is (= [[:document.actions/append-pending-diffs
+               [{:type "diff" :path "/tmp/test.md"
+                 :old-text "old" :new-text "new"}]]]
+             effects))))
+
+  (testing "returns nil for tool-call-update without diffs"
     (let [effects (acp/handle-tool-event
                     {}
                     {:session-update :tool-call-update
@@ -84,10 +98,15 @@
       (is (= "Read File — src/gremllm/schema.cljs" (:text message)))
       (is (number? (:id message)))))
 
-  (testing "logs tool-call-update without chat effects"
+  (testing "dispatches pending diffs for tool-call-update with diff content"
     (let [state {:topics {"t1" {:messages []}}
                  :active-topic-id "t1"}
           effects (acp/session-update state {:update {:session-update :tool-call-update
                                                       :tool-call-id "toolu_1"
-                                                      :status "completed"}})]
-      (is (nil? effects)))))
+                                                      :status "completed"
+                                                      :content [{:type "diff" :path "/tmp/test.md"
+                                                                 :old-text "old" :new-text "new"}]}})]
+      (is (= [[:document.actions/append-pending-diffs
+               [{:type "diff" :path "/tmp/test.md"
+                 :old-text "old" :new-text "new"}]]]
+             effects)))))

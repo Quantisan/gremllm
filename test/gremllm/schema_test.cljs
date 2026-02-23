@@ -101,6 +101,160 @@
             false
             (catch :default _ true))))))
 
+(deftest test-acp-session-update-tool-call-update-with-diffs
+  (testing "coerces tool_call_update with diff content, locations, and raw output"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_01Lcc"
+                                    :status "completed"
+                                    :_meta #js {:claudeCode #js {:toolName "mcp__acp__Edit"}}
+                                    :content #js [#js {:type "diff"
+                                                       :path "/tmp/test.md"
+                                                       :oldText "old content"
+                                                       :newText "new content"}]
+                                    :locations #js [#js {:path "/tmp/test.md" :line 1}]
+                                    :rawOutput #js [#js {:type "text"
+                                                         :text "--- a\n+++ b\n"}]}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= "toolu_01Lcc" (:tool-call-id update)))
+      (is (= "completed" (:status update)))
+      (is (= [{:type "diff" :path "/tmp/test.md"
+               :old-text "old content" :new-text "new content"}]
+             (:content update)))
+      (is (= [{:path "/tmp/test.md" :line 1}] (:locations update)))
+      (is (= [{:type "text" :text "--- a\n+++ b\n"}] (:raw-output update)))
+      (is (= "mcp__acp__Edit" (get-in update [:meta :claude-code :tool-name])))))
+
+  (testing "coerces tool_call_update without diffs (status-only)"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_02"
+                                    :status "completed"}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= "completed" (:status update)))
+      (is (nil? (:content update)))
+      (is (nil? (:locations update))))))
+
+(deftest test-acp-session-update-tool-call-edit-kind
+  (testing "coerces tool_call with kind 'edit' and locations"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_03"
+                                    :title "Edit File"
+                                    :kind "edit"
+                                    :status "pending"
+                                    :rawInput #js {:filePath "/tmp/test.md"}
+                                    :content #js []
+                                    :locations #js [#js {:path "/tmp/test.md" :line 5}]}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= "edit" (get-in result [:update :kind])))))
+
+  (testing "coerces pending tool_call without locations"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_04"
+                                    :title "Edit File"
+                                    :kind "edit"
+                                    :status "pending"
+                                    :rawInput #js {:filePath "/tmp/test.md"
+                                                   :oldString "foo"
+                                                   :newString "bar"}
+                                    :content #js []}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call (:session-update update)))
+      (is (= "edit" (:kind update)))
+      (is (nil? (:locations update)))
+      (is (= "foo" (get-in update [:raw-input :old-string])))
+      (is (= "bar" (get-in update [:raw-input :new-string])))))
+
+  (testing "coerces tool_call_update with string rawOutput"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_05"
+                                    :status "failed"
+                                    :rawOutput "Error: file not found"}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= "failed" (:status update)))
+      (is (= "Error: file not found" (:raw-output update))))))
+
+(deftest test-acp-session-update-tool-call-wrapped-content
+  (testing "coerces tool_call with wrapped text content item"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_06"
+                                    :title "Read File"
+                                    :kind "read"
+                                    :status "completed"
+                                    :rawInput #js {:filePath "src/foo.cljs"}
+                                    :content #js [#js {:type "content"
+                                                       :content #js {:type "text"
+                                                                     :text "file contents"}}]}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call (:session-update update)))
+      (is (= [{:type "content" :content {:type "text" :text "file contents"}}]
+             (:content update)))))
+
+  (testing "coerces tool_call_update with mixed wrapped and diff content items"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_07"
+                                    :status "completed"
+                                    :content #js [#js {:type "content"
+                                                       :content #js {:type "text"
+                                                                     :text "result text"}}
+                                                  #js {:type "diff"
+                                                       :path "/tmp/foo.md"
+                                                       :oldText "old"
+                                                       :newText "new"}]}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= [{:type "content" :content {:type "text" :text "result text"}}
+              {:type "diff" :path "/tmp/foo.md" :old-text "old" :new-text "new"}]
+             (:content update)))))
+
+  (testing "coerces diff item without oldText (new file creation)"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_08"
+                                    :status "completed"
+                                    :content #js [#js {:type "diff"
+                                                       :path "/tmp/new-file.md"
+                                                       :newText "brand new content"}]}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= [{:type "diff" :path "/tmp/new-file.md" :new-text "brand new content"}]
+             (:content update))))))
+
+(deftest test-acp-tool-call-update-diffs
+  (testing "extracts diff items from content"
+    (let [update {:content [{:type "diff" :path "/a.md"
+                             :old-text "old" :new-text "new"}
+                            {:type "text" :text "some output"}
+                            {:type "diff" :path "/b.md"
+                             :old-text "before" :new-text "after"}]}]
+      (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
+              {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
+             (codec/acp-tool-call-update-diffs update)))))
+
+  (testing "returns nil when no diff items"
+    (is (nil? (codec/acp-tool-call-update-diffs {:content [{:type "text" :text "hi"}]}))))
+
+  (testing "returns nil when content is nil"
+    (is (nil? (codec/acp-tool-call-update-diffs {:content nil}))))
+
+  (testing "returns nil when content is empty"
+    (is (nil? (codec/acp-tool-call-update-diffs {:content []})))))
+
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
   (doseq [chunk-type (keys test-content-chunks)]

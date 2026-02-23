@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-11
 **Supersedes:** `2026-02-09-document-first-pivot.md`
-**References:** `test/acp-native-tools-spike.mjs` (read behavior), `test/acp-agent-document-interaction.mjs` (write/diff behavior)
+**References:** `test/acp-native-tools-spike.mjs` (read behavior), `test/acp-agent-document-interaction.mjs` (write/diff behavior — primary evidence for S4b schema gaps)
 
 ## Vision
 
@@ -118,16 +118,28 @@ Research that the old plan handled via standalone spikes is folded into the slic
 
 ### S4b: Production wiring
 
-**Capability:** AI proposes document edits via ACP. Edits are captured as structured diff data without touching disk. Diffs are visible in renderer state via Dataspex.
+**Goal: Wire the dry-run diff pipeline through the real app.** The spike proved the mechanism works in isolation. S4b runs the same interaction through real JS adapter, real IPC, and real Nexus state. The interception is expected to work; the work is closing the gap between the spike harness and production plumbing.
 
-| Layer | Work |
-|-------|------|
-| ACP | Implement `writeTextFile` callback in JS adapter (no ACP `readTextFile` callback) |
-| ACP | Block `writeTextFile` (dry-run mode) to prevent disk mutation |
-| ACP | Set `clientCapabilities.fs` to write-only (`{ writeTextFile: true }`) for dry-run interception |
-| Schema | Expand `AcpUpdate` codec to model diff content items (`{type, path, oldText, newText}`) and edit tool kinds |
-| State | Route `tool-call-update` diff events into renderer state (currently just `console.log`) |
-| State | Store captured diffs as pending proposals at `[:document :pending-diffs]` |
+**Known schema gaps (visible in existing spike output, need resolution before wiring):**
+
+| Gap | Observed shape | Current schema |
+|-----|----------------|----------------|
+| `tool-call-update` `:raw-output` | Array `[{type:"text", text:"...unified diff..."}]` | `:string` — wrong |
+| `tool-call-update` `:content` items | `{type:"diff", path, oldText, newText}` | `[:vector :any]` — underspecified |
+| `tool-call-update` `:locations` | `[{path, line}]` — present in spike output, advisory per L3 | Not in schema |
+| `tool-call` `:kind` for write operations | Unknown — spike only exercised reads | `[:enum "read"]` only |
+
+**Representation decisions to make during wiring (not before):**
+- Does the internal pending-diff record carry `rawOutput` (the unified diff text), the structured `{oldText, newText, path}`, or both? The right answer may only be clear once S5 needs to consume it.
+- Does `locations[].line` belong in the stored diff record, or is it advisory metadata that gets logged and discarded? (L3 said treat it as advisory — verify that holds end-to-end.)
+- What `kind` values does a write-path `tool-call` emit? Discovered during wiring, handled then.
+
+**Wiring work:**
+- Implement `writeTextFile` callback in JS adapter; dry-run returns `{}` to block disk mutation
+- Set `clientCapabilities.fs` to `{writeTextFile: true}` for dry-run interception
+- Fix `AcpUpdate` codec to match observed shapes; leave representation decisions as close to the wire as possible until S5 shows what it needs
+- Route `tool-call-update` diff events into renderer state (currently `console.log` only)
+- Store captured diffs at `[:document :pending-diffs]`; shape TBD, informed by what Dataspex reveals during wiring
 
 **Testable result:** Ask AI to edit a document. Diff data appears in Dataspex at `[:document :pending-diffs]`. No file written to disk. (Verifies L1: end-to-end reliability through real app plumbing.)
 

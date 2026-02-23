@@ -138,8 +138,11 @@
     ;; from runtime capabilities - other ACP effects handle user operations.
     (acp-effects/initialize
       (fn [params]
-        (let [coerced (codec/acp-session-update-from-js params)]
-          (nxr/dispatch store {} [[:acp.events/session-update coerced]]))))))
+        (try
+          (let [coerced (codec/acp-session-update-from-js params)]
+            (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
+          (catch :default e
+            (js/console.error "ACP session update coercion failed" e params)))))))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

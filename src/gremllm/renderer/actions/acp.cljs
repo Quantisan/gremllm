@@ -38,15 +38,16 @@
 
 (defn handle-tool-event
   "Handles ACP tool-related session updates.
-   Returns chat effects for :tool-call and logs :tool-call-update."
-  [_state {:keys [session-update tool-call-id status] :as update} message-id]
+   Returns chat effects for :tool-call and diff routing effects for :tool-call-update."
+  [_state {:keys [session-update] :as update} message-id]
   (cond
     (= :tool-call session-update)
     ;; TODO: `:tool-use` should come from schema instead of hardcoded deeply here
     (start-response :tool-use (codec/acp-tool-call-text update) message-id)
 
     (= :tool-call-update session-update)
-    (js/console.log "[ACP] tool-call-update:" tool-call-id status)))
+    (when-let [diffs (codec/acp-tool-call-update-diffs update)]
+      [[:document.actions/append-pending-diffs diffs]])))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).

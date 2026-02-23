@@ -15,3 +15,7 @@
 
 (defn set-content [_state content]
   [[:effects/save document-state/content-path content]])
+
+(defn append-pending-diffs [state diffs]
+  (let [existing (get-in state document-state/pending-diffs-path [])]
+    [[:effects/save document-state/pending-diffs-path (into existing diffs)]]))

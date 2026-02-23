@@ -124,6 +124,14 @@
     (str title " — " location)
     title))
 
+(defn acp-tool-call-update-diffs
+  "Extracts diff items from a tool-call-update's content.
+   Returns a vector of diff maps or nil if none present."
+  [{:keys [content]}]
+  (when (seq content)
+    (let [diffs (filterv #(= "diff" (:type %)) content)]
+      (when (seq diffs) diffs))))
+
 ;; ACP Update sub-schemas
 (def AcpCommandInput
   "Optional input schema for ACP commands."
@@ -162,12 +170,47 @@
    [:claude-code {:optional true} AcpToolMetaClaudeCode]])
 
 (def AcpToolRawInput
-  "Schema for read-focused ACP tool call raw input."
+  "Schema for ACP tool call raw input. Open map — different tools send different
+   keys (e.g. read sends file-path; edit sends old-string, new-string, file-path)."
+  [:map])
+
+(def AcpWrappedContent
+  "Wrapped text content block as sent by ACP in tool call content arrays."
   [:map
-   [:file-path {:optional true} :string]])
+   [:type [:= "content"]]
+   [:content AcpTextContent]])
+
+(def AcpTerminalContent
+  "Terminal output content in ACP tool call content arrays."
+  [:map
+   [:type [:= "terminal"]]
+   [:terminal-id :string]])
+
+(def AcpDiffItem
+  "Structured diff content from a tool-call-update write operation.
+   old-text is optional — absent when ACP creates a new file."
+  [:map
+   [:type [:= "diff"]]
+   [:path :string]
+   [:old-text {:optional true} :string]
+   [:new-text :string]])
 
 (def AcpToolCallContentItem
-  "Schema for ACP tool call content blocks."
+  "Discriminated union of ACP tool call content blocks.
+   Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
+   Both tool-call and tool-call-update share this content type."
+   ;; TODO: can we lock down to either string or keyword?
+  [:multi {:dispatch (fn [m]
+                       (let [item-type (or (:type m) (get m "type"))]
+                         (if (keyword? item-type)
+                           (name item-type)
+                           item-type)))}
+   ["content"  AcpWrappedContent]
+   ["diff"     AcpDiffItem]
+   ["terminal" AcpTerminalContent]])
+
+(def AcpRawOutputItem
+  "Raw output items in tool-call-update (unified diff text blocks)."
   AcpTextContent)
 
 (def AcpToolCallContent
@@ -203,23 +246,25 @@
 
    [:tool-call
     [:map
-     [:session-update        [:= :tool-call]]
-     [:tool-call-id          :string]
-     [:title                 :string]
-     [:kind                  [:enum "read"]]  ;; TODO: should be keywords
-     [:status                :string]
-     [:raw-input             AcpToolRawInput]
-     [:meta {:optional true} AcpToolMeta]
-     [:content               AcpToolCallContent]
-     [:locations             [:vector AcpToolLocation]]]]
+     [:session-update                    [:= :tool-call]]
+     [:tool-call-id                      :string]
+     [:title                             :string]
+     [:kind                              [:enum "read" "edit"]]
+     [:status                            :string]
+     [:raw-input                         AcpToolRawInput]
+     [:meta {:optional true}             AcpToolMeta]
+     [:content                           AcpToolCallContent]
+     [:locations {:optional true}        [:vector AcpToolLocation]]]]
 
    [:tool-call-update
     [:map
      [:session-update              [:= :tool-call-update]]
      [:tool-call-id                :string]
      [:status {:optional true}     :string]
-     [:raw-output {:optional true} :string]
-     [:content {:optional true}    [:vector :any]]]]])
+     [:raw-output {:optional true} [:or :string [:vector AcpRawOutputItem]]]
+     [:content {:optional true}    [:vector AcpToolCallContentItem]]
+     [:locations {:optional true}  [:vector AcpToolLocation]]
+     [:meta {:optional true}       AcpToolMeta]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
