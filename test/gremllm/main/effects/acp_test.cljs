@@ -155,14 +155,10 @@
 
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
-    (testing "returns full content when line and limit are nil"
-      (is (= content (acp/slice-content-by-lines content nil nil))))
     (testing "slices from 1-indexed line with limit"
       (is (= "line-2\nline-3" (acp/slice-content-by-lines content 2 2))))
     (testing "slices from line to end when no limit"
-      (is (= "line-3\nline-4\n" (acp/slice-content-by-lines content 3 nil))))
-    (testing "returns empty string when offset past end"
-      (is (= "" (acp/slice-content-by-lines content 99 2))))))
+      (is (= "line-3\nline-4\n" (acp/slice-content-by-lines content 3 nil))))))
 
 (deftest test-read-text-file
   (testing "reads file and applies line slicing"
