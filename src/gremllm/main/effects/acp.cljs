@@ -1,11 +1,28 @@
 (ns gremllm.main.effects.acp
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
-  (:require ["acp" :as acp-factory]))
+  (:require [clojure.string :as str]
+            ["acp" :as acp-factory]))
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 (defonce ^:private initialize-in-flight (atom nil))
+
+(defn slice-content-by-lines
+  "Slice string content by 1-indexed line offset and limit.
+   Returns full content when both line and limit are nil."
+  [content line limit]
+  (if (and (nil? line) (nil? limit))
+    content
+    (let [line-vec   (vec (str/split content #"\n" -1))
+          line-count (count line-vec)
+          start      (max 0 (dec (or line 1)))
+          end        (if (some? limit)
+                       (max start (+ start limit))
+                       line-count)]
+      (if (>= start line-count)
+        ""
+        (str/join "\n" (subvec line-vec start (min end line-count)))))))
 
 (defn- create-connection
   "Thin wrapper for testability via with-redefs."
