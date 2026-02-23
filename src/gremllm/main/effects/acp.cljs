@@ -2,7 +2,8 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
-            ["acp" :as acp-factory]))
+            ["acp" :as acp-factory]
+            ["fs/promises" :as fsp]))
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
@@ -23,6 +24,23 @@
       (if (>= start line-count)
         ""
         (str/join "\n" (subvec line-vec start (min end line-count)))))))
+
+(defn read-text-file
+  "Read file from disk with optional line/limit slicing.
+   Returns JS promise resolving to #js {:content \"...\"}
+   matching ACP SDK's expected readTextFile return shape.
+
+   Reference:
+   https://agentclientprotocol.github.io/typescript-sdk/types/ReadTextFileRequest.html"
+  [^js params]
+  (let [file-path (.-path params)]
+    (when-not (and (string? file-path) (pos? (count file-path)))
+      (throw (js/Error. "readTextFile requires a non-empty path")))
+    (-> (.readFile fsp file-path "utf8")
+        (.then (fn [content]
+                 #js {:content (slice-content-by-lines content
+                                                       (.-line params)
+                                                       (.-limit params))})))))
 
 (defn- create-connection
   "Thin wrapper for testability via with-redefs."
