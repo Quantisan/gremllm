@@ -60,7 +60,8 @@
 
     :else
     (let [^js result (create-connection
-                       #js {:onSessionUpdate on-session-update})
+                       #js {:onSessionUpdate on-session-update
+                            :onReadTextFile  read-text-file})
           conn       (.-connection result)
           subprocess (.-subprocess result)
           init-promise

@@ -1,33 +1,8 @@
 // resources/acp/index.js
 const { spawn } = require("node:child_process");
-const fs = require("node:fs/promises");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { resolvePermissionOutcome } = require("./permission");
-
-// TODO: refactor or test this fn?
-function sliceContentByLines(content, line, limit) {
-  if (line == null && limit == null) {
-    return content;
-  }
-
-  const lines = content.split("\n");
-  const start = Math.max(0, (line ?? 1) - 1);
-  const end = limit != null ? Math.max(start, start + limit) : lines.length;
-  return lines.slice(start, end).join("\n");
-}
-
-async function readTextFileFromDisk(params) {
-  const filePath = params?.path;
-  if (typeof filePath !== "string" || filePath.length === 0) {
-    throw new Error("readTextFile requires a non-empty path");
-  }
-
-  const content = await fs.readFile(filePath, "utf8");
-  return {
-    content: sliceContentByLines(content, params?.line, params?.limit)
-  };
-}
 
 function createConnection(callbacks) {
   const subprocess = spawn("npx", ["@zed-industries/claude-code-acp"], {
@@ -44,9 +19,8 @@ function createConnection(callbacks) {
     async requestPermission(params) {
       return resolvePermissionOutcome(params);
     },
-    // Internal read bridge for ACP edit/write tool flows.
     async readTextFile(params) {
-      return readTextFileFromDisk(params);
+      return callbacks.onReadTextFile(params);
     },
     // Hardcoded dry-run: acknowledge write requests without mutating disk.
     async writeTextFile(_params) {
@@ -66,11 +40,4 @@ function createConnection(callbacks) {
   };
 }
 
-module.exports = {
-  createConnection,
-  // TODO: why are we exporting these in _test_?
-  __test__: {
-    sliceContentByLines,
-    readTextFileFromDisk
-  }
-};
+module.exports = { createConnection };
