@@ -199,6 +199,7 @@
   "Discriminated union of ACP tool call content blocks.
    Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
    Both tool-call and tool-call-update share this content type."
+   ;; TODO: can we lock down to either string or keyword?
   [:multi {:dispatch (fn [m]
                        (let [item-type (or (:type m) (get m "type"))]
                          (if (keyword? item-type)

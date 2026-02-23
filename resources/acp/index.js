@@ -5,6 +5,7 @@ const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { resolvePermissionOutcome } = require("./permission");
 
+// TODO: refactor or test this fn?
 function sliceContentByLines(content, line, limit) {
   if (line == null && limit == null) {
     return content;
@@ -67,6 +68,7 @@ function createConnection(callbacks) {
 
 module.exports = {
   createConnection,
+  // TODO: why are we exporting these in _test_?
   __test__: {
     sliceContentByLines,
     readTextFileFromDisk
