@@ -15,15 +15,10 @@
   [content line limit]
   (if (and (nil? line) (nil? limit))
     content
-    (let [line-vec   (vec (str/split content #"\n" -1))
-          line-count (count line-vec)
-          start      (max 0 (dec (or line 1)))
-          end        (if (some? limit)
-                       (max start (+ start limit))
-                       line-count)]
-      (if (>= start line-count)
-        ""
-        (str/join "\n" (subvec line-vec start (min end line-count)))))))
+    (str/join "\n"
+      (cond->> (drop (max 0 (dec (or line 1)))
+                     (str/split content #"\n" -1))
+        limit (take limit)))))
 
 (defn read-text-file
   "Read file from disk with optional line/limit slicing.
