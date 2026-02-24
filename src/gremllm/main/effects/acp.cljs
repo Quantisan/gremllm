@@ -1,11 +1,51 @@
 (ns gremllm.main.effects.acp
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
-  (:require ["acp" :as acp-factory]))
+  (:require [clojure.string :as str]
+            ["acp" :as acp-factory]
+            ["fs/promises" :as fsp]))
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 (defonce ^:private initialize-in-flight (atom nil))
+
+(defn slice-content-by-lines
+  "Slice string content by 1-indexed line offset and limit.
+   Returns full content when both line and limit are nil."
+  [content line limit]
+  (if (and (nil? line) (nil? limit))
+    content
+    (str/join "\n"
+      (cond->> (drop (max 0 (dec (or line 1)))
+                     (str/split content #"\n" -1))
+        limit (take limit)))))
+
+(defn read-text-file
+  "Read file from disk with optional line/limit slicing.
+   Returns JS promise resolving to #js {:content \"...\"}
+   matching ACP SDK's expected readTextFile return shape.
+
+   Request params shape:
+   type ReadTextFileRequest = {
+     _meta?: { [key: string]: unknown } | null;
+     limit?: number | null;
+     line?: number | null;
+     path: string;
+     sessionId: string;
+   }
+   Note: ACP provides sessionId in params; it is intentionally unused here.
+
+   Reference:
+   https://agentclientprotocol.github.io/typescript-sdk/types/ReadTextFileRequest.html"
+  [^js params]
+  (let [file-path (.-path params)
+        line      (.-line params)
+        limit     (.-limit params)]
+    (when-not (and (string? file-path) (seq file-path))
+      (throw (js/Error. "readTextFile requires a non-empty path")))
+    (-> (.readFile fsp file-path "utf8")
+        (.then (fn [content]
+                 #js {:content (slice-content-by-lines content line limit)})))))
 
 (defn- create-connection
   "Thin wrapper for testability via with-redefs."
@@ -25,7 +65,8 @@
 
     :else
     (let [^js result (create-connection
-                       #js {:onSessionUpdate on-session-update})
+                       #js {:onSessionUpdate on-session-update
+                            :onReadTextFile  read-text-file})
           conn       (.-connection result)
           subprocess (.-subprocess result)
           init-promise

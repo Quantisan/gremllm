@@ -152,3 +152,29 @@
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))
+
+(deftest test-slice-content-by-lines
+  (let [content "line-1\nline-2\nline-3\nline-4\n"]
+    (testing "slices from 1-indexed line with limit"
+      (is (= "line-2\nline-3" (acp/slice-content-by-lines content 2 2))))
+    (testing "slices from line to end when no limit"
+      (is (= "line-3\nline-4\n" (acp/slice-content-by-lines content 3 nil))))))
+
+(deftest test-read-text-file
+  (testing "reads file and returns content in expected shape"
+    (async done
+      (let [os   (js/require "os")
+            fs   (js/require "fs/promises")
+            path (js/require "path")]
+        (-> (.mkdtemp fs (.join path (.tmpdir os) "acp-read-test-"))
+            (.then (fn [dir]
+                     (let [file-path (.join path dir "test.md")
+                           content   "line-1\nline-2\nline-3\n"]
+                       (-> (.writeFile fs file-path content "utf8")
+                           (.then (fn [_] (acp/read-text-file #js {:path file-path})))
+                           (.then (fn [^js result]
+                                    (is (= content (.-content result)))))
+                           (.finally (fn []
+                                       (.rm fs dir #js {:recursive true
+                                                        :force true})))))))
+            (.finally (fn [] (done))))))))
