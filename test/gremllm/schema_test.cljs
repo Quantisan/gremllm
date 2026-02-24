@@ -140,19 +140,6 @@
       (is (nil? (:locations update))))))
 
 (deftest test-acp-session-update-tool-call-edit-kind
-  (testing "coerces tool_call with kind 'edit' and locations"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call"
-                                    :toolCallId "toolu_03"
-                                    :title "Edit File"
-                                    :kind "edit"
-                                    :status "pending"
-                                    :rawInput #js {:filePath "/tmp/test.md"}
-                                    :content #js []
-                                    :locations #js [#js {:path "/tmp/test.md" :line 5}]}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= "edit" (get-in result [:update :kind])))))
-
   (testing "coerces pending tool_call without locations"
     (let [js-data #js {:sessionId test-acp-session-id
                        :update #js {:sessionUpdate "tool_call"

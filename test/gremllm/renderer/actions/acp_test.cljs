@@ -1,5 +1,7 @@
 (ns gremllm.renderer.actions.acp-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [are deftest is testing]]
+            [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [gremllm.renderer.actions.acp :as acp]))
 
 (deftest test-append-to-response
@@ -75,38 +77,22 @@
                     123)]
       (is (nil? effects)))))
 
-;; TODO: is this needed? even if yes, tighten scope
-(deftest test-session-update
-  (testing "continues assistant streaming chunk"
-    (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}
-                 :active-topic-id "t1"}
-          effects (acp/session-update state {:update {:session-update :agent-message-chunk
-                                                      :content {:type "text" :text "there"}}})]
-      (is (= [[:effects/save [:topics "t1" :messages 0 :text] "Hi there"]]
-             effects))))
+(deftest test-session-update-routing
+  (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}
+               :active-topic-id "t1"}]
+    (with-redefs [schema/generate-message-id (constantly 1)
+                  codec/acp-update-text      (constantly "text")
+                  acp/streaming-chunk-effects (fn [_ msg-type _ _] [[:streamed msg-type]])
+                  acp/handle-tool-event       (fn [_ update _]     [[:tooled (:session-update update)]])]
 
-  (testing "creates tool-use message for tool-call update"
-    (let [state {:topics {"t1" {:messages [{:type :assistant :text "Done"}]}}
-                 :active-topic-id "t1"}
-          effects (acp/session-update state {:update {:session-update :tool-call
-                                                      :title "Read File"
-                                                      :locations [{:path "src/gremllm/schema.cljs"}]}})
-          action (first effects)
-          message (nth action 1)]
-      (is (= :messages.actions/add-to-chat-no-save (first action)))
-      (is (= :tool-use (:type message)))
-      (is (= "Read File — src/gremllm/schema.cljs" (:text message)))
-      (is (number? (:id message)))))
+      (testing "routes each update type to the correct handler"
+        (are [update-type expected]
+          (= expected (acp/session-update state {:update {:session-update update-type
+                                                          :content {:type "text" :text "x"}}}))
+          :agent-message-chunk [[:streamed :assistant]]
+          :agent-thought-chunk [[:streamed :reasoning]]
+          :tool-call           [[:tooled :tool-call]]
+          :tool-call-update    [[:tooled :tool-call-update]]))
 
-  (testing "dispatches pending diffs for tool-call-update with diff content"
-    (let [state {:topics {"t1" {:messages []}}
-                 :active-topic-id "t1"}
-          effects (acp/session-update state {:update {:session-update :tool-call-update
-                                                      :tool-call-id "toolu_1"
-                                                      :status "completed"
-                                                      :content [{:type "diff" :path "/tmp/test.md"
-                                                                 :old-text "old" :new-text "new"}]}})]
-      (is (= [[:document.actions/append-pending-diffs
-               [{:type "diff" :path "/tmp/test.md"
-                 :old-text "old" :new-text "new"}]]]
-             effects)))))
+      (testing "ignores unsupported update types"
+        (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))

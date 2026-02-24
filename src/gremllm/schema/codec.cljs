@@ -199,15 +199,10 @@
   "Discriminated union of ACP tool call content blocks.
    Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
    Both tool-call and tool-call-update share this content type."
-   ;; TODO: can we lock down to either string or keyword?
-  [:multi {:dispatch (fn [m]
-                       (let [item-type (or (:type m) (get m "type"))]
-                         (if (keyword? item-type)
-                           (name item-type)
-                           item-type)))}
-   ["content"  AcpWrappedContent]
-   ["diff"     AcpDiffItem]
-   ["terminal" AcpTerminalContent]])
+  [:multi {:dispatch (fn [m] (some-> (:type m) name keyword))}
+   [:content  AcpWrappedContent]
+   [:diff     AcpDiffItem]
+   [:terminal AcpTerminalContent]])
 
 (def AcpRawOutputItem
   "Raw output items in tool-call-update (unified diff text blocks)."
@@ -225,8 +220,7 @@
                        ;; Most paths normalize keys before coercion, but tests and
                        ;; internal callers may pass pre-coerced CLJS maps directly.
                        (some-> (or (:session-update m)
-                                   (get m "sessionUpdate")
-                                   (get m "session-update"))
+                                   (:sessionUpdate m))
                                csk/->kebab-case
                                keyword))}
    [:available-commands-update
@@ -277,7 +271,7 @@
    Specially handles sessionId → :acp-session-id."
   (mt/key-transformer
     {:decode (fn [k]
-               (if (= k "sessionId")
+               (if (= k :sessionId)
                  :acp-session-id
                  (csk/->kebab-case-keyword k)))}))
 
@@ -285,27 +279,18 @@
   "Transforms :session-update values to kebab-case keywords."
   (mt/transformer
     {:name :session-update
-     :decoders {:map (fn [x]
-                       (if (map? x)
-                         (let [session-update (:session-update x)]
-                           ;; TODO: not sure if this branching is needed...
-                           (cond
-                             (string? session-update)
-                             (update x :session-update (comp keyword csk/->kebab-case))
+     :decoders {:map (fn [m]
+                       (cond-> m
+                         (:session-update m)
+                         (update :session-update
+                                 (comp keyword csk/->kebab-case name))))}}))
 
-                             (keyword? session-update)
-                             (assoc x :session-update
-                                    (-> session-update name csk/->kebab-case keyword))
-
-                             :else
-                             x))
-                         x))}}))
 
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
   (m/coerce AcpSessionUpdate
-            (js->clj js-data)
+            (js->clj js-data :keywordize-keys true)
             (mt/transformer
               acp-key-transformer
               session-update-value-transformer
