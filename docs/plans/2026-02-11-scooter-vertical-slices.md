@@ -127,32 +127,43 @@ Research that the old plan handled via standalone spikes is folded into the slic
 | `tool-call-update` `:raw-output` | Array `[{type:"text", text:"...unified diff..."}]` | `:string` — wrong |
 | `tool-call-update` `:content` items | `{type:"diff", path, oldText, newText}` | `[:vector :any]` — underspecified |
 | `tool-call-update` `:locations` | `[{path, line}]` — present in spike output, advisory per L3 | Not in schema |
-| `tool-call` `:kind` for write operations | Unknown — spike only exercised reads | `[:enum "read"]` only |
+| `tool-call` `:kind` for write operations | Observed `"edit"` in write-path events | `[:enum "read" "edit"]` |
 
-**Representation decisions to make during wiring (not before):**
+**Representation decisions deferred to S5:**
 - Does the internal pending-diff record carry `rawOutput` (the unified diff text), the structured `{oldText, newText, path}`, or both? The right answer may only be clear once S5 needs to consume it.
 - Does `locations[].line` belong in the stored diff record, or is it advisory metadata that gets logged and discarded? (L3 said treat it as advisory — verify that holds end-to-end.)
-- What `kind` values does a write-path `tool-call` emit? Discovered during wiring, handled then.
+- Should `tool-call` `:kind` stay strict (`"read"|"edit"`) or widen for forward-compat if ACP emits additional write-path kinds?
 
 **Wiring work:**
 - Implement `writeTextFile` callback in JS adapter; dry-run returns `{}` to block disk mutation
-- Set `clientCapabilities.fs` to `{writeTextFile: true}` for dry-run interception
+- Set `clientCapabilities.fs` to `{readTextFile: true, writeTextFile: true}` for read bridging + dry-run write interception
 - Fix `AcpUpdate` codec to match observed shapes; leave representation decisions as close to the wire as possible until S5 shows what it needs
 - Route `tool-call-update` diff events into renderer state (currently `console.log` only)
 - Store captured diffs at `[:document :pending-diffs]`; shape TBD, informed by what Dataspex reveals during wiring
 
 **Testable result:** Ask AI to edit a document. Diff data appears in Dataspex at `[:document :pending-diffs]`. No file written to disk. (Verifies L1: end-to-end reliability through real app plumbing.)
 
+**S4b outcomes (as of 2026-02-24):**
+
+| Item | Status | Evidence | S5 implication |
+|------|--------|----------|----------------|
+| Dry-run write interception (`writeTextFile` returns `{}`) | Implemented | `resources/acp/index.js` write callback | S5 controls when accepted changes mutate disk |
+| Internal read bridge for edit/write flows | Implemented | `src/gremllm/main/effects/acp.cljs` `read-text-file` + adapter callback wiring | S5 can rely on ACP reading current file state during edit flows |
+| ACP codec updates for diff payloads (`raw-output`, `content`, `locations`, `kind`) | Implemented | `src/gremllm/schema/codec.cljs` + `test/gremllm/schema_test.cljs` | S5 can consume normalized diff payloads without redoing wire-shape coercion |
+| Diff routing to renderer pending state | Implemented | `src/gremllm/renderer/actions/acp.cljs` + `src/gremllm/renderer/actions/document.cljs` | S5 can focus on rendering/interaction over plumbing |
+| Pending-diff identity/dedup policy | Open | Current append-only behavior in `append-pending-diffs` | S5 must define stable change identity + duplicate handling |
+| `tool-call` kind extensibility beyond `"read"|"edit"` | Open risk | Current enum in codec | S5 should decide strictness vs forward-compat behavior |
+
 ---
 
-### Architectural Decisions from S4 (to be filled after spikes)
+### Architectural Decisions from S4 (current status)
 
-Decisions that S4a learning will inform:
+Decisions informed by S4a and carried forward after S4b wiring:
 
-- **Prompt refresh strategy:** Is explicit re-read hinting (with `resource_link`) sufficient for reliable fresh reads on subsequent prompts after disk changes? (L5)
-- **Edit anchoring:** Content-addressed (`oldText`) sufficient, or need `locations[].line` + content verification? (L3)
+- **Prompt refresh strategy (L5):** Provisional. Keep `resource_link` on each prompt; explicit re-read hint remains optional/redundant based on current spike evidence.
+- **Edit anchoring (L3):** Provisional. Treat `oldText` as primary anchor and `locations[].line` as advisory metadata until broader runs confirm reliability.
 
-Decisions deferred to S5 (require a working pipeline to experiment against):
+Decisions deferred to S5 (require the working S4b pipeline to experiment against):
 
 - **Accept/reject granularity:** Per-edit or per-batch (all edits in one response)? (L4)
 - **Edit granularity control:** Prompt-driven, post-processed, or both? (L2)
@@ -163,9 +174,16 @@ Decisions deferred to S5 (require a working pipeline to experiment against):
 
 ### S5: AI proposes tracked changes
 
-**Builds on architectural decisions made in S4. The prompt refresh strategy, accept/reject granularity, and edit anchoring approach are determined by S4 spike findings.**
+**Builds on S4 plumbing outcomes. L3/L5 guidance is still provisional, and accept/reject granularity plus final anchoring/rendering policy are resolved in S5.**
 
 **Capability:** AI suggests edits as inline diffs. User sees deletions/insertions in the document flow and can accept or reject each block.
+
+**S5 entry checklist:**
+- [x] Dry-run diff pipeline is wired end-to-end (ACP -> codec -> renderer state)
+- [x] `tool-call-update` diffs are captured at `[:document :pending-diffs]`
+- [x] ACP fs capabilities include `readTextFile` + dry-run `writeTextFile`
+- [ ] Pending-diff identity/dedup policy is defined
+- [ ] `tool-call` kind extensibility policy is defined (strict vs forward-compatible)
 
 | Layer | Work |
 |-------|------|
