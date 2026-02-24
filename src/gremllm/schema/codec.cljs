@@ -279,13 +279,12 @@
   "Transforms :session-update values to kebab-case keywords."
   (mt/transformer
     {:name :session-update
-     :decoders {:map (fn [x]
-                       (if (map? x)
-                         (if-some [session-update (:session-update x)]
-                           (assoc x :session-update
-                                  (-> session-update name csk/->kebab-case keyword))
-                           x)
-                         x))}}))
+     :decoders {:map (fn [m]
+                       (cond-> m
+                         (:session-update m)
+                         (update :session-update
+                                 (comp keyword csk/->kebab-case name))))}}))
+
 
 (defn acp-session-update-from-js
   "Coerce ACP session update from JS dispatcher bridge."
