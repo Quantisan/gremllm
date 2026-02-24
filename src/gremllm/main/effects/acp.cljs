@@ -30,6 +30,16 @@
    Returns JS promise resolving to #js {:content \"...\"}
    matching ACP SDK's expected readTextFile return shape.
 
+   Request params shape:
+   type ReadTextFileRequest = {
+     _meta?: { [key: string]: unknown } | null;
+     limit?: number | null;
+     line?: number | null;
+     path: string;
+     sessionId: string;
+   }
+   Note: ACP provides sessionId in params; it is intentionally unused here.
+
    Reference:
    https://agentclientprotocol.github.io/typescript-sdk/types/ReadTextFileRequest.html"
   [^js params]
