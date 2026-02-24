@@ -199,9 +199,8 @@
   "Discriminated union of ACP tool call content blocks.
    Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
    Both tool-call and tool-call-update share this content type."
-   ;; TODO: can we lock down to either string or keyword?
   [:multi {:dispatch (fn [m]
-                       (let [item-type (or (:type m) (get m "type"))]
+                       (let [item-type (:type m)]
                          (if (keyword? item-type)
                            item-type
                            (keyword item-type))))}
@@ -225,6 +224,7 @@
                        ;; Most paths normalize keys before coercion, but tests and
                        ;; internal callers may pass pre-coerced CLJS maps directly.
                        (some-> (or (:session-update m)
+                                   (:sessionUpdate m)
                                    (get m "sessionUpdate")
                                    (get m "session-update"))
                                csk/->kebab-case
@@ -277,7 +277,8 @@
    Specially handles sessionId → :acp-session-id."
   (mt/key-transformer
     {:decode (fn [k]
-               (if (= k "sessionId")
+               (if (or (= k "sessionId")
+                       (= k :sessionId))
                  :acp-session-id
                  (csk/->kebab-case-keyword k)))}))
 
@@ -305,7 +306,7 @@
   "Coerce ACP session update from JS dispatcher bridge."
   [js-data]
   (m/coerce AcpSessionUpdate
-            (js->clj js-data)
+            (js->clj js-data :keywordize-keys true)
             (mt/transformer
               acp-key-transformer
               session-update-value-transformer
