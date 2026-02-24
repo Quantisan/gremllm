@@ -203,11 +203,11 @@
   [:multi {:dispatch (fn [m]
                        (let [item-type (or (:type m) (get m "type"))]
                          (if (keyword? item-type)
-                           (name item-type)
-                           item-type)))}
-   ["content"  AcpWrappedContent]
-   ["diff"     AcpDiffItem]
-   ["terminal" AcpTerminalContent]])
+                           item-type
+                           (keyword item-type))))}
+   [:content  AcpWrappedContent]
+   [:diff     AcpDiffItem]
+   [:terminal AcpTerminalContent]])
 
 (def AcpRawOutputItem
   "Raw output items in tool-call-update (unified diff text blocks)."
