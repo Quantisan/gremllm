@@ -167,7 +167,7 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 - **Accept/reject granularity:** Per-edit or per-batch (all edits in one response)? (L4)
 - **Edit granularity control:** Prompt-driven, post-processed, or both? (L2)
-- **Diff rendering strategy:** How to anchor `oldText`/`newText` regions in the rendered document for inline tracked changes? (L6)
+- **Diff anchoring/rendering policy (L6):** Finalize deterministic source-string anchoring for `oldText`/`newText` with explicit statuses (`anchored`, `ambiguous`, `unmatched`), chunked document-flow rendering, and re-anchoring after accepted edits.
 - **Change identity:** How to assign stable IDs to proposed changes for S6 rejection feedback?
 
 ---
@@ -200,8 +200,8 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 - **Edit granularity (L2):** What the agent naturally produces; whether prompt instructions or `rawOutput` post-processing yields better change boundaries. Try prompt instructions for logical chunks. Try post-processing unified diff into sub-hunks.
 - **Multi-edit composition (L4):** Observe independent vs. sequential-dependent edits. Does partial accept require dependency tracking? Implications for S6 rejection handling when edits are coupled.
-- **Diff anchoring in rendered view (L6):** Locate `oldText`/`newText` regions in the rendered DOM. Options to spike: (a) text-search `oldText` in DOM text content to locate containing nodes and wrap them; (b) renderer that attaches source-position metadata to DOM nodes; (c) chunked rendering — split source into unchanged markdown chunks and change-region chunks, render unchanged as markdown, render change regions as raw diff markup. Note: markdown rendering destroys source addressability — formatting chars are collapsed, list/table markup is restructured, and DOM text offsets diverge from source offsets.
-- Offset recomputation on accept; multiple simultaneous changes.
+- **Diff anchoring in rendered view (L6):** Use deterministic source-string anchoring (not rendered-DOM address mapping). For each proposed change, match `oldText` against current markdown source: exactly one match -> `anchored`; zero matches -> `unmatched`; multiple matches -> `ambiguous`. Render anchored changes as atomic diff blocks in chunked document flow (unchanged markdown chunks + change chunk). Never auto-place ambiguous or unmatched changes.
+- Re-anchor remaining pending changes after every accepted edit; verify behavior with multiple simultaneous changes.
 
 ---
 
@@ -286,8 +286,8 @@ Complete. Key findings for implementation:
 4. Both structured diff and unified diff format are available in `rawOutput` for tracked-change rendering.
 5. File-on-disk is source of truth.
 6. **Prompt-scoped interaction loop:** The edit cycle is prompt-scoped — agent reads real file at prompt start, proposes edits, user accepts/rejects, accepted changes hit disk, next prompt sees updated file. S4a/L5 verifies whether explicit re-read hinting on each prompt reliably triggers fresh reads after file changes.
-7. **Change display approach:** Unified diff blocks embedded in document flow (not side-by-side panels, not inline tracked changes in rendered HTML). Surrounding content renders as markdown; change regions show deletion/insertion with accept/reject controls.
-8. **Expert-identified risks:** Ambiguous content-addressed anchoring, compound edit incoherence, partial accept of coupled edits, no rejection back-channel to agent, no change identity across cycles.
+7. **Change display approach:** Chunked document-flow composition anchored in markdown source (not side-by-side panels and not rendered-DOM address mapping). Surrounding content renders as markdown; anchored change regions render as atomic deletion/insertion blocks with accept/reject controls.
+8. **Expert-identified risks:** Ambiguous/unmatched anchors requiring manual resolution, compound edit incoherence, partial accept of coupled edits, no rejection back-channel to agent, no change identity across cycles.
 
 ## Domain Model
 
