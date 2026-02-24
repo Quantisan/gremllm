@@ -38,14 +38,14 @@
    Reference:
    https://agentclientprotocol.github.io/typescript-sdk/types/ReadTextFileRequest.html"
   [^js params]
-  (let [file-path (.-path params)]
-    (when-not (and (string? file-path) (pos? (count file-path)))
+  (let [file-path (.-path params)
+        line      (.-line params)
+        limit     (.-limit params)]
+    (when-not (and (string? file-path) (seq file-path))
       (throw (js/Error. "readTextFile requires a non-empty path")))
     (-> (.readFile fsp file-path "utf8")
         (.then (fn [content]
-                 #js {:content (slice-content-by-lines content
-                                                       (.-line params)
-                                                       (.-limit params))})))))
+                 #js {:content (slice-content-by-lines content line limit)})))))
 
 (defn- create-connection
   "Thin wrapper for testability via with-redefs."
