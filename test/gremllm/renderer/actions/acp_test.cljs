@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.acp-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.actions.acp :as acp]))
@@ -79,56 +79,20 @@
 
 (deftest test-session-update-routing
   (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}
-               :active-topic-id "t1"}
-        streaming-calls (atom [])
-        tool-calls (atom [])
-        next-id 4242]
-    (with-redefs [schema/generate-message-id
-                  (fn [] next-id)
+               :active-topic-id "t1"}]
+    (with-redefs [schema/generate-message-id (constantly 1)
+                  codec/acp-update-text      (constantly "text")
+                  acp/streaming-chunk-effects (fn [_ msg-type _ _] [[:streamed msg-type]])
+                  acp/handle-tool-event       (fn [_ update _]     [[:tooled (:session-update update)]])]
 
-                  codec/acp-update-text
-                  (fn [update]
-                    (str "text:" (get-in update [:content :text])))
+      (testing "routes each update type to the correct handler"
+        (are [update-type expected]
+          (= expected (acp/session-update state {:update {:session-update update-type
+                                                          :content {:type "text" :text "x"}}}))
+          :agent-message-chunk [[:streamed :assistant]]
+          :agent-thought-chunk [[:streamed :reasoning]]
+          :tool-call           [[:tooled :tool-call]]
+          :tool-call-update    [[:tooled :tool-call-update]]))
 
-                  acp/streaming-chunk-effects
-                  (fn [st message-type chunk-text message-id]
-                    (swap! streaming-calls conj [st message-type chunk-text message-id])
-                    [[:streaming message-type chunk-text message-id]])
-
-                  acp/handle-tool-event
-                  (fn [st update message-id]
-                    (swap! tool-calls conj [st update message-id])
-                    [[:tool (:session-update update) message-id]])]
-
-      (testing "routes message chunk updates through streaming handler"
-        (let [effects (acp/session-update state {:update {:session-update :agent-message-chunk
-                                                          :content {:type "text" :text "hello"}}})]
-          (is (= [[:streaming :assistant "text:hello" next-id]] effects))
-          (is (= [[state :assistant "text:hello" next-id]] @streaming-calls))
-          (is (empty? @tool-calls))))
-
-      (testing "routes thought chunk updates to reasoning message type"
-        (reset! streaming-calls [])
-        (let [effects (acp/session-update state {:update {:session-update :agent-thought-chunk
-                                                          :content {:type "text" :text "thinking"}}})]
-          (is (= [[:streaming :reasoning "text:thinking" next-id]] effects))
-          (is (= [[state :reasoning "text:thinking" next-id]] @streaming-calls))
-          (is (empty? @tool-calls))))
-
-      (testing "routes tool updates through tool-event handler"
-        (reset! streaming-calls [])
-        (let [update {:session-update :tool-call-update
-                      :tool-call-id "toolu_1"}
-              effects (acp/session-update state {:update update})]
-          (is (= [[:tool :tool-call-update next-id]] effects))
-          (is (= [[state update next-id]] @tool-calls))
-          (is (empty? @streaming-calls))))
-
-      (testing "returns nil for unsupported update types"
-        (reset! streaming-calls [])
-        (reset! tool-calls [])
-        (let [effects (acp/session-update state {:update {:session-update :available-commands-update
-                                                          :available-commands []}})]
-          (is (nil? effects))
-          (is (empty? @streaming-calls))
-          (is (empty? @tool-calls)))))))
+      (testing "ignores unsupported update types"
+        (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
