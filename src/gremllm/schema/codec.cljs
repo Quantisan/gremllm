@@ -199,11 +199,7 @@
   "Discriminated union of ACP tool call content blocks.
    Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
    Both tool-call and tool-call-update share this content type."
-  [:multi {:dispatch (fn [m]
-                       (let [item-type (:type m)]
-                         (if (keyword? item-type)
-                           item-type
-                           (keyword item-type))))}
+  [:multi {:dispatch (fn [m] (some-> (:type m) name keyword))}
    [:content  AcpWrappedContent]
    [:diff     AcpDiffItem]
    [:terminal AcpTerminalContent]])
@@ -224,9 +220,7 @@
                        ;; Most paths normalize keys before coercion, but tests and
                        ;; internal callers may pass pre-coerced CLJS maps directly.
                        (some-> (or (:session-update m)
-                                   (:sessionUpdate m)
-                                   (get m "sessionUpdate")
-                                   (get m "session-update"))
+                                   (:sessionUpdate m))
                                csk/->kebab-case
                                keyword))}
    [:available-commands-update
@@ -277,8 +271,7 @@
    Specially handles sessionId → :acp-session-id."
   (mt/key-transformer
     {:decode (fn [k]
-               (if (or (= k "sessionId")
-                       (= k :sessionId))
+               (if (= k :sessionId)
                  :acp-session-id
                  (csk/->kebab-case-keyword k)))}))
 
@@ -288,18 +281,10 @@
     {:name :session-update
      :decoders {:map (fn [x]
                        (if (map? x)
-                         (let [session-update (:session-update x)]
-                           ;; TODO: not sure if this branching is needed...
-                           (cond
-                             (string? session-update)
-                             (update x :session-update (comp keyword csk/->kebab-case))
-
-                             (keyword? session-update)
-                             (assoc x :session-update
-                                    (-> session-update name csk/->kebab-case keyword))
-
-                             :else
-                             x))
+                         (if-some [session-update (:session-update x)]
+                           (assoc x :session-update
+                                  (-> session-update name csk/->kebab-case keyword))
+                           x)
                          x))}}))
 
 (defn acp-session-update-from-js
