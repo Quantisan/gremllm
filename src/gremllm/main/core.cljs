@@ -142,7 +142,8 @@
           (let [coerced (codec/acp-session-update-from-js params)]
             (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
           (catch :default e
-            (js/console.error "ACP session update coercion failed" e params)))))))
+            (js/console.error "ACP session update coercion failed" e params))))
+      (.-isPackaged app))))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

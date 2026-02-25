@@ -71,6 +71,22 @@
                           (acp/shutdown)
                           (done)))))))))
 
+(deftest test-initialize-passes-packaging-flag
+  (testing "forwards isPackaged flag to create-connection options"
+    (async done
+      (let [{:keys [result]} (make-fake-env)
+            captured-opts (atom nil)]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-opts opts)
+                        result)]
+          (-> (acp/initialize (fn [_] nil) true)
+              (.then (fn [_]
+                       (is (= true (.-isPackaged ^js @captured-opts)))))
+              (.finally (fn []
+                          (acp/shutdown)
+                          (done)))))))))
+
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
     (async done
