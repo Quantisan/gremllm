@@ -3,8 +3,7 @@
 
 (defn render-document [content]
   (if content
-    [:article
-     [:div {:innerHTML (md/markdown->html content)}]]
+    [:article (md/markdown->hiccup content)]
     [:article
      [:p {:style {:color "var(--pico-muted-color)"
                   :font-style "italic"}}
