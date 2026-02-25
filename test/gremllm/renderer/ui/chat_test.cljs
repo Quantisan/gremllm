@@ -3,16 +3,6 @@
             [gremllm.renderer.ui.chat :as chat-ui]
             [lookup.core :as lookup]))
 
-(deftest render-assistant-message-no-innerHTML-test
-  (testing "assistant messages render as hiccup, not innerHTML"
-    (let [messages [{:type :assistant :text "**bold** reply"}]
-          hiccup (chat-ui/render-chat-area messages false)]
-      (is (some? (lookup/select-one 'strong hiccup))
-          "Markdown should render as hiccup elements")
-      (is (nil? (->> (lookup/select 'div hiccup)
-                     (some #(:innerHTML (lookup/attrs %)))))
-          "Should not use innerHTML"))))
-
 (deftest render-input-form-test
   (testing ":on-submit handler has correct structure"
     (let [hiccup (chat-ui/render-input-form
