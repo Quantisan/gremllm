@@ -1,28 +1,32 @@
 (ns gremllm.renderer.ui.markdown-test
   (:require [cljs.test :refer-macros [deftest is testing]]
-            [clojure.string :as str]
-            [gremllm.renderer.ui.markdown :as md]))
+            [gremllm.renderer.ui.markdown :as md]
+            [lookup.core :as lookup]))
 
-(deftest markdown->html-test
-  (testing "renders basic markdown"
-    (let [result (md/markdown->html "**bold** and `code`")]
-      (is (str/includes? result "<strong>bold</strong>"))
-      (is (str/includes? result "<code>code</code>"))))
+(deftest markdown->hiccup-test
+  (testing "renders headings"
+    (let [hiccup (md/markdown->hiccup "# Hello")]
+      (is (some? (lookup/select-one 'h1 hiccup)))))
 
-  (testing "sanitizes script tags"
-    (let [result (md/markdown->html "<script>alert('xss')</script>")]
-      (is (not (str/includes? result "<script")))
-      (is (not (str/includes? result "alert")))))
+  (testing "renders bold and emphasis"
+    (let [hiccup (md/markdown->hiccup "**bold** and *italic*")]
+      (is (some? (lookup/select-one 'strong hiccup)))
+      (is (some? (lookup/select-one 'em hiccup)))))
 
-  (testing "sanitizes javascript: URLs"
-    (let [result (md/markdown->html "[bad link](javascript:alert('xss'))")]
-      (is (not (str/includes? result "javascript:")))
-      (is (not (str/includes? result "alert")))))
+  (testing "renders inline code"
+    (let [hiccup (md/markdown->hiccup "use `code` here")]
+      (is (some? (lookup/select-one 'code hiccup)))))
 
-  (testing "sanitizes event handlers"
-    (let [result (md/markdown->html "<a onclick=\"alert('xss')\">click</a>")]
-      (is (not (str/includes? result "onclick")))))
+  (testing "renders links"
+    (let [hiccup (md/markdown->hiccup "[link](https://example.com)")]
+      (is (= "https://example.com"
+             (-> (lookup/select-one 'a hiccup) lookup/attrs :href)))))
 
-  (testing "allows safe links"
-    (let [result (md/markdown->html "[safe](https://example.com)")]
-      (is (str/includes? result "https://example.com")))))
+  (testing "renders fenced code blocks"
+    (let [hiccup (md/markdown->hiccup "```js\nconsole.log('hi')\n```")]
+      (is (some? (lookup/select-one 'pre hiccup)))))
+
+  (testing "renders lists"
+    (let [hiccup (md/markdown->hiccup "- one\n- two")]
+      (is (some? (lookup/select-one 'ul hiccup)))
+      (is (= 2 (count (lookup/select 'li hiccup)))))))

@@ -40,7 +40,11 @@
     "@agentclientprotocol/sdk": "^0.13.1",
     "@dotenvx/dotenvx": "^1.47.6",
     "acp": "file:./resources/acp",
-    "sanitize-html": "^2.17.0",
-    "snarkdown": "^2.0.0"
+    "markdown-it": "14.1.1",
+    "markdown-it-block-image": "0.0.3",
+    "markdown-it-footnote": "3.0.3",
+    "markdown-it-texmath": "1.0.0",
+    "markdown-it-toc-done-right": "4.2.0",
+    "punycode": "2.1.1"
   }
 }
