@@ -31,7 +31,7 @@ const client = {
 };
 
 async function createConnection() {
-  const proc = spawn("npx", ["@zed-industries/claude-code-acp"], {
+  const proc = spawn("npx", ["@zed-industries/claude-agent-acp"], {
     stdio: ["pipe", "pipe", "inherit"],
     env: process.env
   });

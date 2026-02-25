@@ -6,7 +6,7 @@ This document captures what we learn as we explore integrating the Agent Client 
 
 Agent Client Protocol (ACP) is a JSON-RPC protocol that allows applications to spawn and communicate with Claude Code as an agentic subprocess. The subprocess can use tools to read files, execute commands, and perform other actions on behalf of the application.
 
-**Package:** `@zed-industries/claude-code-acp`
+**Package:** `@zed-industries/claude-agent-acp`
 **Protocol Spec:** https://agentclientprotocol.org/
 **Implementation Guide**: context/acp_client.md
 
@@ -15,7 +15,7 @@ Agent Client Protocol (ACP) is a JSON-RPC protocol that allows applications to s
 **Goal:** Prove we can spawn the ACP subprocess with stdio pipes.
 
 **Key Learnings:**
-- Process spawns via `npx @zed-industries/claude-code-acp` with auto-install (3-5s first run, ~1s thereafter)
+- Process spawns via `npx @zed-industries/claude-agent-acp` with auto-install (3-5s first run, ~1s thereafter)
 - stdio config: `["pipe", "pipe", "inherit"]` for stdin/stdout pipes, stderr passthrough
 - Environment inheritance includes `ANTHROPIC_API_KEY`
 - Clean shutdown via SIGTERM
@@ -261,7 +261,7 @@ renderer/ui/chat.cljs
 
 8. **⚠️ MONITOR THESE ISSUES:**
    - [anthropics/claude-agent-sdk-typescript#14](https://github.com/anthropics/claude-agent-sdk-typescript/issues/14) - "Feature Request: API to retrieve historical messages" (OPEN)
-   - [zed-industries/claude-code-acp#64](https://github.com/zed-industries/claude-code-acp/issues/64) - "Feature Request: Add loadSession support" (OPEN)
+   - [zed-industries/claude-agent-acp#64](https://github.com/zed-industries/claude-agent-acp/issues/64) - "Feature Request: Add loadSession support" (OPEN)
    - If implemented, could eliminate need for custom message persistence in Gremllm
    - As of 2026-01-29: both issues open, no implementation timeline
 
@@ -275,7 +275,7 @@ renderer/ui/chat.cljs
 
 - [ACP Protocol Spec](https://agentclientprotocol.org/)
 - [ACP SDK on npm](https://www.npmjs.com/package/@agentclientprotocol/sdk)
-- [Claude Code ACP on npm](https://www.npmjs.com/package/@zed-industries/claude-code-acp)
+- [Claude Code ACP on npm](https://www.npmjs.com/package/@zed-industries/claude-agent-acp)
 
 ## Open Questions
 

@@ -5,7 +5,7 @@ const acp = require("@agentclientprotocol/sdk");
 const { resolvePermissionOutcome } = require("./permission");
 
 function createConnection(callbacks) {
-  const subprocess = spawn("npx", ["@zed-industries/claude-code-acp"], {
+  const subprocess = spawn("npx", ["@zed-industries/claude-agent-acp"], {
     stdio: ["pipe", "pipe", "inherit"],
     env: { ...process.env }
   });

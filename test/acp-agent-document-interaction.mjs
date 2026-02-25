@@ -30,7 +30,7 @@
 // CONFIGURATION (via environment variables):
 //   ACP_DOC_PATH          Document to edit (overrides CLI arg)
 //   ACP_AGENT_CMD         Agent command (default: npx)
-//   ACP_AGENT_ARGS        Agent args (default: @zed-industries/claude-code-acp)
+//   ACP_AGENT_ARGS        Agent args (default: @zed-industries/claude-agent-acp)
 //   ACP_CLIENT_FS         Filesystem caps: none, read, write, readwrite (default: readwrite)
 //   VERBOSE               Set to 1 for full JSON dump of all sessionUpdates
 //
@@ -64,7 +64,7 @@ const DOC_URI = pathToFileURL(DOC_PATH).toString();
 const AGENT_CMD = process.env.ACP_AGENT_CMD || "npx";
 const AGENT_ARGS = process.env.ACP_AGENT_ARGS
   ? process.env.ACP_AGENT_ARGS.split(" ")
-  : ["@zed-industries/claude-code-acp"];
+  : ["@zed-industries/claude-agent-acp"];
 
 // Dry-run mode: Block writeTextFile to capture proposed edits without mutation
 const DRY_RUN = true;
@@ -233,7 +233,7 @@ async function main() {
 
   agentProcess.on("error", (err) => {
     console.error(`Failed to spawn agent (${AGENT_CMD}):`, err);
-    console.error("Tip: default uses `npx @zed-industries/claude-code-acp`.");
+    console.error("Tip: default uses `npx @zed-industries/claude-agent-acp`.");
     console.error("Override via ACP_AGENT_CMD and ACP_AGENT_ARGS if needed.");
     process.exit(1);
   });
