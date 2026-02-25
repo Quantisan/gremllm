@@ -4,10 +4,38 @@ const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { resolvePermissionOutcome } = require("./permission");
 
-function createConnection(callbacks) {
-  const subprocess = spawn("npx", ["@zed-industries/claude-agent-acp"], {
+function buildNpxSpawnConfig(options = {}) {
+  if (options.isPackaged) {
+    return {
+      command: "npx",
+      args: ["@zed-industries/claude-agent-acp"],
+      envPatch: {}
+    };
+  }
+
+  return {
+    command: "npx",
+    args: [
+      "--yes",
+      "--package=@zed-industries/claude-agent-acp@latest",
+      "--",
+      "claude-agent-acp"
+    ],
+    envPatch: {
+      npm_config_prefer_online: "true"
+    }
+  };
+}
+
+function createConnection(options = {}) {
+  const callbacks = options;
+  const { command, args, envPatch } = buildNpxSpawnConfig({
+    isPackaged: Boolean(options.isPackaged)
+  });
+
+  const subprocess = spawn(command, args, {
     stdio: ["pipe", "pipe", "inherit"],
-    env: { ...process.env }
+    env: { ...process.env, ...envPatch }
   });
 
   const client = {
@@ -40,4 +68,9 @@ function createConnection(callbacks) {
   };
 }
 
-module.exports = { createConnection };
+module.exports = {
+  createConnection,
+  __test__: {
+    buildNpxSpawnConfig
+  }
+};
