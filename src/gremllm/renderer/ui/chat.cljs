@@ -9,11 +9,11 @@
 
 (defn- render-assistant-message [message]
   [e/assistant-message
-    [:div {:innerHTML (md/markdown->html (:text message))}]])
+    (md/markdown->hiccup (:text message))])
 
 (defn- render-reasoning-message [message]
   [e/reasoning-message {}
-   [:div {:innerHTML (md/markdown->html (:text message))}]])
+   (md/markdown->hiccup (:text message))])
 
 (defn- render-tool-use-message [message]
   [e/tool-use-message
