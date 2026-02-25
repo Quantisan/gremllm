@@ -32,19 +32,19 @@
     "@electron-forge/publisher-github": "^7.8.1",
     "@electron/fuses": "^1.8.0",
     "concurrently": "^9.2.0",
-    "electron": "^39.2.7",
+    "electron": "^40.6.1",
     "electron-reload": "^2.0.0-alpha.1",
     "shadow-cljs": "^3.3.4"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "^0.13.1",
-    "@dotenvx/dotenvx": "^1.47.6",
+    "@agentclientprotocol/sdk": "^0.14.1",
+    "@dotenvx/dotenvx": "^1.52.0",
     "acp": "file:./resources/acp",
     "markdown-it": "14.1.1",
     "markdown-it-block-image": "0.0.3",
-    "markdown-it-footnote": "3.0.3",
+    "markdown-it-footnote": "4.0.0",
     "markdown-it-texmath": "1.0.0",
     "markdown-it-toc-done-right": "4.2.0",
-    "punycode": "2.1.1"
+    "punycode": "2.3.1"
   }
 }
