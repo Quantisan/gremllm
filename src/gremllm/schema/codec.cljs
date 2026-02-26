@@ -1,5 +1,6 @@
 (ns gremllm.schema.codec
   (:require [camel-snake-kebab.core :as csk]
+            [clojure.string :as str]
             [gremllm.schema :as schema]
             [malli.core :as m]
             [malli.transform :as mt]))
@@ -116,7 +117,7 @@
   [update]
   (get-in update [:content :text]))
 
-(defn acp-tool-call-text
+(defn acp-tool-display-label
   "Composes display text from a tool_call update.
    Returns 'Title — path' when locations exist, otherwise just 'Title'."
   [{:keys [title locations]}]
@@ -124,13 +125,38 @@
     (str title " — " location)
     title))
 
-(defn acp-tool-call-update-diffs
+(defn acp-read-display-label
+  "Extracts display text from a Read tool-call-update with tool-response metadata.
+   Returns 'Read — filename (N lines)' or nil."
+  [update]
+  (when-let [file (get-in update [:meta :claude-code :tool-response :file])]
+    (let [filename (-> (:filePath file) (str/split #"/") last)
+          lines   (:totalLines file)]
+      (str "Read — " filename " (" lines " lines)"))))
+
+(defn acp-pending-diffs
   "Extracts diff items from a tool-call-update's content.
    Returns a vector of diff maps or nil if none present."
   [{:keys [content]}]
   (when (seq content)
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
+
+(defn displayable-tool-call?
+  "True when a tool-call update should produce a chat message.
+   Read tool-calls are skipped — their display comes from tool-call-update."
+  [{:keys [session-update kind]}]
+  (and (= :tool-call session-update) (not= "read" kind)))
+
+(defn read-tool-response?
+  "True when a tool-call-update carries Read tool-response metadata."
+  [update]
+  (some? (get-in update [:meta :claude-code :tool-response :file])))
+
+(defn has-diffs?
+  "True when a tool-call-update contains diff content."
+  [{:keys [content]}]
+  (some #(= "diff" (:type %)) content))
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput

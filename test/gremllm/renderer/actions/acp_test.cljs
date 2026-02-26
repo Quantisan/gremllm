@@ -36,15 +36,49 @@
     (let [effects (acp/handle-tool-event
                     {}
                     {:session-update :tool-call
-                     :title "Read File"
+                     :kind "edit"
+                     :title "Edit File"
                      :locations [{:path "src/gremllm/schema.cljs"}]}
                     789)
           action (first effects)
           message (nth action 1)]
       (is (= :messages.actions/add-to-chat-no-save (first action)))
       (is (= :tool-use (:type message)))
-      (is (= "Read File — src/gremllm/schema.cljs" (:text message)))
+      (is (= "Edit File — src/gremllm/schema.cljs" (:text message)))
       (is (= 789 (:id message)))))
+
+  (testing "returns nil for tool-call with kind read (skipped at request phase)"
+    (let [effects (acp/handle-tool-event
+                    {}
+                    {:session-update :tool-call
+                     :tool-call-id "toolu_01Ext"
+                     :kind "read"
+                     :status "pending"
+                     :title "Read File"
+                     :raw-input {:file-path "/path/to/document.md"}
+                     :content []
+                     :locations []}
+                    789)]
+      (is (nil? effects))))
+
+  (testing "returns tool-use for tool-call-update with Read tool-response meta"
+    (let [effects (acp/handle-tool-event
+                    {}
+                    {:session-update :tool-call-update
+                     :tool-call-id "toolu_01Ext"
+                     :meta {:claude-code {:tool-name "Read"
+                                          :tool-response {:file {:filePath "/path/to/document.md"
+                                                                 :totalLines 37
+                                                                 :numLines 37
+                                                                 :startLine 1}
+                                                          :type "text"}}}}
+                    456)
+          action (first effects)
+          message (nth action 1)]
+      (is (= :messages.actions/add-to-chat-no-save (first action)))
+      (is (= :tool-use (:type message)))
+      (is (= "Read — document.md (37 lines)" (:text message)))
+      (is (= 456 (:id message)))))
 
   (testing "dispatches pending diffs from tool-call-update with diff content"
     (let [effects (acp/handle-tool-event
@@ -60,12 +94,13 @@
                  :old-text "old" :new-text "new"}]]]
              effects))))
 
-  (testing "returns nil for tool-call-update without diffs"
+  (testing "returns nil for tool-call-update without diffs and no Read meta"
     (let [effects (acp/handle-tool-event
                     {}
                     {:session-update :tool-call-update
                      :tool-call-id "toolu_1"
-                     :status "completed"}
+                     :status "completed"
+                     :meta {:claude-code {:tool-name "Edit"}}}
                     123)]
       (is (nil? effects))))
 

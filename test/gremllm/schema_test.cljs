@@ -222,7 +222,7 @@
       (is (= [{:type "diff" :path "/tmp/new-file.md" :new-text "brand new content"}]
              (:content update))))))
 
-(deftest test-acp-tool-call-update-diffs
+(deftest test-acp-pending-diffs
   (testing "extracts diff items from content"
     (let [update {:content [{:type "diff" :path "/a.md"
                              :old-text "old" :new-text "new"}
@@ -231,16 +231,16 @@
                              :old-text "before" :new-text "after"}]}]
       (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
               {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
-             (codec/acp-tool-call-update-diffs update)))))
+             (codec/acp-pending-diffs update)))))
 
   (testing "returns nil when no diff items"
-    (is (nil? (codec/acp-tool-call-update-diffs {:content [{:type "text" :text "hi"}]}))))
+    (is (nil? (codec/acp-pending-diffs {:content [{:type "text" :text "hi"}]}))))
 
   (testing "returns nil when content is nil"
-    (is (nil? (codec/acp-tool-call-update-diffs {:content nil}))))
+    (is (nil? (codec/acp-pending-diffs {:content nil}))))
 
   (testing "returns nil when content is empty"
-    (is (nil? (codec/acp-tool-call-update-diffs {:content []})))))
+    (is (nil? (codec/acp-pending-diffs {:content []})))))
 
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
