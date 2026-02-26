@@ -8,11 +8,6 @@
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]))
 
-;; Replace the IPC send effect with a no-op so tests don't need a renderer.
-;; Individual tests capture updates via the session-update callback instead.
-(nxr/register-effect! :ipc.effects/send-to-renderer
-  (fn [_ctx _store _channel _data]))
-
 (defn- make-test-callback [store captured]
   (fn [params]
     (try
