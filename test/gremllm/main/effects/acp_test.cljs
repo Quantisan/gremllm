@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.acp-test
-  (:require [cljs.test :refer [deftest is testing async]]
+  (:require ["acp" :as acp-module]
+            [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.acp :as acp]))
 
 (defn- make-fake-env
@@ -49,6 +50,11 @@
                      (let [i (swap! create-count inc)]
                        (:result (nth envs (dec i)))))}))
 
+(defn- initialize-dev
+  "Initialize ACP in test default mode (non-packaged)."
+  [on-update]
+  (acp/initialize on-update false))
+
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
     (async done
@@ -58,7 +64,7 @@
                       (fn [^js opts]
                         (reset! captured-callback (.-onSessionUpdate opts))
                         result)]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_]
                        (is (fn? @captured-callback))
                        (let [^js payload (first (:initialize @calls))]
@@ -71,13 +77,37 @@
                           (acp/shutdown)
                           (done)))))))))
 
+(defn- spawn-config->map [^js config]
+  {:command   (.-command config)
+   :args      (vec (js->clj (.-args config)))
+   :env-patch (js->clj (.-envPatch config))})
+
+(deftest test-build-npx-agent-package-config
+  (let [build (.. acp-module -__test__ -buildNpxAgentPackageConfig)]
+    (testing "latest mode forces online package resolution"
+      (is (= {:command   "npx"
+              :args      ["--yes"
+                          "--package=@zed-industries/claude-agent-acp@latest"
+                          "--"
+                          "claude-agent-acp"]
+              :env-patch {"npm_config_prefer_online" "true"}}
+             (spawn-config->map (build "latest")))))
+    (testing "cached mode uses default package"
+      (is (= {:command   "npx"
+              :args      ["@zed-industries/claude-agent-acp"]
+              :env-patch {}}
+             (spawn-config->map (build "cached")))))
+    (testing "invalid mode falls back to cached"
+      (is (= (spawn-config->map (build "cached"))
+             (spawn-config->map (build "not-a-valid-mode")))))))
+
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
     (async done
       (let [{:keys [calls result]} (make-fake-env)
             cwd "/tmp/ws"]
         (with-redefs [acp/create-connection (fn [_] result)]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_] (acp/new-session cwd)))
               (.then (fn [session-id]
                        (is (= "s-123" session-id))
@@ -112,8 +142,8 @@
                       (fn [_]
                         (swap! create-count inc)
                         result)]
-          (-> (acp/initialize (fn [_] nil))
-              (.then (fn [_] (acp/initialize (fn [_] nil))))
+          (-> (initialize-dev (fn [_] nil))
+              (.then (fn [_] (initialize-dev (fn [_] nil))))
               (.then (fn [_]
                        (is (= 1 @create-count))
                        (acp/shutdown)
@@ -133,7 +163,7 @@
             {:keys [create-count fake-create]}
             (make-rotating-create [failing-env recovery-env])]
         (with-redefs [acp/create-connection fake-create]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_]
                        (is false "Expected first initialize call to fail")))
               (.catch (fn [err]
@@ -144,7 +174,7 @@
                         ;; Re-bind for retry because async Promise callbacks run
                         ;; after the outer with-redefs scope has unwound.
                         (with-redefs [acp/create-connection fake-create]
-                          (acp/initialize (fn [_] nil)))))
+                          (initialize-dev (fn [_] nil)))))
               (.then (fn [_] (acp/new-session "/tmp/ws")))
               (.then (fn [session-id]
                        (is (= "s-456" session-id))

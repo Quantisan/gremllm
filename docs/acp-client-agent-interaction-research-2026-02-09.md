@@ -2,7 +2,7 @@
 
 Date: 2026-02-09
 
-This document captures only discovered facts from ACP specs, Zed docs, and the local `claude-code-acp` adapter source. It intentionally avoids synthesis or recommendations.
+This document captures only discovered facts from ACP specs, Zed docs, and the local `claude-agent-acp` adapter source. It intentionally avoids synthesis or recommendations.
 
 ## Sources (external docs)
 
@@ -31,9 +31,9 @@ This document captures only discovered facts from ACP specs, Zed docs, and the l
 - Quote: “Under the hood, Zed runs Claude Code and communicate to it over ACP, through a dedicated adapter.” (Zed External Agents docs)
 - Quote: “Zed supports many external agents… through the Agent Client Protocol (ACP).” (Zed External Agents docs)
 
-## Facts from local `claude-code-acp` adapter (source code)
+## Facts from local `claude-agent-acp` adapter (source code)
 
-All file references below are in `/Users/paul/Projects/claude-code-acp`.
+All file references below are in `/Users/paul/Projects/claude-agent-acp`.
 
 ### Prompt shaping
 
@@ -91,9 +91,9 @@ All file references below are in `/Users/paul/Projects/claude-code-acp`.
 - `src/acp-agent.ts` explicitly adds ACP read/write/edit tools to `disallowedTools` when built-ins are disabled.
   - Quote: `disallowedTools.push(acpToolNames.read, acpToolNames.write, acpToolNames.edit, ...);`
 
-## Facts from local `claude-code-acp` adapter tests (edge cases)
+## Facts from local `claude-agent-acp` adapter tests (edge cases)
 
-All file references below are in `/Users/paul/Projects/claude-code-acp`.
+All file references below are in `/Users/paul/Projects/claude-agent-acp`.
 
 ### Tool call update behavior
 
@@ -165,7 +165,7 @@ This section answers the Spike 0 research questions using only evidence from the
   Refs: https://zed.dev/docs/ai/agent-panel (Adding Context)
 
 - **claude‑code‑acp adapter: embedded resources become `<context ref="…">` blocks; resource links become formatted links.** The adapter converts ACP `resource` blocks to tagged context appended to the prompt and formats `resource_link` into `[@name](uri)` text.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/acp-agent.ts (promptToClaude)
+  Refs: /Users/paul/Projects/claude-agent-acp/src/acp-agent.ts (promptToClaude)
 
 - **Partial‑context handling (inference):** ACP allows line/limit reads and Zed supports selection‑as‑context, so partial document context can be delivered either as embedded snippets or via line‑range reads.  
   Refs: https://agentclientprotocol.com/protocol/file-system (line/limit), https://zed.dev/docs/ai/agent-panel (Selection as Context)
@@ -185,16 +185,16 @@ This section answers the Spike 0 research questions using only evidence from the
   Refs: https://agentclientprotocol.com/protocol/schema (ToolCallContent, Diff)
 
 - **claude‑code‑acp adapter emits diffs for edits by parsing unified patches.** The adapter’s Edit tool produces a patch and then parses it into ACP diff blocks with locations for UI display.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/mcp-server.ts (diff.createPatch), /Users/paul/Projects/claude-code-acp/src/tools.ts (diff.parsePatch → diff blocks)
+  Refs: /Users/paul/Projects/claude-agent-acp/src/mcp-server.ts (diff.createPatch), /Users/paul/Projects/claude-agent-acp/src/tools.ts (diff.parsePatch → diff blocks)
 
 - **claude‑code‑acp adapter ignores `document` blocks from model output.** The adapter drops content blocks of type `document` during streaming.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/acp-agent.ts (case "document": break;)
+  Refs: /Users/paul/Projects/claude-agent-acp/src/acp-agent.ts (case "document": break;)
 
 - **Tool call updates carry raw output for downstream parsing.** The adapter forwards tool result payloads as `rawOutput` in `tool_call_update` messages.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/acp-agent.ts, /Users/paul/Projects/claude-code-acp/src/tests/tools.test.ts
+  Refs: /Users/paul/Projects/claude-agent-acp/src/acp-agent.ts, /Users/paul/Projects/claude-agent-acp/src/tests/tools.test.ts
 
 - **Edit tool result parsing failure is explicitly handled.** The adapter returns an empty update when patch parsing fails; error results are converted to content blocks.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/tests/acp-agent.test.ts
+  Refs: /Users/paul/Projects/claude-agent-acp/src/tests/acp-agent.test.ts
 
 ### 3) Round‑trip interaction model (context → proposed changes → review)
 
@@ -205,7 +205,7 @@ This section answers the Spike 0 research questions using only evidence from the
   Refs: https://agentclientprotocol.com/protocol/schema (ToolCallContent, Diff, ToolCallLocation)
 
 - **claude‑code‑acp edit tool yields diff content + locations, enabling review UIs.** The adapter parses patches into diff blocks and attaches line locations.  
-  Refs: /Users/paul/Projects/claude-code-acp/src/tools.ts (diff blocks + locations)
+  Refs: /Users/paul/Projects/claude-agent-acp/src/tools.ts (diff blocks + locations)
 
 - **Conversation continuity is session‑based.** ACP sessions maintain context/history/state; additional prompts continue the conversation after a turn completes.  
   Refs: https://agentclientprotocol.com/protocol/schema (SessionId), https://agentclientprotocol.com/protocol/prompt-turn (Continue Conversation)
