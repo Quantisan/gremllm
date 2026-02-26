@@ -2,16 +2,33 @@
   (:require ["fs/promises" :as fsp]
             ["path" :as path]
             [cljs.test :refer [deftest is testing async]]
+            [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
-            [gremllm.schema.codec :as codec]))
+            [gremllm.schema.codec :as codec]
+            [nexus.registry :as nxr]))
+
+;; Replace the IPC send effect with a no-op so tests don't need a renderer.
+;; Individual tests capture updates via the session-update callback instead.
+(nxr/register-effect! :ipc.effects/send-to-renderer
+  (fn [_ctx _store _channel _data]))
+
+(defn- make-test-callback [store captured]
+  (fn [params]
+    (try
+      (let [coerced (codec/acp-session-update-from-js params)]
+        (swap! captured conj coerced)
+        (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
+      (catch :default e
+        (js/console.error "Test ACP session update coercion failed" e params)))))
 
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
-      (let [updates (atom [])
-            cwd (.cwd js/process)]
-        (-> (acp/initialize #(swap! updates conj %) false)
+      (let [store    (atom {})
+            captured (atom [])
+            cwd      (.cwd js/process)]
+        (-> (acp/initialize (make-test-callback store captured) false)
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (is (string? session-id))
@@ -19,8 +36,8 @@
                                               :text "Reply with exactly: hi"}])))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
-                     (is (pos? (count @updates)))
-                     (let [response (->> (mapv codec/acp-session-update-from-js @updates)
+                     (is (pos? (count @captured)))
+                     (let [response (->> @captured
                                          (map :update)
                                          (filter #(= :agent-message-chunk (:session-update %)))
                                          (map codec/acp-update-text)
@@ -36,12 +53,13 @@
 (deftest test-live-document-first-edit
   (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
-      (let [updates  (atom [])
+      (let [store    (atom {})
+            captured (atom [])
             cwd      (.cwd js/process)
             doc-path (path/resolve "resources/gremllm-launch-log.md")]
         (-> (.readFile fsp doc-path "utf8")
             (.then (fn [content-before]
-                     (-> (acp/initialize #(swap! updates conj %) false)
+                     (-> (acp/initialize (make-test-callback store captured) false)
                          (.then (fn [_] (acp/new-session cwd)))
                          (.then (fn [session-id]
                                   (acp/prompt session-id
@@ -50,11 +68,10 @@
                                       doc-path))))
                          (.then (fn [^js result]
                                   (is (= "end_turn" (.-stopReason result)))
-                                  (let [coerced (mapv codec/acp-session-update-from-js @updates)
-                                        diffs   (->> coerced
-                                                     (map :update)
-                                                     (filter codec/has-diffs?)
-                                                     (mapcat codec/acp-pending-diffs))]
+                                  (let [diffs (->> @captured
+                                                   (map :update)
+                                                   (filter codec/has-diffs?)
+                                                   (mapcat codec/acp-pending-diffs))]
                                     (is (pos? (count diffs))
                                         "Expected at least one diff from tool-call-update")
                                     (is (every? #(= doc-path (:path %)) diffs)
