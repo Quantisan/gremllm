@@ -1,6 +1,8 @@
 (ns gremllm.main.window
-  (:require [gremllm.main.io :as io]
-            ["electron/main" :refer [app BrowserWindow screen]]))
+  (:require [gremllm.main.io :as io]))
+
+(defn- electron-main []
+  (js/require "electron/main"))
 
 (def window-dimension-specs
   {:width-scale  0.75
@@ -17,7 +19,7 @@
       long))
 
 (defn calculate-window-dimensions [{:keys [width-scale min-width max-width height-scale max-height]}]
-  (let [work-area (-> screen .getPrimaryDisplay .-workAreaSize)]
+  (let [work-area (-> (electron-main) .-screen .getPrimaryDisplay .-workAreaSize)]
     {:width (calculate-dimension (.-width work-area) width-scale min-width max-width)
      :height (calculate-dimension (.-height work-area) height-scale 0 max-height)}))
 
@@ -41,21 +43,22 @@
       (.once main-window "closed"
              (fn []
                (js/console.log "Window closed - now quitting app")
-               (.quit app))))))
+               (.quit (.-app (electron-main))))))))
 
 (defn setup-close-handlers
   "Handle window close and app quit with unsaved changes protection."
   [^js main-window]
-  (.on app "before-quit" (partial handle-app-quit main-window))
+  (.on (.-app (electron-main)) "before-quit" (partial handle-app-quit main-window))
   (.on main-window "close" (partial handle-window-close main-window))
   main-window)
 
 (defn create-window []
-  (let [dimensions (calculate-window-dimensions window-dimension-specs)
-        preload-path (io/path-join js/__dirname "../resources/public/js/preload.js")
+  (let [BrowserWindow (.-BrowserWindow (electron-main))
+        dimensions    (calculate-window-dimensions window-dimension-specs)
+        preload-path  (io/path-join js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
-        main-window (BrowserWindow. (clj->js window-config))
-        html-path "resources/public/index.html"]
+        main-window   (BrowserWindow. (clj->js window-config))
+        html-path     "resources/public/index.html"]
     (.loadFile main-window html-path)
     main-window))
 
