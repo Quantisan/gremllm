@@ -80,23 +80,6 @@
       (is (= "Read — document.md (37 lines)" (:text message)))
       (is (= 456 (:id message)))))
 
-  (testing "returns tool-use Read — completed for tool-call-update with Read tool-name + completed status"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :tool-call-update
-                     :tool-call-id "toolu_01Ext"
-                     :status "completed"
-                     :meta {:claude-code {:tool-name "Read"}}
-                     :content [{:type "content" :content {:type "text" :text "file contents..."}}]
-                     :raw-output "file contents..."}
-                    789)
-          action (first effects)
-          message (nth action 1)]
-      (is (= :messages.actions/add-to-chat-no-save (first action)))
-      (is (= :tool-use (:type message)))
-      (is (= "Read — completed" (:text message)))
-      (is (= 789 (:id message)))))
-
   (testing "dispatches pending diffs from tool-call-update with diff content"
     (let [effects (acp/handle-tool-event
                     {}

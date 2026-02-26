@@ -142,6 +142,22 @@
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
 
+(defn displayable-tool-call?
+  "True when a tool-call update should produce a chat message.
+   Read tool-calls are skipped — their display comes from tool-call-update."
+  [{:keys [session-update kind]}]
+  (and (= :tool-call session-update) (not= "read" kind)))
+
+(defn read-tool-response?
+  "True when a tool-call-update carries Read tool-response metadata."
+  [update]
+  (some? (get-in update [:meta :claude-code :tool-response :file])))
+
+(defn has-diffs?
+  "True when a tool-call-update contains diff content."
+  [{:keys [content]}]
+  (some #(= "diff" (:type %)) content))
+
 ;; ACP Update sub-schemas
 (def AcpCommandInput
   "Optional input schema for ACP commands."
