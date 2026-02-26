@@ -137,12 +137,7 @@
     ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
     ;; from runtime capabilities - other ACP effects handle user operations.
     (acp-effects/initialize
-      (fn [params]
-        (try
-          (let [coerced (codec/acp-session-update-from-js params)]
-            (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
-          (catch :default e
-            (js/console.error "ACP session update coercion failed" e params))))
+      (acp-effects/make-session-update-callback store nil)
       (.-isPackaged app))))
 
 (defn- initialize-app [store]

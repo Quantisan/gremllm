@@ -50,7 +50,7 @@ import * as acp from "@agentclientprotocol/sdk";
 // ============================================================================
 
 const PROJECT_ROOT = process.cwd();
-const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "docs/plans/2026-02-09-document-first-pivot.md");
+const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "resources/gremllm-launch-log.md");
 
 // Document to edit - configurable via env var, CLI arg, or default
 const DOC_PATH = process.env.ACP_DOC_PATH
@@ -279,7 +279,7 @@ async function main() {
   // Send prompt - text instruction + resource_link (not full document content)
   // The agent will call readTextFile to demand-read the document
   const promptText =
-    "Read the linked document, then propose a single edit: update the front-matter Date field to 2026-02-10. Do not change anything else.";
+    "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else.";
 
   const promptResult = await connection.prompt({
     sessionId: session.sessionId,

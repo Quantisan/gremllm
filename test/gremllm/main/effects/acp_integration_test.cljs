@@ -1,13 +1,19 @@
 (ns gremllm.main.effects.acp-integration-test
-  (:require [cljs.test :refer [deftest is testing async]]
-            [gremllm.main.effects.acp :as acp]))
+  (:require ["fs/promises" :as fsp]
+            ["path" :as path]
+            [cljs.test :refer [deftest is testing async]]
+            [gremllm.main.actions]
+            [gremllm.main.actions.acp :as acp-actions]
+            [gremllm.main.effects.acp :as acp]
+            [gremllm.schema.codec :as codec]))
 
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
-      (let [updates (atom [])
-            cwd (.cwd js/process)]
-        (-> (acp/initialize #(swap! updates conj %) false)
+      (let [store    (atom {})
+            captured (atom [])
+            cwd      (.cwd js/process)]
+        (-> (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false)
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (is (string? session-id))
@@ -15,9 +21,52 @@
                                               :text "Reply with exactly: hi"}])))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
-                     (is (pos? (count @updates)))))
+                     (is (pos? (count @captured)))
+                     (let [response (->> @captured
+                                         (map :update)
+                                         (filter #(= :agent-message-chunk (:session-update %)))
+                                         (map codec/acp-update-text)
+                                         (apply str))]
+                       (is (re-find #"(?i)\bhi\b" response)
+                           "Expected response to contain 'hi'"))))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
                         (acp/shutdown)
                         (done))))))))
+
+(deftest test-live-document-first-edit
+  (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
+    (async done
+      (let [store    (atom {})
+            captured (atom [])
+            cwd      (.cwd js/process)
+            doc-path (path/resolve "resources/gremllm-launch-log.md")]
+        (-> (.readFile fsp doc-path "utf8")
+            (.then (fn [content-before]
+                     (-> (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false)
+                         (.then (fn [_] (acp/new-session cwd)))
+                         (.then (fn [session-id]
+                                  (acp/prompt session-id
+                                    (acp-actions/prompt-content-blocks
+                                      "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else."
+                                      doc-path))))
+                         (.then (fn [^js result]
+                                  (is (= "end_turn" (.-stopReason result)))
+                                  (let [diffs (->> @captured
+                                                   (map :update)
+                                                   (filter codec/has-diffs?)
+                                                   (mapcat codec/acp-pending-diffs))]
+                                    (is (pos? (count diffs))
+                                        "Expected at least one diff from tool-call-update")
+                                    (is (every? #(= doc-path (:path %)) diffs)
+                                        "All diffs should target the linked document"))))
+                         (.then (fn [_] (.readFile fsp doc-path "utf8")))
+                         (.then (fn [content-after]
+                                  (is (= content-before content-after)
+                                      "Document must be unchanged (writeTextFile is a no-op)")))
+                         (.catch (fn [err]
+                                   (is false (str "Document-first edit test failed: " err))))
+                         (.finally (fn []
+                                     (acp/shutdown)
+                                     (done)))))))))))

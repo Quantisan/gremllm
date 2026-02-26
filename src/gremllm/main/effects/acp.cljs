@@ -2,6 +2,8 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
+            [gremllm.schema.codec :as codec]
+            [nexus.registry :as nxr]
             ["acp" :as acp-factory]
             ["fs/promises" :as fsp]))
 
@@ -132,6 +134,19 @@
   (.prompt (conn!)
     #js {:sessionId acp-session-id
          :prompt    (clj->js content-blocks)}))
+
+(defn make-session-update-callback
+  "Build the on-session-update callback for ACP initialize.
+   Coerces raw JS params, dispatches to store. When on-update is
+   provided, calls it with the coerced value before dispatch."
+  [store on-update]
+  (fn [params]
+    (try
+      (let [coerced (codec/acp-session-update-from-js params)]
+        (when on-update (on-update coerced))
+        (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
+      (catch :default e
+        (js/console.error "ACP session update coercion failed" e params)))))
 
 (defn shutdown
   "Terminate ACP subprocess."
