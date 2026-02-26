@@ -1,7 +1,8 @@
 (ns gremllm.main.effects.acp-test
   (:require ["acp" :as acp-module]
             [cljs.test :refer [deftest is testing async]]
-            [gremllm.main.effects.acp :as acp]))
+            [gremllm.main.effects.acp :as acp]
+            [gremllm.schema.codec :as codec]))
 
 (defn- make-fake-env
   "Creates a fake ACP connection environment with call-tracking atoms.
@@ -73,6 +74,34 @@
                          (is (= "Gremllm" (.. payload -clientInfo -title)))
                          (is (= "0.1.0" (.. payload -clientInfo -version)))
                          (is (= false (.. payload -clientCapabilities -terminal))))))
+              (.finally (fn []
+                          (acp/shutdown)
+                          (done)))))))))
+
+(deftest test-callback-fires-and-coerces-diffs
+  (testing "onSessionUpdate callback receives raw JS, coerces to CLJS, has-diffs? true"
+    (async done
+      (let [received    (atom nil)
+            captured-cb (atom nil)
+            {:keys [result]} (make-fake-env)]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-cb (.-onSessionUpdate opts))
+                        result)]
+          (-> (initialize-dev (fn [data] (reset! received data)))
+              (.then (fn [_]
+                       (let [js-data #js {:sessionId "s-test"
+                                          :update    #js {:sessionUpdate "tool_call_update"
+                                                          :toolCallId    "tc-1"
+                                                          :content       #js [#js {:type    "diff"
+                                                                                   :path    "/doc.md"
+                                                                                   :oldText "old"
+                                                                                   :newText "new"}]}}]
+                         (@captured-cb js-data)
+                         (is (identical? js-data @received))
+                         (let [coerced (codec/acp-session-update-from-js @received)]
+                           (is (= "s-test" (:acp-session-id coerced)))
+                           (is (codec/has-diffs? (:update coerced)))))))
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))
