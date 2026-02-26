@@ -1,5 +1,6 @@
 (ns gremllm.schema.codec
   (:require [camel-snake-kebab.core :as csk]
+            [clojure.string :as str]
             [gremllm.schema :as schema]
             [malli.core :as m]
             [malli.transform :as mt]))
@@ -123,6 +124,15 @@
   (if-let [location (some-> locations first :path)]
     (str title " — " location)
     title))
+
+(defn acp-tool-call-update-read-text
+  "Extracts display text from a Read tool-call-update with tool-response metadata.
+   Returns 'Read — filename (N lines)' or nil."
+  [update]
+  (when-let [file (get-in update [:meta :claude-code :tool-response :file])]
+    (let [filename (-> (:filePath file) (str/split #"/") last)
+          lines   (:totalLines file)]
+      (str "Read — " filename " (" lines " lines)"))))
 
 (defn acp-tool-call-update-diffs
   "Extracts diff items from a tool-call-update's content.
