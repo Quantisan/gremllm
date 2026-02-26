@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.acp-integration-test
-  (:require ["path" :as path]
+  (:require ["fs/promises" :as fsp]
+            ["path" :as path]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
@@ -26,26 +27,37 @@
                         (done))))))))
 
 (deftest test-live-document-first-edit
-  (testing "resource_link prompt produces tool-call-update with diffs"
+  (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
       (let [updates  (atom [])
             cwd      (.cwd js/process)
             doc-path (path/resolve "resources/gremllm-launch-log.md")]
-        (-> (acp/initialize #(swap! updates conj %) false)
-            (.then (fn [_] (acp/new-session cwd)))
-            (.then (fn [session-id]
-                     (is (string? session-id))
-                     (acp/prompt session-id
-                       (acp-actions/prompt-content-blocks
-                         "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else."
-                         doc-path))))
-            (.then (fn [^js result]
-                     (is (= "end_turn" (.-stopReason result)))
-                     (let [coerced (map codec/acp-session-update-from-js @updates)]
-                       (is (some #(codec/has-diffs? (:update %)) coerced)
-                           "Expected at least one tool-call-update with diff content"))))
-            (.catch (fn [err]
-                      (is false (str "Document-first edit test failed: " err))))
-            (.finally (fn []
-                        (acp/shutdown)
-                        (done))))))))
+        (-> (.readFile fsp doc-path "utf8")
+            (.then (fn [content-before]
+                     (-> (acp/initialize #(swap! updates conj %) false)
+                         (.then (fn [_] (acp/new-session cwd)))
+                         (.then (fn [session-id]
+                                  (acp/prompt session-id
+                                    (acp-actions/prompt-content-blocks
+                                      "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else."
+                                      doc-path))))
+                         (.then (fn [^js result]
+                                  (is (= "end_turn" (.-stopReason result)))
+                                  (let [coerced (mapv codec/acp-session-update-from-js @updates)
+                                        diffs   (->> coerced
+                                                     (map :update)
+                                                     (filter codec/has-diffs?)
+                                                     (mapcat codec/acp-pending-diffs))]
+                                    (is (pos? (count diffs))
+                                        "Expected at least one diff from tool-call-update")
+                                    (is (every? #(= doc-path (:path %)) diffs)
+                                        "All diffs should target the linked document"))))
+                         (.then (fn [_] (.readFile fsp doc-path "utf8")))
+                         (.then (fn [content-after]
+                                  (is (= content-before content-after)
+                                      "Document must be unchanged (writeTextFile is a no-op)")))
+                         (.catch (fn [err]
+                                   (is false (str "Document-first edit test failed: " err))))
+                         (.finally (fn []
+                                     (acp/shutdown)
+                                     (done)))))))))))
