@@ -5,17 +5,7 @@
             [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
-            [gremllm.schema.codec :as codec]
-            [nexus.registry :as nxr]))
-
-(defn- make-test-callback [store captured]
-  (fn [params]
-    (try
-      (let [coerced (codec/acp-session-update-from-js params)]
-        (swap! captured conj coerced)
-        (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
-      (catch :default e
-        (js/console.error "Test ACP session update coercion failed" e params)))))
+            [gremllm.schema.codec :as codec]))
 
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
@@ -23,7 +13,7 @@
       (let [store    (atom {})
             captured (atom [])
             cwd      (.cwd js/process)]
-        (-> (acp/initialize (make-test-callback store captured) false)
+        (-> (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false)
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (is (string? session-id))
@@ -54,7 +44,7 @@
             doc-path (path/resolve "resources/gremllm-launch-log.md")]
         (-> (.readFile fsp doc-path "utf8")
             (.then (fn [content-before]
-                     (-> (acp/initialize (make-test-callback store captured) false)
+                     (-> (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false)
                          (.then (fn [_] (acp/new-session cwd)))
                          (.then (fn [session-id]
                                   (acp/prompt session-id
