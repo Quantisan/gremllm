@@ -58,6 +58,31 @@
   [is-packaged?]
   (if is-packaged? "cached" "latest"))
 
+(def ^:private client-info
+  #js {:name "gremllm" :title "Gremllm" :version "0.1.0"})
+
+(def ^:private client-capabilities
+  #js {:fs       #js {:readTextFile true :writeTextFile true}
+       :terminal false})
+
+(defn- start-connection!
+  "Perform ACP handshake, update state atoms, and kill subprocess on failure.
+   Returns the initialization promise."
+  [^js conn ^js subprocess ^js protocol-version]
+  (-> (.initialize conn
+        #js {:protocolVersion    protocol-version
+             :clientCapabilities client-capabilities
+             :clientInfo         client-info})
+      (.then (fn [_]
+               (reset! state {:connection conn :subprocess subprocess})
+               nil))
+      (.catch (fn [err]
+                (when subprocess
+                  (.kill subprocess "SIGTERM"))
+                (throw err)))
+      (.finally (fn []
+                  (reset! initialize-in-flight nil)))))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK.
@@ -75,29 +100,12 @@
                        #js {:onSessionUpdate on-session-update
                             :onReadTextFile  read-text-file
                             :spawnMode       (spawn-mode (boolean is-packaged?))})
-          conn       (.-connection result)
-          subprocess (.-subprocess result)
           init-promise
-          (-> (.initialize conn
-                #js {:protocolVersion    (.-protocolVersion result)
-                     :clientCapabilities #js {:fs #js {:readTextFile true,
-                                                       :writeTextFile true}
-                                              :terminal false}
-                     :clientInfo         #js {:name "gremllm"
-                                              :title "Gremllm"
-                                              :version "0.1.0"}})
-              (.then (fn [_]
-                       (reset! state {:connection conn
-                                      :subprocess subprocess})
-                       nil))
-              (.catch (fn [err]
-                        (when subprocess
-                          (.kill subprocess "SIGTERM"))
-                        (throw err)))
-              (.finally (fn []
-                          (reset! initialize-in-flight nil))))]
+          (start-connection! (.-connection result)
+                             (.-subprocess result)
+                             (.-protocolVersion result))]
       (reset! initialize-in-flight {:promise init-promise
-                                    :subprocess subprocess})
+                                    :subprocess (.-subprocess result)})
       init-promise)))
 
 (defn- ^js conn! []
