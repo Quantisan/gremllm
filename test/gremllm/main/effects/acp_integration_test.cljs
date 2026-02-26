@@ -7,7 +7,7 @@
     (async done
       (let [updates (atom [])
             cwd (.cwd js/process)]
-        (-> (acp/initialize #(swap! updates conj %))
+        (-> (acp/initialize #(swap! updates conj %) false)
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (is (string? session-id))

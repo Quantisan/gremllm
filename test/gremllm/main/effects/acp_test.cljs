@@ -49,6 +49,11 @@
                      (let [i (swap! create-count inc)]
                        (:result (nth envs (dec i)))))}))
 
+(defn- initialize-dev
+  "Initialize ACP in test default mode (non-packaged)."
+  [on-update]
+  (acp/initialize on-update false))
+
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
     (async done
@@ -58,7 +63,7 @@
                       (fn [^js opts]
                         (reset! captured-callback (.-onSessionUpdate opts))
                         result)]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_]
                        (is (fn? @captured-callback))
                        (let [^js payload (first (:initialize @calls))]
@@ -98,7 +103,7 @@
       (let [{:keys [calls result]} (make-fake-env)
             cwd "/tmp/ws"]
         (with-redefs [acp/create-connection (fn [_] result)]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_] (acp/new-session cwd)))
               (.then (fn [session-id]
                        (is (= "s-123" session-id))
@@ -133,8 +138,8 @@
                       (fn [_]
                         (swap! create-count inc)
                         result)]
-          (-> (acp/initialize (fn [_] nil))
-              (.then (fn [_] (acp/initialize (fn [_] nil))))
+          (-> (initialize-dev (fn [_] nil))
+              (.then (fn [_] (initialize-dev (fn [_] nil))))
               (.then (fn [_]
                        (is (= 1 @create-count))
                        (acp/shutdown)
@@ -154,7 +159,7 @@
             {:keys [create-count fake-create]}
             (make-rotating-create [failing-env recovery-env])]
         (with-redefs [acp/create-connection fake-create]
-          (-> (acp/initialize (fn [_] nil))
+          (-> (initialize-dev (fn [_] nil))
               (.then (fn [_]
                        (is false "Expected first initialize call to fail")))
               (.catch (fn [err]
@@ -165,7 +170,7 @@
                         ;; Re-bind for retry because async Promise callbacks run
                         ;; after the outer with-redefs scope has unwound.
                         (with-redefs [acp/create-connection fake-create]
-                          (acp/initialize (fn [_] nil)))))
+                          (initialize-dev (fn [_] nil)))))
               (.then (fn [_] (acp/new-session "/tmp/ws")))
               (.then (fn [session-id]
                        (is (= "s-456" session-id))

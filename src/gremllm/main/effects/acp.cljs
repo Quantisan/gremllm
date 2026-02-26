@@ -60,46 +60,45 @@
 
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
-   on-session-update: callback receiving raw JS session update params from SDK."
-  ([on-session-update]
-   (initialize on-session-update false))
-  ([on-session-update is-packaged?]
-   (cond
-     @state
-     (js/Promise.resolve nil)
+   on-session-update: callback receiving raw JS session update params from SDK.
+   is-packaged?: Electron app packaging state used to select ACP spawn policy."
+  [on-session-update is-packaged?]
+  (cond
+    @state
+    (js/Promise.resolve nil)
 
-     @initialize-in-flight
-     (:promise @initialize-in-flight)
+    @initialize-in-flight
+    (:promise @initialize-in-flight)
 
-     :else
-     (let [^js result (create-connection
-                        #js {:onSessionUpdate on-session-update
-                             :onReadTextFile  read-text-file
-                             :spawnMode       (spawn-mode (boolean is-packaged?))})
-           conn       (.-connection result)
-           subprocess (.-subprocess result)
-           init-promise
-           (-> (.initialize conn
-                 #js {:protocolVersion    (.-protocolVersion result)
-                      :clientCapabilities #js {:fs #js {:readTextFile true,
-                                                        :writeTextFile true}
-                                               :terminal false}
-                      :clientInfo         #js {:name "gremllm"
-                                               :title "Gremllm"
-                                               :version "0.1.0"}})
-               (.then (fn [_]
-                        (reset! state {:connection conn
-                                       :subprocess subprocess})
-                        nil))
-               (.catch (fn [err]
-                         (when subprocess
-                           (.kill subprocess "SIGTERM"))
-                         (throw err)))
-               (.finally (fn []
-                           (reset! initialize-in-flight nil))))]
-       (reset! initialize-in-flight {:promise init-promise
-                                     :subprocess subprocess})
-       init-promise))))
+    :else
+    (let [^js result (create-connection
+                       #js {:onSessionUpdate on-session-update
+                            :onReadTextFile  read-text-file
+                            :spawnMode       (spawn-mode (boolean is-packaged?))})
+          conn       (.-connection result)
+          subprocess (.-subprocess result)
+          init-promise
+          (-> (.initialize conn
+                #js {:protocolVersion    (.-protocolVersion result)
+                     :clientCapabilities #js {:fs #js {:readTextFile true,
+                                                       :writeTextFile true}
+                                              :terminal false}
+                     :clientInfo         #js {:name "gremllm"
+                                              :title "Gremllm"
+                                              :version "0.1.0"}})
+              (.then (fn [_]
+                       (reset! state {:connection conn
+                                      :subprocess subprocess})
+                       nil))
+              (.catch (fn [err]
+                        (when subprocess
+                          (.kill subprocess "SIGTERM"))
+                        (throw err)))
+              (.finally (fn []
+                          (reset! initialize-in-flight nil))))]
+      (reset! initialize-in-flight {:promise init-promise
+                                    :subprocess subprocess})
+      init-promise)))
 
 (defn- ^js conn! []
   (or (:connection @state)
