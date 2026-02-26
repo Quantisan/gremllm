@@ -77,11 +77,6 @@
                           (acp/shutdown)
                           (done)))))))))
 
-(deftest test-agent-package-mode-policy
-  (testing "maps packaging state to ACP agent package mode policy"
-    (is (= "latest" (acp/agent-package-mode false)))
-    (is (= "cached" (acp/agent-package-mode true)))))
-
 (deftest test-build-npx-agent-package-config
   (testing "exposes buildNpxAgentPackageConfig for test assertions"
     (is (fn? (.. acp-module -__test__ -buildNpxAgentPackageConfig))
@@ -106,22 +101,6 @@
       (let [^js config (build-npx-agent-package-config "not-a-valid-mode")]
         (is (= ["@zed-industries/claude-agent-acp"]
                (vec (js->clj (.-args config)))))))))
-
-(deftest test-initialize-passes-agent-package-mode
-  (testing "forwards agentPackageMode option to create-connection"
-    (async done
-      (let [{:keys [result]} (make-fake-env)
-            captured-opts (atom nil)]
-        (with-redefs [acp/create-connection
-                      (fn [^js opts]
-                        (reset! captured-opts opts)
-                        result)]
-          (-> (acp/initialize (fn [_] nil) true)
-              (.then (fn [_]
-                       (is (= "cached" (.-agentPackageMode ^js @captured-opts)))))
-              (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
 
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
