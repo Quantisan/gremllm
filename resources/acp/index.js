@@ -4,12 +4,12 @@ const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { resolvePermissionOutcome } = require("./permission");
 
-function normalizeSpawnMode(spawnMode) {
-  return spawnMode === "latest" ? "latest" : "cached";
+function normalizeAgentPackageMode(agentPackageMode) {
+  return agentPackageMode === "latest" ? "latest" : "cached";
 }
 
-function buildNpxSpawnConfig(spawnMode) {
-  if (normalizeSpawnMode(spawnMode) === "cached") {
+function buildNpxAgentPackageConfig(agentPackageMode) {
+  if (normalizeAgentPackageMode(agentPackageMode) === "cached") {
     return {
       command: "npx",
       args: ["@zed-industries/claude-agent-acp"],
@@ -33,7 +33,7 @@ function buildNpxSpawnConfig(spawnMode) {
 
 function createConnection(options = {}) {
   const callbacks = options;
-  const { command, args, envPatch } = buildNpxSpawnConfig(options.spawnMode);
+  const { command, args, envPatch } = buildNpxAgentPackageConfig(options.agentPackageMode);
 
   const subprocess = spawn(command, args, {
     stdio: ["pipe", "pipe", "inherit"],
@@ -73,6 +73,6 @@ function createConnection(options = {}) {
 module.exports = {
   createConnection,
   __test__: {
-    buildNpxSpawnConfig
+    buildNpxAgentPackageConfig
   }
 };

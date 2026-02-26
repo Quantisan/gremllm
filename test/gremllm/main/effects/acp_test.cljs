@@ -77,18 +77,18 @@
                           (acp/shutdown)
                           (done)))))))))
 
-(deftest test-spawn-mode-policy
-  (testing "maps packaging state to ACP spawn mode policy"
-    (is (= "latest" (acp/spawn-mode false)))
-    (is (= "cached" (acp/spawn-mode true)))))
+(deftest test-agent-package-mode-policy
+  (testing "maps packaging state to ACP agent package mode policy"
+    (is (= "latest" (acp/agent-package-mode false)))
+    (is (= "cached" (acp/agent-package-mode true)))))
 
-(deftest test-build-npx-spawn-config
-  (testing "exposes buildNpxSpawnConfig for test assertions"
-    (is (fn? (.. acp-module -__test__ -buildNpxSpawnConfig))
-        "Expected __test__.buildNpxSpawnConfig export"))
-  (let [build-npx-spawn-config (.. acp-module -__test__ -buildNpxSpawnConfig)]
+(deftest test-build-npx-agent-package-config
+  (testing "exposes buildNpxAgentPackageConfig for test assertions"
+    (is (fn? (.. acp-module -__test__ -buildNpxAgentPackageConfig))
+        "Expected __test__.buildNpxAgentPackageConfig export"))
+  (let [build-npx-agent-package-config (.. acp-module -__test__ -buildNpxAgentPackageConfig)]
     (testing "latest mode uses online latest package"
-      (let [^js config (build-npx-spawn-config "latest")]
+      (let [^js config (build-npx-agent-package-config "latest")]
         (is (= "npx" (.-command config)))
         (is (= ["--yes"
                 "--package=@zed-industries/claude-agent-acp@latest"
@@ -97,18 +97,18 @@
                (vec (js->clj (.-args config)))))
         (is (= "true" (.. config -envPatch -npm_config_prefer_online)))))
     (testing "cached mode uses default package and no env patch"
-      (let [^js config (build-npx-spawn-config "cached")]
+      (let [^js config (build-npx-agent-package-config "cached")]
         (is (= "npx" (.-command config)))
         (is (= ["@zed-industries/claude-agent-acp"]
                (vec (js->clj (.-args config)))))
         (is (= {} (js->clj (.-envPatch config))))))
     (testing "invalid mode falls back to cached behavior"
-      (let [^js config (build-npx-spawn-config "not-a-valid-mode")]
+      (let [^js config (build-npx-agent-package-config "not-a-valid-mode")]
         (is (= ["@zed-industries/claude-agent-acp"]
                (vec (js->clj (.-args config)))))))))
 
-(deftest test-initialize-passes-spawn-mode
-  (testing "forwards spawnMode option to create-connection"
+(deftest test-initialize-passes-agent-package-mode
+  (testing "forwards agentPackageMode option to create-connection"
     (async done
       (let [{:keys [result]} (make-fake-env)
             captured-opts (atom nil)]
@@ -118,7 +118,7 @@
                         result)]
           (-> (acp/initialize (fn [_] nil) true)
               (.then (fn [_]
-                       (is (= "cached" (.-spawnMode ^js @captured-opts)))))
+                       (is (= "cached" (.-agentPackageMode ^js @captured-opts)))))
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))

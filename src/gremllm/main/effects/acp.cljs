@@ -52,9 +52,9 @@
   [opts]
   (acp-factory/createConnection opts))
 
-(defn spawn-mode
-  "ACP spawn policy: packaged apps prefer cached/default package resolution,
-   development prefers latest package resolution."
+(defn agent-package-mode
+  "ACP agent package mode policy: packaged apps prefer cached/default package
+   resolution, development prefers latest package resolution."
   [is-packaged?]
   (if is-packaged? "cached" "latest"))
 
@@ -86,7 +86,8 @@
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK.
-   is-packaged?: Electron app packaging state used to select ACP spawn policy."
+   is-packaged?: Electron app packaging state used to select ACP agent package
+   mode policy."
   [on-session-update is-packaged?]
   (cond
     @state
@@ -99,7 +100,7 @@
     (let [^js result (create-connection
                        #js {:onSessionUpdate on-session-update
                             :onReadTextFile  read-text-file
-                            :spawnMode       (spawn-mode (boolean is-packaged?))})
+                            :agentPackageMode (agent-package-mode (boolean is-packaged?))})
           init-promise
           (start-connection! (.-connection result)
                              (.-subprocess result)
