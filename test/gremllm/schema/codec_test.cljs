@@ -2,10 +2,10 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.schema.codec :as codec]))
 
-(deftest test-acp-tool-call-update-read-text
+(deftest test-acp-read-display-label
   (testing "returns 'Read — filename (N lines)' when tool-response meta present"
     (is (= "Read — document.md (37 lines)"
-           (codec/acp-tool-call-update-read-text
+           (codec/acp-read-display-label
              {:session-update :tool-call-update
               :tool-call-id "toolu_01Ext"
               :meta {:claude-code {:tool-name "Read"
@@ -16,7 +16,7 @@
                                                    :type "text"}}}}))))
 
   (testing "returns nil when tool-response meta is absent"
-    (is (nil? (codec/acp-tool-call-update-read-text
+    (is (nil? (codec/acp-read-display-label
                 {:session-update :tool-call-update
                  :tool-call-id "toolu_01Ext"
                  :status "completed"

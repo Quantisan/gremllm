@@ -117,7 +117,7 @@
   [update]
   (get-in update [:content :text]))
 
-(defn acp-tool-call-text
+(defn acp-tool-display-label
   "Composes display text from a tool_call update.
    Returns 'Title — path' when locations exist, otherwise just 'Title'."
   [{:keys [title locations]}]
@@ -125,7 +125,7 @@
     (str title " — " location)
     title))
 
-(defn acp-tool-call-update-read-text
+(defn acp-read-display-label
   "Extracts display text from a Read tool-call-update with tool-response metadata.
    Returns 'Read — filename (N lines)' or nil."
   [update]
@@ -134,7 +134,7 @@
           lines   (:totalLines file)]
       (str "Read — " filename " (" lines " lines)"))))
 
-(defn acp-tool-call-update-diffs
+(defn acp-pending-diffs
   "Extracts diff items from a tool-call-update's content.
    Returns a vector of diff maps or nil if none present."
   [{:keys [content]}]

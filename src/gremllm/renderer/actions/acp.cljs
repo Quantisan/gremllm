@@ -43,13 +43,13 @@
   [_state update message-id]
   (cond
     (codec/displayable-tool-call? update)
-    (start-response :tool-use (codec/acp-tool-call-text update) message-id)
+    (start-response :tool-use (codec/acp-tool-display-label update) message-id)
 
     (codec/read-tool-response? update)
-    (start-response :tool-use (codec/acp-tool-call-update-read-text update) message-id)
+    (start-response :tool-use (codec/acp-read-display-label update) message-id)
 
     (codec/has-diffs? update)
-    [[:document.actions/append-pending-diffs (codec/acp-tool-call-update-diffs update)]]))
+    [[:document.actions/append-pending-diffs (codec/acp-pending-diffs update)]]))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
