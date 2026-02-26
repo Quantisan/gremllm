@@ -279,7 +279,7 @@ async function main() {
   // Send prompt - text instruction + resource_link (not full document content)
   // The agent will call readTextFile to demand-read the document
   const promptText =
-    "Read the linked document, then propose a single edit: update the front-matter Date field to 2026-02-10. Do not change anything else.";
+    "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else.";
 
   const promptResult = await connection.prompt({
     sessionId: session.sessionId,
