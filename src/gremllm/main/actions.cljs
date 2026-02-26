@@ -2,13 +2,11 @@
   (:require [nexus.registry :as nxr]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.ipc :as ipc-effects]
-            [gremllm.main.actions.secrets :as secrets-actions]
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.io :as io]
-            [gremllm.main.window :as window]
-            [gremllm.schema :as schema]))
+            [gremllm.main.window :as window]))
 
 ;; Register how to extract state from the system
 (nxr/register-system->state! deref)
