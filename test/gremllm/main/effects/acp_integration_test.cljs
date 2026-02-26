@@ -19,7 +19,14 @@
                                               :text "Reply with exactly: hi"}])))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
-                     (is (pos? (count @updates)))))
+                     (is (pos? (count @updates)))
+                     (let [response (->> (mapv codec/acp-session-update-from-js @updates)
+                                         (map :update)
+                                         (filter #(= :agent-message-chunk (:session-update %)))
+                                         (map codec/acp-update-text)
+                                         (apply str))]
+                       (is (re-find #"(?i)\bhi\b" response)
+                           "Expected response to contain 'hi'"))))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
