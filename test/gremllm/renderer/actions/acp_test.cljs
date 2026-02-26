@@ -32,35 +32,6 @@
              effects)))))
 
 (deftest test-handle-tool-event
-  (testing "creates tool-use message for tool-call"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :tool-call
-                     :kind "edit"
-                     :title "Edit File"
-                     :locations [{:path "src/gremllm/schema.cljs"}]}
-                    789)
-          action (first effects)
-          message (nth action 1)]
-      (is (= :messages.actions/add-to-chat-no-save (first action)))
-      (is (= :tool-use (:type message)))
-      (is (= "Edit File — src/gremllm/schema.cljs" (:text message)))
-      (is (= 789 (:id message)))))
-
-  (testing "returns nil for tool-call with kind read (skipped at request phase)"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :tool-call
-                     :tool-call-id "toolu_01Ext"
-                     :kind "read"
-                     :status "pending"
-                     :title "Read File"
-                     :raw-input {:file-path "/path/to/document.md"}
-                     :content []
-                     :locations []}
-                    789)]
-      (is (nil? effects))))
-
   (testing "returns tool-use for tool-call-update with Read tool-response meta"
     (let [effects (acp/handle-tool-event
                     {}

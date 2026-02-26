@@ -42,9 +42,6 @@
    or diff effects for tool-call-updates with diffs."
   [_state update message-id]
   (cond
-    (codec/displayable-tool-call? update)
-    (start-response :tool-use (codec/acp-tool-display-label update) message-id)
-
     (codec/read-tool-response? update)
     (start-response :tool-use (codec/acp-read-display-label update) message-id)
 

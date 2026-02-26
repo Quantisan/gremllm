@@ -117,14 +117,6 @@
   [update]
   (get-in update [:content :text]))
 
-(defn acp-tool-display-label
-  "Composes display text from a tool_call update.
-   Returns 'Title — path' when locations exist, otherwise just 'Title'."
-  [{:keys [title locations]}]
-  (if-let [location (some-> locations first :path)]
-    (str title " — " location)
-    title))
-
 (defn acp-read-display-label
   "Extracts display text from a Read tool-call-update with tool-response metadata.
    Returns 'Read — filename (N lines)' or nil."
