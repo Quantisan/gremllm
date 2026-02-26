@@ -52,6 +52,12 @@
   [opts]
   (acp-factory/createConnection opts))
 
+(defn spawn-mode
+  "ACP spawn policy: packaged apps prefer cached/default package resolution,
+   development prefers latest package resolution."
+  [is-packaged?]
+  (if is-packaged? "cached" "latest"))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK."
@@ -69,7 +75,7 @@
      (let [^js result (create-connection
                         #js {:onSessionUpdate on-session-update
                              :onReadTextFile  read-text-file
-                             :isPackaged      (boolean is-packaged?)})
+                             :spawnMode       (spawn-mode (boolean is-packaged?))})
            conn       (.-connection result)
            subprocess (.-subprocess result)
            init-promise

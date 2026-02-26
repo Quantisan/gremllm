@@ -71,8 +71,13 @@
                           (acp/shutdown)
                           (done)))))))))
 
-(deftest test-initialize-passes-packaging-flag
-  (testing "forwards isPackaged flag to create-connection options"
+(deftest test-spawn-mode-policy
+  (testing "maps packaging state to ACP spawn mode policy"
+    (is (= "latest" (acp/spawn-mode false)))
+    (is (= "cached" (acp/spawn-mode true)))))
+
+(deftest test-initialize-passes-spawn-mode
+  (testing "forwards spawnMode option to create-connection"
     (async done
       (let [{:keys [result]} (make-fake-env)
             captured-opts (atom nil)]
@@ -82,7 +87,7 @@
                         result)]
           (-> (acp/initialize (fn [_] nil) true)
               (.then (fn [_]
-                       (is (= true (.-isPackaged ^js @captured-opts)))))
+                       (is (= "cached" (.-spawnMode ^js @captured-opts)))))
               (.finally (fn []
                           (acp/shutdown)
                           (done)))))))))

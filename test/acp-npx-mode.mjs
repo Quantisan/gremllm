@@ -12,7 +12,7 @@ assert.equal(
 );
 
 {
-  const config = buildNpxSpawnConfig({ isPackaged: false });
+  const config = buildNpxSpawnConfig("latest");
   assert.equal(config.command, "npx");
   assert.deepEqual(config.args, [
     "--yes",
@@ -24,10 +24,15 @@ assert.equal(
 }
 
 {
-  const config = buildNpxSpawnConfig({ isPackaged: true });
+  const config = buildNpxSpawnConfig("cached");
   assert.equal(config.command, "npx");
   assert.deepEqual(config.args, ["@zed-industries/claude-agent-acp"]);
   assert.deepEqual(config.envPatch, {});
+}
+
+{
+  const config = buildNpxSpawnConfig("not-a-valid-mode");
+  assert.deepEqual(config.args, ["@zed-industries/claude-agent-acp"]);
 }
 
 console.log("acp-npx-mode: all tests passed");
