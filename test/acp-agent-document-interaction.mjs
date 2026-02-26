@@ -50,7 +50,7 @@ import * as acp from "@agentclientprotocol/sdk";
 // ============================================================================
 
 const PROJECT_ROOT = process.cwd();
-const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "docs/plans/2026-02-09-document-first-pivot.md");
+const DEFAULT_DOC = path.resolve(PROJECT_ROOT, "resources/gremllm-launch-log.md");
 
 // Document to edit - configurable via env var, CLI arg, or default
 const DOC_PATH = process.env.ACP_DOC_PATH
