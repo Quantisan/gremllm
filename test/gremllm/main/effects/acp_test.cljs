@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.acp-test
-  (:require [cljs.test :refer [deftest is testing async]]
+  (:require ["acp" :as acp-module]
+            [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.acp :as acp]))
 
 (defn- make-fake-env
@@ -80,6 +81,31 @@
   (testing "maps packaging state to ACP spawn mode policy"
     (is (= "latest" (acp/spawn-mode false)))
     (is (= "cached" (acp/spawn-mode true)))))
+
+(deftest test-build-npx-spawn-config
+  (testing "exposes buildNpxSpawnConfig for test assertions"
+    (is (fn? (.. acp-module -__test__ -buildNpxSpawnConfig))
+        "Expected __test__.buildNpxSpawnConfig export"))
+  (let [build-npx-spawn-config (.. acp-module -__test__ -buildNpxSpawnConfig)]
+    (testing "latest mode uses online latest package"
+      (let [^js config (build-npx-spawn-config "latest")]
+        (is (= "npx" (.-command config)))
+        (is (= ["--yes"
+                "--package=@zed-industries/claude-agent-acp@latest"
+                "--"
+                "claude-agent-acp"]
+               (vec (js->clj (.-args config)))))
+        (is (= "true" (.. config -envPatch -npm_config_prefer_online)))))
+    (testing "cached mode uses default package and no env patch"
+      (let [^js config (build-npx-spawn-config "cached")]
+        (is (= "npx" (.-command config)))
+        (is (= ["@zed-industries/claude-agent-acp"]
+               (vec (js->clj (.-args config)))))
+        (is (= {} (js->clj (.-envPatch config))))))
+    (testing "invalid mode falls back to cached behavior"
+      (let [^js config (build-npx-spawn-config "not-a-valid-mode")]
+        (is (= ["@zed-industries/claude-agent-acp"]
+               (vec (js->clj (.-args config)))))))))
 
 (deftest test-initialize-passes-spawn-mode
   (testing "forwards spawnMode option to create-connection"
