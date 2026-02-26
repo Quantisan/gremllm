@@ -77,30 +77,29 @@
                           (acp/shutdown)
                           (done)))))))))
 
+(defn- spawn-config->map [^js config]
+  {:command   (.-command config)
+   :args      (vec (js->clj (.-args config)))
+   :env-patch (js->clj (.-envPatch config))})
+
 (deftest test-build-npx-agent-package-config
-  (testing "exposes buildNpxAgentPackageConfig for test assertions"
-    (is (fn? (.. acp-module -__test__ -buildNpxAgentPackageConfig))
-        "Expected __test__.buildNpxAgentPackageConfig export"))
-  (let [build-npx-agent-package-config (.. acp-module -__test__ -buildNpxAgentPackageConfig)]
-    (testing "latest mode uses online latest package"
-      (let [^js config (build-npx-agent-package-config "latest")]
-        (is (= "npx" (.-command config)))
-        (is (= ["--yes"
-                "--package=@zed-industries/claude-agent-acp@latest"
-                "--"
-                "claude-agent-acp"]
-               (vec (js->clj (.-args config)))))
-        (is (= "true" (.. config -envPatch -npm_config_prefer_online)))))
-    (testing "cached mode uses default package and no env patch"
-      (let [^js config (build-npx-agent-package-config "cached")]
-        (is (= "npx" (.-command config)))
-        (is (= ["@zed-industries/claude-agent-acp"]
-               (vec (js->clj (.-args config)))))
-        (is (= {} (js->clj (.-envPatch config))))))
-    (testing "invalid mode falls back to cached behavior"
-      (let [^js config (build-npx-agent-package-config "not-a-valid-mode")]
-        (is (= ["@zed-industries/claude-agent-acp"]
-               (vec (js->clj (.-args config)))))))))
+  (let [build (.. acp-module -__test__ -buildNpxAgentPackageConfig)]
+    (testing "latest mode forces online package resolution"
+      (is (= {:command   "npx"
+              :args      ["--yes"
+                          "--package=@zed-industries/claude-agent-acp@latest"
+                          "--"
+                          "claude-agent-acp"]
+              :env-patch {"npm_config_prefer_online" "true"}}
+             (spawn-config->map (build "latest")))))
+    (testing "cached mode uses default package"
+      (is (= {:command   "npx"
+              :args      ["@zed-industries/claude-agent-acp"]
+              :env-patch {}}
+             (spawn-config->map (build "cached")))))
+    (testing "invalid mode falls back to cached"
+      (is (= (spawn-config->map (build "cached"))
+             (spawn-config->map (build "not-a-valid-mode")))))))
 
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
