@@ -122,7 +122,7 @@
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
-                         "Read the linked document, then propose a single edit: Update the title to something arbitrary. Do not change anything else."
+                         "Read the linked document, then proceed to a single edit without further question: Update the title to something arbitrary. Do not change anything else."
                          doc-path))))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
