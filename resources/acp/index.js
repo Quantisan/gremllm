@@ -2,7 +2,9 @@
 const { spawn } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
-const { resolvePermissionOutcome } = require("./permission");
+const { makeResolver } = require("./permission");
+
+const sessionCwdMap = new Map();
 
 function normalizeAgentPackageMode(agentPackageMode) {
   return agentPackageMode === "latest" ? "latest" : "cached";
@@ -40,6 +42,8 @@ function createConnection(options = {}) {
     env: { ...process.env, ...envPatch }
   });
 
+  const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
+
   const client = {
     async sessionUpdate(params) {
       if (callbacks.onSessionUpdate) {
@@ -50,7 +54,7 @@ function createConnection(options = {}) {
       if (callbacks.onRequestPermission) {
         callbacks.onRequestPermission(params);
       }
-      return resolvePermissionOutcome(params);
+      return resolver(params);
     },
     async readTextFile(params) {
       return callbacks.onReadTextFile(params);
@@ -65,6 +69,20 @@ function createConnection(options = {}) {
   const output = Readable.toWeb(subprocess.stdout);
   const stream = acp.ndJsonStream(input, output);
   const connection = new acp.ClientSideConnection(() => client, stream);
+
+  const originalNewSession = connection.newSession.bind(connection);
+  connection.newSession = async (params) => {
+    const result = await originalNewSession(params);
+    sessionCwdMap.set(result.sessionId, params.cwd);
+    return result;
+  };
+
+  const originalResumeSession = connection.unstable_resumeSession.bind(connection);
+  connection.unstable_resumeSession = async (params) => {
+    const result = await originalResumeSession(params);
+    sessionCwdMap.set(params.sessionId, params.cwd);
+    return result;
+  };
 
   return {
     connection,

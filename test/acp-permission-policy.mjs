@@ -4,104 +4,22 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import acpModule from "../resources/acp/permission.js";
 
-const resolvePermissionOutcome = acpModule.__test__?.resolvePermissionOutcome;
+const { makeResolver } = acpModule;
+const { normalizePath, isWithinRoot, requestedPath } = acpModule.__test__;
 
-assert.equal(
-  typeof resolvePermissionOutcome,
-  "function",
-  "Expected __test__.resolvePermissionOutcome export"
-);
+assert.equal(typeof makeResolver, "function", "Expected makeResolver export");
+assert.equal(typeof normalizePath, "function", "Expected __test__.normalizePath export");
+assert.equal(typeof isWithinRoot, "function", "Expected __test__.isWithinRoot export");
+assert.equal(typeof requestedPath, "function", "Expected __test__.requestedPath export");
+
+function option(optionId, kind) {
+  return { optionId, kind, name: kind };
+}
 
 function selectedOptionId(result) {
   assert.equal(result.outcome.outcome, "selected");
   return result.outcome.optionId;
 }
-
-function option(optionId, kind, name = kind) {
-  return { optionId, kind, name };
-}
-
-function selectOptionByKind(options, preferredKinds, fallback) {
-  for (const kind of preferredKinds) {
-    const match = options.find((entry) => entry?.kind === kind);
-    if (match) return match;
-  }
-  return fallback(options);
-}
-
-function normalizePath(value) {
-  if (typeof value !== "string" || value.length === 0) return null;
-  return path.resolve(value);
-}
-
-function isWithinRoot(candidatePath, rootPath) {
-  const relative = path.relative(rootPath, candidatePath);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-}
-
-function requestedPath(toolCall) {
-  const rawInput = toolCall?.rawInput ?? {};
-  return rawInput.path ?? rawInput.file_path ?? null;
-}
-
-function isAllowedEditPath(toolCall, policy) {
-  const normalizedRequested = normalizePath(requestedPath(toolCall));
-  if (!normalizedRequested) return false;
-
-  const normalizedWorkspaceRoot = normalizePath(policy.workspaceRoot);
-  if (normalizedWorkspaceRoot && isWithinRoot(normalizedRequested, normalizedWorkspaceRoot)) {
-    return true;
-  }
-
-  const linkedFiles = new Set((policy.linkedFiles ?? []).map(normalizePath).filter(Boolean));
-  return linkedFiles.has(normalizedRequested);
-}
-
-function resolvePermissionOutcomeSpike(params, policy) {
-  const options = Array.isArray(params?.options) ? params.options : [];
-  const toolCall = params?.toolCall ?? {};
-  const toolKind = toolCall.kind ?? null;
-
-  if (options.length === 0) {
-    return { outcome: { outcome: "cancelled" } };
-  }
-
-  if (toolKind === "read") {
-    const allowOption = selectOptionByKind(options, ["allow_always", "allow_once"], (list) => list[0]);
-    return { outcome: { outcome: "selected", optionId: allowOption.optionId } };
-  }
-
-  if (toolKind === "edit" && isAllowedEditPath(toolCall, policy)) {
-    const allowOption = selectOptionByKind(options, ["allow_always", "allow_once"], (list) => list[0]);
-    return { outcome: { outcome: "selected", optionId: allowOption.optionId } };
-  }
-
-  const rejectOption = selectOptionByKind(options, ["reject_once", "reject_always"], (list) => list[list.length - 1]);
-  return { outcome: { outcome: "selected", optionId: rejectOption.optionId } };
-}
-
-function printSpikeCase(label, params, baselineOutcome, spikeOutcome) {
-  console.log(`\n=== ${label} ===`);
-  console.log("[params]");
-  console.dir(params, { depth: null });
-  console.log("[selected]");
-  console.log({
-    baselineOptionId: baselineOutcome.outcome?.outcome === "selected" ? baselineOutcome.outcome.optionId : "cancelled",
-    spikeOptionId: spikeOutcome.outcome?.outcome === "selected" ? spikeOutcome.outcome.optionId : "cancelled"
-  });
-}
-
-function runSpikeCase({ label, params, expectedSpikeOptionId, policy }) {
-  const baselineOutcome = resolvePermissionOutcome(params);
-  const spikeOutcome = resolvePermissionOutcomeSpike(params, policy);
-
-  printSpikeCase(label, params, baselineOutcome, spikeOutcome);
-  assert.equal(selectedOptionId(spikeOutcome), expectedSpikeOptionId);
-}
-
-const workspaceRoot = path.resolve(process.cwd(), "resources");
-const linkedDocument = path.resolve(process.cwd(), "resources/gremllm-launch-log.md");
-const outsideFile = path.resolve(process.cwd(), "README.md");
 
 const fullOptions = [
   option("allow-always", "allow_always"),
@@ -110,101 +28,81 @@ const fullOptions = [
   option("reject-always", "reject_always")
 ];
 
-const policy = {
-  workspaceRoot,
-  linkedFiles: [linkedDocument]
-};
+const cwd = path.resolve(process.cwd(), "resources");
+const fileInCwd = path.resolve(cwd, "gremllm-launch-log.md");
+const fileOutsideCwd = path.resolve(process.cwd(), "README.md");
 
-runSpikeCase({
-  label: "read uses rawInput.path and always allows",
-  params: {
-    sessionId: "session-1",
-    toolCall: {
-      toolCallId: "tool-1",
-      kind: "read",
-      title: `Read ${linkedDocument}`,
-      rawInput: { path: linkedDocument }
-    },
-    options: fullOptions
-  },
-  expectedSpikeOptionId: "allow-always",
-  policy
-});
+const getSessionCwd = (sessionId) => (sessionId === "session-known" ? cwd : undefined);
+const resolver = makeResolver(getSessionCwd);
 
-runSpikeCase({
-  label: "read uses rawInput.file_path and always allows",
-  params: {
-    sessionId: "session-2",
-    toolCall: {
-      toolCallId: "tool-2",
-      kind: "read",
-      title: `Read ${outsideFile}`,
-      rawInput: { file_path: outsideFile },
-      locations: [{ path: outsideFile }]
-    },
-    options: fullOptions
-  },
-  expectedSpikeOptionId: "allow-always",
-  policy
-});
-
-runSpikeCase({
-  label: "edit in workspace root is conditionally allowed",
-  params: {
-    sessionId: "session-3",
-    toolCall: {
-      toolCallId: "tool-3",
-      kind: "edit",
-      title: `Edit ${linkedDocument}`,
-      rawInput: { path: linkedDocument }
-    },
-    options: fullOptions
-  },
-  expectedSpikeOptionId: "allow-always",
-  policy
-});
-
-runSpikeCase({
-  label: "edit outside workspace is rejected",
-  params: {
-    sessionId: "session-4",
-    toolCall: {
-      toolCallId: "tool-4",
-      kind: "edit",
-      title: `Edit ${outsideFile}`,
-      rawInput: { file_path: outsideFile }
-    },
-    options: fullOptions
-  },
-  expectedSpikeOptionId: "reject-once",
-  policy
-});
-
-runSpikeCase({
-  label: "edit without path metadata is rejected",
-  params: {
-    sessionId: "session-5",
-    toolCall: {
-      toolCallId: "tool-5",
-      kind: "edit",
-      title: "Edit without rawInput path",
-      rawInput: { replace_all: false }
-    },
-    options: fullOptions
-  },
-  expectedSpikeOptionId: "reject-once",
-  policy
-});
-
+// read always allowed (rawInput.path)
 {
-  const result = resolvePermissionOutcomeSpike({
-    sessionId: "session-6",
-    toolCall: { kind: "read", title: "Read with no options", rawInput: { path: linkedDocument } },
-    options: []
-  }, policy);
-  console.log("\n=== no options ===");
-  console.dir(result, { depth: null });
-  assert.deepEqual(result, { outcome: { outcome: "cancelled" } });
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "read", rawInput: { path: fileInCwd } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "allow-always", "read via rawInput.path always allowed");
 }
 
-console.log("\nacp-permission-policy spike: all assertions passed");
+// read always allowed (rawInput.file_path, outside cwd)
+{
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "read", rawInput: { file_path: fileOutsideCwd } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "allow-always", "read via rawInput.file_path always allowed");
+}
+
+// edit within cwd: allowed
+{
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "edit", rawInput: { path: fileInCwd } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "allow-always", "edit within cwd is allowed");
+}
+
+// edit outside cwd: rejected
+{
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "edit", rawInput: { file_path: fileOutsideCwd } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "reject-once", "edit outside cwd is rejected");
+}
+
+// edit without path metadata: rejected
+{
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "edit", rawInput: { replace_all: false } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "reject-once", "edit without path metadata is rejected");
+}
+
+// no options: cancelled
+{
+  const result = resolver({
+    sessionId: "session-known",
+    toolCall: { kind: "read", rawInput: { path: fileInCwd } },
+    options: []
+  });
+  assert.deepEqual(result, { outcome: { outcome: "cancelled" } }, "no options yields cancelled");
+}
+
+// unknown/missing session: edit rejected
+{
+  const result = resolver({
+    sessionId: "session-unknown",
+    toolCall: { kind: "edit", rawInput: { path: fileInCwd } },
+    options: fullOptions
+  });
+  assert.equal(selectedOptionId(result), "reject-once", "edit with unknown session is rejected");
+}
+
+console.log("acp-permission-policy: all assertions passed");
