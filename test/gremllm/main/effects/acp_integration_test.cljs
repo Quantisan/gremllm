@@ -64,8 +64,8 @@
                                   (print-updates @captured)
                                   (let [diffs (->> @captured
                                                    (map :update)
-                                                   (filter codec/has-diffs?)
-                                                   (mapcat codec/acp-pending-diffs))]
+                                                   (filter codec/tool-response-has-diffs?)
+                                                   (mapcat codec/tool-response-diffs))]
                                     (is (pos? (count diffs))
                                         "Expected at least one diff from tool-call-update")
                                     (is (every? #(= doc-path (:path %)) diffs)
