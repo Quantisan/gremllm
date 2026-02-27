@@ -32,24 +32,21 @@
              effects)))))
 
 (deftest test-handle-tool-event
-  (testing "returns tool-use for tool-call-update with Read tool-response meta"
+  (testing "returns tool-use for Read tool-call-update with file payload"
     (let [effects (acp/handle-tool-event
                     {}
                     {:session-update :tool-call-update
-                     :tool-call-id "toolu_01Ext"
+                     :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
                      :meta {:claude-code {:tool-name "Read"
-                                          :tool-response {:file {:filePath "/path/to/document.md"
-                                                                 :totalLines 37
-                                                                 :numLines 37
-                                                                 :startLine 1}
+                                          :tool-response {:file {:filePath "/Users/paul/Projects/gremllm/resources/gremllm-launch-log.md"
+                                                                 :totalLines 16}
                                                           :type "text"}}}}
-                    456)
-          action (first effects)
-          message (nth action 1)]
-      (is (= :messages.actions/add-to-chat-no-save (first action)))
-      (is (= :tool-use (:type message)))
-      (is (= "Read — document.md (37 lines)" (:text message)))
-      (is (= 456 (:id message)))))
+                    456)]
+      (is (= [[:messages.actions/add-to-chat-no-save
+               {:id 456
+                :type :tool-use
+                :text "Read — gremllm-launch-log.md (16 lines)"}]]
+             effects))))
 
   (testing "dispatches pending diffs from tool-call-update with diff content"
     (let [effects (acp/handle-tool-event
