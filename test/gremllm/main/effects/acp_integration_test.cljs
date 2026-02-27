@@ -1,11 +1,18 @@
 (ns gremllm.main.effects.acp-integration-test
   (:require ["fs/promises" :as fsp]
             ["path" :as path]
+            [cljs.pprint :as pprint]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
             [gremllm.schema.codec :as codec]))
+
+(defn- print-updates [updates]
+  (println "\n--- Session Updates ---")
+  (doseq [{:keys [update]} updates]
+    (pprint/pprint update))
+  (println "--- End Updates ---"))
 
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
@@ -22,6 +29,7 @@
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
                      (is (pos? (count @captured)))
+                     (print-updates @captured)
                      (let [response (->> @captured
                                          (map :update)
                                          (filter #(= :agent-message-chunk (:session-update %)))
@@ -53,14 +61,24 @@
                                       doc-path))))
                          (.then (fn [^js result]
                                   (is (= "end_turn" (.-stopReason result)))
+                                  (print-updates @captured)
                                   (let [diffs (->> @captured
                                                    (map :update)
-                                                   (filter codec/has-diffs?)
-                                                   (mapcat codec/acp-pending-diffs))]
+                                                   (filter codec/tool-response-has-diffs?)
+                                                   (mapcat codec/tool-response-diffs))]
                                     (is (pos? (count diffs))
                                         "Expected at least one diff from tool-call-update")
                                     (is (every? #(= doc-path (:path %)) diffs)
-                                        "All diffs should target the linked document"))))
+                                        "All diffs should target the linked document"))
+                                  (let [updates-by-id (->> @captured
+                                                           (map :update)
+                                                           (filter #(= :tool-call-update (:session-update %)))
+                                                           (group-by :tool-call-id))
+                                        diff-tool-ids (set (map :tool-call-id (filter codec/tool-response-has-diffs? (map :update @captured))))
+                                        statuses      (->> diff-tool-ids
+                                                           (map (fn [id] (some codec/tool-call-update-status (get updates-by-id id)))))]
+                                    (is (every? #(= "completed" %) statuses)
+                                        "All diff-producing tool calls should succeed"))))
                          (.then (fn [_] (.readFile fsp doc-path "utf8")))
                          (.then (fn [content-after]
                                   (is (= content-before content-after)

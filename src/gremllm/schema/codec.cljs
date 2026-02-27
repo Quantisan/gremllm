@@ -9,12 +9,6 @@
 ;; IPC Codecs
 ;; ========================================
 
-(defn messages-from-ipc
-  [messages-js]
-  (as-> messages-js $
-    (js->clj $ :keywordize-keys true)
-    (m/coerce schema/Messages $ mt/json-transformer)))
-
 (def FlatSecrets
   "Secrets structure as received from IPC (main process).
    Flat map with provider-specific key names.
@@ -126,29 +120,32 @@
           lines   (:totalLines file)]
       (str "Read — " filename " (" lines " lines)"))))
 
-(defn acp-pending-diffs
+(defn tool-response-diffs
   "Extracts diff items from a tool-call-update's content.
-   Returns a vector of diff maps or nil if none present."
-  [{:keys [content]}]
-  (when (seq content)
+   Returns a vector of diff maps or nil if none present.
+   Only matches :tool-call-update events; returns nil for :tool-call requests."
+  [{:keys [session-update content]}]
+  (when (and (= :tool-call-update session-update) (seq content))
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
-
-(defn displayable-tool-call?
-  "True when a tool-call update should produce a chat message.
-   Read tool-calls are skipped — their display comes from tool-call-update."
-  [{:keys [session-update kind]}]
-  (and (= :tool-call session-update) (not= "read" kind)))
 
 (defn read-tool-response?
   "True when a tool-call-update carries Read tool-response metadata."
   [update]
   (some? (get-in update [:meta :claude-code :tool-response :file])))
 
-(defn has-diffs?
-  "True when a tool-call-update contains diff content."
-  [{:keys [content]}]
-  (some #(= "diff" (:type %)) content))
+(defn tool-response-has-diffs?
+  "True when a tool-call-update contains diff content.
+   Returns false for :tool-call request events."
+  [{:keys [session-update content]}]
+  (and (= :tool-call-update session-update)
+       (some #(= "diff" (:type %)) content)))
+
+(defn tool-call-update-status
+  "Extracts the status string from a tool-call-update, or nil."
+  [{:keys [session-update status]}]
+  (when (= :tool-call-update session-update)
+    status))
 
 ;; ACP Update sub-schemas
 (def AcpCommandInput

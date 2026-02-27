@@ -222,25 +222,32 @@
       (is (= [{:type "diff" :path "/tmp/new-file.md" :new-text "brand new content"}]
              (:content update))))))
 
-(deftest test-acp-pending-diffs
-  (testing "extracts diff items from content"
-    (let [update {:content [{:type "diff" :path "/a.md"
+(deftest test-tool-response-diffs
+  (testing "extracts diff items from tool-call-update content"
+    (let [update {:session-update :tool-call-update
+                  :content [{:type "diff" :path "/a.md"
                              :old-text "old" :new-text "new"}
                             {:type "text" :text "some output"}
                             {:type "diff" :path "/b.md"
                              :old-text "before" :new-text "after"}]}]
       (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
               {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
-             (codec/acp-pending-diffs update)))))
+             (codec/tool-response-diffs update)))))
+
+  (testing "returns nil for :tool-call request events"
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call
+                                          :content [{:type "diff" :path "/a.md"
+                                                     :old-text "old" :new-text "new"}]}))))
 
   (testing "returns nil when no diff items"
-    (is (nil? (codec/acp-pending-diffs {:content [{:type "text" :text "hi"}]}))))
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
+                                          :content [{:type "text" :text "hi"}]}))))
 
   (testing "returns nil when content is nil"
-    (is (nil? (codec/acp-pending-diffs {:content nil}))))
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update :content nil}))))
 
   (testing "returns nil when content is empty"
-    (is (nil? (codec/acp-pending-diffs {:content []})))))
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update :content []})))))
 
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
