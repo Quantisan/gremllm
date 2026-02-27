@@ -47,6 +47,9 @@ function createConnection(options = {}) {
       }
     },
     async requestPermission(params) {
+      if (callbacks.onRequestPermission) {
+        callbacks.onRequestPermission(params);
+      }
       return resolvePermissionOutcome(params);
     },
     async readTextFile(params) {

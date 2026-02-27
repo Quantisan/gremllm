@@ -322,3 +322,47 @@
   "Validates and transforms ACP session update from IPC. Throws if invalid."
   [event-data-js]
   (acp-session-update-from-js event-data-js))
+
+;; ========================================
+;; ACP Permission Request
+;; ========================================
+
+(def AcpPermissionOptionKind
+  "ACP permission option kinds."
+  [:enum "allow_always" "allow_once" "reject_once" "reject_always"])
+
+(def AcpPermissionOption
+  "A single permission option presented to the client."
+  [:map
+   [:option-id :string]
+   [:name :string]
+   [:kind AcpPermissionOptionKind]])
+
+(def AcpToolKind
+  "ACP tool operation kinds."
+  [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
+
+(def AcpPermissionToolCall
+  "Tool call context within an ACP permission request."
+  [:map
+   [:tool-call-id :string]
+   [:kind {:optional true} [:maybe AcpToolKind]]
+   [:title {:optional true} :string]
+   [:raw-input {:optional true} [:map-of :keyword :any]]
+   [:locations {:optional true} [:vector AcpToolLocation]]])
+
+(def AcpPermissionRequest
+  "ACP requestPermission params shape."
+  [:map
+   [:acp-session-id :string]
+   [:tool-call AcpPermissionToolCall]
+   [:options [:vector AcpPermissionOption]]])
+
+(defn acp-permission-request-from-js
+  "Coerce ACP requestPermission params from JS callback."
+  [js-data]
+  (m/coerce AcpPermissionRequest
+            (js->clj js-data :keywordize-keys true)
+            (mt/transformer
+              acp-key-transformer
+              mt/json-transformer)))

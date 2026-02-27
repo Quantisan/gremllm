@@ -14,6 +14,12 @@
     (pprint/pprint update))
   (println "--- End Updates ---"))
 
+(defn- print-permissions [permissions]
+  (println "\n--- Permission Requests ---")
+  (doseq [p permissions]
+    (pprint/pprint p))
+  (println (str "--- End Permission Requests (" (count permissions) " total) ---")))
+
 (defn- updates [captured]
   (map :update @captured))
 
@@ -73,17 +79,45 @@
     (is (every? #(= "completed" %) (tool-statuses diff-ids updates))
         "All diff-producing tool calls should succeed")))
 
+(def ^:private valid-option-kinds
+  #{"allow_always" "allow_once" "reject_once" "reject_always"})
+
+(def ^:private valid-tool-kinds
+  #{"read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"})
+
+(defn- assert-permission-contract [permissions]
+  (is (pos? (count permissions)) "Expected at least one permission request")
+  (doseq [p permissions]
+    (is (string? (:acp-session-id p)) "permission acp-session-id must be a string")
+    (let [tc (:tool-call p)]
+      (is (string? (:tool-call-id tc)) "tool-call-id must be a string")
+      (when-let [kind (:kind tc)]
+        (is (contains? valid-tool-kinds kind) (str "tool kind must be valid enum, got: " kind))))
+    (is (pos? (count (:options p))) "options must be non-empty")
+    (doseq [opt (:options p)]
+      (is (string? (:option-id opt)) "option-id must be a string")
+      (is (string? (:name opt)) "option name must be a string")
+      (is (contains? valid-option-kinds (:kind opt))
+          (str "option kind must be valid enum, got: " (:kind opt))))))
+
+(defn- assert-permission-kinds [permissions]
+  ;; The SDK only calls requestPermission for writes/edits.
+  ;; Read operations are pre-approved and never reach this callback.
+  (let [kinds (set (keep #(get-in % [:tool-call :kind]) permissions))]
+    (is (contains? kinds "edit") "Expected at least one 'edit' permission request")))
+
 (deftest test-live-document-first-edit
   (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
       (let [store         (atom {})
             captured      (atom [])
+            permissions   (atom [])
             content-before (atom nil)
             cwd           (.cwd js/process)
             doc-path      (path/resolve "resources/gremllm-launch-log.md")]
         (-> (.readFile fsp doc-path "utf8")
             (.then (fn [content] (reset! content-before content)))
-            (.then (fn [_] (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false)))
+            (.then (fn [_] (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false #(swap! permissions conj %))))
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (acp/prompt session-id
@@ -93,9 +127,12 @@
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
                      (print-updates @captured)
+                     (print-permissions @permissions)
                      (let [evts (updates captured)]
                        (assert-diffs-target evts doc-path)
-                       (assert-tools-completed evts))))
+                       (assert-tools-completed evts)
+                       (assert-permission-contract @permissions)
+                       (assert-permission-kinds @permissions))))
             (.then (fn [_] (.readFile fsp doc-path "utf8")))
             (.then (fn [content-after]
                      (is (= @content-before content-after)

@@ -85,31 +85,48 @@
       (.finally (fn []
                   (reset! initialize-in-flight nil)))))
 
+(defn- make-permission-callback
+  "Build a fire-and-forget permission tap. Coerces raw JS params and
+   calls on-permission with the coerced value."
+  [on-permission]
+  (fn [params]
+    (js/console.log "ACP requestPermission tap fired" params)
+    (try
+      (on-permission (codec/acp-permission-request-from-js params))
+      (catch :default e
+        (js/console.error "ACP permission request coercion failed" e params)))))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK.
    is-packaged?: Electron app packaging state used to select ACP agent package
-   mode policy."
-  [on-session-update is-packaged?]
-  (cond
-    @state
-    (js/Promise.resolve nil)
+   mode policy.
+   on-permission: optional tap receiving coerced permission request params."
+  ([on-session-update is-packaged?]
+   (initialize on-session-update is-packaged? nil))
 
-    @initialize-in-flight
-    (:promise @initialize-in-flight)
+  ([on-session-update is-packaged? on-permission]
+   (cond
+     @state
+     (js/Promise.resolve nil)
 
-    :else
-    (let [^js result (create-connection
-                       #js {:onSessionUpdate on-session-update
-                            :onReadTextFile  read-text-file
-                            :agentPackageMode (agent-package-mode (boolean is-packaged?))})
-          init-promise
-          (start-connection! (.-connection result)
-                             (.-subprocess result)
-                             (.-protocolVersion result))]
-      (reset! initialize-in-flight {:promise init-promise
-                                    :subprocess (.-subprocess result)})
-      init-promise)))
+     @initialize-in-flight
+     (:promise @initialize-in-flight)
+
+     :else
+     (let [^js result (create-connection
+                        #js {:onSessionUpdate     on-session-update
+                             :onReadTextFile       read-text-file
+                             :agentPackageMode     (agent-package-mode (boolean is-packaged?))
+                             :onRequestPermission  (when on-permission
+                                                     (make-permission-callback on-permission))})
+           init-promise
+           (start-connection! (.-connection result)
+                              (.-subprocess result)
+                              (.-protocolVersion result))]
+       (reset! initialize-in-flight {:promise init-promise
+                                     :subprocess (.-subprocess result)})
+       init-promise))))
 
 (defn- ^js conn! []
   (or (:connection @state)
