@@ -74,10 +74,19 @@
                                                            (map :update)
                                                            (filter #(= :tool-call-update (:session-update %)))
                                                            (group-by :tool-call-id))
+                                        read-tool-ids (set (map :tool-call-id
+                                                                 (filter codec/tool-response-read-event?
+                                                                         (map :update @captured))))
+                                        read-statuses (->> read-tool-ids
+                                                           (map (fn [id] (some codec/tool-call-update-status (get updates-by-id id)))))
                                         diff-tool-ids (set (map :tool-call-id (filter codec/tool-response-has-diffs? (map :update @captured))))
-                                        statuses      (->> diff-tool-ids
-                                                           (map (fn [id] (some codec/tool-call-update-status (get updates-by-id id)))))]
-                                    (is (every? #(= "completed" %) statuses)
+                                        diff-statuses      (->> diff-tool-ids
+                                                                (map (fn [id] (some codec/tool-call-update-status (get updates-by-id id)))))]
+                                    (is (pos? (count read-tool-ids))
+                                        "Expected at least one Read tool-call-update event")
+                                    (is (every? #(= "completed" %) read-statuses)
+                                        "All Read tool calls should succeed")
+                                    (is (every? #(= "completed" %) diff-statuses)
                                         "All diff-producing tool calls should succeed"))))
                          (.then (fn [_] (.readFile fsp doc-path "utf8")))
                          (.then (fn [content-after]
