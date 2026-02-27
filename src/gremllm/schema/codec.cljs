@@ -9,12 +9,6 @@
 ;; IPC Codecs
 ;; ========================================
 
-(defn messages-from-ipc
-  [messages-js]
-  (as-> messages-js $
-    (js->clj $ :keywordize-keys true)
-    (m/coerce schema/Messages $ mt/json-transformer)))
-
 (def FlatSecrets
   "Secrets structure as received from IPC (main process).
    Flat map with provider-specific key names.
@@ -133,12 +127,6 @@
   (when (seq content)
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
-
-(defn displayable-tool-call?
-  "True when a tool-call update should produce a chat message.
-   Read tool-calls are skipped — their display comes from tool-call-update."
-  [{:keys [session-update kind]}]
-  (and (= :tool-call session-update) (not= "read" kind)))
 
 (defn read-tool-response?
   "True when a tool-call-update carries Read tool-response metadata."
