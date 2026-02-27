@@ -69,7 +69,16 @@
                                     (is (pos? (count diffs))
                                         "Expected at least one diff from tool-call-update")
                                     (is (every? #(= doc-path (:path %)) diffs)
-                                        "All diffs should target the linked document"))))
+                                        "All diffs should target the linked document"))
+                                  (let [updates-by-id (->> @captured
+                                                           (map :update)
+                                                           (filter #(= :tool-call-update (:session-update %)))
+                                                           (group-by :tool-call-id))
+                                        diff-tool-ids (set (map :tool-call-id (filter codec/tool-response-has-diffs? (map :update @captured))))
+                                        statuses      (->> diff-tool-ids
+                                                           (map (fn [id] (some codec/tool-call-update-status (get updates-by-id id)))))]
+                                    (is (every? #(= "completed" %) statuses)
+                                        "All diff-producing tool calls should succeed"))))
                          (.then (fn [_] (.readFile fsp doc-path "utf8")))
                          (.then (fn [content-after]
                                   (is (= content-before content-after)

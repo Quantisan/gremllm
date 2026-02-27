@@ -141,6 +141,12 @@
   (and (= :tool-call-update session-update)
        (some #(= "diff" (:type %)) content)))
 
+(defn tool-call-update-status
+  "Extracts the status string from a tool-call-update, or nil."
+  [{:keys [session-update status]}]
+  (when (= :tool-call-update session-update)
+    status))
+
 ;; ACP Update sub-schemas
 (def AcpCommandInput
   "Optional input schema for ACP commands."
