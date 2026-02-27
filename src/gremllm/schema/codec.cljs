@@ -129,13 +129,13 @@
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
 
-(defn tool-response-reads?
+(defn tool-response-read-event?
   "True when a tool-call-update is a Read response event."
   [{:keys [session-update] :as update}]
   (and (= :tool-call-update session-update)
        (= "Read" (get-in update [:meta :claude-code :tool-name]))))
 
-(defn read-tool-response?
+(defn tool-response-read-with-file-metadata?
   "True when a Read tool-call-update carries tool-response file metadata."
   [{:keys [session-update] :as update}]
   (and (= :tool-call-update session-update)
