@@ -115,6 +115,12 @@
     (is (every? #(= doc-path (:path %)) writes)
         "All writeTextFile calls should target the linked document")))
 
+;; TODO:
+;; 1. try disabling my global Claude Code permissions, just to see if it's actually using native R/W
+;; 2. tighten this commit 004f14c3cfed7f1687d7c7d99fc41ce70d191a64 with CC for keeping
+;; 3. if it proves that agent is indeed bypassing our client R/W, then file this issue and PUNT.
+;; 4. we can proceed with Accept/Reject because that would auto-save to file from document in
+;;    memory. Although this is an unreliable, incidental workaround. But we need to keep moving.
 (deftest test-live-document-first-edit
   (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
