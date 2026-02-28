@@ -2,7 +2,7 @@
 const { spawn } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
-const { makeResolver } = require("./permission");
+const { makeResolver, requestedToolName } = require("./permission");
 
 const sessionCwdMap = new Map();
 
@@ -21,8 +21,7 @@ function enrichPermissionParams(toolNamesByCallId, params) {
   const toolCall = params?.toolCall;
   const toolCallId = toolCall?.toolCallId;
   const trackedToolName =
-    toolCall?.toolName ??
-    toolCall?._meta?.claudeCode?.toolName ??
+    requestedToolName(toolCall) ??
     (typeof toolCallId === "string" ? toolNamesByCallId.get(toolCallId) : undefined);
 
   if (typeof trackedToolName !== "string" || trackedToolName.length === 0) {
