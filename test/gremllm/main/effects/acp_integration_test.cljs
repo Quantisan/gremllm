@@ -1,6 +1,5 @@
 (ns gremllm.main.effects.acp-integration-test
-  (:require ["acp" :as acp-module]
-            ["fs/promises" :as fsp]
+  (:require ["fs/promises" :as fsp]
             ["path" :as path]
             [cljs.pprint :as pprint]
             [cljs.test :refer [deftest is testing async]]
@@ -107,59 +106,28 @@
   (let [kinds (set (keep #(get-in % [:tool-call :kind]) permissions))]
     (is (contains? kinds "edit") "Expected at least one 'edit' permission request")))
 
-(defn- reset-write-text-file-calls! []
-  (when-let [reset-fn (.. acp-module -__test__ -resetWriteTextFileCalls)]
-    (reset-fn)))
-
-(defn- write-text-file-calls []
-  (if-let [get-fn (.. acp-module -__test__ -getWriteTextFileCalls)]
-    (js->clj (get-fn) :keywordize-keys true)
-    []))
-
-(defn- permission-requested-path [permission]
-  (or (get-in permission [:tool-call :raw-input :path])
-      (get-in permission [:tool-call :raw-input :file-path])))
-
-(defn- mutating-permissions [permissions]
-  (filter #(not= "read" (get-in % [:tool-call :kind])) permissions))
-
-(defn- matching-mutating-permission [permissions doc-path]
-  (let [writes (mutating-permissions permissions)]
-    (or (some #(when (= doc-path (permission-requested-path %)) %) writes)
-        (first writes))))
-
-(defn- assert-write-text-file-called [permissions doc-path]
-  (let [calls (write-text-file-calls)]
-    (if (seq calls)
-      (do
-        (is (pos? (count calls))
-            (str "Expected ACP bridge writeTextFile to be called for " doc-path))
-        (is (every? #(= doc-path (:path %)) calls)
-            "All ACP bridge writeTextFile calls should target the linked document"))
-      (if-let [permission (matching-mutating-permission permissions doc-path)]
-        (is false
-            (str "Expected ACP bridge writeTextFile to be called for "
-                 doc-path
-                 ", but it was not. Mutating permission request: "
-                 (pr-str (select-keys (:tool-call permission) [:kind :title :raw-input]))))
-        (is false
-            (str "Expected ACP bridge writeTextFile to be called for "
-                 doc-path
-                 ", but no mutating permission request was captured."))))))
+(defn- assert-write-text-file-called [writes permissions doc-path]
+  (is (seq writes)
+      (str "writeTextFile not called. Mutating permissions: "
+           (pr-str (map #(select-keys (:tool-call %) [:kind :title :raw-input])
+                        (remove #(= "read" (get-in % [:tool-call :kind])) permissions)))))
+  (when (seq writes)
+    (is (every? #(= doc-path (:path %)) writes)
+        "All writeTextFile calls should target the linked document")))
 
 (deftest test-live-document-first-edit
   (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
-      (reset-write-text-file-calls!)
       (let [store         (atom {})
             captured      (atom [])
             permissions   (atom [])
+            writes        (atom [])
             content-before (atom nil)
             cwd           (.cwd js/process)
             doc-path      (path/resolve "resources/gremllm-launch-log.md")]
         (-> (.readFile fsp doc-path "utf8")
             (.then (fn [content] (reset! content-before content)))
-            (.then (fn [_] (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false #(swap! permissions conj %))))
+            (.then (fn [_] (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false #(swap! permissions conj %) #(swap! writes conj %))))
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (acp/prompt session-id
@@ -175,7 +143,7 @@
                        (assert-tools-completed evts)
                        (assert-permission-contract @permissions)
                        (assert-permission-kinds @permissions)
-                       (assert-write-text-file-called @permissions doc-path))))
+                       (assert-write-text-file-called @writes @permissions doc-path))))
             (.then (fn [_] (.readFile fsp doc-path "utf8")))
             (.then (fn [content-after]
                      (is (= @content-before content-after)
@@ -184,5 +152,4 @@
                       (is false (str "Document-first edit test failed: " err))))
             (.finally (fn []
                         (acp/shutdown)
-                        (reset-write-text-file-calls!)
                         (done))))))))

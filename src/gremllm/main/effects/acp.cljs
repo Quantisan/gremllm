@@ -96,16 +96,33 @@
       (catch :default e
         (js/console.error "ACP permission request coercion failed" e params)))))
 
+(defn- make-write-callback
+  "Build a fire-and-forget write tap. Coerces raw JS params and
+   calls on-write with a map of :path, :session-id, :content-length."
+  [on-write]
+  (fn [params]
+    (try
+      (on-write {:path           (.-path params)
+                 :session-id     (.-sessionId params)
+                 :content-length (when (string? (.-content params))
+                                   (.-length (.-content params)))})
+      (catch :default e
+        (js/console.error "ACP write request coercion failed" e params)))))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK.
    is-packaged?: Electron app packaging state used to select ACP agent package
    mode policy.
-   on-permission: optional tap receiving coerced permission request params."
+   on-permission: optional tap receiving coerced permission request params.
+   on-write: optional tap receiving coerced writeTextFile params."
   ([on-session-update is-packaged?]
-   (initialize on-session-update is-packaged? nil))
+   (initialize on-session-update is-packaged? nil nil))
 
   ([on-session-update is-packaged? on-permission]
+   (initialize on-session-update is-packaged? on-permission nil))
+
+  ([on-session-update is-packaged? on-permission on-write]
    (cond
      @state
      (js/Promise.resolve nil)
@@ -119,7 +136,9 @@
                              :onReadTextFile       read-text-file
                              :agentPackageMode     (agent-package-mode (boolean is-packaged?))
                              :onRequestPermission  (when on-permission
-                                                     (make-permission-callback on-permission))})
+                                                     (make-permission-callback on-permission))
+                             :onWriteTextFile      (when on-write
+                                                     (make-write-callback on-write))})
            init-promise
            (start-connection! (.-connection result)
                               (.-subprocess result)
