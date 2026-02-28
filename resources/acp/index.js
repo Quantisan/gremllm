@@ -6,6 +6,37 @@ const { makeResolver } = require("./permission");
 
 const sessionCwdMap = new Map();
 
+function rememberToolName(toolNamesByCallId, params) {
+  const update = params?.update;
+  const toolCallId = update?.toolCallId;
+  const toolName = update?._meta?.claudeCode?.toolName;
+
+  if (typeof toolCallId === "string" && typeof toolName === "string" && toolName.length > 0) {
+    toolNamesByCallId.set(toolCallId, toolName);
+  }
+}
+
+function enrichPermissionParams(toolNamesByCallId, params) {
+  const toolCall = params?.toolCall;
+  const toolCallId = toolCall?.toolCallId;
+  const trackedToolName =
+    toolCall?.toolName ??
+    toolCall?._meta?.claudeCode?.toolName ??
+    (typeof toolCallId === "string" ? toolNamesByCallId.get(toolCallId) : undefined);
+
+  if (typeof trackedToolName !== "string" || trackedToolName.length === 0) {
+    return params;
+  }
+
+  return {
+    ...params,
+    toolCall: {
+      ...toolCall,
+      toolName: trackedToolName
+    }
+  };
+}
+
 function normalizeAgentPackageMode(agentPackageMode) {
   return agentPackageMode === "latest" ? "latest" : "cached";
 }
@@ -36,6 +67,7 @@ function buildNpxAgentPackageConfig(agentPackageMode) {
 function createConnection(options = {}) {
   const callbacks = options;
   const { command, args, envPatch } = buildNpxAgentPackageConfig(options.agentPackageMode);
+  const toolNamesByCallId = new Map();
 
   const subprocess = spawn(command, args, {
     stdio: ["pipe", "pipe", "inherit"],
@@ -46,15 +78,17 @@ function createConnection(options = {}) {
 
   const client = {
     async sessionUpdate(params) {
+      rememberToolName(toolNamesByCallId, params);
       if (callbacks.onSessionUpdate) {
         callbacks.onSessionUpdate(params);
       }
     },
     async requestPermission(params) {
+      const enrichedParams = enrichPermissionParams(toolNamesByCallId, params);
       if (callbacks.onRequestPermission) {
-        callbacks.onRequestPermission(params);
+        callbacks.onRequestPermission(enrichedParams);
       }
-      return resolver(params);
+      return resolver(enrichedParams);
     },
     async readTextFile(params) {
       return callbacks.onReadTextFile(params);
@@ -97,6 +131,8 @@ function createConnection(options = {}) {
 module.exports = {
   createConnection,
   __test__: {
-    buildNpxAgentPackageConfig
+    buildNpxAgentPackageConfig,
+    enrichPermissionParams,
+    rememberToolName
   }
 };

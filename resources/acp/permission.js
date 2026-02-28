@@ -16,6 +16,15 @@ function requestedPath(toolCall) {
   return rawInput.path ?? rawInput.file_path ?? null;
 }
 
+function requestedToolName(toolCall) {
+  if (typeof toolCall?.toolName === "string" && toolCall.toolName.length > 0) {
+    return toolCall.toolName;
+  }
+
+  const metaToolName = toolCall?._meta?.claudeCode?.toolName;
+  return typeof metaToolName === "string" && metaToolName.length > 0 ? metaToolName : null;
+}
+
 function selectOptionByKind(options, preferredKinds, fallback) {
   for (const kind of preferredKinds) {
     const match = options.find((option) => option?.kind === kind);
@@ -30,15 +39,13 @@ function makeResolver(getSessionCwd) {
     const options = Array.isArray(params?.options) ? params.options : [];
     const toolCall = params?.toolCall ?? {};
     const toolKind = toolCall.kind ?? null;
+    const toolName = requestedToolName(toolCall);
 
     if (options.length === 0) {
       return { outcome: { outcome: "cancelled" } };
     }
 
-    // TODO(security): Do not auto-approve all "read" tool calls.
-    // Restrict reads to an allowlist (for example, workspace root and explicitly linked files);
-    // otherwise reject/cancel to avoid exposing sensitive local files.
-    if (toolKind === "read") {
+    if (toolKind === "read" && toolName === "mcp__acp__Read") {
       const approveOption = selectOptionByKind(
         options,
         ["allow_always", "allow_once"],
@@ -47,7 +54,10 @@ function makeResolver(getSessionCwd) {
       return { outcome: { outcome: "selected", optionId: approveOption.optionId } };
     }
 
-    if (toolKind === "edit") {
+    if (
+      toolKind === "edit" &&
+      (toolName === "mcp__acp__Edit" || toolName === "mcp__acp__Write")
+    ) {
       const cwd = getSessionCwd(params.sessionId);
       const normalizedCwd = normalizePath(cwd);
       const normalizedRequested = normalizePath(requestedPath(toolCall));
@@ -116,6 +126,7 @@ module.exports = {
     resolvePermissionOutcome,
     normalizePath,
     isWithinRoot,
-    requestedPath
+    requestedPath,
+    requestedToolName
   }
 };
