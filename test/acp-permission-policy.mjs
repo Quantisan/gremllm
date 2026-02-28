@@ -36,6 +36,21 @@ const fileOutsideCwd = path.resolve(process.cwd(), "README.md");
 const getSessionCwd = (sessionId) => (sessionId === "session-known" ? cwd : undefined);
 const resolver = makeResolver(getSessionCwd);
 
+// requestedToolName helper
+{
+  assert.equal(
+    requestedToolName({ toolName: "mcp__acp__Edit" }),
+    "mcp__acp__Edit",
+    "requestedToolName prefers toolCall.toolName"
+  );
+  assert.equal(
+    requestedToolName({ _meta: { claudeCode: { toolName: "Read" } } }),
+    "Read",
+    "requestedToolName falls back to _meta.claudeCode.toolName"
+  );
+  assert.equal(requestedToolName({ rawInput: { file_path: fileInCwd } }), null, "requestedToolName returns null when absent");
+}
+
 // ACP read always allowed (rawInput.path)
 {
   const result = resolver({
@@ -46,14 +61,14 @@ const resolver = makeResolver(getSessionCwd);
   assert.equal(selectedOptionId(result), "allow-always", "ACP read via rawInput.path is allowed");
 }
 
-// plain Read is rejected
+// plain Read is also allowed under kind-based policy
 {
   const result = resolver({
     sessionId: "session-known",
     toolCall: { kind: "read", toolName: "Read", rawInput: { file_path: fileOutsideCwd } },
     options: fullOptions
   });
-  assert.equal(selectedOptionId(result), "reject-once", "plain Read is rejected");
+  assert.equal(selectedOptionId(result), "allow-always", "plain Read is allowed by kind-based policy");
 }
 
 // ACP edit within cwd: allowed
@@ -76,14 +91,14 @@ const resolver = makeResolver(getSessionCwd);
   assert.equal(selectedOptionId(result), "allow-always", "ACP write within cwd is allowed");
 }
 
-// plain Edit is rejected
+// plain Edit within cwd is allowed under kind-based policy
 {
   const result = resolver({
     sessionId: "session-known",
     toolCall: { kind: "edit", toolName: "Edit", rawInput: { file_path: fileInCwd } },
     options: fullOptions
   });
-  assert.equal(selectedOptionId(result), "reject-once", "plain Edit is rejected");
+  assert.equal(selectedOptionId(result), "allow-always", "plain Edit within cwd is allowed by kind-based policy");
 }
 
 // ACP edit outside cwd: rejected
