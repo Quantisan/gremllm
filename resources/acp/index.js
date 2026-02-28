@@ -5,6 +5,15 @@ const acp = require("@agentclientprotocol/sdk");
 const { makeResolver } = require("./permission");
 
 const sessionCwdMap = new Map();
+const writeTextFileCalls = [];
+
+function resetWriteTextFileCalls() {
+  writeTextFileCalls.length = 0;
+}
+
+function getWriteTextFileCalls() {
+  return writeTextFileCalls.map((call) => ({ ...call }));
+}
 
 function normalizeAgentPackageMode(agentPackageMode) {
   return agentPackageMode === "latest" ? "latest" : "cached";
@@ -60,7 +69,12 @@ function createConnection(options = {}) {
       return callbacks.onReadTextFile(params);
     },
     // Hardcoded dry-run: acknowledge write requests without mutating disk.
-    async writeTextFile(_params) {
+    async writeTextFile(params = {}) {
+      writeTextFileCalls.push({
+        path: typeof params.path === "string" ? params.path : null,
+        sessionId: typeof params.sessionId === "string" ? params.sessionId : null,
+        contentLength: typeof params.content === "string" ? params.content.length : null
+      });
       return {};
     }
   };
@@ -94,6 +108,8 @@ function createConnection(options = {}) {
 module.exports = {
   createConnection,
   __test__: {
-    buildNpxAgentPackageConfig
+    buildNpxAgentPackageConfig,
+    getWriteTextFileCalls,
+    resetWriteTextFileCalls
   }
 };

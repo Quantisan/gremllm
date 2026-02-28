@@ -130,6 +130,12 @@
       (is (= (spawn-config->map (build "cached"))
              (spawn-config->map (build "not-a-valid-mode")))))))
 
+(deftest test-write-text-file-test-hooks
+  (testing "ACP module exposes writeTextFile recorder hooks for tests"
+    (let [test-api (.-__test__ acp-module)]
+      (is (fn? (.-getWriteTextFileCalls test-api)))
+      (is (fn? (.-resetWriteTextFileCalls test-api))))))
+
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
     (async done
