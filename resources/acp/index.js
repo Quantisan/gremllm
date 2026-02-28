@@ -11,6 +11,7 @@ function rememberToolName(toolNamesByCallId, params) {
   const toolCallId = update?.toolCallId;
   const toolName = update?._meta?.claudeCode?.toolName;
 
+  // TODO: toolNamesByCallId Map grows unbounded per connection (one entry per tool call)
   if (typeof toolCallId === "string" && typeof toolName === "string" && toolName.length > 0) {
     toolNamesByCallId.set(toolCallId, toolName);
   }
