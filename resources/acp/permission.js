@@ -39,13 +39,15 @@ function makeResolver(getSessionCwd) {
     const options = Array.isArray(params?.options) ? params.options : [];
     const toolCall = params?.toolCall ?? {};
     const toolKind = toolCall.kind ?? null;
-    const toolName = requestedToolName(toolCall);
 
     if (options.length === 0) {
       return { outcome: { outcome: "cancelled" } };
     }
 
-    if (toolKind === "read" && toolName === "mcp__acp__Read") {
+    // TODO(security): Do not auto-approve all "read" tool calls.
+    // Restrict reads to an allowlist (for example, workspace root and explicitly linked files);
+    // otherwise reject/cancel to avoid exposing sensitive local files.
+    if (toolKind === "read") {
       const approveOption = selectOptionByKind(
         options,
         ["allow_always", "allow_once"],
@@ -54,10 +56,7 @@ function makeResolver(getSessionCwd) {
       return { outcome: { outcome: "selected", optionId: approveOption.optionId } };
     }
 
-    if (
-      toolKind === "edit" &&
-      (toolName === "mcp__acp__Edit" || toolName === "mcp__acp__Write")
-    ) {
+    if (toolKind === "edit") {
       const cwd = getSessionCwd(params.sessionId);
       const normalizedCwd = normalizePath(cwd);
       const normalizedRequested = normalizePath(requestedPath(toolCall));
