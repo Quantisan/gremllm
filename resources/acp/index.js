@@ -1,5 +1,5 @@
 // resources/acp/index.js
-const { spawn } = require("node:child_process");
+const { spawn, execFile } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { makeResolver, requestedToolName } = require("./permission");
@@ -35,6 +35,12 @@ function enrichPermissionParams(toolNamesByCallId, params) {
       toolName: trackedToolName
     }
   };
+}
+
+function logLatestAgentVersion() {
+  execFile("npm", ["view", "@zed-industries/claude-agent-acp@latest", "version"], (err, stdout) => {
+    if (!err) console.log("[ACP] claude-agent-acp@" + stdout.trim());
+  });
 }
 
 function normalizeAgentPackageMode(agentPackageMode) {
@@ -73,6 +79,10 @@ function createConnection(options = {}) {
     stdio: ["pipe", "pipe", "inherit"],
     env: { ...process.env, ...envPatch }
   });
+
+  if (normalizeAgentPackageMode(options.agentPackageMode) === "latest") {
+    logLatestAgentVersion();
+  }
 
   const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
 
