@@ -3,6 +3,7 @@ const { spawn, execFile } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
 const { makeResolver, requestedToolName } = require("./permission");
+const permission = require("./permission");
 
 const sessionCwdMap = new Map();
 
@@ -143,6 +144,9 @@ module.exports = {
   __test__: {
     buildNpxAgentPackageConfig,
     enrichPermissionParams,
-    rememberToolName
+    rememberToolName,
+    makeResolver,
+    permissionRequestedToolName: requestedToolName,
+    permissionRequestedPath: permission.__test__.requestedPath
   }
 };
