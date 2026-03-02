@@ -212,6 +212,35 @@
                           (acp/shutdown)
                           (done)))))))))
 
+(deftest test-remember-and-enrich-tool-name
+  (let [remember-tool-name     (.. acp-module -__test__ -rememberToolName)
+        enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
+        tool-names             (js/Map.)
+        session-update         #js {:update #js {:sessionUpdate "tool_call"
+                                                  :toolCallId    "toolu_01"
+                                                  :_meta         #js {:claudeCode #js {:toolName "mcp__acp__Edit"}}}}]
+    (remember-tool-name tool-names session-update)
+    (let [^js enriched (enrich-permission-params
+                         tool-names
+                         #js {:sessionId "session-1"
+                              :toolCall  #js {:toolCallId "toolu_01"
+                                             :title      "Edit `/tmp/test.md`"
+                                             :rawInput   #js {:file_path "/tmp/test.md"}}
+                              :options   #js []})]
+      (is (= "mcp__acp__Edit" (.. enriched -toolCall -toolName))))))
+
+(deftest test-enrich-without-tracked-tool-name
+  (let [enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
+        tool-names               (js/Map.)
+        ^js enriched             (enrich-permission-params
+                                   tool-names
+                                   #js {:sessionId "session-1"
+                                        :toolCall  #js {:toolCallId "toolu_missing"
+                                                        :title      "Edit `/tmp/test.md`"
+                                                        :rawInput   #js {:file_path "/tmp/test.md"}}
+                                        :options   #js []})]
+    (is (nil? (.. enriched -toolCall -toolName)))))
+
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
     (testing "slices from 1-indexed line with limit"

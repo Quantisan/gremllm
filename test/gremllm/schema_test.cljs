@@ -249,6 +249,25 @@
   (testing "returns nil when content is empty"
     (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update :content []})))))
 
+(deftest test-acp-permission-request-from-js
+  (testing "coerces tool_name on permission tool call"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :toolCall #js {:toolCallId "toolu_perm_01"
+                                      :toolName "mcp__acp__Edit"
+                                      :kind "edit"
+                                      :title "Edit `/tmp/test.md`"
+                                      :rawInput #js {:file_path "/tmp/test.md"
+                                                     :oldString "before"
+                                                     :newString "after"}}
+                       :options #js [#js {:optionId "allow"
+                                          :name "Allow"
+                                          :kind "allow_once"}]}
+          result (codec/acp-permission-request-from-js js-data)]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= "toolu_perm_01" (get-in result [:tool-call :tool-call-id])))
+      (is (= "mcp__acp__Edit" (get-in result [:tool-call :tool-name])))
+      (is (= "edit" (get-in result [:tool-call :kind]))))))
+
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
   (doseq [chunk-type (keys test-content-chunks)]

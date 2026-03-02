@@ -1,10 +1,47 @@
 // resources/acp/index.js
-const { spawn } = require("node:child_process");
+const { spawn, execFile } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
-const { makeResolver } = require("./permission");
+const { makeResolver, requestedToolName } = require("./permission");
 
 const sessionCwdMap = new Map();
+
+function rememberToolName(toolNamesByCallId, params) {
+  const update = params?.update;
+  const toolCallId = update?.toolCallId;
+  const toolName = update?._meta?.claudeCode?.toolName;
+
+  // TODO: toolNamesByCallId Map grows unbounded per connection (one entry per tool call)
+  if (typeof toolCallId === "string" && typeof toolName === "string" && toolName.length > 0) {
+    toolNamesByCallId.set(toolCallId, toolName);
+  }
+}
+
+function enrichPermissionParams(toolNamesByCallId, params) {
+  const toolCall = params?.toolCall;
+  const toolCallId = toolCall?.toolCallId;
+  const trackedToolName =
+    requestedToolName(toolCall) ??
+    (typeof toolCallId === "string" ? toolNamesByCallId.get(toolCallId) : undefined);
+
+  if (typeof trackedToolName !== "string" || trackedToolName.length === 0) {
+    return params;
+  }
+
+  return {
+    ...params,
+    toolCall: {
+      ...toolCall,
+      toolName: trackedToolName
+    }
+  };
+}
+
+function logLatestAgentVersion() {
+  execFile("npm", ["view", "@zed-industries/claude-agent-acp@latest", "version"], (err, stdout) => {
+    if (!err) console.log("[ACP] claude-agent-acp@" + stdout.trim());
+  });
+}
 
 function normalizeAgentPackageMode(agentPackageMode) {
   return agentPackageMode === "latest" ? "latest" : "cached";
@@ -36,25 +73,32 @@ function buildNpxAgentPackageConfig(agentPackageMode) {
 function createConnection(options = {}) {
   const callbacks = options;
   const { command, args, envPatch } = buildNpxAgentPackageConfig(options.agentPackageMode);
+  const toolNamesByCallId = new Map();
 
   const subprocess = spawn(command, args, {
     stdio: ["pipe", "pipe", "inherit"],
     env: { ...process.env, ...envPatch }
   });
 
+  if (normalizeAgentPackageMode(options.agentPackageMode) === "latest") {
+    logLatestAgentVersion();
+  }
+
   const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
 
   const client = {
     async sessionUpdate(params) {
+      rememberToolName(toolNamesByCallId, params);
       if (callbacks.onSessionUpdate) {
         callbacks.onSessionUpdate(params);
       }
     },
     async requestPermission(params) {
+      const enrichedParams = enrichPermissionParams(toolNamesByCallId, params);
       if (callbacks.onRequestPermission) {
-        callbacks.onRequestPermission(params);
+        callbacks.onRequestPermission(enrichedParams);
       }
-      return resolver(params);
+      return resolver(enrichedParams);
     },
     async readTextFile(params) {
       return callbacks.onReadTextFile(params);
@@ -97,6 +141,8 @@ function createConnection(options = {}) {
 module.exports = {
   createConnection,
   __test__: {
-    buildNpxAgentPackageConfig
+    buildNpxAgentPackageConfig,
+    enrichPermissionParams,
+    rememberToolName
   }
 };

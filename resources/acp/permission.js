@@ -16,6 +16,15 @@ function requestedPath(toolCall) {
   return rawInput.path ?? rawInput.file_path ?? null;
 }
 
+function requestedToolName(toolCall) {
+  if (typeof toolCall?.toolName === "string" && toolCall.toolName.length > 0) {
+    return toolCall.toolName;
+  }
+
+  const metaToolName = toolCall?._meta?.claudeCode?.toolName;
+  return typeof metaToolName === "string" && metaToolName.length > 0 ? metaToolName : null;
+}
+
 function selectOptionByKind(options, preferredKinds, fallback) {
   for (const kind of preferredKinds) {
     const match = options.find((option) => option?.kind === kind);
@@ -70,52 +79,13 @@ function makeResolver(getSessionCwd) {
   };
 }
 
-// TODO: integration tests
-function resolvePermissionOutcome(params) {
-  const options = Array.isArray(params?.options) ? params.options : [];
-  const toolKind = params?.toolCall?.kind || null;
-
-  if (options.length === 0) {
-    return { outcome: { outcome: "cancelled" } };
-  }
-
-  // TODO(security): Do not auto-approve all "read" tool calls.
-  // Restrict reads to an allowlist (for example, workspace root and explicitly linked files);
-  // otherwise reject/cancel to avoid exposing sensitive local files.
-  if (toolKind === "read") {
-    const approveOption = selectOptionByKind(
-      options,
-      ["allow_once", "allow_always"],
-      (list) => list[0]
-    );
-    return {
-      outcome: {
-        outcome: "selected",
-        optionId: approveOption.optionId
-      }
-    };
-  }
-
-  const rejectOption = selectOptionByKind(
-    options,
-    ["reject_once", "reject_always"],
-    (list) => list[list.length - 1]
-  );
-  return {
-    outcome: {
-      outcome: "selected",
-      optionId: rejectOption.optionId
-    }
-  };
-}
-
 module.exports = {
-  resolvePermissionOutcome,
   makeResolver,
+  requestedToolName,
   __test__: {
-    resolvePermissionOutcome,
     normalizePath,
     isWithinRoot,
-    requestedPath
+    requestedPath,
+    requestedToolName
   }
 };

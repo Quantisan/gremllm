@@ -346,6 +346,7 @@
   "Tool call context within an ACP permission request."
   [:map
    [:tool-call-id :string]
+   [:tool-name {:optional true} :string]
    [:kind {:optional true} [:maybe AcpToolKind]]
    [:title {:optional true} :string]
    [:raw-input {:optional true} [:map-of :keyword :any]]
