@@ -258,7 +258,8 @@
                                       :title "Edit `/tmp/test.md`"
                                       :rawInput #js {:file_path "/tmp/test.md"
                                                      :oldString "before"
-                                                     :newString "after"}}
+                                                     :newString "after"}
+                                      :locations #js [#js {:path "/tmp/test.md"}]}
                        :options #js [#js {:optionId "allow"
                                           :name "Allow"
                                           :kind "allow_once"}]}
