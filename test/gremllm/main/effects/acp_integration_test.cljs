@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.acp-integration-test
   (:require ["fs/promises" :as fsp]
+            ["os" :as os]
             ["path" :as path]
             [cljs.pprint :as pprint]
             [cljs.test :refer [deftest is testing async]]
@@ -115,42 +116,46 @@
     (is (every? #(= doc-path (:path %)) writes)
         "All writeTextFile calls should target the linked document")))
 
-;; TODO:
-;; 1. try disabling my global Claude Code permissions, just to see if it's actually using native R/W
-;; 2. tighten this commit 004f14c3cfed7f1687d7c7d99fc41ce70d191a64 with CC for keeping
-;; 3. if it proves that agent is indeed bypassing our client R/W, then file this issue and PUNT.
-;; 4. we can proceed with Accept/Reject because that would auto-save to file from document in
-;;    memory. Although this is an unreliable, incidental workaround. But we need to keep moving.
 (deftest test-live-document-first-edit
   (testing "resource_link prompt: agent reads doc, proposes diff, file unchanged"
     (async done
-      (let [store         (atom {})
-            captured      (atom [])
-            permissions   (atom [])
-            writes        (atom [])
+      (let [store          (atom {})
+            captured       (atom [])
+            permissions    (atom [])
+            writes         (atom [])
             content-before (atom nil)
-            cwd           (.cwd js/process)
-            doc-path      (path/resolve "resources/gremllm-launch-log.md")]
-        (-> (.readFile fsp doc-path "utf8")
+            tmp-dir        (atom nil)
+            doc-path       (atom nil)
+            src-path       (path/resolve "resources/gremllm-launch-log.md")]
+        (-> (js/Promise.resolve nil)
+            (.then (fn [_]
+                     (let [dir (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))]
+                       (reset! tmp-dir dir)
+                       (.mkdir fsp dir #js {:recursive true}))))
+            (.then (fn [_]
+                     (let [dest (path/join @tmp-dir "gremllm-launch-log.md")]
+                       (reset! doc-path dest)
+                       (.copyFile fsp src-path dest))))
+            (.then (fn [_] (.readFile fsp @doc-path "utf8")))
             (.then (fn [content] (reset! content-before content)))
             (.then (fn [_] (acp/initialize (acp/make-session-update-callback store #(swap! captured conj %)) false #(swap! permissions conj %) #(swap! writes conj %))))
-            (.then (fn [_] (acp/new-session cwd)))
+            (.then (fn [_] (acp/new-session @tmp-dir)))
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
                          "Read the linked document, then proceed to a single edit without further question: Update the title to something arbitrary. Do not change anything else."
-                         doc-path))))
+                         @doc-path))))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
                      (print-updates @captured)
                      (print-permissions @permissions)
                      (let [evts (updates captured)]
-                       (assert-diffs-target evts doc-path)
+                       (assert-diffs-target evts @doc-path)
                        (assert-tools-completed evts)
                        (assert-permission-contract @permissions)
                        (assert-permission-kinds @permissions)
-                       (assert-write-text-file-called @writes @permissions doc-path))))
-            (.then (fn [_] (.readFile fsp doc-path "utf8")))
+                       (assert-write-text-file-called @writes @permissions @doc-path))))
+            (.then (fn [_] (.readFile fsp @doc-path "utf8")))
             (.then (fn [content-after]
                      (is (= @content-before content-after)
                          "Document must be unchanged (writeTextFile is a no-op)")))
@@ -158,4 +163,6 @@
                       (is false (str "Document-first edit test failed: " err))))
             (.finally (fn []
                         (acp/shutdown)
+                        (when @tmp-dir
+                          (.rm fsp @tmp-dir #js {:recursive true :force true}))
                         (done))))))))
