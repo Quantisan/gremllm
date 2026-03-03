@@ -212,6 +212,97 @@
                           (acp/shutdown)
                           (done)))))))))
 
+(deftest test-remember-and-enrich-tool-name
+  (let [remember-tool-name     (.. acp-module -__test__ -rememberToolName)
+        enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
+        tool-names             (js/Map.)
+        session-update         #js {:update #js {:sessionUpdate "tool_call"
+                                                  :toolCallId    "toolu_01"
+                                                  :_meta         #js {:claudeCode #js {:toolName "mcp__acp__Edit"}}}}]
+    (remember-tool-name tool-names session-update)
+    (let [^js enriched (enrich-permission-params
+                         tool-names
+                         #js {:sessionId "session-1"
+                              :toolCall  #js {:toolCallId "toolu_01"
+                                             :title      "Edit `/tmp/test.md`"
+                                             :rawInput   #js {:file_path "/tmp/test.md"}}
+                              :options   #js []})]
+      (is (= "mcp__acp__Edit" (.. enriched -toolCall -toolName))))))
+
+(deftest test-enrich-without-tracked-tool-name
+  (let [enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
+        tool-names               (js/Map.)
+        ^js enriched             (enrich-permission-params
+                                   tool-names
+                                   #js {:sessionId "session-1"
+                                        :toolCall  #js {:toolCallId "toolu_missing"
+                                                        :title      "Edit `/tmp/test.md`"
+                                                        :rawInput   #js {:file_path "/tmp/test.md"}}
+                                        :options   #js []})]
+    (is (nil? (.. enriched -toolCall -toolName)))))
+
+(deftest test-permission-resolver-policy
+  (let [path          (js/require "path")
+        cwd           (.resolve path (.cwd js/process) "resources")
+        file-in-cwd   (.resolve path cwd "gremllm-launch-log.md")
+        file-out      (.resolve path (.cwd js/process) "README.md")
+        make-resolver (.. acp-module -__test__ -makeResolver)
+        get-cwd       (fn [session-id] (when (= session-id "session-known") cwd))
+        resolver      (make-resolver get-cwd)
+        full-options  #js [#js {:optionId "allow-always"  :kind "allow_always"  :name "allow_always"}
+                           #js {:optionId "allow-once"    :kind "allow_once"    :name "allow_once"}
+                           #js {:optionId "reject-once"   :kind "reject_once"   :name "reject_once"}
+                           #js {:optionId "reject-always" :kind "reject_always" :name "reject_always"}]
+        option-id     (fn [^js result] (.. result -outcome -optionId))]
+    (testing "read tool call is allowed regardless of path"
+      (is (= "allow-always"
+             (option-id (resolver #js {:sessionId "session-known"
+                                       :toolCall  #js {:kind "read" :toolName "mcp__acp__Read"
+                                                       :rawInput #js {:path file-in-cwd}}
+                                       :options   full-options})))))
+    (testing "edit within cwd is allowed"
+      (is (= "allow-once"
+             (option-id (resolver #js {:sessionId "session-known"
+                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
+                                                       :rawInput #js {:path file-in-cwd}}
+                                       :options   full-options})))))
+    (testing "edit outside cwd is rejected"
+      (is (= "reject-once"
+             (option-id (resolver #js {:sessionId "session-known"
+                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
+                                                       :rawInput #js {:file_path file-out}}
+                                       :options   full-options})))))
+    (testing "edit without path metadata is rejected"
+      (is (= "reject-once"
+             (option-id (resolver #js {:sessionId "session-known"
+                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
+                                                       :rawInput #js {:replace_all false}}
+                                       :options   full-options})))))
+    (testing "edit with unknown session is rejected"
+      (is (= "reject-once"
+             (option-id (resolver #js {:sessionId "session-unknown"
+                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
+                                                       :rawInput #js {:path file-in-cwd}}
+                                       :options   full-options})))))
+    (testing "empty options yields cancelled"
+      (is (= "cancelled"
+             (.. (resolver #js {:sessionId "session-known"
+                                :toolCall  #js {:kind "read" :toolName "mcp__acp__Read"
+                                                :rawInput #js {:path file-in-cwd}}
+                                :options   #js []})
+                 -outcome -outcome))))))
+
+(deftest test-permission-requested-tool-name
+  (let [requested-tool-name (.. acp-module -__test__ -permissionRequestedToolName)]
+    (testing "prefers toolCall.toolName"
+      (is (= "mcp__acp__Edit"
+             (requested-tool-name #js {:toolName "mcp__acp__Edit"}))))
+    (testing "falls back to _meta.claudeCode.toolName"
+      (is (= "Read"
+             (requested-tool-name #js {:_meta #js {:claudeCode #js {:toolName "Read"}}}))))
+    (testing "returns nil when absent"
+      (is (nil? (requested-tool-name #js {:rawInput #js {:file_path "/tmp/test.md"}}))))))
+
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
     (testing "slices from 1-indexed line with limit"
