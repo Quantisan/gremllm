@@ -335,8 +335,8 @@
   "A single permission option presented to the client."
   [:map
    [:option-id :string]
-   [:name :string]
-   [:kind AcpPermissionOptionKind]])
+   [:name      :string]
+   [:kind      AcpPermissionOptionKind]])
 
 (def AcpToolKind
   "ACP tool operation kinds."
@@ -346,18 +346,18 @@
   "Tool call context within an ACP permission request."
   [:map
    [:tool-call-id :string]
-   [:tool-name {:optional true} :string]
-   [:kind {:optional true} [:maybe AcpToolKind]]
-   [:title {:optional true} :string]
-   [:raw-input {:optional true} [:map-of :keyword :any]]
-   [:locations {:optional true} [:vector AcpToolLocation]]])
+   [:tool-name    :string]
+   [:kind         [:maybe AcpToolKind]]
+   [:title        :string]
+   [:raw-input    [:map-of :keyword :any]]
+   [:locations    [:vector AcpToolLocation]]])
 
 (def AcpPermissionRequest
   "ACP requestPermission params shape."
   [:map
    [:acp-session-id :string]
-   [:tool-call AcpPermissionToolCall]
-   [:options [:vector AcpPermissionOption]]])
+   [:tool-call      AcpPermissionToolCall]
+   [:options        [:vector AcpPermissionOption]]])
 
 (defn acp-permission-request-from-js
   "Coerce ACP requestPermission params from JS callback."
