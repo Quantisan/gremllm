@@ -261,7 +261,7 @@
                                                        :rawInput #js {:path file-in-cwd}}
                                        :options   full-options})))))
     (testing "edit within cwd is allowed"
-      (is (= "allow-always"
+      (is (= "allow-once"
              (option-id (resolver #js {:sessionId "session-known"
                                        :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
                                                        :rawInput #js {:path file-in-cwd}}

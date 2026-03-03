@@ -61,9 +61,13 @@ function makeResolver(getSessionCwd) {
       const normalizedCwd = normalizePath(cwd);
       const normalizedRequested = normalizePath(requestedPath(toolCall));
       if (normalizedCwd && normalizedRequested && isWithinRoot(normalizedRequested, normalizedCwd)) {
+        // Prefer allow_once so every Edit re-enters this resolver and gets a
+        // fresh path check. allow_always would create a session-scoped rule
+        // keyed only on toolName, bypassing the workspace-root guard for all
+        // subsequent edits—including ones outside the workspace root.
         const approveOption = selectOptionByKind(
           options,
-          ["allow_always", "allow_once"],
+          ["allow_once", "allow_always"],
           (list) => list[0]
         );
         return { outcome: { outcome: "selected", optionId: approveOption.optionId } };
