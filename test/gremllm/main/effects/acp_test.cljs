@@ -93,6 +93,7 @@
                        (let [js-data #js {:sessionId "s-test"
                                           :update    #js {:sessionUpdate "tool_call_update"
                                                           :toolCallId    "tc-1"
+                                                          :_meta         #js {:claudeCode #js {:toolResponse #js {}}}
                                                           :content       #js [#js {:type    "diff"
                                                                                    :path    "/doc.md"
                                                                                    :oldText "old"
