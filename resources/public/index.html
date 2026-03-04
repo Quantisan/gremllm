@@ -222,6 +222,39 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Diff mode — monospace document view when pending diffs are present */
+        .diff-mode {
+            font-family: var(--pico-font-family-monospace, monospace);
+            white-space: pre-wrap;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            padding: var(--pico-spacing);
+        }
+
+        .diff-block {
+            border-left: 3px solid var(--pico-primary);
+            padding: 0.25rem 0.5rem;
+            margin: 0.5rem 0;
+            background: var(--pico-card-background-color);
+            border-radius: var(--pico-border-radius);
+        }
+
+        .diff-block del {
+            display: block;
+            background: rgba(244, 121, 32, 0.12);  /* --tva-orange at 12% */
+            text-decoration: line-through;
+            padding: 0.125rem 0.25rem;
+            border-radius: 2px;
+        }
+
+        .diff-block ins {
+            display: block;
+            background: rgba(0, 75, 73, 0.12);  /* --tva-teal at 12% */
+            text-decoration: none;
+            padding: 0.125rem 0.25rem;
+            border-radius: 2px;
+        }
     </style>
 </head>
 
