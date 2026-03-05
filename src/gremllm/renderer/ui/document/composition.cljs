@@ -16,6 +16,9 @@
           (conj segments {:type :text :content (subs content pos)})
           segments)
         (let [{:keys [char-index length old-text new-text]} (first diffs)
+              ;; WARN: Overlapping diffs will crash the renderer. if two anchored diffs overlap (LLM
+              ;; produces edits targeting adjacent text), subs gets called with pos > char-index and
+              ;; throws.
               before (subs content pos char-index)]
           (recur (+ char-index length)
                  (rest diffs)
