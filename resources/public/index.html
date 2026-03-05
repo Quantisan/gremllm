@@ -242,7 +242,7 @@
 
         .diff-block del {
             display: block;
-            background: rgba(244, 121, 32, 0.12);  /* --tva-orange at 12% */
+            background: color-mix(in srgb, var(--tva-orange) 12%, transparent);
             text-decoration: line-through;
             padding: 0.125rem 0.25rem;
             border-radius: 2px;
@@ -250,7 +250,7 @@
 
         .diff-block ins {
             display: block;
-            background: rgba(0, 75, 73, 0.12);  /* --tva-teal at 12% */
+            background: color-mix(in srgb, var(--tva-teal) 12%, transparent);
             text-decoration: none;
             padding: 0.125rem 0.25rem;
             border-radius: 2px;
