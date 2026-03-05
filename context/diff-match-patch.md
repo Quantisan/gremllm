@@ -205,6 +205,79 @@ Trade-offs:
 
 ## Deep Dive B: Sequential and Overlapping Diffs
 
+Sequential diffs are usually applied against evolving text state:
+
+1. apply patch set A to base text
+2. use the result as input when applying patch set B
+
+This is different from applying both sets independently to the original text.
+
+### Sequential Apply Model
+
+```ts
+import {applyPatches, type Patch} from '@sanity/diff-match-patch'
+
+type ApplyStep = {
+  text: string
+  applied: boolean[]
+}
+
+function applySequence(base: string, patchSets: Patch[][]): ApplyStep[] {
+  const steps: ApplyStep[] = []
+  let current = base
+
+  for (const patches of patchSets) {
+    const [next, applied] = applyPatches(patches, current)
+    steps.push({text: next, applied})
+    current = next
+  }
+
+  return steps
+}
+```
+
+Interpretation notes:
+- each `applied` entry maps to one patch chunk in that apply call
+- partial success is possible (`[true, false, ...]`)
+- a later sequence step may fail even when earlier steps succeeded
+
+### Overlap Scenarios
+
+Overlaps happen when two patch sets target the same or nearby regions. In that case, applying one patch set can invalidate assumptions used by another patch set.
+
+Neutral handling options:
+
+1. Keep patch sets independent and accept failed apply flags
+- Useful when best-effort behavior is acceptable
+
+2. Recompute later patches against the latest successful state
+- Generate new patches from updated text after each successful step
+
+3. Merge or transform overlapping edits before patch apply
+- Resolve overlap semantics first, then apply a consolidated patch set
+
+4. Surface overlap as a conflict state
+- Skip automatic merge and escalate to conflict-resolution logic
+
+### Compact Success/Failure Inspection Pattern
+
+```ts
+import {applyPatches, type Patch} from '@sanity/diff-match-patch'
+
+function applyAndInspect(text: string, patches: Patch[]) {
+  const [next, flags] = applyPatches(patches, text)
+  const successCount = flags.filter(Boolean).length
+  const failedCount = flags.length - successCount
+  return {next, flags, successCount, failedCount}
+}
+```
+
+### Practical Notes
+
+- If sequence order matters, test both single-step and end-to-end outcomes.
+- Consider treating any `false` in `boolean[]` as a first-class event for metrics or retries.
+- Keep patch generation/apply boundaries explicit in logs to debug overlap behavior.
+
 ## Unicode and Index Semantics
 
 ## Serialization and Replay
