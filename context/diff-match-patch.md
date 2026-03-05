@@ -280,10 +280,148 @@ function applyAndInspect(text: string, patches: Patch[]) {
 
 ## Unicode and Index Semantics
 
+This fork tracks both character-based fields and UTF-8 byte-based fields in patch objects.
+
+- Character-oriented fields: `start1`, `start2`, `length1`, `length2`
+- UTF-8-oriented fields: `utf8Start1`, `utf8Start2`, `utf8Length1`, `utf8Length2`
+
+Why this exists:
+- patch text format (`@@ -a,b +c,d @@`) is represented with UTF-8 lengths in this fork
+- JavaScript string slicing/indexing is still character-oriented (`string.length` and `substring`)
+
+`adjustIndiciesToUcs2()` can be used when parsed patch indices need alignment with local string indexing behavior.
+
+```ts
+import {parsePatch, adjustIndiciesToUcs2, applyPatches} from '@sanity/diff-match-patch'
+
+const parsed = parsePatch(unidiffText)
+const adjusted = adjustIndiciesToUcs2(parsed, baseText, {
+  allowExceedingIndices: true,
+})
+const [nextText, flags] = applyPatches(adjusted, baseText, {
+  allowExceedingIndices: true,
+})
+```
+
+Notes:
+- `allowExceedingIndices` is useful for best-effort application when base text does not fully match generation context.
+- Keep offset changes consistent across both character and UTF-8 start fields if mutating patches manually.
+
 ## Serialization and Replay
+
+Use `stringifyPatches()` to export unidiff-like patch text and `parsePatch()` to read it back.
+
+```ts
+import {
+  makePatches,
+  stringifyPatches,
+  parsePatch,
+  applyPatches,
+} from '@sanity/diff-match-patch'
+
+const patches = makePatches('from this', 'to this')
+const patchText = stringifyPatches(patches)
+
+const parsed = parsePatch(patchText)
+const [next, flags] = applyPatches(parsed, 'from this')
+```
+
+Round-trip considerations:
+- `applyPatches()` expects `Patch[]`, not raw patch text
+- patch body lines are URI-encoded by stringify/parse internals
+- `parsePatch('')` returns `[]`
+
+Common replay pattern:
+1. store patch text as durable artifact
+2. parse at apply time
+3. apply and inspect `boolean[]` for partial failures
 
 ## Match Tuning
 
+`match(text, pattern, searchLocation, options)` supports two knobs:
+
+- `threshold` (`0.0` to `1.0`): lower values are stricter
+- `distance` (`0` to large): lower values prefer proximity to `searchLocation`
+
+```ts
+import {match} from '@sanity/diff-match-patch'
+
+const idx = match(fullText, query, expectedIndex, {
+  threshold: 0.4,
+  distance: 800,
+})
+```
+
+Trade-off summary:
+- lower `threshold` can reduce false positives but can increase misses
+- lower `distance` can keep matches near expected location but can miss far valid matches
+- broad settings increase search flexibility but may increase runtime and less-local matches
+
 ## Gotchas and Verification Checklist
 
+### Gotchas
+
+- This package is not constructor-based. Use function exports, not `new diff_match_patch()`.
+- Use `parsePatch` (singular export name), not `parsePatches`.
+- `applyPatches()` can partially succeed; always inspect `boolean[]`.
+- Sequential application can alter the context expected by later patches.
+- Long/complex patches can be split internally during apply; treat each apply flag as meaningful.
+
+### Verification Checklist
+
+- API correctness spot-check:
+  - `makePatches`, `applyPatches`, `parsePatch`, `stringifyPatches`, `match`, `xIndex`, `adjustIndiciesToUcs2`
+- Neutrality check:
+  - ensure no project-specific assumptions or recommendations are introduced
+- Legacy API typo check:
+  - avoid constructor-era names (`new diff_match_patch`, `patch_make`, `patch_apply`, `parsePatches`)
+- Line count check:
+  - keep this guide under 1000 lines
+- API naming check:
+  - `makePatches`, `applyPatches`, `parsePatch`, `stringifyPatches`, `match`, `xIndex`, `adjustIndiciesToUcs2`
+- Behavior checks:
+  - exact apply success path
+  - partial/failure path (`boolean[]` contains `false`)
+  - sequential apply behavior over evolving text
+  - Unicode-heavy input path if your data includes multibyte characters
+- Serialization checks:
+  - `stringifyPatches` -> `parsePatch` -> `applyPatches` round trip
+- Compatibility checks:
+  - runtime satisfies `node >= 18.18`
+
 ## Progressive-Disclosure References
+
+Upstream repository:
+- https://github.com/sanity-io/diff-match-patch
+- Tag: https://github.com/sanity-io/diff-match-patch/tree/v3.2.0
+
+Primary docs:
+- README: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/README.md
+- Changelog: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/CHANGELOG.md
+
+API/source entry points:
+- Exports map: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/index.ts
+- Match API: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/match/match.ts
+- Patch make: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/make.ts
+- Patch apply: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/apply.ts
+- Patch parse: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/parse.ts
+- Patch stringify: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/stringify.ts
+- Index mapping: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/diff/xIndex.ts
+- UTF-8/UCS-2 utils: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/utils/utf8Indices.ts
+
+Upstream tests worth reading:
+- API smoke tests: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/index.test.ts
+- Patch apply behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/__tests__/apply.test.ts
+- Patch generation behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/__tests__/make.test.ts
+- Parse/stringify behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/__tests__/parse.test.ts
+- Patch splitting behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/patch/__tests__/splitMax.test.ts
+- Match behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/match/__tests__/match.test.ts
+- UTF-8 index adjustment behavior: https://github.com/sanity-io/diff-match-patch/blob/v3.2.0/src/utils/__tests__/utf8Indicies.test.ts
+
+Additional usage examples in Sanity codebases:
+- `diffMatchPatch` apply path:
+  - https://github.com/sanity-io/sanity/blob/main/packages/@sanity/mutator/src/patch/DiffMatchPatch.ts
+- patch generation for mutation squashing:
+  - https://github.com/sanity-io/sanity/blob/main/packages/@sanity/mutator/src/document/SquashingBuffer.ts
+- string patch application in form layer:
+  - https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/form/patch/string.ts
