@@ -43,6 +43,20 @@
       (is (= 1 (count segments)))
       (is (= :text (:type (first segments))))))
 
+  (testing "overlapping diffs both render without crash"
+    (let [content  "Hello beautiful wonderful world"
+          anchored [{:type "diff" :old-text "beautiful wonderful"
+                     :new-text "amazing" :anchor-status :anchored
+                     :char-index 6 :length 19}
+                    {:type "diff" :old-text "wonderful world"
+                     :new-text "great world" :anchor-status :anchored
+                     :char-index 16 :length 15}]
+          segments (composition/compose-diff-segments content anchored)]
+      (is (= 3 (count segments)))
+      (is (= :text (:type (first segments))))
+      (is (= :diff-block (:type (second segments))))
+      (is (= :diff-block (:type (nth segments 2))))))
+
   (testing "multiple diffs sorted by position regardless of input order"
     ;; list_diff: two diffs at different positions in the document
     (let [content  "- Support 100 concurrent users\n- Maintain data consistency\n\nDeployment includes monitoring integration."
