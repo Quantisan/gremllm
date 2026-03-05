@@ -54,7 +54,6 @@
                     {:session-update :tool-call-update
                      :tool-call-id "toolu_1"
                      :status "completed"
-                     :meta {:claude-code {:tool-response {}}}
                      :content [{:type "diff" :path "/tmp/test.md"
                                 :old-text "old" :new-text "new"}]}
                     123)]
