@@ -20,6 +20,12 @@
                  (rest diffs)
                  (cond-> segments
                    (< pos char-index)
-                     (conj {:type :text :content (subs content pos char-index)})
+                   (conj {:type :text :content (subs content pos char-index)})
+
                    true
-                     (conj {:type :diff-block :old-text old-text :new-text new-text}))))))))
+                   (conj {:type :diff-block :old-text old-text :new-text new-text}))))))))
+
+(defn compose-sequential-diffs
+  "Compose sequential diffs against evolving content. Not yet implemented."
+  [_content _diffs]
+  [])

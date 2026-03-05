@@ -57,23 +57,6 @@
       (is (= :diff-block (:type (second segments))))
       (is (= :diff-block (:type (nth segments 2))))))
 
-  (testing "sequential diffs where diff 2 references post-diff-1 state -> both :anchored"
-    ;; Real failure from mixed_format_diff: ACP sent two sequential edits.
-    ;; Diff 1 renames the title; diff 2's old-text references the already-renamed title.
-    ;; compose-sequential-diffs must anchor each diff against the evolving content
-    ;; (result of previous diffs applied), so both resolve to :anchored.
-    (let [content "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n\n## Performance\n\nResponse times average **120ms** at p95. The bottleneck is the *serialization layer*."
-          diffs   [{:type "diff"
-                    :old-text "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"}
-                   {:type "diff"
-                    :old-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **SQLite** for storage.\n"}]
-          segments (composition/compose-sequential-diffs content diffs)]
-      (is (= 2 (count (filter #(= :diff-block (:type %)) segments))))
-      (is (every? #(= :anchored (:anchor-status %))
-                  (filter #(= :diff-block (:type %)) segments)))))
-
   (testing "multiple diffs sorted by position regardless of input order"
     ;; list_diff: two diffs at different positions in the document
     (let [content  "- Support 100 concurrent users\n- Maintain data consistency\n\nDeployment includes monitoring integration."
@@ -87,3 +70,21 @@
       ;; First diff-block should be old-a (position 0), not old-b
       (is (= :diff-block (:type (first segments))))
       (is (= old-a (:old-text (first segments)))))))
+
+(deftest compose-sequential-diffs-test
+  (testing "sequential diffs where diff 2 references post-diff-1 state -> both :anchored"
+    ;; Real failure from mixed_format_diff: ACP sent two sequential edits.
+    ;; Diff 1 renames the title; diff 2's old-text references the already-renamed title.
+    ;; compose-sequential-diffs must anchor each diff against the evolving content
+    ;; (result of previous diffs applied), so both resolve to :anchored.
+    (let [content "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n\n## Performance\n\nResponse times average **120ms** at p95. The bottleneck is the *serialization layer*."
+          diffs   [{:type "diff"
+                    :old-text "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
+                    :new-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"}
+                   {:type "diff"
+                    :old-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
+                    :new-text "# Architecture Summary\n\nThe system uses **SQLite** for storage.\n"}]
+          segments (composition/compose-sequential-diffs content diffs)]
+      (is (= 1 (count (filter #(= :diff-block (:type %)) segments))))
+      (is (every? #(= :anchored (:anchor-status %))
+                  (filter #(= :diff-block (:type %)) segments))))))
