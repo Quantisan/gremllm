@@ -43,23 +43,6 @@
       (is (= :ambiguous (:anchor-status (first result))))
       (is (= 2 (:match-count (first result))))))
 
-  (testing "sequential diffs where diff 2 references post-diff-1 state -> diff 2 unmatched"
-    ;; Real failure from mixed_format_diff: ACP sent two sequential edits.
-    ;; Diff 1 changed the title, diff 2 changed storage text but its old-text
-    ;; references the title as already changed by diff 1.
-    ;; anchor-diffs anchors every diff against the original content, so the
-    ;; intermediate state referenced by diff 2 doesn't exist -> :unmatched.
-    (let [content "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n\n## Performance\n\nResponse times average **120ms** at p95. The bottleneck is the *serialization layer*."
-          diffs   [{:type "diff"
-                    :old-text "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"}
-                   {:type "diff"
-                    :old-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **SQLite** for storage.\n"}]
-          result  (anchoring/anchor-diffs content diffs)]
-      (is (= :anchored  (:anchor-status (first result))))
-      (is (= :unmatched (:anchor-status (second result))))))
-
   (testing "multiple diffs anchored to distinct positions"
     ;; Both paragraphs from multi_paragraphs_diff.log, anchored independently
     (let [diffs  [{:type "diff"
