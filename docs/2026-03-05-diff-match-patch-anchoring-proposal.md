@@ -9,17 +9,17 @@ The current anchoring and sequential diff composition code reinvents what `@sani
 
 ## Spike Findings (2026-03-05)
 
-Status: **No-Go for direct replacement as proposed**.
+Status: **No-go for naive drop-in; go with compensating strategies.**
 
 Evidence from `node test/diff_match_patch_spike.mjs` (real logs only):
 
-1. `@sanity/diff-match-patch` does **not** expose `new diff_match_patch()`; it exposes functional APIs (`makePatches`, `applyPatches`, `match`, etc.).
-2. Snippet patching (`makePatches(oldText, newText)` on full document text) fails on long-document real logs where the true match is far from the patch's expected location.
-3. Manually offsetting patch coordinates from `locations[].line` can recover the long-document case.
-4. Overlapping sequential diffs are not independently composable; applying one can invalidate the second regardless of order.
-5. Multi-paragraph diffs still apply successfully in the captured fixture.
+1. **No constructor (non-blocking).** `@sanity/diff-match-patch` does not expose `new diff_match_patch()`; it exposes functional APIs (`makePatches`, `applyPatches`, `match`, etc.). The proposal pseudocode was already noted as outdated. Rewrite against the functional imports.
+2. **Snippet patching fails on long docs (significant).** `makePatches(oldText, newText)` applied to the full document fails when the true match is far from the patch's expected location. Guide Option 1 (snippet-only patching) is blocked. Requires guide Option 2: location-seeded patching using the existing `:locations[].line` data.
+3. **Offset recovery works (confirms guide Option 2).** Manually seeding patch coordinates from `locations[].line` recovered the long-document case. The spike's offset experiment succeeded, validating that this approach is viable.
+4. **Overlapping sequential diffs (significant).** Not solvable by naive sequential apply—applying one diff can invalidate the next regardless of order. Needs one of: recompute each diff against latest document state, merge diffs before applying, or surface as a conflict (guide Deep Dive B, options 2–4).
+5. **Multi-paragraph diffs work (non-blocking).** Multi-paragraph diffs applied successfully in the captured fixture. The library handles this case.
 
-Decision rule for this spike was strict no-go on major mismatch; multiple major mismatches were found.
+Decision: the spike blocks the original naive proposal but validates that `@sanity/diff-match-patch` is viable. Both significant findings have documented strategies in `context/diff-match-patch.md`.
 
 ## The Library: `@sanity/diff-match-patch`
 
