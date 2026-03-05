@@ -43,20 +43,6 @@
       (is (= 1 (count segments)))
       (is (= :text (:type (first segments))))))
 
-  (testing "overlapping diffs both render without crash"
-    (let [content  "Hello beautiful wonderful world"
-          anchored [{:type "diff" :old-text "beautiful wonderful"
-                     :new-text "amazing" :anchor-status :anchored
-                     :char-index 6 :length 19}
-                    {:type "diff" :old-text "wonderful world"
-                     :new-text "great world" :anchor-status :anchored
-                     :char-index 16 :length 15}]
-          segments (composition/compose-diff-segments content anchored)]
-      (is (= 3 (count segments)))
-      (is (= :text (:type (first segments))))
-      (is (= :diff-block (:type (second segments))))
-      (is (= :diff-block (:type (nth segments 2))))))
-
   (testing "multiple diffs sorted by position regardless of input order"
     ;; list_diff: two diffs at different positions in the document
     (let [content  "- Support 100 concurrent users\n- Maintain data consistency\n\nDeployment includes monitoring integration."
@@ -85,6 +71,20 @@
                     :old-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
                     :new-text "# Architecture Summary\n\nThe system uses **SQLite** for storage.\n"}]
           segments (composition/compose-sequential-diffs content diffs)]
+      (is (= 1 (count (filter #(= :diff-block (:type %)) segments))))
+      (is (every? #(= :anchored (:anchor-status %))
+                  (filter #(= :diff-block (:type %)) segments)))))
+
+  (testing "overlapping sequential diffs merge into one diff-block"
+    (let [content  "Hello beautiful wonderful world"
+          diffs    [{:type "diff"
+                     :old-text "beautiful wonderful"
+                     :new-text "amazing"}
+                    {:type "diff"
+                     :old-text "amazing world"
+                     :new-text "great planet"}]
+          segments (composition/compose-sequential-diffs content diffs)]
+      ;; Two sequential edits to overlapping region -> single merged diff-block
       (is (= 1 (count (filter #(= :diff-block (:type %)) segments))))
       (is (every? #(= :anchored (:anchor-status %))
                   (filter #(= :diff-block (:type %)) segments))))))
