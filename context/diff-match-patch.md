@@ -109,6 +109,100 @@ const [nextText, applied] = applyPatches(patches, 'from this')
 
 ## Deep Dive A: Long-Document Anchoring
 
+Long-document anchoring is about where patch application starts searching.
+
+`applyPatches()` does fuzzy matching internally, but it still uses expected locations from each patch object (`start2` plus internal delta tracking). Depending on how patches are generated, those expected locations may be more or less useful for large documents.
+
+### Option 1: Snippet-Only Patching
+
+Create patch objects from `oldText` and `newText` only, then apply to a larger document.
+
+```ts
+import {makePatches, applyPatches} from '@sanity/diff-match-patch'
+
+const patches = makePatches(oldText, newText)
+const [nextDoc, applied] = applyPatches(patches, fullDocument)
+```
+
+Trade-offs:
+- Pros: simplest flow and smallest input surface
+- Cons: expected patch positions come from snippet context, not necessarily full-document positions
+
+### Option 2: Location-Seeded Snippet Patching
+
+Use an external location hint to find a likely anchor near a target index, then offset patch coordinates before apply.
+
+```ts
+import {makePatches, applyPatches, match, type Patch} from '@sanity/diff-match-patch'
+
+function offsetPatches(patches: Patch[], charOffset: number): Patch[] {
+  return patches.map((p) => ({
+    ...p,
+    start1: p.start1 + charOffset,
+    start2: p.start2 + charOffset,
+    utf8Start1: p.utf8Start1 + charOffset,
+    utf8Start2: p.utf8Start2 + charOffset,
+  }))
+}
+
+const snippetPatches = makePatches(oldText, newText)
+const guessedIndex = lineHintIndex // or any external hint
+const bestIndex = match(fullDocument, oldText.slice(0, 32), guessedIndex, {
+  distance: 1000,
+  threshold: 0.5,
+})
+
+const seeded = bestIndex >= 0 ? offsetPatches(snippetPatches, bestIndex) : snippetPatches
+const [nextDoc, applied] = applyPatches(seeded, fullDocument)
+```
+
+Trade-offs:
+- Pros: keeps snippet-based workflow while adding a controllable search seed
+- Cons: requires external hinting strategy and careful offset handling
+
+### Option 3: Full-Document Patch Generation
+
+Generate patches from full source and full target text.
+
+```ts
+import {makePatches, applyPatches} from '@sanity/diff-match-patch'
+
+const nextDocument = fullDocument.replace(oldText, newText) // example transform
+const fullPatches = makePatches(fullDocument, nextDocument)
+const [appliedDocument, applied] = applyPatches(fullPatches, fullDocument)
+```
+
+Trade-offs:
+- Pros: patch coordinates are derived from full-document context
+- Cons: requires access to both full source and full target states
+
+### Option 4: Hybrid Fallback Flow
+
+Try simpler anchoring first, then escalate to heavier anchoring when apply flags fail.
+
+```ts
+import {makePatches, applyPatches} from '@sanity/diff-match-patch'
+
+const firstTry = makePatches(oldText, newText)
+const [firstDoc, firstApplied] = applyPatches(firstTry, fullDocument)
+
+const allApplied = firstApplied.length > 0 && firstApplied.every(Boolean)
+if (!allApplied) {
+  // Fallback strategy can be location-seeded snippet patching
+  // or full-document patch generation, depending on system constraints.
+}
+```
+
+Trade-offs:
+- Pros: allows staged complexity
+- Cons: introduces branching behavior and more states to test
+
+### Notes for Option Selection
+
+- Check `boolean[]` apply flags, not just resulting text.
+- If you mutate patch coordinates directly, keep character and UTF-8 fields consistent.
+- Keep examples aligned to functional exports (`makePatches`, `applyPatches`, `match`).
+
 ## Deep Dive B: Sequential and Overlapping Diffs
 
 ## Unicode and Index Semantics
