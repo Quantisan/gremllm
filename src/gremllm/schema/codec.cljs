@@ -121,11 +121,13 @@
       (str "Read — " filename " (" lines " lines)"))))
 
 (defn tool-response-diffs
-  "Extracts diff items from a tool-call-update's content.
+  "Extracts diff items from a PostToolUse tool-call-update's content.
    Returns a vector of diff maps or nil if none present.
-   Only matches :tool-call-update events; returns nil for :tool-call requests."
-  [{:keys [session-update content]}]
-  (when (and (= :tool-call-update session-update) (seq content))
+   Excludes streaming refinement events which carry :kind."
+  [{:keys [session-update content kind]}]
+  (when (and (= :tool-call-update session-update)
+             (nil? kind)
+             (seq content))
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
 
@@ -142,10 +144,11 @@
        (some? (get-in update [:meta :claude-code :tool-response :file]))))
 
 (defn tool-response-has-diffs?
-  "True when a tool-call-update contains diff content.
-   Returns false for :tool-call request events."
-  [{:keys [session-update content]}]
+  "True when a tool-call-update is a PostToolUse event containing diff content.
+   Excludes streaming refinement events which carry :kind."
+  [{:keys [session-update content kind]}]
   (and (= :tool-call-update session-update)
+       (nil? kind)
        (some #(= "diff" (:type %)) content)))
 
 (defn tool-call-update-status

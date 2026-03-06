@@ -223,7 +223,7 @@
              (:content update))))))
 
 (deftest test-tool-response-diffs
-  (testing "extracts diff items from tool-call-update content"
+  (testing "extracts diff items from PostToolUse tool-call-update"
     (let [update {:session-update :tool-call-update
                   :content [{:type "diff" :path "/a.md"
                              :old-text "old" :new-text "new"}
@@ -233,6 +233,12 @@
       (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
               {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
              (codec/tool-response-diffs update)))))
+
+  (testing "returns nil for streaming refinement events (have :kind set)"
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
+                                          :kind "edit"
+                                          :content [{:type "diff" :path "/a.md"
+                                                     :old-text "old" :new-text "new"}]}))))
 
   (testing "returns nil for :tool-call request events"
     (is (nil? (codec/tool-response-diffs {:session-update :tool-call
@@ -244,10 +250,12 @@
                                           :content [{:type "text" :text "hi"}]}))))
 
   (testing "returns nil when content is nil"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update :content nil}))))
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
+                                          :content nil}))))
 
   (testing "returns nil when content is empty"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update :content []})))))
+    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
+                                          :content []})))))
 
 (deftest test-acp-permission-request-from-js
   (testing "coerces tool_name on permission tool call"

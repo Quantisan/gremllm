@@ -8,3 +8,6 @@
 ;; S4b: Diffs stored as-is from codec output. Shape may evolve when
 ;; renderer consumes this for UI display (S5).
 (def pending-diffs-path [:document :pending-diffs])
+
+(defn get-pending-diffs [state]
+  (get-in state pending-diffs-path))
