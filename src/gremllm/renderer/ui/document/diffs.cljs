@@ -7,6 +7,9 @@
 ;; must handle both patterns: independent diffs produce separate :diff-block
 ;; segments; dependent overlapping diffs merge into a single :diff-block.
 
+;; TODO: Refactor anchoring/composition to leverage diff-match-patch.
+;; Proposal: docs/2026-03-05-diff-match-patch-anchoring-proposal.md
+
 ;; ---- Anchoring ----
 
 (defn- find-occurrences
