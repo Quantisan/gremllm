@@ -1,7 +1,6 @@
 (ns gremllm.renderer.ui.document
   (:require [gremllm.renderer.ui.markdown :as md]
-            [gremllm.renderer.ui.document.anchoring :as anchoring]
-            [gremllm.renderer.ui.document.composition :as composition]))
+            [gremllm.renderer.ui.document.diffs :as diffs]))
 
 (defn- render-diff-segments [segments]
   (into [:div]
@@ -14,8 +13,7 @@
 (defn render-document [content pending-diffs]
   (if content
     (if (seq pending-diffs)
-      (let [anchored (anchoring/anchor-diffs content pending-diffs)
-            segments (composition/compose-diff-segments content anchored)]
+      (let [segments (diffs/compose content pending-diffs)]
         [:article.diff-mode (render-diff-segments segments)])
       [:article (md/markdown->hiccup content)])
     [:article
