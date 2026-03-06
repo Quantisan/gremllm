@@ -57,34 +57,51 @@
       (is (= :diff-block (:type (first segments))))
       (is (= old-a (:old-text (first segments)))))))
 
-(deftest compose-sequential-diffs-test
-  (testing "sequential diffs where diff 2 references post-diff-1 state -> both :anchored"
-    ;; Real failure from mixed_format_diff: ACP sent two sequential edits.
-    ;; Diff 1 renames the title; diff 2's old-text references the already-renamed title.
-    ;; compose-sequential-diffs must anchor each diff against the evolving content
-    ;; (result of previous diffs applied), so both resolve to :anchored.
-    (let [content "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n\n## Performance\n\nResponse times average **120ms** at p95. The bottleneck is the *serialization layer*."
-          diffs   [{:type "diff"
-                    :old-text "# Technical Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"}
-                   {:type "diff"
-                    :old-text "# Architecture Summary\n\nThe system uses **PostgreSQL** for storage and **Redis** for caching.\n"
-                    :new-text "# Architecture Summary\n\nThe system uses **SQLite** for storage.\n"}]
-          segments (composition/compose-sequential-diffs content diffs)]
-      (is (= 1 (count (filter #(= :diff-block (:type %)) segments))))
-      (is (every? #(= :anchored (:anchor-status %))
-                  (filter #(= :diff-block (:type %)) segments)))))
+(deftest compose-diffs-test
+  (testing "two independent diffs -> separate diff-blocks"
+    (let [content  "AAA\n\nBBB\n\nCCC"
+          diffs    [{:type "diff" :old-text "AAA" :new-text "XXX"}
+                    {:type "diff" :old-text "CCC" :new-text "ZZZ"}]
+          segments (composition/compose-diffs content diffs)]
+      (is (= 3 (count segments)))
+      (is (= :diff-block (:type (first segments))))
+      (is (= "AAA" (:old-text (first segments))))
+      (is (= :text (:type (second segments))))
+      (is (= :diff-block (:type (nth segments 2))))
+      (is (= "CCC" (:old-text (nth segments 2))))))
 
-  (testing "overlapping sequential diffs merge into one diff-block"
-    (let [content  "Hello beautiful wonderful world"
-          diffs    [{:type "diff"
-                     :old-text "beautiful wonderful"
-                     :new-text "amazing"}
-                    {:type "diff"
-                     :old-text "amazing world"
-                     :new-text "great planet"}]
-          segments (composition/compose-sequential-diffs content diffs)]
-      ;; Two sequential edits to overlapping region -> single merged diff-block
-      (is (= 1 (count (filter #(= :diff-block (:type %)) segments))))
-      (is (every? #(= :anchored (:anchor-status %))
-                  (filter #(= :diff-block (:type %)) segments))))))
+  (testing "two dependent overlapping diffs -> single merged diff-block"
+    (let [content     "Hello beautiful wonderful world"
+          diffs       [{:type "diff" :old-text "beautiful wonderful" :new-text "amazing"}
+                       {:type "diff" :old-text "amazing world"      :new-text "great planet"}]
+          segments    (composition/compose-diffs content diffs)
+          diff-blocks (filter #(= :diff-block (:type %)) segments)]
+      (is (= 1 (count diff-blocks)))
+      (is (= :anchored (:anchor-status (first diff-blocks))))))
+
+  (testing "mixed: independent + dependent chain -> two diff-blocks"
+    (let [content     "Title\n\nBody paragraph\n\nFooter"
+          diffs       [{:type "diff" :old-text "Body paragraph" :new-text "New body"}
+                       {:type "diff" :old-text "New body"       :new-text "Final body"}
+                       {:type "diff" :old-text "Footer"         :new-text "New footer"}]
+          segments    (composition/compose-diffs content diffs)
+          diff-blocks (filter #(= :diff-block (:type %)) segments)]
+      (is (= 2 (count diff-blocks)))
+      (is (= "Body paragraph" (:old-text (first diff-blocks))))
+      (is (= "Footer" (:old-text (second diff-blocks))))))
+
+  (testing "dependent chain in different regions -> two diff-blocks"
+    (let [content     "# Technical Summary\n\nThe system uses PostgreSQL.\n\n## Performance\n\nResponse times average 120ms."
+          diffs       [{:type "diff"
+                        :old-text "# Technical Summary"
+                        :new-text "# Architecture Summary"}
+                       {:type "diff"
+                        :old-text "# Architecture Summary\n\nThe system uses PostgreSQL."
+                        :new-text "# Architecture Summary\n\nThe system uses SQLite."}
+                       {:type "diff"
+                        :old-text "Response times average 120ms."
+                        :new-text "Response times average 85ms."}]
+          segments    (composition/compose-diffs content diffs)
+          diff-blocks (filter #(= :diff-block (:type %)) segments)]
+      (is (= 2 (count diff-blocks))))))
+

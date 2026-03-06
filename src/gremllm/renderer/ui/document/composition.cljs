@@ -1,4 +1,12 @@
-(ns gremllm.renderer.ui.document.composition)
+(ns gremllm.renderer.ui.document.composition
+  (:require [gremllm.renderer.ui.document.anchoring :as anchoring]))
+
+;; Pending-diffs arrive as a single ordered batch per ACP tool-call response.
+;; Within a batch, diff N's :old-text may reference content that only exists
+;; after applying diffs 1..N-1 (sequential dependency). Independent diffs
+;; reference the original document content directly. The composition pipeline
+;; must handle both patterns: independent diffs produce separate :diff-block
+;; segments; dependent overlapping diffs merge into a single :diff-block.
 
 (defn compose-diff-segments
   "Splits content string into ordered segments for diff rendering.
@@ -31,37 +39,98 @@
       text
       (str (subs text 0 idx) new-text (subs text (+ idx (count old-text)))))))
 
-(defn- common-prefix-len [a b]
-  (let [limit (min (count a) (count b))]
-    (loop [i 0]
-      (if (or (= i limit) (not= (.charAt a i) (.charAt b i)))
-        i
-        (recur (inc i))))))
+;; --- compose-diffs pipeline ---
 
-(defn- common-suffix-len [a b prefix-len]
-  (let [limit (- (min (count a) (count b)) prefix-len)]
-    (loop [i 0]
-      (if (or (= i limit)
-              (not= (.charAt a (- (count a) i 1))
-                    (.charAt b (- (count b) i 1))))
-        i
-        (recur (inc i))))))
+(defn- try-anchor [content diff]
+  (first (anchoring/anchor-diffs content [diff])))
 
-(defn compose-sequential-diffs
-  "Applies diffs in sequence against evolving content, then produces renderable
-   segments by comparing original to final via prefix/suffix analysis."
+(defn- evol-pos->orig-pos
+  "Maps a position in evolved content back to the corresponding original position
+   given the list of applied diffs (each with :orig-start :orig-len :new-len)."
+  [evol-pos applied]
+  (loop [remaining      applied
+         running-offset 0]
+    (if (empty? remaining)
+      (- evol-pos running-offset)
+      (let [{:keys [orig-start orig-len new-len]} (first remaining)
+            evol-start (+ orig-start running-offset)
+            evol-end   (+ evol-start new-len)]
+        (if (<= evol-end evol-pos)
+          (recur (rest remaining) (+ running-offset (- new-len orig-len)))
+          (- evol-pos running-offset))))))
+
+(defn- ranges-overlap? [a-start a-end b-start b-end]
+  (and (< a-start b-end) (< b-start a-end)))
+
+(defn- merge-diff-into-groups
+  "Merges new-diffs covering [orig-start, orig-end) with any overlapping groups.
+   Returns updated groups list with a single merged entry for the affected region."
+  [groups orig-start orig-end new-diffs content]
+  (let [{overlapping    true
+         non-overlapping false}
+        (group-by #(ranges-overlap? orig-start orig-end (:orig-start %) (:orig-end %)) groups)
+        overlapping     (or overlapping [])
+        non-overlapping (or non-overlapping [])
+
+        all-starts   (conj (mapv :orig-start overlapping) orig-start)
+        all-ends     (conj (mapv :orig-end overlapping) orig-end)
+        all-diffs    (concat (mapcat :diffs overlapping) new-diffs)
+
+        merged-start (apply min all-starts)
+        merged-end   (apply max all-ends)
+        merged-old   (subs content merged-start merged-end)
+        merged-new   (reduce apply-diff merged-old all-diffs)]
+    (conj (vec non-overlapping)
+          {:orig-start    merged-start
+           :orig-end      merged-end
+           :diffs         all-diffs
+           :old-text      merged-old
+           :new-text      merged-new
+           :char-index    merged-start
+           :length        (- merged-end merged-start)
+           :anchor-status :anchored})))
+
+(defn- build-diff-groups
+  "Processes diffs in order, classifying each as independent (anchors in original)
+   or dependent (anchors in evolved content). Groups overlapping diffs into merged
+   anchored-diff records suitable for compose-diff-segments."
   [content diffs]
-  (let [final     (reduce apply-diff content diffs)
-        prefix    (common-prefix-len content final)
-        suffix    (common-suffix-len content final prefix)
-        orig-end  (- (count content) suffix)
-        final-end (- (count final) suffix)]
-    (if (= prefix orig-end)
-      [{:type :text :content content}]
-      (compose-diff-segments content
-        [{:type        "diff"
-          :old-text    (subs content prefix orig-end)
-          :new-text    (subs final prefix final-end)
-          :anchor-status :anchored
-          :char-index  prefix
-          :length      (- orig-end prefix)}]))))
+  (loop [remaining diffs
+         groups    []
+         evolved   content
+         applied   []]
+    (if (empty? remaining)
+      groups
+      (let [diff        (first remaining)
+            orig-anchor (try-anchor content diff)]
+        (if (= :anchored (:anchor-status orig-anchor))
+          ;; Independent: anchors directly against original content
+          (let [orig-start (:char-index orig-anchor)
+                orig-end   (+ orig-start (:length orig-anchor))]
+            (recur (rest remaining)
+                   (merge-diff-into-groups groups orig-start orig-end [diff] content)
+                   (apply-diff evolved diff)
+                   (conj applied {:orig-start orig-start
+                                  :orig-len   (:length orig-anchor)
+                                  :new-len    (count (:new-text diff))})))
+          ;; Dependent: try to anchor against evolved content and map back
+          (let [evol-anchor (try-anchor evolved diff)]
+            (if (= :anchored (:anchor-status evol-anchor))
+              (let [evol-start (:char-index evol-anchor)
+                    evol-end   (+ evol-start (:length evol-anchor))
+                    orig-start (evol-pos->orig-pos evol-start applied)
+                    orig-end   (evol-pos->orig-pos evol-end applied)]
+                (recur (rest remaining)
+                       (merge-diff-into-groups groups orig-start orig-end [diff] content)
+                       (apply-diff evolved diff)
+                       (conj applied {:orig-start orig-start
+                                      :orig-len   (- orig-end orig-start)
+                                      :new-len    (count (:new-text diff))})))
+              ;; Unmatched in both original and evolved — skip
+              (recur (rest remaining) groups evolved applied))))))))
+
+(defn compose-diffs
+  "Unified diff composition pipeline. Produces separate :diff-block segments for
+   independent diffs and merges overlapping dependent diffs into single blocks."
+  [content diffs]
+  (compose-diff-segments content (build-diff-groups content diffs)))
