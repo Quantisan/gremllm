@@ -1,5 +1,4 @@
-(ns gremllm.renderer.ui.document.composition
-  (:require [gremllm.renderer.ui.document.anchoring :as anchoring]))
+(ns gremllm.renderer.ui.document.diffs)
 
 ;; Pending-diffs arrive as a single ordered batch per ACP tool-call response.
 ;; Within a batch, diff N's :old-text may reference content that only exists
@@ -8,30 +7,37 @@
 ;; must handle both patterns: independent diffs produce separate :diff-block
 ;; segments; dependent overlapping diffs merge into a single :diff-block.
 
-(defn compose-diff-segments
-  "Splits content string into ordered segments for diff rendering.
-   Anchored diffs are inserted as :diff-block segments; surrounding text
-   becomes :text segments. Unmatched and ambiguous diffs are silently ignored."
-  [content anchored-diffs]
-  (let [sorted (->> anchored-diffs
-                    (filter #(= :anchored (:anchor-status %)))
-                    (sort-by :char-index))]
-    (loop [pos      0
-           diffs    sorted
-           segments []]
-      (if (empty? diffs)
-        (if (< pos (count content))
-          (conj segments {:type :text :content (subs content pos)})
-          segments)
-        (let [{:keys [char-index length old-text new-text anchor-status]} (first diffs)]
-          (recur (max pos (+ char-index length))
-                 (rest diffs)
-                 (cond-> segments
-                   (< pos char-index)
-                   (conj {:type :text :content (subs content pos char-index)})
+;; ---- Anchoring ----
 
-                   true
-                   (conj {:type :diff-block :old-text old-text :new-text new-text :anchor-status anchor-status}))))))))
+(defn- find-occurrences
+  "Returns {:count n :first-index idx} for old-text in content."
+  [content old-text]
+  (let [step (.-length old-text)]
+    (loop [start 0 n 0 first-idx -1]
+      (let [idx (.indexOf content old-text start)]
+        (if (= idx -1)
+          {:count n :first-index (when (pos? n) first-idx)}
+          (recur (+ idx step) (inc n) (if (zero? n) idx first-idx)))))))
+
+(defn- anchor-diff [content {:keys [old-text] :as diff}]
+  (if (or (nil? old-text) (empty? old-text))
+    (assoc diff :anchor-status :unmatched)
+    (let [{:keys [count first-index]} (find-occurrences content old-text)]
+      (case count
+        0 (assoc diff :anchor-status :unmatched)
+        1 (assoc diff :anchor-status :anchored
+                      :char-index first-index
+                      :length     (.-length old-text))
+        (assoc diff :anchor-status :ambiguous :match-count count)))))
+
+(defn anchor
+  "Locates each diff's old-text in the raw markdown content string.
+   Returns diffs annotated with :anchor-status (:anchored/:unmatched/:ambiguous),
+   :char-index, and :length for anchored diffs."
+  [content diffs]
+  (mapv #(anchor-diff content %) diffs))
+
+;; ---- Resolution ----
 
 (defn- apply-diff [text {:keys [old-text new-text]}]
   (let [idx (.indexOf text old-text)]
@@ -39,10 +45,8 @@
       text
       (str (subs text 0 idx) new-text (subs text (+ idx (count old-text)))))))
 
-;; --- compose-diffs pipeline ---
-
 (defn- try-anchor [content diff]
-  (first (anchoring/anchor-diffs content [diff])))
+  (first (anchor content [diff])))
 
 (defn- evol-pos->orig-pos
   "Maps a position in evolved content back to the corresponding original position
@@ -93,7 +97,7 @@
 (defn- build-diff-groups
   "Processes diffs in order, classifying each as independent (anchors in original)
    or dependent (anchors in evolved content). Groups overlapping diffs into merged
-   anchored-diff records suitable for compose-diff-segments."
+   anchored-diff records suitable for compose-segments."
   [content diffs]
   (loop [remaining diffs
          groups    []
@@ -129,8 +133,35 @@
               ;; Unmatched in both original and evolved — skip
               (recur (rest remaining) groups evolved applied))))))))
 
-(defn compose-diffs
+;; ---- Segmentation ----
+
+(defn compose-segments
+  "Splits content string into ordered segments for diff rendering.
+   Anchored diffs are inserted as :diff-block segments; surrounding text
+   becomes :text segments. Unmatched and ambiguous diffs are silently ignored."
+  [content anchored-diffs]
+  (let [sorted (->> anchored-diffs
+                    (filter #(= :anchored (:anchor-status %)))
+                    (sort-by :char-index))]
+    (loop [pos      0
+           diffs    sorted
+           segments []]
+      (if (empty? diffs)
+        (if (< pos (count content))
+          (conj segments {:type :text :content (subs content pos)})
+          segments)
+        (let [{:keys [char-index length old-text new-text anchor-status]} (first diffs)]
+          (recur (max pos (+ char-index length))
+                 (rest diffs)
+                 (cond-> segments
+                   (< pos char-index)
+                   (conj {:type :text :content (subs content pos char-index)})
+
+                   true
+                   (conj {:type :diff-block :old-text old-text :new-text new-text :anchor-status anchor-status}))))))))
+
+(defn compose
   "Unified diff composition pipeline. Produces separate :diff-block segments for
    independent diffs and merges overlapping dependent diffs into single blocks."
   [content diffs]
-  (compose-diff-segments content (build-diff-groups content diffs)))
+  (compose-segments content (build-diff-groups content diffs)))
