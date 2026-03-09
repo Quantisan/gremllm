@@ -112,13 +112,21 @@
         random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
     (str "topic-" timestamp "-" random-suffix)))
 
+(def PendingDiff
+  [:map
+   [:type [:= "diff"]]
+   [:path :string]
+   [:old-text {:optional true} :string]
+   [:new-text :string]])
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"} :string]
    [:acp-session-id {:optional true} :string]         ;; TODO: refator to :uuid type
-   [:messages {:default []} [:vector Message]]])
+   [:messages {:default []} [:vector Message]]
+   [:pending-diffs {:default []} [:vector PendingDiff]]])
 
 (def Topic
   "Schema for topics in app state (includes transient fields)"
@@ -150,9 +158,11 @@
 
 (def topic-from-disk
   "Loads and validates a topic from persisted EDN format.
+  Applies defaults for fields added after initial save (e.g. pending-diffs).
   Throws if the topic data is invalid."
-  (m/coercer Topic mt/json-transformer))
+  (m/coercer Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
 
 (def topic-for-disk
-  "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
-  (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
+  "Prepares topic for disk persistence, stripping transient fields.
+  Applies defaults for any fields missing from in-memory topic. Throws if invalid."
+  (m/coercer PersistedTopic (mt/transformer mt/default-value-transformer mt/strip-extra-keys-transformer)))
