@@ -57,7 +57,7 @@
                      :content [{:type "diff" :path "/tmp/test.md"
                                 :old-text "old" :new-text "new"}]}
                     123)]
-      (is (= [[:document.actions/append-pending-diffs
+      (is (= [[:topic.actions/append-pending-diffs
                [{:type "diff" :path "/tmp/test.md"
                  :old-text "old" :new-text "new"}]]]
              effects))))
