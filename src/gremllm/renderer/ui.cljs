@@ -19,7 +19,7 @@
   (let [has-any-api-key?      (system-state/has-any-api-key? state)
         workspace             (workspace-state/get-workspace state)
         document-content      (document-state/get-content state)
-        pending-diffs         (document-state/get-pending-diffs state)
+        pending-diffs         (topic-state/get-pending-diffs state)
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)
