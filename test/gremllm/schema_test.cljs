@@ -4,6 +4,35 @@
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
 
+(deftest test-topic-from-disk-migration
+  (testing "migrates flat acp-session-id and pending-diffs to nested session"
+    (let [flat-topic {:id "topic-123"
+                      :name "Test"
+                      :messages []
+                      :acp-session-id "abc-123"
+                      :pending-diffs [{:type "diff" :path "/a.md" :new-text "new"}]}
+          result (schema/topic-from-disk flat-topic)]
+      (is (nil? (:acp-session-id result)))
+      (is (nil? (:pending-diffs result)))
+      (is (= "abc-123" (get-in result [:session :id])))
+      (is (= [{:type "diff" :path "/a.md" :new-text "new"}]
+             (get-in result [:session :pending-diffs])))))
+
+  (testing "migrates empty pending-diffs at root to nested session"
+    (let [flat-topic {:id "topic-123" :name "Test" :messages [] :pending-diffs []}
+          result (schema/topic-from-disk flat-topic)]
+      (is (nil? (:pending-diffs result)))
+      (is (= [] (get-in result [:session :pending-diffs])))))
+
+  (testing "passes through topics already in nested format"
+    (let [nested-topic {:id "topic-123"
+                        :name "Test"
+                        :messages []
+                        :session {:id "abc-123" :pending-diffs []}}
+          result (schema/topic-from-disk nested-topic)]
+      (is (= "abc-123" (get-in result [:session :id])))
+      (is (= [] (get-in result [:session :pending-diffs]))))))
+
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
     (is (= :anthropic-api-key (schema/provider->api-key-keyword :anthropic))))
