@@ -28,6 +28,12 @@
 (defn get-topic-field [state topic-id field]
   (get-in state (topic-field-path topic-id field)))
 
+(defn get-pending-diffs [state]
+  (:pending-diffs (get-active-topic state)))
+
+(defn pending-diffs-path [topic-id]
+  (topic-field-path topic-id :pending-diffs))
+
 (defn get-acp-session-id [state topic-id]
   (:acp-session-id (get-topic state topic-id)))
 
