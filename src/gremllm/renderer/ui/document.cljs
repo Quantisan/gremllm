@@ -7,7 +7,17 @@
         (mapv (fn [{:keys [type content old-text new-text]}]
                 (case type
                   :text       [:span content]
-                  :diff-block [:div.diff-block [:del old-text] [:ins new-text]]))
+                  :diff-block [:div.diff-block
+                               [:del old-text]
+                               [:ins new-text]
+                               [:div.diff-controls
+                                [:button {:on {:click [[:document.actions/accept-diff
+                                                        {:old-text old-text :new-text new-text}]]}}
+                                 "Accept"]
+                                [:button {:class "secondary outline"
+                                          :on {:click [[:document.actions/reject-diff
+                                                        {:old-text old-text :new-text new-text}]]}}
+                                 "Reject"]]]))
               segments)))
 
 (defn render-document [content pending-diffs]
