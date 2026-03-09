@@ -119,15 +119,22 @@
    [:old-text {:optional true} :string]
    [:new-text :string]])
 
+(def AcpSession
+  "Session state produced by an ACP agent for a topic."
+  [:map
+   ;; TODO: id should be required
+   [:id {:optional true}         :string]
+   [:pending-diffs {:default []} [:vector PendingDiff]]])
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
-   [:name {:default "New Topic"} :string]
-   [:acp-session-id {:optional true} :string]         ;; TODO: refator to :uuid type
-   [:messages {:default []} [:vector Message]]
-   [:pending-diffs {:default []} [:vector PendingDiff]]])
+   [:name {:default "New Topic"}        :string]
+   [:session {:default {}}              AcpSession]
+   [:messages {:default []}             [:vector Message]]])
 
+;; TODO: Pivot domain model -- Topic should be Session.
 (def Topic
   "Schema for topics in app state (includes transient fields)"
   (mu/merge
@@ -156,11 +163,24 @@
   [name]
   {:name name})
 
-(def topic-from-disk
-  "Loads and validates a topic from persisted EDN format.
-  Applies defaults for fields added after initial save (e.g. pending-diffs).
-  Throws if the topic data is invalid."
+(defn- migrate-flat-topic
+  "Migrates topics saved with flat {:acp-session-id X :pending-diffs Y} fields
+   to the nested {:session {:id X :pending-diffs Y}} shape."
+  [topic]
+  (cond-> (dissoc topic :acp-session-id :pending-diffs)
+    (:acp-session-id topic)            (assoc-in [:session :id] (:acp-session-id topic))
+    (contains? topic :pending-diffs)   (assoc-in [:session :pending-diffs] (:pending-diffs topic))))
+
+(def ^:private topic-coercer
   (m/coercer Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
+
+(defn topic-from-disk
+  "Loads and validates a topic from persisted EDN format.
+  Applies defaults for fields added after initial save.
+  Migrates flat {:acp-session-id X :pending-diffs Y} to nested {:session {...}} format.
+  Throws if the topic data is invalid."
+  [topic]
+  (-> topic migrate-flat-topic topic-coercer))
 
 (def topic-for-disk
   "Prepares topic for disk persistence, stripping transient fields.
