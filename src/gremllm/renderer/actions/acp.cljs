@@ -47,7 +47,7 @@
     (start-response :tool-use (codec/acp-read-display-label update) message-id)
 
     (codec/tool-response-has-diffs? update)
-    [[:document.actions/append-pending-diffs (codec/tool-response-diffs update)]]))
+    [[:topic.actions/append-pending-diffs (codec/tool-response-diffs update)]]))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).

@@ -50,6 +50,11 @@
     (when (seq messages)
       [[:topic.effects/save-topic topic-id]])))
 
+(defn append-pending-diffs [state diffs]
+  (let [topic-id (topic-state/get-active-topic-id state)
+        existing (or (topic-state/get-topic-field state topic-id :pending-diffs) [])]
+    [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]

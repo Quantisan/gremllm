@@ -131,11 +131,11 @@
 (nxr/register-action! :document.actions/create-success document/create-success)
 (nxr/register-action! :document.actions/create-error document/create-error)
 (nxr/register-action! :document.actions/set-content document/set-content)
-(nxr/register-action! :document.actions/append-pending-diffs document/append-pending-diffs)
 
 ;; Topic
 
 ;; Register all topic actions
+(nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
