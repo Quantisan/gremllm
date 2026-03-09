@@ -52,7 +52,7 @@
 
 (defn append-pending-diffs [state diffs]
   (let [topic-id (topic-state/get-active-topic-id state)
-        existing (or (topic-state/get-topic-field state topic-id :pending-diffs) [])]
+        existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
 (defn set-active

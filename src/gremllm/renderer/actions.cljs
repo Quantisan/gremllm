@@ -187,6 +187,6 @@
 ;; captured at dispatch start, missing topic data saved by earlier effects in the chain.
 (nxr/register-effect! :acp.effects/init-session
   (fn [{:keys [dispatch]} store topic-id]
-    (if-let [existing-acp-session-id (topic-state/get-topic-field @store topic-id :acp-session-id)]
+    (if-let [existing-acp-session-id (topic-state/get-acp-session-id @store topic-id)]
       (dispatch [[:acp.actions/resume-session topic-id existing-acp-session-id]])
       (dispatch [[:acp.actions/new-session topic-id]]))))

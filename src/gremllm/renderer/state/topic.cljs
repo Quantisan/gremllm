@@ -29,14 +29,16 @@
   (get-in state (topic-field-path topic-id field)))
 
 (defn get-pending-diffs [state]
-  (:pending-diffs (get-active-topic state)))
+  (get-in (get-active-topic state) [:session :pending-diffs]))
 
 (defn pending-diffs-path [topic-id]
-  (topic-field-path topic-id :pending-diffs))
+  (-> topics-path (conj topic-id :session :pending-diffs)))
 
 (defn get-acp-session-id [state topic-id]
-  (:acp-session-id (get-topic state topic-id)))
+  (get-in (get-topic state topic-id) [:session :id]))
 
 (defn acp-session-id-path [topic-id]
-  (topic-field-path topic-id :acp-session-id))
+  ;; TODO: add reverse lookup from acp-session-id to topic-id for correct
+  ;; inbound routing of session updates to the originating topic
+  (-> topics-path (conj topic-id :session :id)))
 
