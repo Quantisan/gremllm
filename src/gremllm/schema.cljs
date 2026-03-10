@@ -112,14 +112,29 @@
         random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
     (str "topic-" timestamp "-" random-suffix)))
 
+(def PendingDiff
+  [:map
+   [:type [:= "diff"]]
+   [:path :string]
+   [:old-text {:optional true} :string]
+   [:new-text :string]])
+
+(def AcpSession
+  "Session state produced by an ACP agent for a topic."
+  [:map
+   ;; TODO: id should be required
+   [:id {:optional true}         :string]
+   [:pending-diffs {:default []} [:vector PendingDiff]]])
+
 (def PersistedTopic
   "Schema for topics as saved to disk"
   [:map
    [:id {:default/fn generate-topic-id} :string]
-   [:name {:default "New Topic"} :string]
-   [:acp-session-id {:optional true} :string]         ;; TODO: refator to :uuid type
-   [:messages {:default []} [:vector Message]]])
+   [:name {:default "New Topic"}        :string]
+   [:session {:default {}}              AcpSession]
+   [:messages {:default []}             [:vector Message]]])
 
+;; TODO: Pivot domain model -- Topic should be Session.
 (def Topic
   "Schema for topics in app state (includes transient fields)"
   (mu/merge
@@ -149,10 +164,11 @@
   {:name name})
 
 (def topic-from-disk
-  "Loads and validates a topic from persisted EDN format.
-  Throws if the topic data is invalid."
-  (m/coercer Topic mt/json-transformer))
+  "Loads and validates a topic from persisted EDN format. Applies defaults for fields added after
+  initial save. Throws if the topic data is invalid."
+  (m/coercer Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
 
 (def topic-for-disk
-  "Prepares topic for disk persistence, stripping transient fields. Throws if invalid."
-  (m/coercer PersistedTopic mt/strip-extra-keys-transformer))
+  "Prepares topic for disk persistence, stripping transient fields.
+  Applies defaults for any fields missing from in-memory topic. Throws if invalid."
+  (m/coercer PersistedTopic (mt/transformer mt/default-value-transformer mt/strip-extra-keys-transformer)))

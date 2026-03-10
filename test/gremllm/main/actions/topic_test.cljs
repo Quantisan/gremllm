@@ -7,13 +7,14 @@
   (testing "creates correct save plan structure"
     (let [topic {:id "topic-123"
                  :name "Test Topic"
-                 :messages []}
+                 :messages []
+                 :session {:pending-diffs []}}
           topics-dir "/test/dir"
           plan (topic/topic->save-plan topic topics-dir)]
-      (is (= {:dir      topics-dir
-              :filepath "/test/dir/topic-123.edn"
-              :content  "{:id \"topic-123\", :name \"Test Topic\", :messages []}"}
-             plan))))
+      (is (= topics-dir (:dir plan)))
+      (is (= "/test/dir/topic-123.edn" (:filepath plan)))
+      (is (= {:id "topic-123" :name "Test Topic" :messages [] :session {:pending-diffs []}}
+             (edn/read-string (:content plan))))))
 
   (testing "strips transient fields before saving"
     (let [topic {:id "topic-123"
@@ -25,6 +26,7 @@
           plan (topic/topic->save-plan topic "/test/dir")]
       (is (= {:id "topic-123"
               :name "Test Topic"
-              :messages []}
+              :messages []
+              :session {:pending-diffs []}}
              (edn/read-string (:content plan)))))))
 

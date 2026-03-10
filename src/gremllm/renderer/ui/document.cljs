@@ -11,11 +11,11 @@
                                [:del old-text]
                                [:ins new-text]
                                [:div.diff-controls
-                                [:button {:on {:click [[:document.actions/accept-diff
+                                [:button {:on {:click [[:topic.actions/accept-diff
                                                         {:old-text old-text :new-text new-text}]]}}
                                  "Accept"]
                                 [:button {:class "secondary outline"
-                                          :on {:click [[:document.actions/reject-diff
+                                          :on {:click [[:topic.actions/reject-diff
                                                         {:old-text old-text :new-text new-text}]]}}
                                  "Reject"]]]))
               segments)))

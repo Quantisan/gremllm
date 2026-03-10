@@ -131,11 +131,11 @@
 (nxr/register-action! :document.actions/create-success document/create-success)
 (nxr/register-action! :document.actions/create-error document/create-error)
 (nxr/register-action! :document.actions/set-content document/set-content)
-(nxr/register-action! :document.actions/append-pending-diffs document/append-pending-diffs)
 
 ;; Topic
 
 ;; Register all topic actions
+(nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
@@ -187,6 +187,6 @@
 ;; captured at dispatch start, missing topic data saved by earlier effects in the chain.
 (nxr/register-effect! :acp.effects/init-session
   (fn [{:keys [dispatch]} store topic-id]
-    (if-let [existing-acp-session-id (topic-state/get-topic-field @store topic-id :acp-session-id)]
+    (if-let [existing-acp-session-id (topic-state/get-acp-session-id @store topic-id)]
       (dispatch [[:acp.actions/resume-session topic-id existing-acp-session-id]])
       (dispatch [[:acp.actions/new-session topic-id]]))))

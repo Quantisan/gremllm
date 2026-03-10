@@ -50,6 +50,12 @@
     (when (seq messages)
       [[:topic.effects/save-topic topic-id]])))
 
+(defn append-pending-diffs [state diffs]
+  ;; TODO: incoming diffs should be matched with acp-session-id
+  (let [topic-id (topic-state/get-active-topic-id state)
+        existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
+    [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]
@@ -89,10 +95,10 @@
   (fn [{dispatch :dispatch} store topic-id]
     (if-let [topic (topic-state/get-topic @store topic-id)]
         (dispatch
-       [[:effects/promise
-         {:promise    (.saveTopic js/window.electronAPI (codec/topic-to-ipc topic))
-          :on-success [[:topic.actions/save-success topic-id]]
-          :on-error   [[:topic.actions/save-error topic-id]]}]])
+         [[:effects/promise
+           {:promise    (.saveTopic js/window.electronAPI (codec/topic-to-ipc topic))
+            :on-success [[:topic.actions/save-success topic-id]]
+            :on-error   [[:topic.actions/save-error topic-id]]}]])
       (dispatch [[:topic.actions/save-error topic-id (js/Error. (str "Topic not found: " topic-id))]]))))
 
 ;; TODO: should :topic.effects/save-active-topic be an action?
