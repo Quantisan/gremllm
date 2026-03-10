@@ -17,9 +17,12 @@ Gremllm pivoted from chat-first to document-first. The red-lining concept is the
 
 ```
 Document with content (AI-generated)
-  → User reads, selects text, adds annotations (margin comments)
-  → Annotations queue up → user switches to chat
-  → Queued annotations become structured context for AI
+  → User reads, selects text → popover appears with quick action labels
+  → Selected text auto-quoted in staging zone above chat input
+  → Multiple selections accumulate in staging zone
+  → User sends a message (staged chunks included as structured context)
+    — or picks a quick action (Validate claim, More research, etc.)
+    — quick action creates a new topic with pre-baked prompt + chunk as context
   → AI responds in chat + proposes structured changes to document
   → Changes appear INLINE as tracked changes (diff view)
   → Accepted → merged into content
@@ -205,7 +208,7 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 ---
 
-### S6: Rejection feedback loop
+### S6: Rejection feedback loop (SKIP)
 
 **Capability:** Rejecting a change prompts for quick feedback. Feedback is auto-sent to AI. AI retries.
 
@@ -220,36 +223,52 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 ---
 
-### S7: User selects text and adds annotations
+### S7: Selection UI & Staging Zone (UI only)
 
-**Capability:** Select text in the rendered document, type a note, see it in the margin.
+**Capability:** Select text in the rendered document. A floating popover appears near the selection with quick action labels. The selected text is auto-quoted in a staging zone above the chat input. Multiple selections accumulate. All state is ephemeral — no ACP, no prompts, no persistence.
 
 | Layer | Work |
 |-------|------|
-| UI | Text selection handling on rendered markdown |
-| UI | Annotation input (popover or inline) |
-| State | Store annotations (text range + comment + status) |
-| UI | Margin comments visible alongside document |
-| Schema | Annotation data model (informed by implementation experience) |
+| UI (Document) | Text selection capture on rendered markdown |
+| UI (Document) | Floating popover near selection showing quick action labels |
+| UI (Document) | Visual highlight on staged text regions |
+| UI (Chat) | Staging zone above input area — quoted chunks with dismiss (✕) |
+| State | Staged selections collection (renderer-only, not persisted) |
+| Actions | Stage/unstage/clear selections |
 
-**Testable result:** Select a paragraph in the document panel. Type "this claim needs evidence." See the annotation in the margin.
+**Testable result:** Select a paragraph — popover appears, chunk shows in staging zone, document highlights the region. Select another — both visible. Dismiss one (✕) — it disappears, highlight clears. Quick action buttons are visible but non-functional (labels only).
 
-**Research folded in:** What was Spike A (annotation anchoring) happens during implementation. Key questions to resolve: DOM selection → markdown position mapping, granularity (paragraph-level vs. character offsets vs. quoted-text substring).
+**Research folded in:** DOM selection → text extraction, popover positioning via selection coordinates, quoted-text anchoring for document highlights (reuses approach from S5 diff anchoring).
 
 ---
 
-### S8: Annotations become AI context
+### S8: Staged Selections Become AI Context
 
-**Capability:** Annotations are bundled into the next chat message as structured context. AI responds with awareness of the annotations.
+**Capability:** Sending a chat message includes all staged chunks as structured context in the ACP prompt. Staging zone clears after send.
 
 | Layer | Work |
 |-------|------|
-| State | Format queued annotations as structured data |
-| ACP | Enrich prompt with annotation context (pure function: `enrich-prompt`) |
-| UI | Annotations marked as "sent" after inclusion |
-| State | Annotation status transitions (`:queued` → `:active`) |
+| Prompt | Pure function to format staged selections as structured context |
+| Actions | Modify submit flow to include staged chunks, then clear staging |
+| State | Clear staged selections on send |
 
-**Testable result:** Add annotation "this claim needs evidence." Send a chat message. AI response references the annotation and addresses it.
+**Testable result:** Stage two chunks. Type a message and send. AI response references both chunks. Staging zone and highlights clear.
+
+---
+
+### S9: Quick Actions
+
+**Capability:** Picking a quick action from the popover creates a new topic with a pre-baked prompt template and the selected chunk as context. The chunk is removed from the staging zone.
+
+| Layer | Work |
+|-------|------|
+| Actions | Quick action dispatchers — create topic, format prompt, unstage chunk |
+| Topic | New topic creation with auto-name (e.g. "Validate: [excerpt]") |
+| ACP/Prompt | Pre-baked prompt templates per action type, with document resource_link |
+
+**Quick actions (initial, PE-focused):** More research, Validate claim, Trace provenance, Simplify
+
+**Testable result:** Stage a chunk, pick "Validate claim" from the popover. New topic appears in sidebar with validation prompt sent. Chunk removed from staging. Other staged chunks unaffected.
 
 ---
 
@@ -301,20 +320,6 @@ Complete. Key findings for implementation:
  [:messages {:default []} [:vector Message]]]
 ```
 
-### Directional: Annotation (refined during S5)
-
-```clojure
-[:map
- [:id :string]
- [:text :string]
- [:anchor [:map
-   [:start :int]
-   [:end :int]
-   [:quoted-text :string]]]
- [:status [:enum :queued :active :resolved]]
- [:created-at :int]]
-```
-
 ### Directional: TrackedChange (refined during S7)
 
 ```clojure
@@ -326,7 +331,6 @@ Complete. Key findings for implementation:
    [:start :int]
    [:end :int]]]
  [:status [:enum :pending :accepted :rejected]]
- [:related-annotation-ids {:default []} [:vector :string]]
  [:rejection-feedback {:optional true} :string]]
 ```
 
@@ -344,7 +348,7 @@ These are directional. Final schemas are informed by implementation experience i
 | Content-addressed anchoring ambiguity in repetitive prose | S4a/S5 | Spiked in S4a; anchoring strategy applied in S5 |
 | Edit granularity (agent-controlled vs post-processed) | S5 | Determines UX of change review |
 | Markdown source↔DOM offset divergence for inline tracked changes | S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
-| Annotation anchoring | S7 | DOM selection → markdown position mapping |
+| Selection anchoring | S7 | DOM selection → markdown source mapping for highlights |
 | Offset recomputation | S5 | Accepted changes shift downstream offsets |
 | Document rendering with overlays | S5 | Markdown + highlights + inline diffs simultaneously |
 | Structured output parsing | S5 | `tool_call_update` → TrackedChange records |
