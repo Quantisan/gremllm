@@ -6,7 +6,7 @@ Gremllm-specific guidance for Claude Code.
 
 Gremllm is an Idea Development Environment for verified knowledge work. It helps knowledge workers produce artifacts that carry their own proof—stakeholders can see the methodology, evidence, and expert judgment that produced the deliverable. **The artifact is portable; the proof lives in the platform.**
 
-Built with Electron and ClojureScript. All user-AI interactions flow through Agent Client Protocol (ACP). Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling).
+Built with Electron and ClojureScript. The current app is document-first: each workspace centers on a `document.md`, and topics are ACP-backed conversations in service of that document. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling), and `markdown-it` (document/chat rendering).
 
 ## Design Principles
 
@@ -36,24 +36,30 @@ Why PE due diligence:
 **Process Structure:**
 - `src/gremllm/main/` - Electron main process (IPC, file ops, system integration)
 - `src/gremllm/renderer/` - UI and app logic (browser context)
-- `resources/public/` - Web assets (index.html, compiled JS, preload script)
+- `resources/public/` - Web assets (index.html, compiled JS)
+- `resources/public/js/preload.js` - Preload boundary exposing intent-driven Electron APIs
 
 **Key Namespaces Quick Reference:**
 
 | Domain | Main Process | Renderer Process |
 |--------|--------------|------------------|
-| Core | `main.core` - entry, window mgmt | `renderer.core` - entry, bootstrap |
 | Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings, topic, workspace |
 | State | - | `renderer.state.*` - ACP, form, messages, UI, system, topic |
 | UI | - | `renderer.ui.*` - chat, settings, topics |
 | Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
+| Core | `main.core` - app bootstrap, IPC handler registration, window/menu setup | `renderer.core` - renderer bootstrap, IPC listeners, render loop |
+| ACP | `main.actions.acp`, `main.effects.acp` - prompt construction, SDK lifecycle, native file callbacks | `renderer.actions.acp` - streaming chunks, tool events, pending diff routing |
+| Workspace & Documents | `main.actions.workspace`, `main.actions.document`, `main.effects.workspace`, `main.state` | `renderer.actions.workspace`, `renderer.actions.document`, `renderer.state.workspace`, `renderer.state.document`, `renderer.ui.document`, `renderer.ui.welcome` |
 | Schema | `schema` - data models, validation | (shared) |
 | Codec | `schema.codec` - IPC/JS/ACP adaptation and codecs | (shared) |
 
 **ACP Integration (current implementation):**
-- One ACP session per topic; the topic stores the `acp-session-id`
+- One ACP session per topic; the topic stores the ACP session id at `[:session :id]`
 - Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
+- Prompts include a `resource_link` to workspace `document.md` when that file exists
+- ACP client capabilities enable `readTextFile` and dry-run `writeTextFile` callbacks so the agent can read the document and propose edits without mutating disk during proposal capture
 - Streaming session updates flow main → renderer via IPC events
+- `tool-call-update` diff payloads are normalized in `schema.codec` and accumulated at `[:topics <topic-id> :session :pending-diffs]`
 - **Note:** Current implementation uses a single generic ACP session per topic. Product direction: specialized agents for different tasks (research, analysis, synthesis, etc.). This is a known gap to be addressed.
 
 ## Development
@@ -61,8 +67,13 @@ Why PE due diligence:
 ```bash
 npm run dev        # Start with hot reload
 npm run build      # Production build
-npm run test       # Run tests
+npm run package    # Package the Electron app
+npm run make       # Build distributables
 npm run repl       # ClojureScript REPL
+npm run test       # Compile + autorun unit tests
+npm run test:ci    # CI-style test run
+npm run test:all   # Compile + autorun unit and integration tests
+npm run test:integration # Compile + autorun integration tests
 ```
 
 ## Design Philosophy
@@ -70,8 +81,8 @@ npm run repl       # ClojureScript REPL
 ### Pragmatic Evolution: From Skateboard to Motorcycle
 We follow the "skateboard → scooter → bicycle → motorcycle" MVP evolution. Every stage delivers a complete, functional product:
 
-- **Skateboard (complete):** Functional end-to-end AI interaction—proved we could ship a working product with ACP integration and topic-based organization.
-- **Scooter (current):** Document-first interface with basic proof capture—the artifact becomes the center of gravity; minimal raw data (e.g., user annotations) captured alongside the work.
+- **Skateboard (complete):** Topic-centered ACP chat with workspace persistence—proved we could ship a working end-to-end Electron + ACP product.
+- **Scooter (current):** Document-first workspace with `document.md`, ACP `resource_link` prompting, and inline pending-diff rendering in the document panel. Annotation capture and diff accept/reject mutation are not complete yet.
 - **Bicycle (next):** Specialized agents and managed context—AI works through steerable agents for specific tasks; context is progressively disclosed per task rather than dumped wholesale.
 - **Motorcycle (future):** Full proof and methodology capture—evidence, methodology, and expert judgment become visible and verifiable.
 
@@ -92,7 +103,7 @@ We maintain a strict separation between pure functions and side effects:
 - Promise handling and async operations
 - Random value generation (UUIDs, etc.)
 
-Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement.
+Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement. IPC handlers in `main/core.cljs` are also part of the imperative shell.
 
 ### Modelarity: Code Reflects the Domain
 We practice a form of domain-driven design where the structure of our code—our namespaces, functions, and data—mirrors the way we think and talk about the problem (credit: Kevlin Henney). If we discuss "saving a topic" or "handling a form submission," the corresponding code should be found in a predictable location like `topic.actions/save` or `form.actions/submit`.
@@ -100,9 +111,9 @@ We practice a form of domain-driven design where the structure of our code—our
 This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
 
 **How this manifests:**
-- **Namespaces:** Organized by domain concepts like `messages`, `topics`, or `ui` (e.g., `renderer.actions.topics`).
-- **State Actions:** Keywords like `:topic.actions/set-active` are namespaced by the part of the system they affect.
-- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt` or `topic/save`.
+- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `settings` (e.g., `renderer.actions.document`, `main.actions.secrets`).
+- **State Actions:** Keywords like `:topic.actions/set-active`, `:document.actions/create`, and `:settings.actions/save-key` are namespaced by the part of the system they affect.
+- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/create`, or `topic/save`.
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
@@ -125,8 +136,11 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ```clojure
 ;; Actions describe what should happen
-(defn update-input [state value]
-  [[:ui.effects/save [:form :user-input] value]])
+(defn create [_state]
+  [[:effects/promise
+    {:promise    (.createDocument js/window.electronAPI)
+     :on-success [[:document.actions/create-success]]
+     :on-error   [[:document.actions/create-error]]}]])
 
 ;; UI dispatches action vectors
 {:on {:submit [[:effects/prevent-default]
@@ -135,58 +149,70 @@ Following FCIS principles, all state changes flow through Nexus:
 ;; Async operations via promises
 [[:effects/promise
   {:promise    (.acpNewSession js/window.electronAPI)
-    :on-success [[:acp.actions/session-ready topic-id]]
-    :on-error   [[:acp.actions/session-error]]}]]
+   :on-success [[:acp.actions/session-ready topic-id]]
+   :on-error   [[:acp.actions/session-error topic-id]]}]]
 ```
 
 **Conventions:**
-- Domain namespacing: `form.actions/submit`, `ui.effects/save`
+- Domain namespacing: `document.actions/create`, `topic.actions/set-active`, `settings.actions/save-key`
 - Always dispatch as vectors: `[[:action-name args]]`
-- Dynamic placeholders: `:event.target/value`, `:event.target/checked`
+- Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:dom/element-by-id`, and `:dom.element/property`
 
 ## IPC & Data
 
 **IPC Channels:**
+- `topic/save` - Persist a topic EDN file
+- `topic/delete` - Delete a topic file after confirmation
+- `document/create` - Create `<workspace>/document.md`
+- `secrets/save` - Encrypt and store a secret in the user data secrets file
+- `secrets/delete` - Delete a stored secret
 - `acp/new-session` - Start a new ACP session
 - `acp/prompt` - Send a user prompt to ACP
 - `acp/resume-session` - Resume a topic-bound ACP session
 - `acp:session-update` - Stream ACP session updates to renderer
-- `topic/save` - Persist topic to disk
-- `topic/delete` - Remove topic file from disk
 - `workspace/pick-folder` - Folder picker dialog
 - `workspace/reload` - Request refreshed workspace data
 - `workspace:opened` - Broadcast refreshed workspace payload (`onWorkspaceOpened`)
 - `system/get-info` - System capabilities
-- Menu commands via `onMenuCommand`
+- `menu:command` - Broadcast app menu commands into the renderer (`onMenuCommand`)
 
-Explicit renderer listeners like `onWorkspaceOpened` and `onAcpSessionUpdate` wrap domain events so the preload boundary exposes intent-driven APIs instead of raw channel strings.
+`preload.js` exposes promise-style wrappers for ACP commands and intent-driven listeners like `onWorkspaceOpened`, `onAcpSessionUpdate`, and `onMenuCommand`, so the renderer does not manipulate raw IPC strings directly outside the preload boundary.
 
 **Data Storage:**
 ```
-<userData>/User/             # System data (Electron userData)
+<userData>/User/
+└── secrets.edn              # Encrypted API keys via Electron safeStorage
 
 <workspace-folder>/          # User-selected folder (anywhere)
-└── topics/                  # Topic files (.edn)
+├── document.md              # Primary workspace document (created on demand)
+└── topics/
+    └── *.edn                # Topic/session files
 ```
 
 - **Workspaces:** Portable folders, like git repos - can live anywhere
-- **Topics:** Individual EDN files in `topics/` subdirectory (includes `acp-session-id` and local message history)
+- **Document:** `document.md` is the primary artifact in the current scooter implementation
+- **Topics:** Individual EDN files in `topics/` subdirectory (includes `[:session :id]`, `[:session :pending-diffs]`, and local message history)
 - **Schemas:** See `schema.cljs` for data structures; transport/IPC codecs live in `schema/codec.cljs`
 - **File I/O:** See `main/io.cljs` for paths and operations
 
 ## Entry Points
 
 - `src/gremllm/main/core.cljs` - Main process start
+- `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle and native file callbacks
 - `src/gremllm/renderer/core.cljs` - Renderer start
 - `src/gremllm/renderer/ui.cljs` - Main UI components
+- `src/gremllm/renderer/ui/document.cljs` - Document panel rendering
+- `src/gremllm/renderer/ui/document/diffs.cljs` - Pending diff anchoring and composition
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
 - `src/gremllm/schema.cljs` - Data models and validation
 - `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
+- `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 
 ## UI Approach
 - **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.
 - **No hardcoded colors** - Use `var(--pico-*)` properties or the six `var(--tva-*)` tokens defined in `index.html`. Never use hex/rgb literals in components.
 - **Minimal custom CSS** - Custom styles live in `index.html`. Add new classes there only when PicoCSS has no semantic equivalent.
+- **Diff rendering is source-driven** - Pending tracked changes are anchored against raw markdown source in `renderer.ui.document.diffs`, not the rendered DOM.
 
 ## Reference Documentation
 
@@ -204,6 +230,7 @@ Framework and library documentation is available in the `context/` directory:
 - `context/replicant_guide.md` - UI framework overview and patterns
 - `context/replicant_concept.md` - Conceptual model and architecture
 - `context/replicant_hiccup.md` - Hiccup syntax and component structure
+- `context/replicant_lifecycle.md` - Lifecycle hooks and mount/update behavior
 
 **Debugging:**
 - `context/dataspex.md` - State inspection and action logging
@@ -212,10 +239,12 @@ Framework and library documentation is available in the `context/` directory:
 - Note: Dataspex only works in browser context (Renderer), not in Node (Main process)
 
 **Electron Integration:**
+- `context/electron_browser_window.md` - BrowserWindow behavior and lifecycle
 - `context/electron_ipc.md` - Inter-process communication
 - `context/electron_dialog.md` - Native dialogs and file pickers
 - `context/electron_safestorage.md` - Secure credential storage
 - `context/electron_menu.md` - Application menu system
+- `context/pico_modal.md` - Modal/dialog styling details for PicoCSS
 
 **Agent Protocols:**
 - `context/acp_client.md` - Agent Client Protocol client library documentation
