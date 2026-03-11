@@ -25,7 +25,7 @@
     (if (seq pending-diffs)
       (let [segments (diffs/compose content pending-diffs)]
         [:article.diff-mode (render-diff-segments segments)])
-      [:article {:on {:mouseup [[:excerpt.actions/capture :event/text-selection]]}}
+      [:article {:on {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}}
        (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
