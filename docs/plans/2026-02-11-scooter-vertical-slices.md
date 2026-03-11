@@ -223,22 +223,128 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 ---
 
-### S7: Selection UI & Staging Zone (UI only)
+### S7: Selection UI & Staging Zone
 
-**Capability:** Select text in the rendered document. A floating popover appears near the selection with quick action labels. The selected text is auto-quoted in a staging zone above the chat input. Multiple selections accumulate. All state is ephemeral — no ACP, no prompts, no persistence.
+**Capability:** Select text in the rendered document. A floating popover appears near the selection. The selected text is auto-quoted in a staging zone above the chat input. Multiple selections accumulate. All state is ephemeral — no ACP, no prompts, no persistence.
+
+#### Why we decomposed
+
+The first attempt (`feat/selection-ui-one-shot`) shipped the functional core cleanly — staging state, actions, and tests were solid, and the staging zone UI above the chat input worked. The branch then burned four consecutive fix commits cycling through coordinate strategies for popover positioning (panel-relative, absolute, raw viewport, fixed outside panel) without converging. It never reached document highlights.
+
+The lesson: stacking browser-level unknowns (Selection API behavior, coordinate systems, containing-block traps) with application concerns (state management, staging UI, highlight rendering) makes failures undiagnosable. Each sub-slice below isolates one unknown.
+
+#### S7 dependency ordering
+
+```
+S7.1 (capture) ──→ S7.2 (popover) ──→ S7.4 (wiring) ──→ S7.5 (highlights)
+                                            ↑
+S7.3 (staging state + zone) ────────────────┘
+```
+
+S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all three. S7.5 is deliberately last and optional for shipping.
+
+---
+
+#### S7.1: Selection data capture spike
+
+**Goal: Learning, not shipping.** Understand what the browser gives us when users select text in rendered markdown.
 
 | Layer | Work |
 |-------|------|
-| UI (Document) | Text selection capture on rendered markdown |
-| UI (Document) | Floating popover near selection showing quick action labels |
-| UI (Document) | Visual highlight on staged text regions |
+| UI (Document) | `mouseup` handler on document panel, calls `getSelection()` |
+| State | Store selection data (text, bounding rect, range nodes) at `[:staging :raw-selection]` |
+
+**Testable result:** Select various content — plain paragraphs, across heading boundaries, across bold/italic formatting, inside code blocks. Inspect what arrives in Dataspex: text content, bounding rect coordinates, range start/end container nodes, offset values. Documented observations for each case.
+
+**What to watch for:**
+- `getSelection().toString()` may collapse whitespace or omit formatting differently than expected
+- Range `startContainer`/`endContainer` may be text nodes deep inside the rendered DOM tree, not the elements you'd expect
+- Bounding rect behavior when selection spans multiple lines or block elements
+
+---
+
+#### S7.2: Popover positioning spike
+
+**Goal: Learning, not shipping.** Reliably position a floating element near a text selection inside the scrollable document panel.
+
+| Layer | Work |
+|-------|------|
+| UI (Document) | Render a small colored `<div>` at coordinates from S7.1 bounding rect |
+| CSS | Solve the coordinate system problem (fixed vs absolute, scroll offsets, containing blocks) |
+
+**Testable result:** Select text anywhere in the document panel. A small colored box appears directly below the selection. Scroll the panel — the box stays correctly positioned (or dismisses). Resize the window — coordinates remain correct.
+
+**What to watch for:**
+- This was the exact failure point of the one-shot branch. The document panel is a scrollable container inside a CSS grid layout. `position: fixed` uses viewport coordinates but ignores scroll; `position: absolute` depends on the nearest positioned ancestor.
+- `getBoundingClientRect()` returns viewport-relative coordinates. Converting to panel-relative requires accounting for the panel's own scroll position and offset.
+- The popover must not be a child of the scrollable panel if using `position: fixed`, because `transform` or `will-change` on ancestors create new containing blocks.
+
+**Depends on:** S7.1 (needs bounding rect data in state)
+
+---
+
+#### S7.3: Staging state & staging zone
+
+**Capability:** Accumulate text selections in state and display them as quoted chunks above the chat input with dismiss controls.
+
+| Layer | Work |
+|-------|------|
+| State | `[:staging :selections]` — vector of `{:text :source-offset}` |
+| Actions | `stage`, `unstage`, `clear` — pure functions returning effects |
 | UI (Chat) | Staging zone above input area — quoted chunks with dismiss (✕) |
-| State | Staged selections collection (renderer-only, not persisted) |
-| Actions | Stage/unstage/clear selections |
+| Tests | Unit tests for all actions |
 
-**Testable result:** Select a paragraph — popover appears, chunk shows in staging zone, document highlights the region. Select another — both visible. Dismiss one (✕) — it disappears, highlight clears. Quick action buttons are visible but non-functional (labels only).
+**Testable result:** Inject selection data directly into state via Dataspex. Quoted chunks appear above the chat input. Dismiss one — it disappears. Clear all — zone empties.
 
-**Research folded in:** DOM selection → text extraction, popover positioning via selection coordinates, quoted-text anchoring for document highlights (reuses approach from S5 diff anchoring).
+**What to watch for:**
+- Low risk. The failed branch already implemented this cleanly. Re-implement from that reference.
+- The `.indexOf` approach for mapping selected DOM text back to markdown source is present but untested under real conditions. For S7.3 alone only the displayed text matters; source offsets become relevant when S7.5 needs them for highlights.
+
+**Independent of S7.1 and S7.2.** Can run in parallel.
+
+---
+
+#### S7.4: Selection-to-stage wiring
+
+**Capability:** The full interaction flow: select text → popover appears → click "Stage" → chunk appears in staging zone.
+
+| Layer | Work |
+|-------|------|
+| UI (Document) | Popover includes "Stage" button dispatching `staging.actions/stage` |
+| Actions | Wire `handle-selection` (S7.1 data) through popover (S7.2) into staging (S7.3) |
+| UI (Document) | Popover shows quick action labels (non-functional, labels only — wired in S9) |
+
+**Testable result:** Select a paragraph. Popover appears. Click "Stage." Chunk appears in staging zone. Select another, stage it. Both visible. Dismiss one — it disappears. Popover dismisses on scroll or outside click.
+
+**What to watch for:**
+- When the user clicks the popover's "Stage" button, the browser may clear the text selection before the click handler fires (`mousedown` on the button triggers selection collapse). Mitigation: capture selection data into state on `mouseup` (S7.1), read from state in the stage action — never read `getSelection()` at button-click time.
+- Popover dismiss timing: scrolling, clicking outside, or making a new selection should dismiss the popover. The `mousedown` that starts a new selection must not race with the popover's click handler.
+
+**Depends on:** S7.1, S7.2, S7.3
+
+---
+
+#### S7.5: Document highlights for staged regions
+
+**Capability:** Staged text selections are visually highlighted in the rendered document panel.
+
+| Layer | Work |
+|-------|------|
+| Research | Evaluate: DOM Range + `<mark>`, CSS Custom Highlight API, or re-render with injected spans |
+| UI (Document) | Highlight rendering for staged regions |
+| State | Source offset data from staged selections drives highlight placement |
+
+**Testable result:** Stage two selections. Both regions highlighted in the document. Unstage one — its highlight disappears. The other remains.
+
+**What to watch for:**
+- Most speculative sub-slice. Three candidate approaches:
+  - **DOM Range manipulation:** Wrap selections in `<mark>`. Fragile — rendered DOM is owned by the markdown pipeline, injected nodes may break on re-render.
+  - **CSS Custom Highlight API:** No DOM mutation, but recent API that may interact poorly with Replicant's virtual DOM reconciliation.
+  - **Re-render with injected spans:** Transform markdown hiccup to insert highlight markers. Analogous to S5 diff anchoring (`diffs/compose`) but operates on rendered hiccup, not raw source.
+- Mapping DOM selection text back to source offsets may fail on formatted text (`**bold**` renders as `bold`). The `.indexOf` approach in `compute-source-offset` doesn't account for this.
+- **Acceptable to ship S7 without highlights.** S7.1–S7.4 deliver a complete selection-to-staging flow. S7.5 adds visual polish. Defer if approach proves too costly.
+
+**Depends on:** S7.3 (needs staged selections), S7.4 (needs real staged data)
 
 ---
 
@@ -320,7 +426,7 @@ Complete. Key findings for implementation:
  [:messages {:default []} [:vector Message]]]
 ```
 
-### Directional: TrackedChange (refined during S7)
+### Directional: TrackedChange (refined during S5)
 
 ```clojure
 [:map
@@ -348,7 +454,8 @@ These are directional. Final schemas are informed by implementation experience i
 | Content-addressed anchoring ambiguity in repetitive prose | S4a/S5 | Spiked in S4a; anchoring strategy applied in S5 |
 | Edit granularity (agent-controlled vs post-processed) | S5 | Determines UX of change review |
 | Markdown source↔DOM offset divergence for inline tracked changes | S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
-| Selection anchoring | S7 | DOM selection → markdown source mapping for highlights |
+| Popover positioning in scrollable panel | S7.2 | Coordinate system traps (fixed vs absolute, scroll offsets, containing blocks). Direct cause of one-shot branch failure |
+| Selection→source mapping for highlights | S7.5 | DOM text may diverge from markdown source due to formatting. `.indexOf` approach untested on formatted text |
 | Offset recomputation | S5 | Accepted changes shift downstream offsets |
 | Document rendering with overlays | S5 | Markdown + highlights + inline diffs simultaneously |
 | Structured output parsing | S5 | `tool_call_update` → TrackedChange records |
