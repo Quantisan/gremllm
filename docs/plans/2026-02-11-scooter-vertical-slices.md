@@ -252,7 +252,7 @@ S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all t
 | Layer | Work |
 |-------|------|
 | UI (Document) | `mouseup` handler on document panel, calls `getSelection()` |
-| State | Store selection data (text, bounding rect, range nodes) at `[:staging :raw-selection]` |
+| State | Store selection data (text, bounding rect, range nodes) at `[:excerpt :captured]` |
 
 **Testable result:** Select various content — plain paragraphs, across heading boundaries, across bold/italic formatting, inside code blocks. Inspect what arrives in Dataspex: text content, bounding rect coordinates, range start/end container nodes, offset values. Documented observations for each case.
 
