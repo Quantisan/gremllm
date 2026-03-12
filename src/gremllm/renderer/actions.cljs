@@ -64,6 +64,9 @@
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
+;; TODO: Doing too much -- data extraction AND structural transformation. Should be a thin adapter with
+;; transformation in a separate pure function. Refactor.
+;;
 ;; Register placeholder for text selection events
 (nxr/register-placeholder! :event/text-selection
   (fn [_]
