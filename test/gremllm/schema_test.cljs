@@ -372,4 +372,10 @@
   (testing "captured-selection-from-dom passes through valid data unchanged"
     (is (= single-word-selection (codec/captured-selection-from-dom single-word-selection)))
     (is (= mixed-format-selection (codec/captured-selection-from-dom mixed-format-selection)))
-    (is (= multi-node-selection (codec/captured-selection-from-dom multi-node-selection)))))
+    (is (= multi-node-selection (codec/captured-selection-from-dom multi-node-selection))))
+
+  (testing "rejects selection data missing required field"
+    (is (try
+          (codec/captured-selection-from-dom (dissoc single-word-selection :text))
+          false
+          (catch :default _ true)))))
