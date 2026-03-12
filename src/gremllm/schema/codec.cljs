@@ -91,6 +91,15 @@
             mt/strip-extra-keys-transformer))
 
 ;; ========================================
+;; Excerpt (Selection Capture)
+;; ========================================
+
+(defn captured-selection-from-dom
+  "Coerces raw DOM selection data into CapturedSelection schema. Throws if invalid."
+  [selection-data]
+  (m/coerce schema/CapturedSelection selection-data mt/json-transformer))
+
+;; ========================================
 ;; ACP Session Updates
 ;; ========================================
 

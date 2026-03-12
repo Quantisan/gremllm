@@ -172,3 +172,48 @@
   "Prepares topic for disk persistence, stripping transient fields.
   Applies defaults for any fields missing from in-memory topic. Throws if invalid."
   (m/coercer PersistedTopic (mt/transformer mt/default-value-transformer mt/strip-extra-keys-transformer)))
+
+;; ========================================
+;; Excerpt (Selection Capture)
+;; ========================================
+
+(def ViewportRect
+  "Viewport-relative rectangle from getBoundingClientRect / getClientRects."
+  [:map
+   [:top number?] [:left number?] [:width number?] [:height number?]])
+
+(def SelectionGeometry
+  "Positioning data for popover placement (S7.2 consumer).
+   bounding-rect spans the full selection; client-rects are per-line/per-span."
+  [:map
+   [:bounding-rect ViewportRect]
+   [:client-rects [:vector ViewportRect]]])
+
+(def SelectionContent
+  "Range content and offset data for staging (S7.3) and source mapping (S7.5).
+   Container node names and text content from the browser Range API."
+  [:map
+   [:start-container :string]
+   [:start-text :string]
+   [:start-offset :int]
+   [:end-container :string]
+   [:end-text :string]
+   [:end-offset :int]
+   [:common-ancestor :string]])
+
+(def SelectionRange
+  "Combined range data from browser Range API. Composes content + geometry."
+  (mu/merge SelectionContent SelectionGeometry))
+
+(def CapturedSelection
+  "Data captured from browser Selection API on mouseup.
+   Stored at [:excerpt :captured] after coercion through captured-selection-from-dom."
+  [:map
+   [:text :string]
+   [:is-collapsed :boolean]
+   [:range-count :int]
+   [:anchor-node :string]
+   [:anchor-offset :int]
+   [:focus-node :string]
+   [:focus-offset :int]
+   [:range SelectionRange]])
