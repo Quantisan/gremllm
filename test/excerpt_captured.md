@@ -1,3 +1,5 @@
+Source document: `resources/gremllm-launch-log.md`
+
 ## Single Word
 
 ```
