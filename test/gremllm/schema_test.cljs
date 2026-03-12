@@ -300,7 +300,6 @@
 
 (def single-word-selection
   {:text "Dispatch"
-   :is-collapsed false
    :range-count 1
    :anchor-node "#text"
    :anchor-offset 19
@@ -318,7 +317,6 @@
 
 (def mixed-format-selection
   {:text "Our Gremllm crew"
-   :is-collapsed false
    :range-count 1
    :anchor-node "#text"
    :anchor-offset 0
@@ -339,7 +337,6 @@
 
 (def multi-node-selection
   {:text "Tonight's Wins\nFixed council chat jitter.\nRun npm run test:ci before demos."
-   :is-collapsed false
    :range-count 1
    :anchor-node "#text"
    :anchor-offset 0

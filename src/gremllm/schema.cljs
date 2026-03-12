@@ -210,7 +210,6 @@
    Stored at [:excerpt :captured] after coercion through captured-selection-from-dom."
   [:map
    [:text :string]
-   [:is-collapsed :boolean]  ;; :is-collapsed is dead data — always false due to double guard (placeholder returns nil for collapsed, action also checks)
    [:range-count :int]
    [:anchor-node :string]
    [:anchor-offset :int]

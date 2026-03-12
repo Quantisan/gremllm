@@ -75,7 +75,6 @@
         (let [range (.getRangeAt sel 0)
               rect  (.getBoundingClientRect range)]
           {:text          (.toString sel)
-           :is-collapsed  (.-isCollapsed sel)
            :range-count   (.-rangeCount sel)
            :anchor-node   (.. sel -anchorNode -nodeName)
            :anchor-offset (.-anchorOffset sel)

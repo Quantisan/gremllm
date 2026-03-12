@@ -7,7 +7,6 @@ Source document: `resources/gremllm-launch-log.md`
             :anchor-offset 19
             :focus-node "#text"
             :focus-offset 27
-            :is-collapsed false
             :range {:bounding-rect {:height 33
                                     :left 350.96875
                                     :top 27
@@ -34,7 +33,6 @@ Source document: `resources/gremllm-launch-log.md`
             :anchor-offset 0
             :focus-node "#text"
             :focus-offset 5
-            :is-collapsed false
             :range {:bounding-rect {:height 17
                                     :left 76
                                     :top 75.5
@@ -73,7 +71,6 @@ Source document: `resources/gremllm-launch-log.md`
             :anchor-offset 0
             :focus-node "#text"
             :focus-offset 14
-            :is-collapsed false
             :range {:bounding-rect {:height 92.171875
                                     :left 76
                                     :top 130.25

@@ -8,9 +8,6 @@
   (testing "nil selection data - no-op"
     (is (nil? (excerpt/capture {} nil))))
 
-  (testing "collapsed selection - no-op"
-    (is (nil? (excerpt/capture {} {:text "" :is-collapsed true}))))
-
   (testing "valid selection data - saves to captured path"
     (let [result (excerpt/capture {} schema-test/single-word-selection)]
       (is (= 1 (count result)))
