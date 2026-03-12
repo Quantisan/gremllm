@@ -64,38 +64,33 @@
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
-;; TODO: Doing too much -- data extraction AND structural transformation. Should be a thin adapter with
-;; transformation in a separate pure function. Refactor.
-;;
+(defn- rect-from-dom [r]
+  {:top (.-top r) :left (.-left r) :width (.-width r) :height (.-height r)})
+
+(defn- range-from-dom [range]
+  (let [rect (.getBoundingClientRect range)]
+    {:start-container (.. range -startContainer -nodeName)
+     :start-text      (.. range -startContainer -textContent)
+     :start-offset    (.-startOffset range)
+     :end-container   (.. range -endContainer -nodeName)
+     :end-text        (.. range -endContainer -textContent)
+     :end-offset      (.-endOffset range)
+     :common-ancestor (.. range -commonAncestorContainer -nodeName)
+     :bounding-rect   (rect-from-dom rect)
+     :client-rects    (mapv rect-from-dom (array-seq (.getClientRects range)))}))
+
 ;; Register placeholder for text selection events
 (nxr/register-placeholder! :event/text-selection
   (fn [_]
     (let [sel (js/document.getSelection)]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        (let [range (.getRangeAt sel 0)
-              rect  (.getBoundingClientRect range)]
-          {:text          (.toString sel)
-           :range-count   (.-rangeCount sel)
-           :anchor-node   (.. sel -anchorNode -nodeName)
-           :anchor-offset (.-anchorOffset sel)
-           :focus-node    (.. sel -focusNode -nodeName)
-           :focus-offset  (.-focusOffset sel)
-           :range         {:start-container  (.. range -startContainer -nodeName)
-                           :start-text       (.. range -startContainer -textContent)
-                           :start-offset     (.-startOffset range)
-                           :end-container    (.. range -endContainer -nodeName)
-                           :end-text         (.. range -endContainer -textContent)
-                           :end-offset       (.-endOffset range)
-                           :common-ancestor  (.. range -commonAncestorContainer -nodeName)
-                           :bounding-rect    {:top    (.-top rect)
-                                              :left   (.-left rect)
-                                              :width  (.-width rect)
-                                              :height (.-height rect)}
-                           :client-rects     (mapv (fn [r] {:top    (.-top r)
-                                                            :left   (.-left r)
-                                                            :width  (.-width r)
-                                                            :height (.-height r)})
-                                                   (array-seq (.getClientRects range)))}})))))
+        {:text          (.toString sel)
+         :range-count   (.-rangeCount sel)
+         :anchor-node   (.. sel -anchorNode -nodeName)
+         :anchor-offset (.-anchorOffset sel)
+         :focus-node    (.. sel -focusNode -nodeName)
+         :focus-offset  (.-focusOffset sel)
+         :range         (range-from-dom (.getRangeAt sel 0))}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
