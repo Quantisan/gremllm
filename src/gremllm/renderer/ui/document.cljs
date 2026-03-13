@@ -24,8 +24,11 @@
   (if content
     (if (seq pending-diffs)
       (let [segments (diffs/compose content pending-diffs)]
+        ;; Intentionally no selection capture in diff mode: review is modal here,
+        ;; so accept/reject is the only allowed interaction (see 58cd32e).
         [:article.diff-mode (render-diff-segments segments)])
-      [:article (md/markdown->hiccup content)])
+      [:article {:on {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}}
+       (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
                   :font-style "italic"}}

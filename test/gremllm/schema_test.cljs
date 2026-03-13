@@ -2,7 +2,8 @@
   (:require [cljs.test :refer [deftest is testing]]
             [clojure.string]
             [gremllm.schema :as schema]
-            [gremllm.schema.codec :as codec]))
+            [gremllm.schema.codec :as codec]
+            [malli.core :as m]))
 
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
@@ -290,3 +291,91 @@
     (let [update {:session-update :available-commands-update
                   :available-commands []}]
       (is (nil? (codec/acp-update-text update))))))
+
+;; ========================================
+;; Excerpt (Selection Capture)
+;; ========================================
+
+;; Fixtures captured from selections on resources/gremllm-launch-log.md
+
+(def single-word-selection
+  {:text "Dispatch"
+   :range-count 1
+   :anchor-node "#text"
+   :anchor-offset 19
+   :focus-node "#text"
+   :focus-offset 27
+   :range {:bounding-rect {:height 33 :left 350.96875 :top 27 :width 117.140625}
+           :client-rects  [{:height 33 :left 350.96875 :top 27 :width 117.140625}]
+           :common-ancestor "#text"
+           :start-container "#text"
+           :start-text "Pangalactic Wombat Dispatch"
+           :start-offset 19
+           :end-container "#text"
+           :end-text "Pangalactic Wombat Dispatch"
+           :end-offset 27}})
+
+(def mixed-format-selection
+  {:text "Our Gremllm crew"
+   :range-count 1
+   :anchor-node "#text"
+   :anchor-offset 0
+   :focus-node "#text"
+   :focus-offset 5
+   :range {:bounding-rect {:height 17 :left 76 :top 75.5 :width 120.9375}
+           :client-rects  [{:height 17 :left 76 :top 75.5 :width 27.640625}
+                           {:height 17 :left 103.640625 :top 75.5 :width 58.296875}
+                           {:height 17 :left 103.640625 :top 75.5 :width 58.296875}
+                           {:height 17 :left 161.9375 :top 75.5 :width 35}]
+           :common-ancestor "P"
+           :start-container "#text"
+           :start-text "Our "
+           :start-offset 0
+           :end-container "#text"
+           :end-text " crew tuned the "
+           :end-offset 5}})
+
+(def multi-node-selection
+  {:text "Tonight's Wins\nFixed council chat jitter.\nRun npm run test:ci before demos."
+   :range-count 1
+   :anchor-node "#text"
+   :anchor-offset 0
+   :focus-node "#text"
+   :focus-offset 14
+   :range {:bounding-rect {:height 92.171875 :left 76 :top 130.25 :width 789.796875}
+           :client-rects  [{:height 29 :left 76 :top 130.25 :width 168.296875}
+                           {:height 21 :left 116 :top 173.421875 :width 749.796875}
+                           {:height 17 :left 116 :top 175.421875 :width 152.71875}
+                           {:height 17 :left 116 :top 200.171875 :width 28.828125}
+                           {:height 24.5 :left 144.828125 :top 197.921875 :width 121.140625}
+                           {:height 14 :left 150.078125 :top 203.171875 :width 110.640625}
+                           {:height 17 :left 265.96875 :top 200.171875 :width 97.0625}]
+           :common-ancestor "DIV"
+           :start-container "#text"
+           :start-text "Tonight's Wins"
+           :start-offset 0
+           :end-container "#text"
+           :end-text " before demos."
+           :end-offset 14}})
+
+(deftest captured-selection-schema-test
+  (testing "single word selection validates against CapturedSelection"
+    (is (m/validate schema/CapturedSelection single-word-selection)))
+
+  (testing "mixed format selection validates against CapturedSelection"
+    (is (m/validate schema/CapturedSelection mixed-format-selection)))
+
+  (testing "multi-node selection validates against CapturedSelection"
+    (is (m/validate schema/CapturedSelection multi-node-selection))))
+
+(deftest captured-selection-codec-test
+  (testing "captured-selection-from-dom passes through valid data unchanged"
+    (is (= single-word-selection (codec/captured-selection-from-dom single-word-selection)))
+    (is (= mixed-format-selection (codec/captured-selection-from-dom mixed-format-selection)))
+    (is (= multi-node-selection (codec/captured-selection-from-dom multi-node-selection))))
+
+  (testing "rejects selection data missing required field"
+    (is (try
+          (codec/captured-selection-from-dom (dissoc single-word-selection :text))
+          false
+          (catch :default _ true)))))

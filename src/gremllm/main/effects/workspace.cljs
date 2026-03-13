@@ -23,7 +23,7 @@
   (try
     (-> content
         edn/read-string
-        schema/topic-from-disk)
+        codec/topic-from-disk)
     (catch :default e
       (js/console.error "Invalid topic file" filename (ex-message e))
       nil)))

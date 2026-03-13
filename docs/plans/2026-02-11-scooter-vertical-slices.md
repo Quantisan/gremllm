@@ -252,7 +252,7 @@ S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all t
 | Layer | Work |
 |-------|------|
 | UI (Document) | `mouseup` handler on document panel, calls `getSelection()` |
-| State | Store selection data (text, bounding rect, range nodes) at `[:staging :raw-selection]` |
+| State | Store selection data (text, bounding rect, range nodes) at `[:excerpt :captured]` |
 
 **Testable result:** Select various content — plain paragraphs, across heading boundaries, across bold/italic formatting, inside code blocks. Inspect what arrives in Dataspex: text content, bounding rect coordinates, range start/end container nodes, offset values. Documented observations for each case.
 
@@ -260,6 +260,16 @@ S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all t
 - `getSelection().toString()` may collapse whitespace or omit formatting differently than expected
 - Range `startContainer`/`endContainer` may be text nodes deep inside the rendered DOM tree, not the elements you'd expect
 - Bounding rect behavior when selection spans multiple lines or block elements
+
+**Takeaway findings (S7.1 spike, 2026-03-12):**
+
+Observations from `test/excerpt_captured.md` (three cases: single word, mixed formatting, multi-line across heading + list):
+
+- **`bounding-rect` is unusable for multi-line popover positioning.** Multi-line selections produce a bounding rect spanning the entire block (92px × 790px in the heading+list case). S7.2 should anchor the popover to the **last `client-rect`**, not the bounding rect.
+- **Formatted text produces duplicate `client-rects`.** Bold/italic spans report separate rects even on the same line — "Our **Gremllm** crew" yields 4 rects. Dedup or ignore; only the last rect matters for popover anchor.
+- **All coordinates are viewport-relative.** Expected from `getBoundingClientRect`. S7.2 must convert to panel-relative (subtract panel offset, add scroll position).
+- **Selection direction is invisible in rect data.** Right-to-left selections have anchor/focus swapped vs left-to-right, but `client-rects` don't indicate which end the user released on. `mouseup` event coordinates (available from the DOM event, not the Selection API) give this for free — S7.2 should capture them.
+- **`:text` is clean across all cases.** `getSelection().toString()` returns usable text for plain, formatted, and multi-line selections. Sufficient for S7.3 staging.
 
 ---
 

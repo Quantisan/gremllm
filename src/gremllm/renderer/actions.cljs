@@ -8,6 +8,7 @@
             [gremllm.renderer.actions.system :as system]
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
+            [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
@@ -62,6 +63,34 @@
 
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
+
+(defn- rect-from-dom [r]
+  {:top (.-top r) :left (.-left r) :width (.-width r) :height (.-height r)})
+
+(defn- range-from-dom [range]
+  (let [rect (.getBoundingClientRect range)]
+    {:start-container (.. range -startContainer -nodeName)
+     :start-text      (.. range -startContainer -textContent)
+     :start-offset    (.-startOffset range)
+     :end-container   (.. range -endContainer -nodeName)
+     :end-text        (.. range -endContainer -textContent)
+     :end-offset      (.-endOffset range)
+     :common-ancestor (.. range -commonAncestorContainer -nodeName)
+     :bounding-rect   (rect-from-dom rect)
+     :client-rects    (mapv rect-from-dom (array-seq (.getClientRects range)))}))
+
+;; Register placeholder for text selection events
+(nxr/register-placeholder! :event/text-selection
+  (fn [_]
+    (let [sel (js/document.getSelection)]
+      (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
+        {:text          (.toString sel)
+         :range-count   (.-rangeCount sel)
+         :anchor-node   (.. sel -anchorNode -nodeName)
+         :anchor-offset (.-anchorOffset sel)
+         :focus-node    (.. sel -focusNode -nodeName)
+         :focus-offset  (.-focusOffset sel)
+         :range         (range-from-dom (.getRangeAt sel 0))}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
@@ -173,6 +202,9 @@
 (nxr/register-action! :settings.actions/save-error settings/save-error)
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
+
+;; Excerpt
+(nxr/register-action! :excerpt.actions/capture excerpt/capture)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)

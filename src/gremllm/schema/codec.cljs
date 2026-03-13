@@ -6,6 +6,20 @@
             [malli.transform :as mt]))
 
 ;; ========================================
+;; Disk Codecs
+;; ========================================
+
+(def topic-from-disk
+  "Loads and validates a topic from persisted EDN format. Applies defaults for fields added after
+  initial save. Throws if the topic data is invalid."
+  (m/coercer schema/Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
+
+(def topic-for-disk
+  "Prepares topic for disk persistence, stripping transient fields.
+  Applies defaults for any fields missing from in-memory topic. Throws if invalid."
+  (m/coercer schema/PersistedTopic (mt/transformer mt/default-value-transformer mt/strip-extra-keys-transformer)))
+
+;; ========================================
 ;; IPC Codecs
 ;; ========================================
 
@@ -89,6 +103,15 @@
   (m/coerce WorkspaceSyncData
             {:topics topics :workspace workspace :document document}
             mt/strip-extra-keys-transformer))
+
+;; ========================================
+;; Excerpt (Selection Capture)
+;; ========================================
+
+(defn captured-selection-from-dom
+  "Coerces raw DOM selection data into CapturedSelection schema. Throws if invalid."
+  [selection-data]
+  (m/coerce schema/CapturedSelection selection-data mt/json-transformer))
 
 ;; ========================================
 ;; ACP Session Updates
