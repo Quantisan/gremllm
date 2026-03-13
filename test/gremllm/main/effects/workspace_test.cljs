@@ -30,7 +30,7 @@
     (let [topic-without-unsaved {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []}}
           content (pr-str topic-without-unsaved)
           result (#'workspace/parse-topic-content content "test.edn")]
-      ;; schema/topic-from-disk should not add :unsaved? key
+      ;; codec/topic-from-disk should not add :unsaved? key
       (is (nil? (:unsaved? result))))))
 
 (deftest test-save-load-round-trip

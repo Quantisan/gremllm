@@ -163,16 +163,6 @@
   [name]
   {:name name})
 
-(def topic-from-disk
-  "Loads and validates a topic from persisted EDN format. Applies defaults for fields added after
-  initial save. Throws if the topic data is invalid."
-  (m/coercer Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
-
-(def topic-for-disk
-  "Prepares topic for disk persistence, stripping transient fields.
-  Applies defaults for any fields missing from in-memory topic. Throws if invalid."
-  (m/coercer PersistedTopic (mt/transformer mt/default-value-transformer mt/strip-extra-keys-transformer)))
-
 ;; ========================================
 ;; Excerpt (Selection Capture)
 ;; ========================================

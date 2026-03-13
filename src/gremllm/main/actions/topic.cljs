@@ -1,7 +1,7 @@
 (ns gremllm.main.actions.topic
   "Pure actions for topic operations"
   (:require ["path" :as path]
-            [gremllm.schema :as schema]))
+            [gremllm.schema.codec :as codec]))
 
 (defn topic-filename
   "Generate filename for a topic (e.g., 'abc123.edn')"
@@ -16,7 +16,7 @@
 (defn topic->save-plan
   "Create save plan for persisting a topic"
   [topic-clj topics-dir]
-  (let [persisted-topic (schema/topic-for-disk topic-clj)]
+  (let [persisted-topic (codec/topic-for-disk topic-clj)]
     {:dir      topics-dir
      :filepath (topic-filepath topics-dir (:id persisted-topic))
      :content  (pr-str persisted-topic)}))
