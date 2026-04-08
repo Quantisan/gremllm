@@ -205,4 +205,8 @@
    [:anchor-offset :int]
    [:focus-node :string]
    [:focus-offset :int]
-   [:range SelectionRange]])
+   [:range SelectionRange]
+   [:mouse-x {:optional true} number?]
+   [:mouse-y {:optional true} number?]
+   [:panel-rect {:optional true} ViewportRect]
+   [:panel-scroll-top {:optional true} number?]])
