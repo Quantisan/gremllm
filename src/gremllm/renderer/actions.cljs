@@ -210,6 +210,8 @@
 
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
+(nxr/register-action! :excerpt.actions/compute-popover-position excerpt/compute-popover-position)
+(nxr/register-action! :excerpt.actions/dismiss-popover excerpt/dismiss-popover)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
