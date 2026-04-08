@@ -7,6 +7,7 @@
             [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.document :as document-state]
+            [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
@@ -23,7 +24,8 @@
         active-topic-id       (topic-state/get-active-topic-id state)
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)
-        nav-expanded?         (ui-state/nav-expanded? state)]
+        nav-expanded?         (ui-state/nav-expanded? state)
+        popover-pos           (excerpt-state/get-popover state)]
     [e/app-layout
      ;; Zone 1: Nav strip
      [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}
@@ -38,7 +40,18 @@
             :active-topic-id   active-topic-id
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
-      (document-ui/render-document document-content pending-diffs)]
+      (document-ui/render-document document-content pending-diffs)
+      (when popover-pos
+        [:div {:style {:position      "absolute"
+                       :top           (str (:top popover-pos) "px")
+                       :left          (str (:left popover-pos) "px")
+                       :z-index       5
+                       :background    "var(--pico-primary)"
+                       :color         "var(--pico-primary-inverse)"
+                       :padding       "4px 8px"
+                       :border-radius "4px"
+                       :font-size     "0.85rem"}}
+         "Stage"])]
 
      ;; Zone 3: Chat panel
      [e/chat-panel
