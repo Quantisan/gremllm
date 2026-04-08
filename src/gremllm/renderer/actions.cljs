@@ -81,16 +81,21 @@
 
 ;; Register placeholder for text selection events
 (nxr/register-placeholder! :event/text-selection
-  (fn [_]
-    (let [sel (js/document.getSelection)]
+  (fn [{:replicant/keys [dom-event]}]
+    (let [sel (js/document.getSelection)
+          panel (when dom-event (.. dom-event -target (closest ".document-panel")))]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        {:text          (.toString sel)
-         :range-count   (.-rangeCount sel)
-         :anchor-node   (.. sel -anchorNode -nodeName)
-         :anchor-offset (.-anchorOffset sel)
-         :focus-node    (.. sel -focusNode -nodeName)
-         :focus-offset  (.-focusOffset sel)
-         :range         (range-from-dom (.getRangeAt sel 0))}))))
+        (cond-> {:text          (.toString sel)
+                 :range-count   (.-rangeCount sel)
+                 :anchor-node   (.. sel -anchorNode -nodeName)
+                 :anchor-offset (.-anchorOffset sel)
+                 :focus-node    (.. sel -focusNode -nodeName)
+                 :focus-offset  (.-focusOffset sel)
+                 :range         (range-from-dom (.getRangeAt sel 0))}
+          panel (assoc :mouse-x (.-clientX dom-event)
+                       :mouse-y (.-clientY dom-event)
+                       :panel-rect (rect-from-dom (.getBoundingClientRect panel))
+                       :panel-scroll-top (.-scrollTop panel)))))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
