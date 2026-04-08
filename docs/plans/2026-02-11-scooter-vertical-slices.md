@@ -142,9 +142,9 @@ Research that the old plan handled via standalone spikes is folded into the slic
 - Set `clientCapabilities.fs` to `{readTextFile: true, writeTextFile: true}` for read bridging + dry-run write interception
 - Fix `AcpUpdate` codec to match observed shapes; leave representation decisions as close to the wire as possible until S5 shows what it needs
 - Route `tool-call-update` diff events into renderer state (currently `console.log` only)
-- Store captured diffs at `[:document :pending-diffs]`; shape TBD, informed by what Dataspex reveals during wiring
+- Store captured diffs at `[:topics <topic-id> :session :pending-diffs]`; shape TBD, informed by what Dataspex reveals during wiring
 
-**Testable result:** Ask AI to edit a document. Diff data appears in Dataspex at `[:document :pending-diffs]`. No file written to disk. (Verifies L1: end-to-end reliability through real app plumbing.)
+**Testable result:** Ask AI to edit a document. Diff data appears in Dataspex at `[:topics <topic-id> :session :pending-diffs]`. No file written to disk. (Verifies L1: end-to-end reliability through real app plumbing.)
 
 **S4b outcomes (as of 2026-02-24):**
 
@@ -153,7 +153,7 @@ Research that the old plan handled via standalone spikes is folded into the slic
 | Dry-run write interception (`writeTextFile` returns `{}`) | Implemented | `resources/acp/index.js` write callback | S5 controls when accepted changes mutate disk |
 | Internal read bridge for edit/write flows | Implemented | `src/gremllm/main/effects/acp.cljs` `read-text-file` + adapter callback wiring | S5 can rely on ACP reading current file state during edit flows |
 | ACP codec updates for diff payloads (`raw-output`, `content`, `locations`, `kind`) | Implemented | `src/gremllm/schema/codec.cljs` + `test/gremllm/schema_test.cljs` | S5 can consume normalized diff payloads without redoing wire-shape coercion |
-| Diff routing to renderer pending state | Implemented | `src/gremllm/renderer/actions/acp.cljs` + `src/gremllm/renderer/actions/document.cljs` | S5 can focus on rendering/interaction over plumbing |
+| Diff routing to renderer pending state | Implemented | `src/gremllm/renderer/actions/acp.cljs` + `src/gremllm/renderer/actions/topic.cljs` | S5 can focus on rendering/interaction over plumbing |
 | Pending-diff identity/dedup policy | Open | Current append-only behavior in `append-pending-diffs` | S5 must define stable change identity + duplicate handling |
 | `tool-call` kind extensibility beyond `"read"|"edit"` | Open risk | Current enum in codec | S5 should decide strictness vs forward-compat behavior |
 
@@ -183,7 +183,7 @@ Decisions deferred to S5 (require the working S4b pipeline to experiment against
 
 **S5 entry checklist:**
 - [x] Dry-run diff pipeline is wired end-to-end (ACP -> codec -> renderer state)
-- [x] `tool-call-update` diffs are captured at `[:document :pending-diffs]`
+- [x] `tool-call-update` diffs are captured at `[:topics <topic-id> :session :pending-diffs]`
 - [x] ACP fs capabilities include `readTextFile` + dry-run `writeTextFile`
 - [ ] Pending-diff identity/dedup policy is defined
 - [ ] `tool-call` kind extensibility policy is defined (strict vs forward-compatible)
