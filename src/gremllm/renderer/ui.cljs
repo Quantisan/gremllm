@@ -32,7 +32,7 @@
       [:span {:style {:font-size "1.5rem"}} "📁"]]
 
      ;; Zone 2: Document panel
-     [e/document-panel
+     [e/document-panel {:on {:scroll [[:excerpt.actions/dismiss-popover]]}}
       (when nav-expanded?
         [e/nav-overlay
          (topics-ui/render-left-panel-content
