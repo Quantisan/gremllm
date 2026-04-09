@@ -17,6 +17,7 @@
 
 
 (defn- render-workspace [state]
+  ;; TODO: all these state crumbs... is there a more organized method?
   (let [has-any-api-key?      (system-state/has-any-api-key? state)
         workspace             (workspace-state/get-workspace state)
         document-content      (document-state/get-content state)
@@ -43,6 +44,7 @@
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
       (document-ui/render-document document-content pending-diffs)
+      ;; TODO: not domain obvious... perhaps rename or comment?
       (when popover-pos
         [:div {:style {:position      "absolute"
                        :top           (str (:top popover-pos) "px")

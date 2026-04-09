@@ -2,6 +2,7 @@
   (:require [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.schema.codec :as codec]))
 
+;; TODO: what's composite-data? Can this be considered trust boundary? Perhaps add a schema?
 (defn capture [_state composite-data]
   (if composite-data
     (let [coerced (codec/captured-selection-from-dom (:selection composite-data))]
