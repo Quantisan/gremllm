@@ -25,7 +25,9 @@
         topics-map            (topic-state/get-topics-map state)
         renaming-topic-id     (ui-state/renaming-topic-id state)
         nav-expanded?         (ui-state/nav-expanded? state)
-        popover-pos           (excerpt-state/get-popover state)]
+        captured              (excerpt-state/get-captured state)
+        anchor                (excerpt-state/get-anchor state)
+        popover-pos           (excerpt-state/popover-position captured anchor)]
     [e/app-layout
      ;; Zone 1: Nav strip
      [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}

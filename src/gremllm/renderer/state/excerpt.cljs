@@ -11,11 +11,6 @@
 (defn get-anchor [state]
   (get-in state anchor-path))
 
-(def popover-path [:excerpt :popover])
-
-(defn get-popover [state]
-  (get-in state popover-path))
-
 (defn popover-position
   "Derives popover {top, left} from selection geometry and anchor context.
    Returns nil if either input is missing or anchor lacks panel-rect."
