@@ -79,23 +79,26 @@
      :bounding-rect   (rect-from-dom rect)
      :client-rects    (mapv rect-from-dom (array-seq (.getClientRects range)))}))
 
-;; Register placeholder for text selection events
+;; Register placeholder for text selection events.
+;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil}
+;; when a non-collapsed selection exists, nil otherwise.
 (nxr/register-placeholder! :event/text-selection
   (fn [{:replicant/keys [dom-event]}]
-    (let [sel (js/document.getSelection)
+    (let [sel   (js/document.getSelection)
           panel (when dom-event (.. dom-event -target (closest ".document-panel")))]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        (cond-> {:text          (.toString sel)
-                 :range-count   (.-rangeCount sel)
-                 :anchor-node   (.. sel -anchorNode -nodeName)
-                 :anchor-offset (.-anchorOffset sel)
-                 :focus-node    (.. sel -focusNode -nodeName)
-                 :focus-offset  (.-focusOffset sel)
-                 :range         (range-from-dom (.getRangeAt sel 0))}
-          panel (assoc :mouse-x (.-clientX dom-event)
-                       :mouse-y (.-clientY dom-event)
-                       :panel-rect (rect-from-dom (.getBoundingClientRect panel))
-                       :panel-scroll-top (.-scrollTop panel)))))))
+        (let [selection {:text          (.toString sel)
+                         :range-count   (.-rangeCount sel)
+                         :anchor-node   (.. sel -anchorNode -nodeName)
+                         :anchor-offset (.-anchorOffset sel)
+                         :focus-node    (.. sel -focusNode -nodeName)
+                         :focus-offset  (.-focusOffset sel)
+                         :range         (range-from-dom (.getRangeAt sel 0))}
+              anchor    (when panel
+                          {:panel-rect       (rect-from-dom (.getBoundingClientRect panel))
+                           :panel-scroll-top (.-scrollTop panel)})]
+          {:selection selection
+           :anchor    anchor})))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
