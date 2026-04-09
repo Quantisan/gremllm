@@ -73,6 +73,7 @@
 ;; ========================================
 
 (deftest dismiss-popover-test
-  (testing "returns save effect clearing popover state"
-    (is (= [[:effects/save excerpt-state/popover-path nil]]
+  (testing "returns save effects clearing the excerpt session state"
+    (is (= [[:effects/save excerpt-state/captured-path nil]
+            [:effects/save excerpt-state/popover-path nil]]
            (excerpt/dismiss-popover {})))))

@@ -22,4 +22,5 @@
       [[:effects/save excerpt-state/popover-path {:top top :left left}]])))
 
 (defn dismiss-popover [_state]
-  [[:effects/save excerpt-state/popover-path nil]])
+  [[:effects/save excerpt-state/captured-path nil]
+   [:effects/save excerpt-state/popover-path nil]])
