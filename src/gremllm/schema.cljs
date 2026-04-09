@@ -205,8 +205,12 @@
    [:anchor-offset :int]
    [:focus-node :string]
    [:focus-offset :int]
-   [:range SelectionRange]
-   [:mouse-x {:optional true} number?]
-   [:mouse-y {:optional true} number?]
-   [:panel-rect {:optional true} ViewportRect]
-   [:panel-scroll-top {:optional true} number?]])
+   [:range SelectionRange]])
+
+(def AnchorContext
+  "Panel geometry snapshot captured at selection time.
+   Ephemeral — only valid until scroll or resize dismisses the popover.
+   Stored at [:excerpt :anchor]."
+  [:map
+   [:panel-rect ViewportRect]
+   [:panel-scroll-top number?]])
