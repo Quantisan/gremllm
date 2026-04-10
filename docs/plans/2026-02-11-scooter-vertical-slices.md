@@ -295,22 +295,22 @@ Observations from `test/excerpt_captured.md` (three cases: single word, mixed fo
 
 #### S7.3: Staging state & staging zone
 
-**Capability:** Accumulate text selections in state and display them as quoted chunks above the chat input with dismiss controls.
+**Capability:** Accumulate text selections in topic state and display them as quoted chunks above the chat input with dismiss controls.
 
 | Layer | Work |
 |-------|------|
-| State | `[:staging :selections]` — vector of `{:text :source-offset}` |
+| State | `[:topics <topic-id> :staged-selections]` — vector of `{:id :string :selection CapturedSelection}` persisted with the topic |
 | Actions | `stage`, `unstage`, `clear` — pure functions returning effects |
 | UI (Chat) | Staging zone above input area — quoted chunks with dismiss (✕) |
 | Tests | Unit tests for all actions |
 
-**Testable result:** Inject selection data directly into state via Dataspex. Quoted chunks appear above the chat input. Dismiss one — it disappears. Clear all — zone empties.
+**Testable result:** Inject staged selections directly into an active topic via Dataspex. Quoted chunks appear above the chat input. Dismiss one — it disappears. Clear all — zone empties.
 
 **What to watch for:**
-- Low risk. The failed branch already implemented this cleanly. Re-implement from that reference.
-- The `.indexOf` approach for mapping selected DOM text back to markdown source is present but untested under real conditions. For S7.3 alone only the displayed text matters; source offsets become relevant when S7.5 needs them for highlights.
+- Persist on `PersistedTopic`, not `:session`; staged selections are user-curated topic context, not ACP runtime state.
+- Store `CapturedSelection` as-is and render from `:selection :text`. `AnchorContext` stays ephemeral at `[:excerpt :anchor]`; source mapping remains an S7.5 concern.
 
-**Independent of S7.1 and S7.2.** Can run in parallel.
+**Independent of S7.2.** Builds on the `CapturedSelection` shape from S7.1.
 
 ---
 
