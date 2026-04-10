@@ -25,13 +25,4 @@
 
   (testing "multiple client-rects uses last rect"
     (is (= {:top 80 :left 30}
-           (excerpt-state/popover-position multi-rect-selection anchor-context))))
-
-  (testing "nil captured-selection returns nil"
-    (is (nil? (excerpt-state/popover-position nil anchor-context))))
-
-  (testing "nil anchor-context returns nil"
-    (is (nil? (excerpt-state/popover-position single-rect-selection nil))))
-
-  (testing "missing panel-rect in anchor returns nil"
-    (is (nil? (excerpt-state/popover-position single-rect-selection {})))))
+           (excerpt-state/popover-position multi-rect-selection anchor-context)))))

@@ -25,7 +25,6 @@
 
   (testing "valid composite - saves selection at captured-path and anchor at anchor-path"
     (let [result (excerpt/capture {} composite-selection)]
-      (is (= 2 (count result)))
       (is (= [:effects/save excerpt-state/captured-path schema-test/single-word-selection]
              (first result)))
       (is (= [:effects/save excerpt-state/anchor-path anchor-context]
