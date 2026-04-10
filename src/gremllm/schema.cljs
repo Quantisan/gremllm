@@ -102,68 +102,6 @@
    [:api-keys {:optional true} APIKeysMap]])
 
 ;; ========================================
-;; Topics & Workspaces
-;; ========================================
-
-(defn generate-topic-id []
-  ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
-  ;; as argument would complicate the call stack for a benign, testable effect.
-  (let [timestamp (js/Date.now)
-        random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
-    (str "topic-" timestamp "-" random-suffix)))
-
-(def PendingDiff
-  [:map
-   [:type [:= "diff"]]
-   [:path :string]
-   [:old-text {:optional true} :string]
-   [:new-text :string]])
-
-(def AcpSession
-  "Session state produced by an ACP agent for a topic."
-  [:map
-   ;; TODO: id should be required
-   [:id {:optional true}         :string]
-   [:pending-diffs {:default []} [:vector PendingDiff]]])
-
-(def PersistedTopic
-  "Schema for topics as saved to disk"
-  [:map
-   [:id {:default/fn generate-topic-id} :string]
-   [:name {:default "New Topic"}        :string]
-   [:session {:default {}}              AcpSession]
-   [:messages {:default []}             [:vector Message]]])
-
-;; TODO: Pivot domain model -- Topic should be Session.
-(def Topic
-  "Schema for topics in app state (includes transient fields)"
-  (mu/merge
-    PersistedTopic
-    [:map
-     [:unsaved? {:optional true} :boolean]]))
-
-;; TODO: refactor with (generate-topic-id)
-(def TopicId
-  "Schema for topic identifiers shared across IPC boundaries."
-  [:string {:min 1}])
-
-(defn create-topic []
-  (m/decode Topic {} mt/default-value-transformer))
-
-;; TODO: rename to DocumentTopics
-(def WorkspaceTopics
-  "Map of Topics keyed by Topic ID"
-  [:map-of :string Topic])
-
-(defn valid-workspace-topics? [topics-map]
-  (m/validate WorkspaceTopics topics-map))
-
-(defn create-workspace-meta
-  "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
-  [name]
-  {:name name})
-
-;; ========================================
 ;; Excerpt (Selection Capture)
 ;; ========================================
 
@@ -214,3 +152,72 @@
   [:map
    [:panel-rect ViewportRect]
    [:panel-scroll-top number?]])
+
+(def StagedSelection
+  "A user-selected excerpt staged as AI context for the active topic."
+  [:map
+   [:id :string]
+   [:selection CapturedSelection]])
+
+;; ========================================
+;; Topics & Workspaces
+;; ========================================
+
+(defn generate-topic-id []
+  ;; NOTE: We call `js/Date.now` and js/Math.random directly for pragmatic FCIS. Passing these values
+  ;; as argument would complicate the call stack for a benign, testable effect.
+  (let [timestamp (js/Date.now)
+        random-suffix (-> (js/Math.random) (.toString 36) (.substring 2))]
+    (str "topic-" timestamp "-" random-suffix)))
+
+(def PendingDiff
+  [:map
+   [:type [:= "diff"]]
+   [:path :string]
+   [:old-text {:optional true} :string]
+   [:new-text :string]])
+
+(def AcpSession
+  "Session state produced by an ACP agent for a topic."
+  [:map
+   ;; TODO: id should be required
+   [:id {:optional true}         :string]
+   [:pending-diffs {:default []} [:vector PendingDiff]]])
+
+(def PersistedTopic
+  "Schema for topics as saved to disk"
+  [:map
+   [:id {:default/fn generate-topic-id} :string]
+   [:name {:default "New Topic"}        :string]
+   [:session {:default {}}              AcpSession]
+   [:messages {:default []}             [:vector Message]]
+   [:staged-selections {:default []}    [:vector StagedSelection]]])
+
+;; TODO: Pivot domain model -- Topic should be Session.
+(def Topic
+  "Schema for topics in app state (includes transient fields)"
+  (mu/merge
+    PersistedTopic
+    [:map
+     [:unsaved? {:optional true} :boolean]]))
+
+;; TODO: refactor with (generate-topic-id)
+(def TopicId
+  "Schema for topic identifiers shared across IPC boundaries."
+  [:string {:min 1}])
+
+(defn create-topic []
+  (m/decode Topic {} mt/default-value-transformer))
+
+;; TODO: rename to DocumentTopics
+(def WorkspaceTopics
+  "Map of Topics keyed by Topic ID"
+  [:map-of :string Topic])
+
+(defn valid-workspace-topics? [topics-map]
+  (m/validate WorkspaceTopics topics-map))
+
+(defn create-workspace-meta
+  "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
+  [name]
+  {:name name})
