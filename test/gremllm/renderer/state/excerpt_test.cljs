@@ -25,4 +25,9 @@
 
   (testing "multiple client-rects uses last rect"
     (is (= {:top 80 :left 30}
-           (excerpt-state/popover-position multi-rect-selection anchor-context)))))
+           (excerpt-state/popover-position multi-rect-selection anchor-context))))
+
+  (testing "missing panel-scroll-top suppresses popover position"
+    (is (nil? (excerpt-state/popover-position
+                single-rect-selection
+                {:panel-rect panel-rect})))))

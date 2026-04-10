@@ -13,9 +13,12 @@
 
 (defn popover-position
   "Derives popover {top, left} from selection geometry and anchor context.
-   Returns nil if either input is missing or anchor lacks panel-rect."
+   Returns nil if either input is missing or anchor lacks required panel geometry."
   [captured-selection anchor-context]
-  (when (and captured-selection anchor-context (:panel-rect anchor-context))
+  (when (and captured-selection
+             anchor-context
+             (:panel-rect anchor-context)
+             (number? (:panel-scroll-top anchor-context)))
     (let [rects      (get-in captured-selection [:range :client-rects])
           last-rect  (peek rects)
           panel-rect (:panel-rect anchor-context)
