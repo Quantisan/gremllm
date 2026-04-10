@@ -9,6 +9,7 @@
             [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.excerpt :as excerpt]
+            [gremllm.schema.codec :as codec]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
@@ -64,21 +65,6 @@
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
-(defn- rect-from-dom [r]
-  {:top (.-top r) :left (.-left r) :width (.-width r) :height (.-height r)})
-
-(defn- range-from-dom [range]
-  (let [rect (.getBoundingClientRect range)]
-    {:start-container (.. range -startContainer -nodeName)
-     :start-text      (.. range -startContainer -textContent)
-     :start-offset    (.-startOffset range)
-     :end-container   (.. range -endContainer -nodeName)
-     :end-text        (.. range -endContainer -textContent)
-     :end-offset      (.-endOffset range)
-     :common-ancestor (.. range -commonAncestorContainer -nodeName)
-     :bounding-rect   (rect-from-dom rect)
-     :client-rects    (mapv rect-from-dom (array-seq (.getClientRects range)))}))
-
 ;; Register placeholder for text selection events.
 ;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil}
 ;; when a non-collapsed selection exists, nil otherwise.
@@ -87,20 +73,8 @@
     (let [sel   (js/document.getSelection)
           panel (when dom-event (.. dom-event -target (closest ".document-panel")))]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        ;; TODO: validate with CapturedSelection
-        (let [selection {:text          (.toString sel)
-                         :range-count   (.-rangeCount sel)
-                         :anchor-node   (.. sel -anchorNode -nodeName)
-                         :anchor-offset (.-anchorOffset sel)
-                         :focus-node    (.. sel -focusNode -nodeName)
-                         :focus-offset  (.-focusOffset sel)
-                         :range         (range-from-dom (.getRangeAt sel 0))}
-              anchor    (when panel
-                          ;; TODO: validate with AnchorContext
-                          {:panel-rect       (rect-from-dom (.getBoundingClientRect panel))
-                           :panel-scroll-top (.-scrollTop panel)})]
-          {:selection selection
-           :anchor    anchor})))))
+        {:selection (codec/captured-selection-from-dom sel)
+         :anchor    (when panel (codec/anchor-context-from-dom panel))}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id

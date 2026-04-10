@@ -108,10 +108,40 @@
 ;; Excerpt (Selection Capture)
 ;; ========================================
 
+(defn- rect-from-dom [r]
+  {:top (.-top r) :left (.-left r) :width (.-width r) :height (.-height r)})
+
+(defn- range-from-dom [range]
+  {:start-container (.. range -startContainer -nodeName)
+   :start-text      (.. range -startContainer -textContent)
+   :start-offset    (.-startOffset range)
+   :end-container   (.. range -endContainer -nodeName)
+   :end-text        (.. range -endContainer -textContent)
+   :end-offset      (.-endOffset range)
+   :common-ancestor (.. range -commonAncestorContainer -nodeName)
+   :bounding-rect   (rect-from-dom (.getBoundingClientRect range))
+   :client-rects    (mapv rect-from-dom (array-seq (.getClientRects range)))})
+
 (defn captured-selection-from-dom
-  "Coerces raw DOM selection data into CapturedSelection schema. Throws if invalid."
-  [selection-data]
-  (m/coerce schema/CapturedSelection selection-data mt/json-transformer))
+  "Reads a live js/Selection and coerces into CapturedSelection. Throws if invalid."
+  [sel]
+  (m/coerce schema/CapturedSelection
+            {:text          (.toString sel)
+             :range-count   (.-rangeCount sel)
+             :anchor-node   (.. sel -anchorNode -nodeName)
+             :anchor-offset (.-anchorOffset sel)
+             :focus-node    (.. sel -focusNode -nodeName)
+             :focus-offset  (.-focusOffset sel)
+             :range         (range-from-dom (.getRangeAt sel 0))}
+            mt/json-transformer))
+
+(defn anchor-context-from-dom
+  "Reads a live DOM panel element and coerces into AnchorContext. Throws if invalid."
+  [panel]
+  (m/coerce schema/AnchorContext
+            {:panel-rect       (rect-from-dom (.getBoundingClientRect panel))
+             :panel-scroll-top (.-scrollTop panel)}
+            mt/json-transformer))
 
 ;; ========================================
 ;; ACP Session Updates
