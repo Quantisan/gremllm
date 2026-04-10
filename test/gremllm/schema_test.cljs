@@ -358,6 +358,30 @@
            :end-text " before demos."
            :end-offset 14}})
 
+(defn- fixture->js-selection
+  "Build a minimal js/Selection-like object from a CapturedSelection fixture.
+   Fields and methods match exactly what captured-selection-from-dom reads."
+  [{:keys [text range-count anchor-node anchor-offset focus-node focus-offset range]}]
+  (let [{:keys [start-container start-text start-offset
+                end-container end-text end-offset
+                common-ancestor bounding-rect client-rects]} range
+        js-range #js {:startContainer          #js {:nodeName    start-container
+                                                    :textContent start-text}
+                      :startOffset             start-offset
+                      :endContainer            #js {:nodeName    end-container
+                                                    :textContent end-text}
+                      :endOffset               end-offset
+                      :commonAncestorContainer #js {:nodeName common-ancestor}
+                      :getBoundingClientRect   (constantly (clj->js bounding-rect))
+                      :getClientRects          (constantly (clj->js client-rects))}]
+    #js {:rangeCount   range-count
+         :anchorNode   #js {:nodeName anchor-node}
+         :anchorOffset anchor-offset
+         :focusNode    #js {:nodeName focus-node}
+         :focusOffset  focus-offset
+         :toString     (constantly text)
+         :getRangeAt   (constantly js-range)}))
+
 (deftest captured-selection-schema-test
   (testing "single word selection validates against CapturedSelection"
     (is (m/validate schema/CapturedSelection single-word-selection)))
@@ -369,19 +393,31 @@
     (is (m/validate schema/CapturedSelection multi-node-selection))))
 
 (deftest captured-selection-codec-test
-  (testing "captured-selection-from-dom passes through valid data unchanged"
-    (is (= single-word-selection (codec/captured-selection-from-dom single-word-selection)))
-    (is (= mixed-format-selection (codec/captured-selection-from-dom mixed-format-selection)))
-    (is (= multi-node-selection (codec/captured-selection-from-dom multi-node-selection))))
+  (testing "reads a live selection mock into CapturedSelection shape"
+    (is (= single-word-selection
+           (codec/captured-selection-from-dom (fixture->js-selection single-word-selection))))
+    (is (= mixed-format-selection
+           (codec/captured-selection-from-dom (fixture->js-selection mixed-format-selection))))
+    (is (= multi-node-selection
+           (codec/captured-selection-from-dom (fixture->js-selection multi-node-selection)))))
 
-  (testing "rejects selection data missing required field"
-    (is (try
-          (codec/captured-selection-from-dom (dissoc single-word-selection :text))
-          false
-          (catch :default _ true)))))
+  (testing "throws when the resulting shape is invalid"
+    (let [bad (doto (fixture->js-selection single-word-selection)
+                (aset "toString" (constantly nil)))]
+      (is (try (codec/captured-selection-from-dom bad) false
+               (catch :default _ true))))))
 
 (deftest anchor-context-schema-test
   (testing "valid AnchorContext validates"
     (is (m/validate schema/AnchorContext
                     {:panel-rect {:top 100 :left 50 :width 800 :height 600}
                      :panel-scroll-top 20}))))
+
+(deftest anchor-context-codec-test
+  (testing "reads a live panel element mock into AnchorContext shape"
+    (let [panel #js {:getBoundingClientRect
+                     (constantly #js {:top 100 :left 50 :width 800 :height 600})
+                     :scrollTop 20}]
+      (is (= {:panel-rect {:top 100 :left 50 :width 800 :height 600}
+              :panel-scroll-top 20}
+             (codec/anchor-context-from-dom panel))))))

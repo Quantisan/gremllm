@@ -9,7 +9,8 @@
   {:panel-rect {:top 100 :left 50 :width 800 :height 600}
    :panel-scroll-top 20})
 
-;; Composite input that the :event/text-selection placeholder now produces
+;; Composite input that the :event/text-selection placeholder produces,
+;; with both sides already coerced at the codec boundary.
 (def composite-selection
   {:selection schema-test/single-word-selection
    :anchor anchor-context})
