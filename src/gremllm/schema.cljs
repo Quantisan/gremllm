@@ -155,6 +155,8 @@
 
 (def StagedSelection
   "A user-selected excerpt staged as AI context for the active topic."
+  ;; TODO: Replace `CapturedSelection` with a smaller persisted source-anchor shape.
+  ;; Why: staged items should be durable topic context tied to a document revision, not a browser-selection snapshot with DOM/render metadata.
   [:map
    [:id :string]
    [:selection CapturedSelection]])
