@@ -4,13 +4,39 @@
             [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.schema-test :as schema-test]))
 
-(deftest capture-test
-  (testing "nil selection data - no-op"
-    (is (nil? (excerpt/capture {} nil))))
+;; Anchor context fixture matching AnchorContext schema
+(def anchor-context
+  {:panel-rect {:top 100 :left 50 :width 800 :height 600}
+   :panel-scroll-top 20})
 
-  (testing "valid selection data - saves to captured path"
-    (let [result (excerpt/capture {} schema-test/single-word-selection)]
-      (is (= 1 (count result)))
-      (is (= :effects/save (ffirst result)))
-      (is (= excerpt-state/captured-path (second (first result))))
-      (is (= schema-test/single-word-selection (nth (first result) 2))))))
+;; Composite input that the :event/text-selection placeholder produces,
+;; with both sides already coerced at the codec boundary.
+(def composite-selection
+  {:selection schema-test/single-word-selection
+   :anchor anchor-context})
+
+;; ========================================
+;; capture
+;; ========================================
+
+(deftest capture-test
+  (testing "nil composite - dispatches dismiss-popover"
+    (let [result (excerpt/capture {} nil)]
+      (is (= [[:excerpt.actions/dismiss-popover]] result))))
+
+  (testing "valid composite - saves selection at captured-path and anchor at anchor-path"
+    (let [result (excerpt/capture {} composite-selection)]
+      (is (= [:effects/save excerpt-state/captured-path schema-test/single-word-selection]
+             (first result)))
+      (is (= [:effects/save excerpt-state/anchor-path anchor-context]
+             (second result))))))
+
+;; ========================================
+;; dismiss-popover
+;; ========================================
+
+(deftest dismiss-popover-test
+  (testing "clears captured-path and anchor-path"
+    (is (= [[:effects/save excerpt-state/captured-path nil]
+            [:effects/save excerpt-state/anchor-path nil]]
+           (excerpt/dismiss-popover {})))))

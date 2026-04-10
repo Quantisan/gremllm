@@ -285,7 +285,7 @@ Observations from `test/excerpt_captured.md` (three cases: single word, mixed fo
 **Testable result:** Select text anywhere in the document panel. A small colored box appears directly below the selection. Scroll the panel — the box stays correctly positioned (or dismisses). Resize the window — coordinates remain correct.
 
 **What to watch for:**
-- This was the exact failure point of the one-shot branch. The document panel is a scrollable container inside a CSS grid layout. `position: fixed` uses viewport coordinates but ignores scroll; `position: absolute` depends on the nearest positioned ancestor.
+- This was the exact failure point of the one-shot branch `feat/selection-ui-one-shot`. The document panel is a scrollable container inside a CSS grid layout. `position: fixed` uses viewport coordinates but ignores scroll; `position: absolute` depends on the nearest positioned ancestor.
 - `getBoundingClientRect()` returns viewport-relative coordinates. Converting to panel-relative requires accounting for the panel's own scroll position and offset.
 - The popover must not be a child of the scrollable panel if using `position: fixed`, because `transform` or `will-change` on ancestors create new containing blocks.
 
