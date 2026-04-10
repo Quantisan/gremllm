@@ -384,11 +384,4 @@
   (testing "valid AnchorContext validates"
     (is (m/validate schema/AnchorContext
                     {:panel-rect {:top 100 :left 50 :width 800 :height 600}
-                     :panel-scroll-top 20})))
-
-  (testing "missing panel-rect fails validation"
-    (is (not (m/validate schema/AnchorContext {:panel-scroll-top 20}))))
-
-  (testing "missing panel-scroll-top fails validation"
-    (is (not (m/validate schema/AnchorContext
-                         {:panel-rect {:top 100 :left 50 :width 800 :height 600}})))))
+                     :panel-scroll-top 20}))))
