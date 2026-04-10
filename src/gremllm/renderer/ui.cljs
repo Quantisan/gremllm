@@ -72,7 +72,8 @@
         {:input-value          (form-state/get-user-input state)
          :loading?             (loading-state/loading? state active-topic-id)
          :has-any-api-key?     has-any-api-key?
-         :pending-attachments  (form-state/get-pending-attachments state)})
+         :pending-attachments  (form-state/get-pending-attachments state)
+         :staged-selections    (topic-state/get-staged-selections state)})
 
       (settings-ui/render-settings-modal
        (merge (sensitive-state/settings-view-props state)

@@ -47,6 +47,26 @@
    (when awaiting-response?
      (render-loading-indicator))])
 
+(defn- truncate [s n]
+  (if (> (count s) n)
+    (str (subs s 0 n) "…")
+    s))
+
+(defn- render-staged-selections [staged-selections]
+  (when (seq staged-selections)
+    [:div.staged-selections
+     (for [{:keys [id selection]} staged-selections]
+       [:span.staged-pill {:key id}
+        "selection: " (truncate (:text selection) 30)
+        [:button.dismiss
+         {:type "button"
+          :on {:click [[:staging.actions/unstage id]]}}
+         "✕"]])
+     (when (> (count staged-selections) 1)
+       [:button {:type "button"
+                 :on {:click [[:staging.actions/clear-staged]]}}
+        "Clear all"])]))
+
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)
     [:div {:style {:margin-bottom "0.5rem"
@@ -60,10 +80,11 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments]}]
+(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments staged-selections]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
+    (render-staged-selections staged-selections)
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"
