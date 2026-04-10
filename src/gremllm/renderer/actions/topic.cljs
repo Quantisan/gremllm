@@ -56,6 +56,24 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
+(defn stage [state selection]
+  (let [topic-id (topic-state/get-active-topic-id state)
+        path     (topic-state/staged-selections-path topic-id)
+        existing (or (get-in state path) [])
+        item     {:id (str "staged-" (random-uuid)) :selection selection}]
+    [[:effects/save path (conj existing item)]]))
+
+(defn unstage [state id]
+  (let [topic-id (topic-state/get-active-topic-id state)
+        path     (topic-state/staged-selections-path topic-id)
+        existing (or (get-in state path) [])]
+    [[:effects/save path (vec (remove #(= (:id %) id) existing))]]))
+
+(defn clear-staged [state]
+  (let [topic-id (topic-state/get-active-topic-id state)
+        path     (topic-state/staged-selections-path topic-id)]
+    [[:effects/save path []]]))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]

@@ -187,6 +187,11 @@
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
+;; Staging
+(nxr/register-action! :staging.actions/stage topic/stage)
+(nxr/register-action! :staging.actions/unstage topic/unstage)
+(nxr/register-action! :staging.actions/clear-staged topic/clear-staged)
+
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
 (nxr/register-action! :excerpt.actions/dismiss-popover excerpt/dismiss-popover)
