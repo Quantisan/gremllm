@@ -76,6 +76,12 @@ npm run test:all   # Compile + autorun unit and integration tests
 npm run test:integration # Compile + autorun integration tests
 ```
 
+## File Conventions
+
+**Design artifacts:**
+- Specs: `docs/specs/`
+- Plans: `docs/plans/`
+
 ## Design Philosophy
 
 ### Pragmatic Evolution: From Skateboard to Motorcycle
