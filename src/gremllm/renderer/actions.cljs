@@ -55,6 +55,12 @@
             :replicant/dom-event
             (.preventDefault))))
 
+(nxr/register-effect! :effects/stop-propagation
+  (fn [{:keys [dispatch-data]} _]
+    (some-> dispatch-data
+            :replicant/dom-event
+            (.stopPropagation))))
+
 (defn promise->actions [{:keys [dispatch]} _ {:keys [promise on-success on-error]}]
   (-> promise
       (.then (fn [result]
@@ -195,6 +201,7 @@
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
 (nxr/register-action! :excerpt.actions/dismiss-popover excerpt/dismiss-popover)
+(nxr/register-action! :excerpt.actions/stage excerpt/stage)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
