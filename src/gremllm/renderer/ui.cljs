@@ -35,7 +35,8 @@
       [:span {:style {:font-size "1.5rem"}} "📁"]]
 
      ;; Zone 2: Document panel
-     [e/document-panel {:on {:scroll [[:excerpt.actions/dismiss-popover]]}}
+     [e/document-panel {:on {:scroll    [[:excerpt.actions/dismiss-popover]]
+                             :mousedown [[:excerpt.actions/dismiss-popover]]}}
       (when nav-expanded?
         [e/nav-overlay
          (topics-ui/render-left-panel-content
@@ -46,15 +47,19 @@
       (document-ui/render-document document-content pending-diffs)
       ;; TODO: not domain obvious... perhaps rename or comment?
       (when popover-pos
-        [:div {:style {:position      "absolute"
-                       :top           (str (:top popover-pos) "px")
-                       :left          (str (:left popover-pos) "px")
-                       :z-index       5
-                       :background    "var(--pico-primary)"
-                       :color         "var(--pico-primary-inverse)"
-                       :padding       "4px 8px"
-                       :border-radius "4px"
-                       :font-size     "0.85rem"}}
+        [:button {:style {:position      "absolute"
+                          :top           (str (:top popover-pos) "px")
+                          :left          (str (:left popover-pos) "px")
+                          :z-index       5
+                          :background    "var(--pico-primary)"
+                          :color         "var(--pico-primary-inverse)"
+                          :padding       "4px 8px"
+                          :border-radius "4px"
+                          :font-size     "0.85rem"
+                          :border        "none"
+                          :cursor        "pointer"}
+                  :on {:mousedown [[:effects/stop-propagation]]
+                       :click     [[:excerpt.actions/stage]]}}
          "Stage"])]
 
      ;; Zone 3: Chat panel
