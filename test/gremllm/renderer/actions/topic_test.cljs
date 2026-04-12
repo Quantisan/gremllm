@@ -5,6 +5,7 @@
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
+            [gremllm.schema-test :as schema-fixtures]
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
@@ -87,3 +88,41 @@
             actions  (topic/delete-topic-error state topic-id error)]
         (is (= [] actions)
             "should return empty actions vector")))))
+
+(def ^:private topic-id "topic-123")
+(def ^:private base-state {:active-topic-id topic-id
+                           :topics {topic-id {:id topic-id :staged-selections []}}})
+
+(deftest stage-test
+  (let [selection schema-fixtures/single-word-selection
+        [[effect path staged-vec]] (topic/stage base-state selection)
+        item (first staged-vec)]
+
+    (is (= :effects/save effect))
+    (is (= (topic-state/staged-selections-path topic-id) path))
+    (is (= 1 (count staged-vec)))
+    (is (string? (:id item)))
+    (is (clojure.string/starts-with? (:id item) "staged-"))
+    (is (= selection (:selection item)))))
+
+(deftest unstage-test
+  (let [item-a {:id "staged-a" :selection schema-fixtures/single-word-selection}
+        item-b {:id "staged-b" :selection schema-fixtures/mixed-format-selection}
+        state  (assoc-in base-state [:topics topic-id :staged-selections] [item-a item-b])]
+
+    (testing "removes item by id"
+      (let [[[_ _ staged-vec]] (topic/unstage state "staged-a")]
+        (is (= 1 (count staged-vec)))
+        (is (= "staged-b" (:id (first staged-vec))))))
+
+    (testing "no-op when id not found"
+      (let [[[_ _ staged-vec]] (topic/unstage state "staged-unknown")]
+        (is (= 2 (count staged-vec)))))))
+
+(deftest clear-staged-test
+  (let [item {:id "staged-a" :selection schema-fixtures/single-word-selection}
+        state (assoc-in base-state [:topics topic-id :staged-selections] [item])
+        [[_ path staged-vec]] (topic/clear-staged state)]
+
+    (is (= (topic-state/staged-selections-path topic-id) path))
+    (is (= [] staged-vec))))

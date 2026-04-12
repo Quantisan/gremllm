@@ -295,33 +295,34 @@ Observations from `test/excerpt_captured.md` (three cases: single word, mixed fo
 
 #### S7.3: Staging state & staging zone
 
-**Capability:** Accumulate text selections in state and display them as quoted chunks above the chat input with dismiss controls.
+**Capability:** Accumulate text selections in topic state and display them as quoted chunks above the chat input with dismiss controls.
 
 | Layer | Work |
 |-------|------|
-| State | `[:staging :selections]` — vector of `{:text :source-offset}` |
+| State | `[:topics <topic-id> :staged-selections]` — vector of `{:id :string :selection CapturedSelection}` persisted with the topic |
 | Actions | `stage`, `unstage`, `clear` — pure functions returning effects |
 | UI (Chat) | Staging zone above input area — quoted chunks with dismiss (✕) |
 | Tests | Unit tests for all actions |
 
-**Testable result:** Inject selection data directly into state via Dataspex. Quoted chunks appear above the chat input. Dismiss one — it disappears. Clear all — zone empties.
+**Testable result:** Inject staged selections directly into an active topic via Dataspex. Quoted chunks appear above the chat input. Dismiss one — it disappears. Clear all — zone empties.
 
 **What to watch for:**
-- Low risk. The failed branch already implemented this cleanly. Re-implement from that reference.
-- The `.indexOf` approach for mapping selected DOM text back to markdown source is present but untested under real conditions. For S7.3 alone only the displayed text matters; source offsets become relevant when S7.5 needs them for highlights.
+- Persist on `PersistedTopic`, not `:session`; staged selections are user-curated topic context, not ACP runtime state.
+- Store `CapturedSelection` as-is and render from `:selection :text`. `AnchorContext` stays ephemeral at `[:excerpt :anchor]`; source mapping remains an S7.5 concern.
 
-**Independent of S7.1 and S7.2.** Can run in parallel.
+**Independent of S7.2.** Builds on the `CapturedSelection` shape from S7.1.
 
 ---
 
 #### S7.4: Selection-to-stage wiring
 
-**Capability:** The full interaction flow: select text → popover appears → click "Stage" → chunk appears in staging zone.
+**Capability:** Wire the existing selection popover into the existing staged-selection flow: select text → popover appears → click "Stage" → chunk appears in staging zone.
 
 | Layer | Work |
 |-------|------|
 | UI (Document) | Popover includes "Stage" button dispatching `staging.actions/stage` |
-| Actions | Wire `handle-selection` (S7.1 data) through popover (S7.2) into staging (S7.3) |
+| Actions | Read `[:excerpt :captured]` populated by S7.1/S7.2 and append it to `[:topics <topic-id> :staged-selections]` via `staging.actions/stage` from S7.3 |
+| UI (Chat) | Existing S7.3 staging zone renders newly staged chunks above the composer |
 | UI (Document) | Popover shows quick action labels (non-functional, labels only — wired in S9) |
 
 **Testable result:** Select a paragraph. Popover appears. Click "Stage." Chunk appears in staging zone. Select another, stage it. Both visible. Dismiss one — it disappears. Popover dismisses on scroll or outside click.
@@ -329,6 +330,7 @@ Observations from `test/excerpt_captured.md` (three cases: single word, mixed fo
 **What to watch for:**
 - When the user clicks the popover's "Stage" button, the browser may clear the text selection before the click handler fires (`mousedown` on the button triggers selection collapse). Mitigation: capture selection data into state on `mouseup` (S7.1), read from state in the stage action — never read `getSelection()` at button-click time.
 - Popover dismiss timing: scrolling, clicking outside, or making a new selection should dismiss the popover. The `mousedown` that starts a new selection must not race with the popover's click handler.
+- Non-goal: do not change staged-selection save or unsaved-state behavior here. S7.4 only wires the popover into the topic-scoped staged-selection state and composer rendering already added in S7.3.
 
 **Depends on:** S7.1, S7.2, S7.3
 

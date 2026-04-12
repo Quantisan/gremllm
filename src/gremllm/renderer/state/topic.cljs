@@ -34,6 +34,12 @@
 (defn pending-diffs-path [topic-id]
   (-> topics-path (conj topic-id :session :pending-diffs)))
 
+(defn staged-selections-path [topic-id]
+  (conj (topic-path topic-id) :staged-selections))
+
+(defn get-staged-selections [state]
+  (or (:staged-selections (get-active-topic state)) []))
+
 (defn get-acp-session-id [state topic-id]
   (get-in (get-topic state topic-id) [:session :id]))
 

@@ -147,6 +147,32 @@
             resize: none;
         }
 
+        .staged-selections {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .staged-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            background: var(--pico-muted-border-color);
+            border-radius: 1rem;
+            color: var(--pico-muted-color);
+        }
+
+        .staged-pill .dismiss {
+            all: unset;
+            cursor: pointer;
+            padding: 0 0.125rem;
+            font-size: 0.625rem;
+            line-height: 1;
+        }
+
         .topic-item {
             /* Keep topic link and delete control on one line */
             display: flex;
