@@ -49,3 +49,35 @@
                  (+ pos len)
                  (conj parts text)
                  (conj spans [node pos (+ pos len)])))))))
+
+(def ^:private highlight-name "staged-excerpt")
+
+(defn- make-range
+  "Builds a DOM Range from a locate-range result and the containing document."
+  [{:keys [start-node start-offset end-node end-offset]}]
+  (let [r (.createRange js/document)]
+    (.setStart r start-node start-offset)
+    (.setEnd   r end-node   end-offset)
+    r))
+
+(defn- selection-texts [staged-selections]
+  (keep #(get-in % [:selection :text]) staged-selections))
+
+(defn sync!
+  "Rebuilds the 'staged-excerpt' highlight registry entry from the given
+   staged-selections against article's current text content. Safe to call
+   on every render; missing matches are silently dropped."
+  [article staged-selections]
+  (let [index  (flatten-article article)
+        ranges (->> (selection-texts staged-selections)
+                    (keep #(locate-range-in-flat-text index %))
+                    (mapv make-range))
+        hl     (js/Highlight.)]
+    (doseq [r ranges] (.add hl r))
+    (.set js/CSS.highlights highlight-name hl)))
+
+(defn clear!
+  "Removes the 'staged-excerpt' highlight registry entry. Call on article
+   unmount to avoid leaving ranges that point to detached nodes."
+  []
+  (.delete js/CSS.highlights highlight-name))
