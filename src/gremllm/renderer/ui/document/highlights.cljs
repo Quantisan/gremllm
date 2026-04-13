@@ -27,3 +27,25 @@
              :start-offset (- idx s-s)
              :end-node     end-node
              :end-offset   (- end-idx e-s)}))))))
+
+(defn flatten-article
+  "Walks article's descendant Text nodes in document order and returns
+   {:text concatenated-text :spans [[node start end] ...]}. start/end are
+   offsets into the concatenated text."
+  [article]
+  (let [walker (.createTreeWalker js/document
+                                  article
+                                  js/NodeFilter.SHOW_TEXT)]
+    (loop [node   (.nextNode walker)
+           pos    0
+           parts  []
+           spans  []]
+      (if (nil? node)
+        {:text  (.join (clj->js parts) "")
+         :spans spans}
+        (let [text (.-nodeValue node)
+              len  (.-length text)]
+          (recur (.nextNode walker)
+                 (+ pos len)
+                 (conj parts text)
+                 (conj spans [node pos (+ pos len)])))))))
