@@ -15,3 +15,25 @@
 
   (testing "returns an empty vector for blank input"
     (is (= [] (locator/block-records "")))))
+
+(deftest selection-debug-test
+  (let [heading-block   {:kind :heading :index 1 :start-line 1 :end-line 1 :text "Title"}
+        paragraph-block {:kind :paragraph :index 2 :start-line 3 :end-line 3 :text "Para bold text"}]
+    (testing "same-block selections get start/end offsets"
+      (is (= {:block-kind  :paragraph
+              :block-index 2
+              :block-start-line 3
+              :block-end-line 3
+              :start-offset 5
+              :end-offset 14}
+             (locator/selection-debug paragraph-block paragraph-block "bold text"))))
+
+    (testing "cross-block selections omit offsets and keep the start block as primary"
+      (is (= {:block-kind  :heading
+              :block-index 1
+              :block-start-line 1
+              :block-end-line 1}
+             (locator/selection-debug heading-block paragraph-block "Title\nPara"))))
+
+    (testing "blank selected text returns nil"
+      (is (nil? (locator/selection-debug paragraph-block paragraph-block ""))))))
