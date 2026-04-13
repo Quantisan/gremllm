@@ -10,6 +10,8 @@
    "code_block"      :code-block
    "table_open"      :table})
 
+(def ^:private block-selector "h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,table")
+
 (defn- token-kind [^js token]
   (get block-open->kind (.-type token)))
 
@@ -91,3 +93,37 @@
       (if (= (:index start-block) (:index end-block))
         (merge base (text-offsets (:text start-block) selected-text))
         base))))
+
+(defn sync-block-metadata! [article markdown-text]
+  (let [blocks   (block-records markdown-text)
+        elements (array-seq (.querySelectorAll article block-selector))]
+    (when (not= (count elements) (count blocks))
+      (js/console.warn "[excerpt-locator-spike] DOM/block count mismatch"
+                       (count elements) "elements," (count blocks) "blocks"))
+    (doseq [[el block] (map vector elements blocks)]
+      (.setAttribute el "data-grem-block-kind" (name (:kind block)))
+      (.setAttribute el "data-grem-block-index" (str (:index block)))
+      (.setAttribute el "data-grem-block-start-line" (str (:start-line block)))
+      (.setAttribute el "data-grem-block-end-line" (str (:end-line block))))))
+
+(defn selection-debug-from-dom [article sel]
+  (let [range         (.getRangeAt sel 0)
+        start-element (some-> (.-startContainer range) .-parentElement (.closest block-selector))
+        end-element   (some-> (.-endContainer range) .-parentElement (.closest block-selector))
+        parse-block   (fn [el]
+                        (when el
+                          {:kind       (some-> (.getAttribute el "data-grem-block-kind") keyword)
+                           :index      (js/parseInt (.getAttribute el "data-grem-block-index") 10)
+                           :start-line (js/parseInt (.getAttribute el "data-grem-block-start-line") 10)
+                           :end-line   (js/parseInt (.getAttribute el "data-grem-block-end-line") 10)
+                           :text       (.-textContent el)}))
+        start-block   (parse-block start-element)
+        end-block     (parse-block end-element)]
+    (when (and start-block end-block)
+      {:selection-direction (or (.-direction sel) "unknown")
+       :anchor-node         (some-> (.-anchorNode sel) .-nodeName)
+       :anchor-offset       (.-anchorOffset sel)
+       :focus-node          (some-> (.-focusNode sel) .-nodeName)
+       :focus-offset        (.-focusOffset sel)
+       :common-ancestor     (some-> (.-commonAncestorContainer range) .-nodeName)
+       :locator             (selection-debug start-block end-block (.toString sel))})))

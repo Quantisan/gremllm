@@ -1,7 +1,8 @@
 (ns gremllm.renderer.ui.document
   (:require [gremllm.renderer.ui.markdown :as md]
             [gremllm.renderer.ui.document.diffs :as diffs]
-            [gremllm.renderer.ui.document.highlights :as highlights]))
+            [gremllm.renderer.ui.document.highlights :as highlights]
+            [gremllm.renderer.ui.document.locator :as locator]))
 
 (defn- render-diff-segments [segments]
   (into [:div]
@@ -21,11 +22,13 @@
                                  "Reject"]]]))
               segments)))
 
-(defn- on-render-sync [staged-selections]
+(defn- on-render-sync [content staged-selections]
   (fn [{:replicant/keys [node life-cycle]}]
     (if (= :replicant.life-cycle/unmount life-cycle)
       (highlights/clear!)
-      (highlights/sync! node staged-selections))))
+      (do
+        (locator/sync-block-metadata! node content)
+        (highlights/sync! node staged-selections)))))
 
 (defn render-document [content pending-diffs staged-selections]
   (if content
@@ -37,7 +40,7 @@
       [:article {:on                   {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
                  ;; Replicant lifecycle hook: after markdown renders, sync DOM
                  ;; highlight ranges against the live article node.
-                 :replicant/on-render  (on-render-sync staged-selections)}
+                 :replicant/on-render  (on-render-sync content staged-selections)}
        (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
