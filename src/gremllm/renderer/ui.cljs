@@ -28,7 +28,8 @@
         nav-expanded?         (ui-state/nav-expanded? state)
         captured              (excerpt-state/get-captured state)
         anchor                (excerpt-state/get-anchor state)
-        popover-pos           (excerpt-state/popover-position captured anchor)]
+        popover-pos           (excerpt-state/popover-position captured anchor)
+        staged-selections     (topic-state/get-staged-selections state)]
     [e/app-layout
      ;; Zone 1: Nav strip
      [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}
@@ -44,7 +45,7 @@
             :active-topic-id   active-topic-id
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
-      (document-ui/render-document document-content pending-diffs)
+      (document-ui/render-document document-content pending-diffs staged-selections)
       ;; TODO: not domain obvious... perhaps rename or comment?
       (when popover-pos
         [:button {:style {:position      "absolute"
@@ -78,7 +79,7 @@
          :loading?             (loading-state/loading? state active-topic-id)
          :has-any-api-key?     has-any-api-key?
          :pending-attachments  (form-state/get-pending-attachments state)
-         :staged-selections    (topic-state/get-staged-selections state)})
+         :staged-selections    staged-selections})
 
       (settings-ui/render-settings-modal
        (merge (sensitive-state/settings-view-props state)
