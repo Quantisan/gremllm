@@ -8,25 +8,46 @@
           (when (and (<= s offset) (< offset e)) span))
         spans))
 
+(defn- strip-newlines [s]
+  (.replace s (js/RegExp. "\\n" "g") ""))
+
+(defn- stripped->orig-idx
+  "Translates a position in the newline-stripped view of text back to its
+   index in the original text. Walks text, counting non-\\n chars until s
+   equals stripped-pos."
+  [text stripped-pos]
+  (let [n (count text)]
+    (loop [i 0, s 0]
+      (if (or (= s stripped-pos) (>= i n))
+        i
+        (recur (inc i)
+               (if (= (.charAt text i) "\n") s (inc s)))))))
+
 (defn locate-range-in-flat-text
   "Finds the first occurrence of search-text within index's flat text.
+   Newlines are normalized out of both sides before comparison: Selection
+   .toString() inserts \\n at block boundaries, while flatten-article joins
+   text nodes with no separator. Match offsets are translated back into the
+   original flat text so spans line up with DOM text-node positions.
    index = {:text String :spans [[node-ref start-offset end-offset] ...]}
    Returns {:start-node :start-offset :end-node :end-offset} with offsets
    local to their node, or nil if not found / empty input."
   [{:keys [text spans]} search-text]
-  (when (and (seq search-text) (seq spans))
-    (let [idx (.indexOf text search-text)]
-      (when (not (neg? idx))
-        (let [end-idx            (+ idx (count search-text))
-              ;; end-idx may equal text length (exclusive); for span lookup
-              ;; treat the last char position as (end-idx - 1).
-              [start-node s-s _] (span-at spans idx)
-              [end-node e-s _]   (span-at spans (dec end-idx))]
-          (when (and start-node end-node)
-            {:start-node   start-node
-             :start-offset (- idx s-s)
-             :end-node     end-node
-             :end-offset   (- end-idx e-s)}))))))
+  (let [stripped-search (strip-newlines (or search-text ""))]
+    (when (and (seq stripped-search) (seq spans))
+      (let [stripped-text (strip-newlines text)
+            s-idx         (.indexOf stripped-text stripped-search)]
+        (when-not (neg? s-idx)
+          (let [s-end              (+ s-idx (count stripped-search))
+                idx                (stripped->orig-idx text s-idx)
+                end-idx            (stripped->orig-idx text s-end)
+                [start-node s-s _] (span-at spans idx)
+                [end-node e-s _]   (span-at spans (dec end-idx))]
+            (when (and start-node end-node)
+              {:start-node   start-node
+               :start-offset (- idx s-s)
+               :end-node     end-node
+               :end-offset   (- end-idx e-s)})))))))
 
 (defn flatten-article
   "Walks article's descendant Text nodes in document order and returns
