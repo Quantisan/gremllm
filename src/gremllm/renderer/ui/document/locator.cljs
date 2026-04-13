@@ -75,3 +75,19 @@
                    (assoc span :kind kind :text (token-text tokens idx token)))))))
          (map-indexed (fn [i b] (assoc b :index (inc i))))
          vec)))
+
+(defn- text-offsets [block-text selected-text]
+  (let [start (.indexOf (or block-text "") (or selected-text ""))]
+    (when (and (seq selected-text) (not (neg? start)))
+      {:start-offset start
+       :end-offset   (+ start (count selected-text))})))
+
+(defn selection-debug [start-block end-block selected-text]
+  (when (seq selected-text)
+    (let [base {:block-kind       (:kind start-block)
+                :block-index      (:index start-block)
+                :block-start-line (:start-line start-block)
+                :block-end-line   (:end-line start-block)}]
+      (if (= (:index start-block) (:index end-block))
+        (merge base (text-offsets (:text start-block) selected-text))
+        base))))
