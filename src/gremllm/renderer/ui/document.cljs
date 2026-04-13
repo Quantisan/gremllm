@@ -35,6 +35,8 @@
         ;; so accept/reject is the only allowed interaction (see 58cd32e).
         [:article.diff-mode (render-diff-segments segments)])
       [:article {:on                   {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
+                 ;; Replicant lifecycle hook: after markdown renders, sync DOM
+                 ;; highlight ranges against the live article node.
                  :replicant/on-render  (on-render-sync staged-selections)}
        (md/markdown->hiccup content)])
     [:article

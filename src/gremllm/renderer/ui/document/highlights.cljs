@@ -1,5 +1,10 @@
 (ns gremllm.renderer.ui.document.highlights)
 
+;; TODO: Worth a look: shared text-matching utilities with document.diffs.
+;; Both namespaces relocate a snippet inside larger text, then diverge into DOM
+;; ranges here vs char offsets/status there; @sanity/diff-match-patch may be useful
+;; if this area needs a deeper pass later.
+
 (defn- span-at
   "Returns the [node start end] entry whose [start end) interval contains
    offset. Uses linear scan; spans are few per document."
@@ -84,6 +89,7 @@
 (defn- selection-texts [staged-selections]
   (keep #(get-in % [:selection :text]) staged-selections))
 
+;; TODO: is there a simpler way to do this?
 (defn sync!
   "Rebuilds the 'staged-excerpt' highlight registry entry from the given
    staged-selections against article's current text content. Safe to call

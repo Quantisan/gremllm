@@ -7,7 +7,9 @@
 ;; must handle both patterns: independent diffs produce separate :diff-block
 ;; segments; dependent overlapping diffs merge into a single :diff-block.
 
-;; TODO: Refactor anchoring/composition to leverage diff-match-patch.
+;; TODO: Worth a look: @sanity/diff-match-patch for the text-anchoring layer.
+;; There may be overlap with document.highlights around "locate this snippet in
+;; that text", even if grouping/evolved-content mapping/composition remain separate.
 ;; Proposal: docs/2026-03-05-diff-match-patch-anchoring-proposal.md
 
 ;; ---- Anchoring ----

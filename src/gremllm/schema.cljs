@@ -155,8 +155,7 @@
 
 (def StagedSelection
   "A user-selected excerpt staged as AI context for the active topic."
-  ;; TODO: Replace `CapturedSelection` with a smaller persisted source-anchor shape.
-  ;; Why: staged items should be durable topic context tied to a document revision, not a browser-selection snapshot with DOM/render metadata.
+  ;; TODO: Revisit the persisted staged-selection payload; highlight replay currently has to rediscover live document ranges from browser/render-specific data.
   [:map
    [:id :string]
    [:selection CapturedSelection]])
