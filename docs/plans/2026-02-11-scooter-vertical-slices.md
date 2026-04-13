@@ -236,12 +236,12 @@ The lesson: stacking browser-level unknowns (Selection API behavior, coordinate 
 #### S7 dependency ordering
 
 ```
-S7.1 (capture) ──→ S7.2 (popover) ──→ S7.4 (wiring) ──→ S7.5 (highlights, punted)
+S7.1 (capture) ──→ S7.2 (popover) ──→ S7.4 (wiring) ──→ S7.5 (highlights)
                                             ↑
 S7.3 (staging state + zone) ────────────────┘
 ```
 
-S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all three. S7.5 was deliberately last and optional for shipping, and is now punted from Scooter as of 2026-04-13.
+S7.1 and S7.3 can start in parallel. S7.2 depends on S7.1. S7.4 integrates all three. S7.5 is deliberately last and optional for shipping.
 
 ---
 
@@ -336,19 +336,9 @@ Observations from `test/excerpt_captured.md` (three cases: single word, mixed fo
 
 ---
 
-#### S7.5: Document highlights for staged regions (PUNTED)
+#### S7.5: Document highlights for staged regions
 
-**Status:** Punted from Scooter on 2026-04-13. Do not treat this as in-scope for the current milestone.
-We do have an exploratory implementation attempt in branch `feat/s-7-5-highlight-staged-selections`; treat that branch as reference material for what was tried, not as a merge target for Scooter.
-
-**Why punted:** The core selection-to-staging flow is already complete in S7.1-S7.4, but the highlight step turned out to be a trust problem rather than a polish task. The attempted approaches all require brittle remapping from a persisted staged selection back onto rendered document text:
-- Text-only matching can highlight the wrong occurrence when phrases repeat.
-- Rendered DOM text diverges from markdown source around formatting and block boundaries, so offset math becomes fragile.
-- A misleading highlight is worse than no highlight in a document-first, proof-oriented product because it suggests false provenance.
-
-The feature is therefore deferred until we have a durable source-anchor strategy tied to document revisions, rather than a best-effort `.indexOf` over rendered text.
-
-**Original capability:** Staged text selections are visually highlighted in the rendered document panel.
+**Capability:** Staged text selections are visually highlighted in the rendered document panel.
 
 | Layer | Work |
 |-------|------|
@@ -356,7 +346,7 @@ The feature is therefore deferred until we have a durable source-anchor strategy
 | UI (Document) | Highlight rendering for staged regions |
 | State | Source offset data from staged selections drives highlight placement |
 
-**Original testable result:** Stage two selections. Both regions highlighted in the document. Unstage one — its highlight disappears. The other remains.
+**Testable result:** Stage two selections. Both regions highlighted in the document. Unstage one — its highlight disappears. The other remains.
 
 **What to watch for:**
 - Most speculative sub-slice. Three candidate approaches:
@@ -364,8 +354,7 @@ The feature is therefore deferred until we have a durable source-anchor strategy
   - **CSS Custom Highlight API:** No DOM mutation, but recent API that may interact poorly with Replicant's virtual DOM reconciliation.
   - **Re-render with injected spans:** Transform markdown hiccup to insert highlight markers. Analogous to S5 diff anchoring (`diffs/compose`) but operates on rendered hiccup, not raw source.
 - Mapping DOM selection text back to source offsets may fail on formatted text (`**bold**` renders as `bold`). The `.indexOf` approach in `compute-source-offset` doesn't account for this.
-- Repeated phrases and post-edit document drift make text-only matching ambiguous even when formatting is not involved.
-- **Decision:** Ship Scooter without highlights. S7.1-S7.4 deliver the usable flow; S7.5 is deferred until anchoring can be made trustworthy.
+- **Acceptable to ship S7 without highlights.** S7.1–S7.4 deliver a complete selection-to-staging flow. S7.5 adds visual polish. Defer if approach proves too costly.
 
 **Depends on:** S7.3 (needs staged selections), S7.4 (needs real staged data)
 
@@ -381,7 +370,7 @@ The feature is therefore deferred until we have a durable source-anchor strategy
 | Actions | Modify submit flow to include staged chunks, then clear staging |
 | State | Clear staged selections on send |
 
-**Testable result:** Stage two chunks. Type a message and send. AI response references both chunks. Staging zone clears.
+**Testable result:** Stage two chunks. Type a message and send. AI response references both chunks. Staging zone and highlights clear.
 
 ---
 
@@ -478,7 +467,7 @@ These are directional. Final schemas are informed by implementation experience i
 | Edit granularity (agent-controlled vs post-processed) | S5 | Determines UX of change review |
 | Markdown source↔DOM offset divergence for inline tracked changes | S5 | Rendering collapses formatting chars and restructures markup; `oldText` position in source does not map to DOM text offset |
 | Popover positioning in scrollable panel | S7.2 | Coordinate system traps (fixed vs absolute, scroll offsets, containing blocks). Direct cause of one-shot branch failure |
-| Selection→source mapping for highlights | S7.5 | Punted for Scooter. Rendered text matching is not trustworthy enough for repeated text, formatting boundaries, or post-edit drift |
+| Selection→source mapping for highlights | S7.5 | DOM text may diverge from markdown source due to formatting. `.indexOf` approach untested on formatted text |
 | Offset recomputation | S5 | Accepted changes shift downstream offsets |
 | Document rendering with overlays | S5 | Markdown + highlights + inline diffs simultaneously |
 | Structured output parsing | S5 | `tool_call_update` → TrackedChange records |

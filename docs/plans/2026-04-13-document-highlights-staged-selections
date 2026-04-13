@@ -1,0 +1,615 @@
+# S7.5: Document Highlights for Staged Regions — Implementation Plan
+
+> **For agentic workers:** Implement task-by-task using checkbox (`- [ ]`) tracking. Each task is independently commit-ready; don't batch tasks into a single commit. Run `npm run test` after each implementation step.
+
+**Goal:** After each render of the document panel, the rendered `<article>` visually marks every text region corresponding to a staged selection.
+
+**Architecture:** A single `:replicant/on-render` lifecycle hook on the non-diff `<article>` calls a thin DOM effect `sync!` that rebuilds the browser's `CSS.highlights` registry from the active topic's staged selections. A pure helper `locate-range-in-flat-text` maps search strings to DOM coordinates; `CSS.highlights` and its `::highlight(...)` CSS rule handle painting. No schema changes, no hiccup transformation, no interaction with the diff pipeline.
+
+**Tech Stack:** ClojureScript + Replicant, CSS Custom Highlight API (guaranteed available in Electron's Chromium), `cljs.test` via `shadow-cljs compile test`.
+
+**Plan reference:** `docs/plans/2026-02-11-scooter-vertical-slices.md` (S7.5)
+
+---
+
+## Context
+
+S7.1–S7.4 delivered a complete selection-to-staging flow. Users can select text in the rendered document panel, click "Stage" in a popover, and the chunk appears as a pill above the chat composer. The staged selections persist with the topic at `[:topics <topic-id> :staged-selections]`.
+
+What's missing: the rendered document gives no visual feedback about which regions are staged. If three paragraphs are staged, the user can see three pills in the composer but the document itself shows nothing. S7.5 closes that loop with inline highlights.
+
+**Why now:** The plan flags S7.5 as the most speculative sub-slice and says it is acceptable to ship S7 without it. We're taking it on because the interaction loop feels incomplete without the visual tie-back — the document is the center of gravity, and staged context should be visible there too.
+
+**Why this approach:** The plan names three candidates — DOM `<mark>` manipulation, CSS Custom Highlight API, hiccup tree transformation. We evaluated them against a Hickey-simple lens ("one thing, un-braided"):
+
+| Approach | What it couples | Cross-element selections (tables, formatting) |
+|---|---|---|
+| Hiccup transform | Highlight placement ↔ every hiccup shape (text, strong, tables, lists). Needs text-node splitting across element boundaries. | Complicated — walker must cross `<tr>`/`<td>`/inline boundaries. |
+| Source segmentation (`diffs.cljs` style) | Highlight positioning ↔ markdown source format. But `:selection :text` is plain rendered text, so `"cell a cell b"` won't match source `\| cell a \| cell b \|`. | Broken — cross-formatting selections don't match in source. |
+| **CSS Custom Highlight API** | Nothing. Highlights live in a separate DOM registry. Hiccup pipeline doesn't know highlights exist; highlight system doesn't know about markdown. Communication is one `Range` per selection. | Free — browser paints a `Range` across whatever elements it spans. |
+
+The Custom Highlight API delivers cross-element highlights "for free" because `Range` is the browser's native primitive for spans over arbitrary DOM. Tables, bold spans, links, code — all handled by the rendering engine.
+
+---
+
+## Goal
+
+After each render of the document panel, the rendered `<article>` visually marks every text region corresponding to a staged selection. Unstaging a selection removes its highlight. Switching topics shows the new topic's highlights.
+
+## Architecture
+
+```
+[:topics id :staged-selections]  ──►  pure: locate-range-in-flat-text  ──►  [Range, ...]
+      (persisted state)                                                         │
+                                                                                ▼
+                                                                  effect: sync!
+                                                                                │
+                                                                                ▼
+                                                                  CSS.highlights "staged-excerpt"
+                                                                                │
+                                                                                ▼
+                                                                  ::highlight(staged-excerpt) CSS rule
+```
+
+- **Pure function** `locate-range-in-flat-text`: takes a flat-text index `{:text "..." :spans [[node-ref start end] ...]}` + a search string, returns `{:start-node :start-offset :end-node :end-offset}` or `nil`. Unit-testable with synthetic inputs (no DOM needed).
+- **DOM helper** `flatten-article`: walks the rendered `<article>` with `TreeWalker` (SHOW_TEXT), returns the flat-text index above. Small; validated by integration/manual test.
+- **Effect** `sync!`: reads staged selections from app state, calls `flatten-article`, maps each selection's `:text` through `locate-range-in-flat-text`, constructs DOM `Range`s, replaces the `CSS.highlights` entry for `"staged-excerpt"`.
+- **Lifecycle wiring**: a single `:replicant/on-render` hook on the non-diff `[:article]` element in `render-document` calls `sync!`. No schema changes, no hiccup tree changes, no interaction with the diff pipeline.
+
+## Tech Stack
+
+- ClojureScript + Replicant (existing)
+- CSS Custom Highlight API (Chrome 105+ — Electron's Chromium is ≥ 120, so universally available)
+- `cljs.test` for pure-function unit tests
+- `shadow-cljs compile test` / `npm run test` for the test runner (existing)
+
+## Design Decisions (locked in)
+
+- **First-occurrence wins** on repeated text. "The" appearing 50 times highlights the first. Accepted trade-off; the composer pill still carries the correct text. Disambiguation using `:range :start-text` / `:start-offset` is punted to a later iteration if it becomes a real problem.
+- **No schema changes.** Highlights use `:selection :text` only. The `StagedSelection` TODO (source-anchor shape) stays open for a later slice.
+- **Clear-and-rebuild per render.** No diffing of what changed. `CSS.highlights` is a `Map`; `.clear()` + re-add is O(N) where N is the handful of staged selections.
+- **Hook on the non-diff article only.** In diff mode, review is modal — no staging interaction, no need to maintain highlights. The existing diff article stays untouched.
+- **Silent on no-match.** A staged selection whose text no longer appears in the document (e.g., document was edited) produces no highlight, no warning. The composer pill remains; the user can unstage it.
+- **Match is plain string `indexOf`** against the flattened DOM text. The rendered text already matches what the user selected (both come from the same rendered pass), so exotic unicode-normalization concerns are out of scope.
+
+## File Structure
+
+**Create:**
+- `src/gremllm/renderer/ui/document/highlights.cljs` — pure `locate-range-in-flat-text` + DOM helper `flatten-article` + effect `sync!`. ~70 lines.
+- `test/gremllm/renderer/ui/document/highlights_test.cljs` — unit tests for `locate-range-in-flat-text` against synthetic flat-text structures. ~80 lines.
+
+**Modify:**
+- `src/gremllm/renderer/ui/document.cljs` — change `render-document` signature to accept `staged-selections`; attach `:replicant/on-render` hook on the non-diff `[:article]`.
+- `src/gremllm/renderer/ui.cljs` (around line 47) — pull `staged-selections` from active topic via existing `topic-state/get-staged-selections`, thread into `render-document`.
+- `resources/public/index.html` — add `::highlight(staged-excerpt) { … }` CSS rule in the existing `<style>` block.
+
+**Untouched:**
+- `src/gremllm/schema.cljs` — no schema changes.
+- `src/gremllm/renderer/actions/topic.cljs` — staging actions unchanged.
+- `src/gremllm/renderer/ui/document/diffs.cljs` — no interaction with diff pipeline.
+
+---
+
+## Tasks
+
+### Task 1: Pure range-locator function (TDD)
+
+**Files:**
+- Create: `src/gremllm/renderer/ui/document/highlights.cljs`
+- Create: `test/gremllm/renderer/ui/document/highlights_test.cljs`
+
+The `locate-range-in-flat-text` function takes a flat-text index and a search string. The index represents the article's text nodes concatenated, with a mapping back to individual nodes. The function finds the first occurrence of the search string and returns the DOM coordinates: start node + offset, end node + offset. If the search string isn't present, it returns `nil`.
+
+- [ ] **Step 1.1: Write the failing tests**
+
+Create `test/gremllm/renderer/ui/document/highlights_test.cljs`:
+
+```clojure
+(ns gremllm.renderer.ui.document.highlights-test
+  (:require [cljs.test :refer-macros [deftest is testing]]
+            [gremllm.renderer.ui.document.highlights :as h]))
+
+;; Synthetic flat-text index: {:text "..." :spans [[node-ref start end] ...]}
+;; node-ref is an opaque id standing in for a real Text node; the pure function
+;; must not look inside it. start/end are [start end) offsets in :text.
+
+(defn- span [id s e] [id s e])
+
+(deftest locate-range-single-node-test
+  (testing "match inside one text node"
+    (let [index {:text  "hello world"
+                 :spans [(span :n1 0 11)]}
+          r     (h/locate-range-in-flat-text index "world")]
+      (is (= {:start-node :n1 :start-offset 6
+              :end-node   :n1 :end-offset   11}
+             r))))
+
+  (testing "no match returns nil"
+    (let [index {:text  "hello world"
+                 :spans [(span :n1 0 11)]}]
+      (is (nil? (h/locate-range-in-flat-text index "absent"))))))
+
+(deftest locate-range-cross-node-test
+  (testing "match spans two adjacent text nodes"
+    ;; "Our " in :n1, "Gremllm" in :n2 (strong), " crew" in :n3
+    ;; Selected text: "Our Gremllm crew" → crosses all three.
+    (let [index {:text  "Our Gremllm crew"
+                 :spans [(span :n1 0 4)
+                         (span :n2 4 11)
+                         (span :n3 11 16)]}
+          r     (h/locate-range-in-flat-text index "Our Gremllm crew")]
+      (is (= {:start-node :n1 :start-offset 0
+              :end-node   :n3 :end-offset   5}
+             r))))
+
+  (testing "match ends mid-node"
+    ;; Selection: "Our Greml" — ends inside :n2 at local offset 5
+    (let [index {:text  "Our Gremllm crew"
+                 :spans [(span :n1 0 4)
+                         (span :n2 4 11)
+                         (span :n3 11 16)]}
+          r     (h/locate-range-in-flat-text index "Our Greml")]
+      (is (= {:start-node :n1 :start-offset 0
+              :end-node   :n2 :end-offset   5}
+             r)))))
+
+(deftest locate-range-first-occurrence-test
+  (testing "repeated text uses first occurrence"
+    (let [index {:text  "the cat and the dog"
+                 :spans [(span :n1 0 19)]}
+          r     (h/locate-range-in-flat-text index "the")]
+      (is (= {:start-node :n1 :start-offset 0
+              :end-node   :n1 :end-offset   3}
+             r)))))
+
+(deftest locate-range-empty-and-edge-test
+  (testing "empty search string returns nil"
+    (let [index {:text "hello" :spans [(span :n1 0 5)]}]
+      (is (nil? (h/locate-range-in-flat-text index "")))))
+
+  (testing "empty index returns nil"
+    (is (nil? (h/locate-range-in-flat-text {:text "" :spans []} "anything")))))
+```
+
+- [ ] **Step 1.2: Create the stub file so the tests compile**
+
+Create `src/gremllm/renderer/ui/document/highlights.cljs`:
+
+```clojure
+(ns gremllm.renderer.ui.document.highlights)
+
+(defn locate-range-in-flat-text
+  "Finds the first occurrence of search-text within index's flat text.
+   index = {:text String :spans [[node-ref start-offset end-offset] ...]}
+   where [start end) are offsets in :text and node-ref stands in for a DOM
+   Text node. Returns {:start-node :start-offset :end-node :end-offset} with
+   offsets local to their nodes, or nil if not found."
+  [index search-text]
+  nil)
+```
+
+- [ ] **Step 1.3: Run tests and verify they fail**
+
+Run: `npm run test`
+Expected: all four `locate-range-*` tests FAIL with assertion mismatch against `nil`.
+
+- [ ] **Step 1.4: Implement `locate-range-in-flat-text`**
+
+Replace the stub in `src/gremllm/renderer/ui/document/highlights.cljs`:
+
+```clojure
+(ns gremllm.renderer.ui.document.highlights)
+
+(defn- span-at
+  "Returns the [node start end] entry whose [start end) interval contains
+   offset. Uses linear scan; spans are few per document."
+  [spans offset]
+  (some (fn [[_ s e :as span]]
+          (when (and (<= s offset) (< offset e)) span))
+        spans))
+
+(defn locate-range-in-flat-text
+  "Finds the first occurrence of search-text within index's flat text.
+   index = {:text String :spans [[node-ref start-offset end-offset] ...]}
+   Returns {:start-node :start-offset :end-node :end-offset} with offsets
+   local to their node, or nil if not found / empty input."
+  [{:keys [text spans]} search-text]
+  (when (and (seq search-text) (seq spans))
+    (let [idx (.indexOf text search-text)]
+      (when (not (neg? idx))
+        (let [end-idx            (+ idx (count search-text))
+              ;; end-idx may equal text length (exclusive); for span lookup
+              ;; treat the last char position as (end-idx - 1).
+              [start-node s-s _] (span-at spans idx)
+              [end-node e-s _]   (span-at spans (dec end-idx))]
+          (when (and start-node end-node)
+            {:start-node   start-node
+             :start-offset (- idx s-s)
+             :end-node     end-node
+             :end-offset   (- end-idx e-s)}))))))
+```
+
+- [ ] **Step 1.5: Run tests and verify they pass**
+
+Run: `npm run test`
+Expected: all `locate-range-*` tests PASS.
+
+- [ ] **Step 1.6: Commit**
+
+```bash
+git add src/gremllm/renderer/ui/document/highlights.cljs \
+        test/gremllm/renderer/ui/document/highlights_test.cljs
+git commit -m "feat(highlights): pure locate-range-in-flat-text for staged selections
+
+Locates a search string inside a flat-text index of DOM text nodes and
+returns start/end node+offset coordinates. First-occurrence wins; repeated
+text, missing text, and empty inputs return nil. Unit-tested against
+synthetic indices covering single-node, cross-node, mid-node, and
+first-occurrence cases."
+```
+
+---
+
+### Task 2: DOM article flattener
+
+**Files:**
+- Modify: `src/gremllm/renderer/ui/document/highlights.cljs`
+
+`flatten-article` walks an article element's text nodes with `TreeWalker(article, NodeFilter.SHOW_TEXT)` and returns the same flat-text index shape the pure locator consumes. This function is DOM-bound and not unit-tested directly — it's covered by Task 4's manual verification.
+
+- [ ] **Step 2.1: Add `flatten-article` to highlights.cljs**
+
+Append to `src/gremllm/renderer/ui/document/highlights.cljs`:
+
+```clojure
+(defn flatten-article
+  "Walks article's descendant Text nodes in document order and returns
+   {:text concatenated-text :spans [[node start end] ...]}. start/end are
+   offsets into the concatenated text."
+  [article]
+  (let [walker (.createTreeWalker js/document
+                                  article
+                                  js/NodeFilter.SHOW_TEXT)]
+    (loop [node   (.nextNode walker)
+           pos    0
+           parts  []
+           spans  []]
+      (if (nil? node)
+        {:text  (.join (clj->js parts) "")
+         :spans spans}
+        (let [text (.-nodeValue node)
+              len  (.-length text)]
+          (recur (.nextNode walker)
+                 (+ pos len)
+                 (conj parts text)
+                 (conj spans [node pos (+ pos len)])))))))
+```
+
+- [ ] **Step 2.2: Type-check via compile**
+
+Run: `npm run test`
+Expected: compile succeeds, existing tests still PASS (no new tests added in this task).
+
+- [ ] **Step 2.3: Commit**
+
+```bash
+git add src/gremllm/renderer/ui/document/highlights.cljs
+git commit -m "feat(highlights): flatten-article walks article text nodes
+
+Produces the flat-text index consumed by locate-range-in-flat-text using
+TreeWalker(SHOW_TEXT). DOM-bound; validated via the integration path in
+sync! rather than unit tests."
+```
+
+---
+
+### Task 3: Highlight sync effect
+
+**Files:**
+- Modify: `src/gremllm/renderer/ui/document/highlights.cljs`
+
+`sync!` is the thin imperative shell. Given an article element and a vector of staged selections, it rebuilds the `CSS.highlights` entry named `"staged-excerpt"`. Call path: flatten → per-selection locate → construct `Range` → register in `Highlight` → set `CSS.highlights`.
+
+- [ ] **Step 3.1: Add `sync!` to highlights.cljs**
+
+Append to `src/gremllm/renderer/ui/document/highlights.cljs`:
+
+```clojure
+(def ^:private highlight-name "staged-excerpt")
+
+(defn- make-range
+  "Builds a DOM Range from a locate-range result and the containing document."
+  [{:keys [start-node start-offset end-node end-offset]}]
+  (let [r (.createRange js/document)]
+    (.setStart r start-node start-offset)
+    (.setEnd   r end-node   end-offset)
+    r))
+
+(defn- selection-texts [staged-selections]
+  (keep #(get-in % [:selection :text]) staged-selections))
+
+(defn sync!
+  "Rebuilds the 'staged-excerpt' highlight registry entry from the given
+   staged-selections against article's current text content. Safe to call
+   on every render; missing matches are silently dropped."
+  [article staged-selections]
+  (let [index  (flatten-article article)
+        ranges (->> (selection-texts staged-selections)
+                    (keep #(locate-range-in-flat-text index %))
+                    (mapv make-range))
+        hl     (js/Highlight.)]
+    (doseq [r ranges] (.add hl r))
+    (.set js/CSS.highlights highlight-name hl)))
+```
+
+- [ ] **Step 3.2: Add a dismiss helper for unmount**
+
+Append to `src/gremllm/renderer/ui/document/highlights.cljs`:
+
+```clojure
+(defn clear!
+  "Removes the 'staged-excerpt' highlight registry entry. Call on article
+   unmount to avoid leaving ranges that point to detached nodes."
+  []
+  (.delete js/CSS.highlights highlight-name))
+```
+
+- [ ] **Step 3.3: Verify compile**
+
+Run: `npm run test`
+Expected: compile succeeds, tests still PASS.
+
+- [ ] **Step 3.4: Commit**
+
+```bash
+git add src/gremllm/renderer/ui/document/highlights.cljs
+git commit -m "feat(highlights): sync! rebuilds CSS highlight registry per render
+
+Given an article element + staged selections, sync! flattens the article,
+locates each staged :text, constructs a DOM Range, and registers all ranges
+under the 'staged-excerpt' Highlight. clear! deletes the entry on unmount.
+Missing matches are silently dropped (accepted edge case)."
+```
+
+---
+
+### Task 4: Lifecycle hook in render-document
+
+**Files:**
+- Modify: `src/gremllm/renderer/ui/document.cljs`
+
+Thread `staged-selections` into `render-document`, and attach a `:replicant/on-render` + `:replicant/on-unmount` hook on the non-diff `[:article]`. The hook receives the live DOM node and the current staged selections via closure.
+
+- [ ] **Step 4.1: Update render-document signature and hook the article**
+
+Replace `src/gremllm/renderer/ui/document.cljs` entirely:
+
+```clojure
+(ns gremllm.renderer.ui.document
+  (:require [gremllm.renderer.ui.markdown :as md]
+            [gremllm.renderer.ui.document.diffs :as diffs]
+            [gremllm.renderer.ui.document.highlights :as highlights]))
+
+(defn- render-diff-segments [segments]
+  (into [:div]
+        (mapv (fn [{:keys [type content old-text new-text]}]
+                (case type
+                  :text       [:span content]
+                  :diff-block [:div.diff-block
+                               [:del old-text]
+                               [:ins new-text]
+                               [:div.diff-controls
+                                [:button {:on {:click [[:topic.actions/accept-diff
+                                                        {:old-text old-text :new-text new-text}]]}}
+                                 "Accept"]
+                                [:button {:class "secondary outline"
+                                          :on {:click [[:topic.actions/reject-diff
+                                                        {:old-text old-text :new-text new-text}]]}}
+                                 "Reject"]]]))
+              segments)))
+
+(defn- on-render-sync [staged-selections]
+  (fn [{:replicant/keys [node life-cycle]}]
+    (if (= :replicant.life-cycle/unmount life-cycle)
+      (highlights/clear!)
+      (highlights/sync! node staged-selections))))
+
+(defn render-document [content pending-diffs staged-selections]
+  (if content
+    (if (seq pending-diffs)
+      (let [segments (diffs/compose content pending-diffs)]
+        ;; Intentionally no selection capture in diff mode: review is modal here,
+        ;; so accept/reject is the only allowed interaction (see 58cd32e).
+        [:article.diff-mode (render-diff-segments segments)])
+      [:article {:on                   {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
+                 :replicant/on-render  (on-render-sync staged-selections)}
+       (md/markdown->hiccup content)])
+    [:article
+     [:p {:style {:color      "var(--pico-muted-color)"
+                  :font-style "italic"}}
+      "No document in this workspace."]
+     [:button {:on {:click [[:document.actions/create]]}}
+      "Create Document"]]))
+```
+
+**Why on-render over on-mount + on-update:** Replicant's `:replicant/on-render` fires on mount, update, and unmount — one hook covers all three. We branch on `:replicant/life-cycle` to call `clear!` on unmount and `sync!` otherwise.
+
+**Why staged-selections is passed as a positional arg, not pulled from state:** `render-document` is pure. State reading lives in `renderer/ui.cljs` which already composes state into render inputs.
+
+- [ ] **Step 4.2: Verify compile**
+
+Run: `npm run test`
+Expected: compile succeeds. Tests for `renderer/ui/document_test.cljs` may fail if they call `render-document` with the old two-arg signature. If so, fix them in-place to pass an empty vector for `staged-selections`.
+
+- [ ] **Step 4.3: Commit**
+
+```bash
+git add src/gremllm/renderer/ui/document.cljs \
+        test/gremllm/renderer/ui/document_test.cljs
+git commit -m "feat(document): wire highlights sync into article lifecycle
+
+render-document now accepts staged-selections and attaches a
+:replicant/on-render hook on the non-diff article. The hook calls
+highlights/sync! on mount/update and highlights/clear! on unmount.
+Diff-mode article is intentionally untouched — review is modal."
+```
+
+---
+
+### Task 5: Thread staged-selections from ui.cljs
+
+**Files:**
+- Modify: `src/gremllm/renderer/ui.cljs` (around line 30 and line 47)
+
+- [ ] **Step 5.1: Pull staged-selections from state and pass to render-document**
+
+In `src/gremllm/renderer/ui.cljs`, inside `render-workspace`'s `let` binding block, add:
+
+```clojure
+staged-selections     (topic-state/get-staged-selections state)
+```
+
+(alongside the other `topic-state/...` bindings near line 24-25).
+
+And update the call to `render-document` (around line 47) from:
+
+```clojure
+(document-ui/render-document document-content pending-diffs)
+```
+
+to:
+
+```clojure
+(document-ui/render-document document-content pending-diffs staged-selections)
+```
+
+- [ ] **Step 5.2: Verify compile**
+
+Run: `npm run test`
+Expected: compile succeeds, all tests PASS.
+
+- [ ] **Step 5.3: Commit**
+
+```bash
+git add src/gremllm/renderer/ui.cljs
+git commit -m "feat(ui): pass staged-selections to render-document
+
+Pulls the active topic's staged selections via get-staged-selections and
+threads them into render-document so the highlight sync hook has the data
+it needs."
+```
+
+---
+
+### Task 6: CSS rule for ::highlight(staged-excerpt)
+
+**Files:**
+- Modify: `resources/public/index.html`
+
+Add the CSS pseudo-element rule that paints registered highlights. Use a `color-mix` of an existing TVA token, distinct from the diff accept/reject colors.
+
+- [ ] **Step 6.1: Add the CSS rule**
+
+In `resources/public/index.html`, inside the existing `<style>` block (near the `.diff-block` rules around line 260-290), add:
+
+```css
+::highlight(staged-excerpt) {
+    background-color: color-mix(in srgb, var(--tva-amber) 18%, transparent);
+    border-radius: 2px;
+}
+```
+
+**Why amber:** Distinct from diff-block's orange (`tva-orange` for `<del>`) and teal (`tva-teal` for `<ins>`). Amber is already part of the palette (`--tva-amber`) and reads as "attention without alarm."
+
+**Why no border or padding:** `::highlight()` only supports a limited set of properties (`color`, `background-color`, `text-decoration`, and text-style variants). Layout properties are ignored by the spec.
+
+- [ ] **Step 6.2: Commit**
+
+```bash
+git add resources/public/index.html
+git commit -m "feat(highlights): add ::highlight(staged-excerpt) CSS rule
+
+Paints registered highlights with a soft amber background, distinct from
+diff-block's orange/teal."
+```
+
+---
+
+### Task 7: End-to-end manual verification
+
+**Files:** none (no code changes)
+
+- [ ] **Step 7.1: Start the dev environment**
+
+Run: `npm run dev`
+
+Wait for the Electron window to open.
+
+- [ ] **Step 7.2: Prepare a workspace with `document.md`**
+
+Open a workspace folder containing a `document.md`. If none exists, click "Create Document" — a template is written to disk.
+
+- [ ] **Step 7.3: Verify single-paragraph highlight**
+
+- Select a full paragraph in the document panel.
+- Click "Stage" in the popover.
+- Expected: the paragraph gets an amber background (soft, ~18% opacity). A pill with the paragraph text appears above the chat composer.
+
+- [ ] **Step 7.4: Verify cross-formatting highlight**
+
+- Find or insert a paragraph containing bold or italic text (e.g., `"The **Gremllm** crew ships fast"`).
+- Select text spanning the bold run (e.g., from `"The"` through `"crew"`).
+- Click "Stage."
+- Expected: the highlight paints a continuous amber band across the plain + bold text without visible seams.
+
+- [ ] **Step 7.5: Verify multiple staged highlights coexist**
+
+- Stage a second, non-overlapping selection.
+- Expected: both regions highlighted simultaneously; two pills in the composer.
+
+- [ ] **Step 7.6: Verify unstage removes highlight**
+
+- Click the ✕ on one pill in the composer.
+- Expected: that region's highlight disappears; the other remains.
+
+- [ ] **Step 7.7: Verify topic switch**
+
+- Create a new topic in the sidebar.
+- Expected: both composer pills and the document highlights clear.
+- Switch back to the original topic.
+- Expected: the remaining pill and its highlight reappear.
+
+- [ ] **Step 7.8: Verify diff-mode coexistence**
+
+- Ask the AI to edit the document so a `tool-call-update` produces a pending diff.
+- Expected: the article enters diff mode (`.diff-mode` class), the diff-block UI renders. Existing highlights in the non-diff view don't bleed through (diff-mode article is a separate render branch with no hook).
+- Accept or reject the diff to return to non-diff mode.
+- Expected: on return, highlights re-render for the still-staged selections.
+
+- [ ] **Step 7.9: Verify cross-table selection (stretch)**
+
+- If `document.md` contains a markdown table, select text from one cell into another.
+- Click "Stage."
+- Expected: the highlight paints across cell boundaries. (This is the cross-element case the Custom Highlight API handles for free.)
+
+- [ ] **Step 7.10: If any verification step fails, file a follow-up and do NOT ship**
+
+Document the failure mode and decide whether to patch inline or revert. Do not commit partial fixes on top of a broken verification.
+
+---
+
+## Risks and Known Limitations
+
+| Risk | Mitigation |
+|---|---|
+| Document edited after staging — text no longer matches | Silent no-highlight; pill remains in composer. User can unstage. Acceptable for Scooter. |
+| Repeated text (e.g., "the") lands first-occurrence | Accepted trade-off. Document has a path to disambiguation later via `:range :start-text`/`:start-offset`. |
+| Replicant reuses the `<article>` node across diff-mode transitions, leaving stale ranges pointing to detached children | `sync!` clears the registry entry before adding, so any re-render rebuilds. `clear!` on unmount handles the case where the node goes away entirely. |
+| `CSS.highlights` API not available in the runtime | Electron ships Chromium ≥ 120; Custom Highlight API is Chrome 105+. Guaranteed available. |
+| Highlights don't update when scrolling | They don't need to — `CSS.highlights` paints via the browser's native Range-tracking. |
+
+## Verification Summary
+
+Run `npm run test` after each task's implementation step and expect all tests to pass. After Task 7's manual verification, the feature is complete.
+
+The plan is conservative — each task produces a working intermediate state. If we stop after Task 3, we have a working sync! function with no callers. If we stop after Task 5, the function is wired but the highlight CSS isn't loaded (invisible highlights, no user-facing change). Only Task 6 makes the feature visible. This ordering lets us commit each task independently.
