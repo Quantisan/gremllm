@@ -62,3 +62,35 @@
 
   (testing "empty index returns nil"
     (is (nil? (h/locate-range-in-flat-text {:text "" :spans []} "anything")))))
+
+(deftest locate-range-cross-block-test
+  ;; Regression tests for cross-block selections (e.g., heading → list item).
+  ;; Selection.toString() inserts \n between block elements, but flatten-article
+  ;; concatenates text-node values with no separator. These tests currently FAIL
+  ;; (return nil) — they document the bug. Fix is a separate slice.
+
+  (testing "selection crosses heading into list item"
+    ;; Rendered DOM for "# Title\n\n- Item one":
+    ;;   <h1>Title</h1><ul><li>Item one</li></ul>
+    ;; TreeWalker(SHOW_TEXT) yields two text nodes: "Title" and "Item one".
+    ;; getSelection().toString() across both: "Title\nItem one".
+    (let [index {:text  "TitleItem one"
+                 :spans [(span :h1-text 0 5)
+                         (span :li-text 5 13)]}
+          r     (h/locate-range-in-flat-text index "Title\nItem one")]
+      (is (= {:start-node :h1-text :start-offset 0
+              :end-node   :li-text :end-offset   8}
+             r))))
+
+  (testing "selection crosses two paragraphs"
+    ;; Rendered DOM for "First para.\n\nSecond para.":
+    ;;   <p>First para.</p><p>Second para.</p>
+    ;; getSelection().toString() across both: "First para.\n\nSecond para."
+    ;; (double newline between paragraph-level blocks).
+    (let [index {:text  "First para.Second para."
+                 :spans [(span :p1 0 11)
+                         (span :p2 11 23)]}
+          r     (h/locate-range-in-flat-text index "First para.\n\nSecond para.")]
+      (is (= {:start-node :p1 :start-offset 0
+              :end-node   :p2 :end-offset   12}
+             r)))))
