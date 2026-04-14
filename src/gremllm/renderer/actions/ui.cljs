@@ -1,6 +1,7 @@
 (ns gremllm.renderer.actions.ui
   (:require [gremllm.schema :as schema]
             [gremllm.renderer.state.form :as form-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]))
 
 ;; UI Actions
@@ -22,14 +23,18 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when-not (empty? text)
-      (let [new-user-message {:id   (schema/generate-message-id)
-                              :type :user
-                              :text text}]
-        [[:messages.actions/add-to-chat new-user-message]
+      (let [staged (or (topic-state/get-staged-selections state) [])
+            base-message {:id   (schema/generate-message-id)
+                          :type :user
+                          :text text}
+            message (if (seq staged)
+                      (assoc base-message :context {:excerpts (vec staged)})
+                      base-message)]
+        [[:messages.actions/add-to-chat message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
          [:ui.actions/scroll-chat-to-bottom]
-         [:acp.actions/send-prompt text]]))))
+         [:acp.actions/send-prompt message]]))))
 
 ;; Pure action for scrolling chat to bottom
 (defn scroll-chat-to-bottom [_state]
