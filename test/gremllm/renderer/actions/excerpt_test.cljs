@@ -59,3 +59,75 @@
             [:effects/save excerpt-state/anchor-path nil]
             [:effects/save excerpt-state/locator-hints-path nil]]
            (excerpt/dismiss-popover {})))))
+
+(deftest capture->excerpt-same-block-test
+  (testing "builds DocumentExcerpt from captured text and same-block locator-hints"
+    (let [captured {:text "launched on a Tuesday"
+                    :range-count 1
+                    :anchor-node "#text"
+                    :anchor-offset 4
+                    :focus-node "#text"
+                    :focus-offset 25
+                    :range {}}
+          hints locator-hints
+          result (excerpt/capture->excerpt captured hints "abc-123")]
+      (is (= "abc-123" (:id result)))
+      (is (= "launched on a Tuesday" (:text result)))
+      (is (= hints (:locator result))))))
+
+(deftest capture->excerpt-cross-block-test
+  (testing "cross-block excerpt has no offsets"
+    (let [captured {:text "Gremllm...Our Gremllm"}
+          hints {:document-relative-path "document.md"
+                 :start-block {:kind :heading
+                               :index 1
+                               :start-line 1
+                               :end-line 1
+                               :block-text-snippet "Gremllm Launch Log"}
+                 :end-block {:kind :paragraph
+                             :index 2
+                             :start-line 3
+                             :end-line 3
+                             :block-text-snippet "Our Gremllm..."}}
+          result (excerpt/capture->excerpt captured hints "xyz")]
+      (is (not (contains? (:locator result) :start-offset))))))
+
+(deftest stage-builds-document-excerpt-test
+  (testing "stage reads captured + locator-hints, dispatches staging.actions/stage with a DocumentExcerpt"
+    (let [state {:excerpt {:captured {:text "hello"}
+                           :locator-hints {:document-relative-path "document.md"
+                                           :start-block {:kind :paragraph
+                                                         :index 2
+                                                         :start-line 3
+                                                         :end-line 3
+                                                         :block-text-snippet "hello world"}
+                                           :end-block {:kind :paragraph
+                                                       :index 2
+                                                       :start-line 3
+                                                       :end-line 3
+                                                       :block-text-snippet "hello world"}
+                                           :start-offset 0
+                                           :end-offset 5}}}
+          result (excerpt/stage state)
+          [[stage-action excerpt] [dismiss-action]] result]
+      (is (= :staging.actions/stage stage-action))
+      (is (= "hello" (:text excerpt)))
+      (is (string? (:id excerpt)))
+      (is (= {:document-relative-path "document.md"
+              :start-block {:kind :paragraph
+                            :index 2
+                            :start-line 3
+                            :end-line 3
+                            :block-text-snippet "hello world"}
+              :end-block {:kind :paragraph
+                          :index 2
+                          :start-line 3
+                          :end-line 3
+                          :block-text-snippet "hello world"}
+              :start-offset 0
+              :end-offset 5}
+             (:locator excerpt)))
+      (is (= :excerpt.actions/dismiss-popover dismiss-action)))))
+
+(deftest stage-without-capture-is-noop-test
+  (is (nil? (excerpt/stage {}))))

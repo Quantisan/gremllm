@@ -46,8 +46,10 @@
   [state topic-id]
   (let [topic-id (or topic-id (topic-state/get-active-topic-id state))
         messages (when topic-id
-                   (topic-state/get-topic-field state topic-id :messages))]
-    (when (seq messages)
+                   (topic-state/get-topic-field state topic-id :messages))
+        staged-selections (when topic-id
+                            (topic-state/get-topic-field state topic-id :staged-selections))]
+    (when (or (seq messages) (seq staged-selections))
       [[:topic.effects/save-topic topic-id]])))
 
 (defn append-pending-diffs [state diffs]
@@ -56,30 +58,28 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
-;; TODO(S7.3 persistence): These staging actions currently only mutate renderer
-;; state via :effects/save. A later manual or incidental topic save will persist
-;; :staged-selections because the whole topic is serialized through PersistedTopic,
-;; but stage/unstage/clear do not themselves mark the topic unsaved or trigger
-;; auto-save like other persisted topic mutations. Route staged-selection updates
-;; through the shared persisted-topic mutation flow instead of relying on a later
-;; save to pick them up.
-(defn stage [state selection]
+(defn stage [state excerpt]
   (let [topic-id (topic-state/get-active-topic-id state)
         path     (topic-state/staged-selections-path topic-id)
-        existing (or (get-in state path) [])
-        item     {:id (str "staged-" (random-uuid)) :selection selection}]
-    [[:effects/save path (conj existing item)]]))
+        existing (or (get-in state path) [])]
+    [[:effects/save path (conj existing excerpt)]
+     [:topic.actions/mark-active-unsaved]
+     [:topic.effects/auto-save topic-id]]))
 
 (defn unstage [state id]
   (let [topic-id (topic-state/get-active-topic-id state)
         path     (topic-state/staged-selections-path topic-id)
         existing (or (get-in state path) [])]
-    [[:effects/save path (vec (remove #(= (:id %) id) existing))]]))
+    [[:effects/save path (vec (remove #(= (:id %) id) existing))]
+     [:topic.actions/mark-active-unsaved]
+     [:topic.effects/auto-save topic-id]]))
 
 (defn clear-staged [state]
   (let [topic-id (topic-state/get-active-topic-id state)
         path     (topic-state/staged-selections-path topic-id)]
-    [[:effects/save path []]]))
+    [[:effects/save path []]
+     [:topic.actions/mark-active-unsaved]
+     [:topic.effects/auto-save topic-id]]))
 
 (defn clear-staged-across-topics [state]
   (mapv (fn [topic-id]
