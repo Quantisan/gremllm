@@ -35,6 +35,13 @@ ensure_tmp_output() {
       exit 1
       ;;
   esac
+
+  case "$output_path" in
+    ../*|*/../*|*/..)
+      echo "prepare_fixture.sh: output must live under /tmp/gremllm-*: $output_path" >&2
+      exit 1
+      ;;
+  esac
 }
 
 copy_source() {

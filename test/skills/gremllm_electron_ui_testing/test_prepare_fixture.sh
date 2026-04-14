@@ -32,7 +32,7 @@ assert_dir_exists "$file_workspace/topics"
   file_workspace="$(assert_command_fails "$SCRIPT" --source "docs/superpowers/plans/2026-04-14-gremllm-electron-ui-testing-skill.md")"
 )
 
-folder_workspace_relative="$("$SCRIPT" --source "docs/superpowers/plans/2026-04-14-gremllm-electron-ui-testing-skill.md")"
+folder_workspace_relative="$("$SCRIPT" --source "docs/plans/2026-04-14-gremllm-electron-ui-testing-skill.md")"
 assert_path_prefix "$folder_workspace_relative" "/tmp/gremllm-"
 assert_file_contains "$folder_workspace_relative/document.md" "Gremllm Electron UI Testing Skill Implementation Plan"
 
