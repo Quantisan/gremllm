@@ -11,10 +11,10 @@
 (defn get-anchor [state]
   (get-in state anchor-path))
 
-(def locator-debug-path [:excerpt :locator-debug])
+(def locator-hints-path [:excerpt :locator-hints])
 
-(defn get-locator-debug [state]
-  (get-in state locator-debug-path))
+(defn get-locator-hints [state]
+  (get-in state locator-hints-path))
 
 (defn popover-position
   "Derives popover {top, left} from selection geometry and anchor context.

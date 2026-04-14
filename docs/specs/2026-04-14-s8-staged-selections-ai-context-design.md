@@ -22,6 +22,7 @@ This slice builds on S7.1-S7.4. It does not attempt exact markdown-source anchor
 - Staged selections are paired references for the user instruction, not generic background context.
 - Clearing behavior is MVP-simple: keep staged selections during the in-flight request, clear them only on prompt success, leave them intact on failure.
 - Document location metadata is advisory only for S8. It should use the strongest rendered-block evidence now available, but it must not claim precise source anchoring.
+- The old spike/debug naming is retired. Renderer-local references should use neutral locator naming such as `:locator-hints` and locator extraction/sync helpers, not `locator-debug` or `selection-debug`.
 - `DocumentExcerpt.locator` uses an explicit rendered-block start/end range abstraction even for same-block selections.
 - Same-block selections may carry rendered-block offsets. Cross-block selections never carry offsets.
 - `:block-text-snippet` stays in the locator because short or repeated selections need more block context than `:text` alone.
@@ -146,7 +147,7 @@ Ephemeral excerpt-related state becomes:
 - `[:excerpt :anchor]` -> popover anchor context
 - `[:excerpt :locator-hints]` -> start/end block metadata plus optional same-block offsets
 
-The spike-only diagnostic fields such as selection direction, boundary node names, and common ancestor should not be part of the persisted S8 design.
+The spike-only diagnostic fields such as selection direction, boundary node names, and common ancestor should not be part of the persisted S8 design. If any renderer-local implementation still carries them transiently inside the locator-hints payload, treat that as an implementation detail rather than part of the S8 domain model.
 
 ### 2. Stage
 

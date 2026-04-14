@@ -9,7 +9,7 @@
                         "t2" {:id "t2" :staged-selections [{:id "b"}]}}
                :excerpt {:captured {:text "Dispatch"}
                          :anchor {:panel-scroll-top 20}
-                         :locator-debug {:block-index 1}}}
+                         :locator-hints {:block-index 1}}}
         effects (document/set-content state "# Replaced")]
     (testing "saves the new content first"
       (is (= [:effects/save document-state/content-path "# Replaced"]

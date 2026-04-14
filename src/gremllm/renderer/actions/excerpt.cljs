@@ -1,18 +1,17 @@
 (ns gremllm.renderer.actions.excerpt
   (:require [gremllm.renderer.state.excerpt :as excerpt-state]))
 
-(defn capture [_state {:keys [selection anchor locator-debug]}]
+(defn capture [_state {:keys [selection anchor locator-hints]}]
   (if selection
-    (cond-> [[:effects/save excerpt-state/captured-path selection]
-             [:effects/save excerpt-state/anchor-path anchor]
-             [:effects/save excerpt-state/locator-debug-path locator-debug]]
-      locator-debug (conj [:ui.effects/console-log "[excerpt-locator-spike]" locator-debug]))
+    [[:effects/save excerpt-state/captured-path selection]
+     [:effects/save excerpt-state/anchor-path anchor]
+     [:effects/save excerpt-state/locator-hints-path locator-hints]]
     [[:excerpt.actions/dismiss-popover]]))
 
 (defn dismiss-popover [_state]
   [[:effects/save excerpt-state/captured-path nil]
    [:effects/save excerpt-state/anchor-path nil]
-   [:effects/save excerpt-state/locator-debug-path nil]])
+   [:effects/save excerpt-state/locator-hints-path nil]])
 
 (defn stage [state]
   (when-let [captured (get-in state excerpt-state/captured-path)]

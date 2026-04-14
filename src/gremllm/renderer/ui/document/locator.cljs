@@ -84,7 +84,7 @@
       {:start-offset start
        :end-offset   (+ start (count selected-text))})))
 
-(defn selection-debug [start-block end-block selected-text]
+(defn selection-locator [start-block end-block selected-text]
   (when (seq selected-text)
     (let [base {:block-kind       (:kind start-block)
                 :block-index      (:index start-block)
@@ -98,7 +98,7 @@
   (let [blocks   (block-records markdown-text)
         elements (array-seq (.querySelectorAll article block-selector))]
     (when (not= (count elements) (count blocks))
-      (js/console.warn "[excerpt-locator-spike] DOM/block count mismatch"
+      (js/console.warn "[document-locator] DOM/block count mismatch"
                        (count elements) "elements," (count blocks) "blocks"))
     (doseq [[el block] (map vector elements blocks)]
       (.setAttribute el "data-grem-block-kind" (name (:kind block)))
@@ -106,7 +106,7 @@
       (.setAttribute el "data-grem-block-start-line" (str (:start-line block)))
       (.setAttribute el "data-grem-block-end-line" (str (:end-line block))))))
 
-(defn selection-debug-from-dom [article sel]
+(defn selection-locator-from-dom [article sel]
   (let [range         (.getRangeAt sel 0)
         start-element (some-> (.-startContainer range) .-parentElement (.closest block-selector))
         end-element   (some-> (.-endContainer range) .-parentElement (.closest block-selector))
@@ -126,4 +126,4 @@
        :focus-node          (some-> (.-focusNode sel) .-nodeName)
        :focus-offset        (.-focusOffset sel)
        :common-ancestor     (some-> (.-commonAncestorContainer range) .-nodeName)
-       :locator             (selection-debug start-block end-block (.toString sel))})))
+       :locator             (selection-locator start-block end-block (.toString sel))})))

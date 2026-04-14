@@ -83,7 +83,7 @@
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
         {:selection     (codec/captured-selection-from-dom sel)
          :anchor        (when panel (codec/anchor-context-from-dom panel))
-         :locator-debug (when article (locator/selection-debug-from-dom article sel))}))))
+         :locator-hints (when article (locator/selection-locator-from-dom article sel))}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
@@ -109,10 +109,6 @@
 (nxr/register-effect! :ui.effects/console-error
   (fn [_ _ & args]
     (apply js/console.error args)))
-
-(nxr/register-effect! :ui.effects/console-log
-  (fn [_ _ & args]
-    (apply js/console.log args)))
 
 ;; Workspace reload effect
 (nxr/register-effect! :workspace.effects/reload
