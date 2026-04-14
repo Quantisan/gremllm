@@ -87,7 +87,7 @@
     r))
 
 (defn- selection-texts [staged-selections]
-  (keep #(get-in % [:selection :text]) staged-selections))
+  (keep :text staged-selections))
 
 ;; TODO: is there a simpler way to do this?
 (defn sync!
