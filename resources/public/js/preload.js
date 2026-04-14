@@ -36,6 +36,10 @@ const createIPCBoundary = (channel) => {
 	};
 };
 
+const acpNewSession = createIPCBoundary("acp/new-session");
+const acpResumeSession = createIPCBoundary("acp/resume-session");
+const acpPrompt = createIPCBoundary("acp/prompt");
+
 contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	deleteTopic: (topicId) => ipcRenderer.invoke("topic/delete", topicId),
@@ -52,7 +56,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
 	getFilePath: (file) => webUtils.getPathForFile(file),
 	// ACP API
-	acpNewSession: createIPCBoundary("acp/new-session"),
-	acpResumeSession: createIPCBoundary("acp/resume-session"),
-	acpPrompt: createIPCBoundary("acp/prompt"),
+	acpNewSession,
+	acpResumeSession,
+	acpPrompt: (sessionId, message) => acpPrompt(sessionId, message),
 });
