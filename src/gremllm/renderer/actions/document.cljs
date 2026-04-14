@@ -13,6 +13,8 @@
 (defn create-error [_state error]
   [[:ui.effects/console-error "Failed to create document:" error]])
 
+;; TODO(design): Revisit whether document content updates should also own
+;; cross-topic staged-selection invalidation; the boundary is still unclear.
 (defn set-content [_state content]
   [[:effects/save document-state/content-path content]
    [:staging.actions/clear-staged-across-topics]
