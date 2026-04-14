@@ -153,6 +153,31 @@
    [:panel-rect ViewportRect]
    [:panel-scroll-top number?]])
 
+(def BlockRef
+  "Rendered-block identity captured at selection time.
+   Advisory only — not exact markdown-source anchoring."
+  [:map
+   [:kind :keyword]
+   [:index :int]
+   [:start-line :int]
+   [:end-line :int]
+   [:block-text-snippet :string]])
+
+(def DocumentExcerpt
+  "Durable user-curated document reference. Paired with a user message
+   as AI context. Locator is advisory rendered-block metadata.
+   Same-block selections may include :start-offset / :end-offset."
+  [:map
+   [:id :string]
+   [:text :string]
+   [:locator
+    [:map
+     [:document-relative-path :string]
+     [:start-block BlockRef]
+     [:end-block BlockRef]
+     [:start-offset {:optional true} :int]
+     [:end-offset {:optional true} :int]]]])
+
 (def StagedSelection
   "A user-selected excerpt staged as AI context for the active topic."
   ;; TODO: Revisit the persisted staged-selection payload; highlight replay currently has to rediscover live document ranges from browser/render-specific data.

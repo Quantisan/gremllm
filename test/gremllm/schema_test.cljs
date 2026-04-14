@@ -136,3 +136,46 @@
     (is (m/validate schema/AnchorContext
                     {:panel-rect {:top 100 :left 50 :width 800 :height 600}
                      :panel-scroll-top 20}))))
+
+(deftest block-ref-test
+  (testing "valid BlockRef"
+    (is (m/validate schema/BlockRef
+                    {:kind :paragraph
+                     :index 2
+                     :start-line 3
+                     :end-line 3
+                     :block-text-snippet "Our Gremllm launched on a Tuesday."})))
+  (testing "missing required field fails"
+    (is (not (m/validate schema/BlockRef
+                         {:kind :paragraph :index 2 :start-line 3 :end-line 3})))))
+
+(deftest document-excerpt-test
+  (let [block {:kind :paragraph
+               :index 2
+               :start-line 3
+               :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}]
+    (testing "same-block excerpt with offsets"
+      (is (m/validate schema/DocumentExcerpt
+                      {:id "excerpt-abc"
+                       :text "launched on a Tuesday"
+                       :locator {:document-relative-path "document.md"
+                                 :start-block block
+                                 :end-block block
+                                 :start-offset 4
+                                 :end-offset 25}})))
+    (testing "cross-block excerpt without offsets"
+      (is (m/validate schema/DocumentExcerpt
+                      {:id "excerpt-xyz"
+                       :text "Gremllm Launch Log\nOur Gremllm"
+                       :locator {:document-relative-path "document.md"
+                                 :start-block (assoc block
+                                                     :kind :heading
+                                                     :index 1
+                                                     :start-line 1
+                                                     :end-line 1
+                                                     :block-text-snippet "Gremllm Launch Log")
+                                 :end-block block}})))
+    (testing "missing :locator fails"
+      (is (not (m/validate schema/DocumentExcerpt
+                           {:id "e" :text "t"}))))))
