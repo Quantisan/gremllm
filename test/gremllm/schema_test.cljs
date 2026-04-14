@@ -179,3 +179,50 @@
     (testing "missing :locator fails"
       (is (not (m/validate schema/DocumentExcerpt
                            {:id "e" :text "t"}))))))
+
+(deftest message-with-context-test
+  (let [excerpt {:id "e1"
+                 :text "snippet"
+                 :locator {:document-relative-path "document.md"
+                           :start-block {:kind :paragraph
+                                         :index 2
+                                         :start-line 3
+                                         :end-line 3
+                                         :block-text-snippet "Our Gremllm..."}
+                           :end-block {:kind :paragraph
+                                       :index 2
+                                       :start-line 3
+                                       :end-line 3
+                                       :block-text-snippet "Our Gremllm..."}
+                           :start-offset 4
+                           :end-offset 11}}]
+    (testing "message with excerpt context"
+      (is (m/validate schema/Message
+                      {:id 1
+                       :type :user
+                       :text "reword these"
+                       :context {:excerpts [excerpt]}})))
+    (testing "message without context still valid"
+      (is (m/validate schema/Message
+                      {:id 1 :type :user :text "hello"})))))
+
+(deftest persisted-topic-staged-selections-are-document-excerpts-test
+  (let [excerpt {:id "e1"
+                 :text "snippet"
+                 :locator {:document-relative-path "document.md"
+                           :start-block {:kind :paragraph
+                                         :index 2
+                                         :start-line 3
+                                         :end-line 3
+                                         :block-text-snippet "Our..."}
+                           :end-block {:kind :paragraph
+                                       :index 2
+                                       :start-line 3
+                                       :end-line 3
+                                       :block-text-snippet "Our..."}}}]
+    (is (m/validate schema/PersistedTopic
+                    {:id "t1"
+                     :name "T"
+                     :session {:pending-diffs []}
+                     :messages []
+                     :staged-selections [excerpt]}))))

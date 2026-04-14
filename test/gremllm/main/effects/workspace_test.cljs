@@ -16,31 +16,20 @@
 
 (def ^:private staged-selection-fixture
   {:id "staged-1"
-   :selection {:text "Our Gremllm crew"
-               :range-count 1
-               :anchor-node "#text"
-               :anchor-offset 0
-               :focus-node "#text"
-               :focus-offset 5
-               :range {:bounding-rect {:height 17
-                                       :left 76
-                                       :top 75.5
-                                       :width 120.9375}
-                       :client-rects [{:height 17
-                                       :left 76
-                                       :top 75.5
-                                       :width 27.640625}
-                                      {:height 17
-                                       :left 161.9375
-                                       :top 75.5
-                                       :width 35}]
-                       :common-ancestor "P"
-                       :start-container "#text"
-                       :start-text "Our "
-                       :start-offset 0
-                       :end-container "#text"
-                       :end-text " crew tuned the "
-                       :end-offset 5}}})
+   :text "Our Gremllm crew"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph
+                           :index 2
+                           :start-line 3
+                           :end-line 3
+                           :block-text-snippet "Our Gremllm crew tuned the launch checklist."}
+             :end-block {:kind :paragraph
+                         :index 2
+                         :start-line 3
+                         :end-line 3
+                         :block-text-snippet "Our Gremllm crew tuned the launch checklist."}
+             :start-offset 0
+             :end-offset 17}})
 
 (deftest test-parse-topic-content
   (testing "parses valid topic content"
