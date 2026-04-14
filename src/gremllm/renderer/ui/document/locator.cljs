@@ -78,21 +78,33 @@
          (map-indexed (fn [i b] (assoc b :index (inc i))))
          vec)))
 
-(defn- text-offsets [block-text selected-text]
-  (let [start (.indexOf (or block-text "") (or selected-text ""))]
-    (when (and (seq selected-text) (not (neg? start)))
-      {:start-offset start
-       :end-offset   (+ start (count selected-text))})))
+(defn- ->block-ref [{:keys [kind index start-line end-line text]}]
+  {:kind kind
+   :index index
+   :start-line start-line
+   :end-line end-line
+   :block-text-snippet (or text "")})
 
-(defn selection-locator [start-block end-block selected-text]
-  (when (seq selected-text)
-    (let [base {:block-kind       (:kind start-block)
-                :block-index      (:index start-block)
-                :block-start-line (:start-line start-block)
-                :block-end-line   (:end-line start-block)}]
-      (if (= (:index start-block) (:index end-block))
-        (merge base (text-offsets (:text start-block) selected-text))
-        base))))
+(defn selection-locator
+  "Pure transform: build advisory DocumentExcerpt.locator from rendered-block
+   records (with :text) and the selected text. Offsets are populated only when
+   start and end blocks are the same block and the selected text appears inside
+   the start block text."
+  [start-block end-block selected-text]
+  (let [same-block? (and (= (:index start-block) (:index end-block))
+                         (= (:kind start-block) (:kind end-block)))
+        base {:document-relative-path "document.md"
+              :start-block (->block-ref start-block)
+              :end-block   (->block-ref end-block)}]
+    (if same-block?
+      (let [block-text (or (:text start-block) "")
+            idx        (.indexOf block-text selected-text)]
+        (if (neg? idx)
+          base
+          (assoc base
+                 :start-offset idx
+                 :end-offset   (+ idx (count selected-text)))))
+      base)))
 
 (defn sync-block-metadata! [article markdown-text]
   (let [blocks   (block-records markdown-text)
