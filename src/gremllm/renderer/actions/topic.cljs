@@ -81,6 +81,11 @@
         path     (topic-state/staged-selections-path topic-id)]
     [[:effects/save path []]]))
 
+(defn clear-staged-across-topics [state]
+  (mapv (fn [topic-id]
+          [:effects/save (topic-state/staged-selections-path topic-id) []])
+        (keys (topic-state/get-topics-map state))))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]

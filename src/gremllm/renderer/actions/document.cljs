@@ -1,6 +1,5 @@
 (ns gremllm.renderer.actions.document
-  (:require [gremllm.renderer.state.document :as document-state]
-            [gremllm.renderer.state.topic :as topic-state]))
+  (:require [gremllm.renderer.state.document :as document-state]))
 
 (defn create [_state]
   [[:effects/promise
@@ -14,11 +13,7 @@
 (defn create-error [_state error]
   [[:ui.effects/console-error "Failed to create document:" error]])
 
-(defn set-content [state content]
-  (let [topic-ids (keys (topic-state/get-topics-map state))]
-    (into [[:effects/save document-state/content-path content]]
-          (concat
-            (map (fn [topic-id]
-                   [:effects/save (topic-state/staged-selections-path topic-id) []])
-                 topic-ids)
-            [[:excerpt.actions/dismiss-popover]]))))
+(defn set-content [_state content]
+  [[:effects/save document-state/content-path content]
+   [:staging.actions/clear-staged-across-topics]
+   [:excerpt.actions/dismiss-popover]])

@@ -126,3 +126,11 @@
 
     (is (= (topic-state/staged-selections-path topic-id) path))
     (is (= [] staged-vec))))
+
+(deftest clear-staged-across-topics-test
+  (let [state {:topics {"t1" {:id "t1" :staged-selections [{:id "a"}]}
+                        "t2" {:id "t2" :staged-selections [{:id "b"}]}}}
+        effects (topic/clear-staged-across-topics state)]
+    (is (= 2 (count effects)))
+    (is (some #{[:effects/save (topic-state/staged-selections-path "t1") []]} effects))
+    (is (some #{[:effects/save (topic-state/staged-selections-path "t2") []]} effects))))
