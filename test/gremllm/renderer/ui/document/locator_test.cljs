@@ -17,23 +17,42 @@
     (is (= [] (locator/block-records "")))))
 
 (deftest selection-locator-test
-  (let [heading-block   {:kind :heading :index 1 :start-line 1 :end-line 1 :text "Title"}
-        paragraph-block {:kind :paragraph :index 2 :start-line 3 :end-line 3 :text "Para bold text"}]
-    (testing "same-block selections get start/end offsets"
-      (is (= {:block-kind  :paragraph
-              :block-index 2
-              :block-start-line 3
-              :block-end-line 3
-              :start-offset 5
-              :end-offset 14}
-             (locator/selection-locator paragraph-block paragraph-block "bold text"))))
+  (let [para-block {:kind :paragraph :index 2 :start-line 3 :end-line 3
+                    :text "Our Gremllm launched on a Tuesday."}
+        heading-block {:kind :heading :index 1 :start-line 1 :end-line 1
+                       :text "Gremllm Launch Log"}]
+    (testing "same-block selection produces identical start/end BlockRefs with offsets"
+      (let [result (locator/selection-locator para-block para-block "launched on a Tuesday")]
+        (is (= "document.md" (:document-relative-path result)))
+        (is (= {:kind :paragraph
+                :index 2
+                :start-line 3
+                :end-line 3
+                :block-text-snippet "Our Gremllm launched on a Tuesday."}
+               (:start-block result)))
+        (is (= (:start-block result) (:end-block result)))
+        (is (= 12 (:start-offset result)))
+        (is (= 33 (:end-offset result)))))
 
-    (testing "cross-block selections omit offsets and keep the start block as primary"
-      (is (= {:block-kind  :heading
-              :block-index 1
-              :block-start-line 1
-              :block-end-line 1}
-             (locator/selection-locator heading-block paragraph-block "Title\nPara"))))
+    (testing "cross-block selection omits offsets"
+      (let [result (locator/selection-locator heading-block para-block "Gremllm...Our Gremllm")]
+        (is (= {:kind :heading
+                :index 1
+                :start-line 1
+                :end-line 1
+                :block-text-snippet "Gremllm Launch Log"}
+               (:start-block result)))
+        (is (= {:kind :paragraph
+                :index 2
+                :start-line 3
+                :end-line 3
+                :block-text-snippet "Our Gremllm launched on a Tuesday."}
+               (:end-block result)))
+        (is (not (contains? result :start-offset)))
+        (is (not (contains? result :end-offset)))))
 
-    (testing "blank selected text returns nil"
-      (is (nil? (locator/selection-locator paragraph-block paragraph-block ""))))))
+    (testing "same-block selection whose text is not found returns locator without offsets"
+      (let [result (locator/selection-locator para-block para-block "not-in-block-text")]
+        (is (= (:start-block result) (:end-block result)))
+        (is (not (contains? result :start-offset)))
+        (is (not (contains? result :end-offset)))))))
