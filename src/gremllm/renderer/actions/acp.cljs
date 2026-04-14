@@ -96,14 +96,17 @@
      :on-success [[:acp.actions/session-ready topic-id]]
      :on-error   [[:acp.actions/session-error topic-id]]}]])
 
-(defn send-prompt [state text]
+(defn send-prompt [state message]
   (let [topic-id       (topic-state/get-active-topic-id state)
         acp-session-id (topic-state/get-acp-session-id state topic-id)]
     (if acp-session-id
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
-        {:promise    (.acpPrompt js/window.electronAPI acp-session-id text)
+        {:promise    (.acpPrompt js/window.electronAPI
+                                 acp-session-id
+                                 (clj->js message))
          :on-success [[:loading.actions/set-loading? topic-id false]
+                      [:staging.actions/clear-staged]
                       [:topic.effects/auto-save topic-id]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))

@@ -99,3 +99,39 @@
 
       (testing "ignores unsupported update types"
         (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
+
+(deftest send-prompt-with-message-and-staged-clears-on-success-test
+  (let [old-window (.-window js/globalThis)]
+    (aset js/globalThis
+          "window"
+          #js {:electronAPI #js {:acpPrompt (fn [_ _ _] (js/Promise.resolve nil))}})
+    (try
+      (let [message {:id 1
+                     :type :user
+                     :text "reword these"
+                     :context {:excerpts [{:id "e1"
+                                           :text "x"
+                                           :locator {:document-relative-path "document.md"
+                                                     :start-block {:kind :paragraph
+                                                                   :index 2
+                                                                   :start-line 3
+                                                                   :end-line 3
+                                                                   :block-text-snippet "x"}
+                                                     :end-block {:kind :paragraph
+                                                                 :index 2
+                                                                 :start-line 3
+                                                                 :end-line 3
+                                                                 :block-text-snippet "x"}}}]}}
+            state {:active-topic-id "t1"
+                   :topics {"t1" {:id "t1" :session {:id "s1"}}}}
+            [[_ _ _] promise-effect] (acp/send-prompt state message)
+            on-success (get-in promise-effect [1 :on-success])
+            on-error (get-in promise-effect [1 :on-error])]
+        (is (some #{[:staging.actions/clear-staged]} on-success)
+            "success clears staged selections")
+        (is (not (some #{[:staging.actions/clear-staged]} on-error))
+            "error preserves staged selections"))
+      (finally
+        (if (nil? old-window)
+          (js-delete js/globalThis "window")
+          (aset js/globalThis "window" old-window))))))
