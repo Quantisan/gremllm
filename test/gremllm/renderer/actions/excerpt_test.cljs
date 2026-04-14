@@ -10,10 +10,17 @@
    :panel-scroll-top 20})
 
 (def locator-hints
-  {:block-kind :paragraph
-   :block-index 2
-   :block-start-line 3
-   :block-end-line 3
+  {:document-relative-path "document.md"
+   :start-block {:kind :paragraph
+                 :index 2
+                 :start-line 3
+                 :end-line 3
+                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
+   :end-block {:kind :paragraph
+               :index 2
+               :start-line 3
+               :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}
    :start-offset 5
    :end-offset 14})
 

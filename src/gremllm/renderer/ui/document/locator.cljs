@@ -118,7 +118,11 @@
       (.setAttribute el "data-grem-block-start-line" (str (:start-line block)))
       (.setAttribute el "data-grem-block-end-line" (str (:end-line block))))))
 
-(defn selection-locator-from-dom [article sel]
+(defn selection-locator-from-dom
+  "Read rendered-block data-* attrs via the DOM Range and return a locator map
+   shaped like DocumentExcerpt.locator. Returns nil when endpoints lack block
+   ancestors."
+  [article sel]
   (let [range         (.getRangeAt sel 0)
         start-element (some-> (.-startContainer range) .-parentElement (.closest block-selector))
         end-element   (some-> (.-endContainer range) .-parentElement (.closest block-selector))
@@ -132,10 +136,4 @@
         start-block   (parse-block start-element)
         end-block     (parse-block end-element)]
     (when (and start-block end-block)
-      {:selection-direction (or (.-direction sel) "unknown")
-       :anchor-node         (some-> (.-anchorNode sel) .-nodeName)
-       :anchor-offset       (.-anchorOffset sel)
-       :focus-node          (some-> (.-focusNode sel) .-nodeName)
-       :focus-offset        (.-focusOffset sel)
-       :common-ancestor     (some-> (.-commonAncestorContainer range) .-nodeName)
-       :locator             (selection-locator start-block end-block (.toString sel))})))
+      (selection-locator start-block end-block (.toString sel)))))
