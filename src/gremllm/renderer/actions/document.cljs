@@ -14,5 +14,6 @@
   [[:ui.effects/console-error "Failed to create document:" error]])
 
 (defn set-content [_state content]
-  [[:effects/save document-state/content-path content]])
-
+  [[:effects/save document-state/content-path content]
+   [:staging.actions/clear-staged-across-topics]
+   [:excerpt.actions/dismiss-popover]])

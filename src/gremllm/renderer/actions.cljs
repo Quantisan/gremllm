@@ -10,6 +10,7 @@
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
+            [gremllm.renderer.ui.document.locator :as locator]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
@@ -76,11 +77,13 @@
 ;; when a non-collapsed selection exists, nil otherwise.
 (nxr/register-placeholder! :event/text-selection
   (fn [{:replicant/keys [dom-event]}]
-    (let [sel   (js/document.getSelection)
-          panel (when dom-event (.. dom-event -target (closest ".document-panel")))]
+    (let [sel     (js/document.getSelection)
+          panel   (when dom-event (.. dom-event -target (closest ".document-panel")))
+          article (when panel (.querySelector panel "article"))]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        {:selection (codec/captured-selection-from-dom sel)
-         :anchor    (when panel (codec/anchor-context-from-dom panel))}))))
+        {:selection     (codec/captured-selection-from-dom sel)
+         :anchor        (when panel (codec/anchor-context-from-dom panel))
+         :locator-hints (when article (locator/selection-locator-from-dom article sel))}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
@@ -197,6 +200,7 @@
 (nxr/register-action! :staging.actions/stage topic/stage)
 (nxr/register-action! :staging.actions/unstage topic/unstage)
 (nxr/register-action! :staging.actions/clear-staged topic/clear-staged)
+(nxr/register-action! :staging.actions/clear-staged-across-topics topic/clear-staged-across-topics)
 
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
