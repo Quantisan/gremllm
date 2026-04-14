@@ -2,24 +2,53 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.ui :as ui]))
 
-(deftest test-submit-message
-  (testing "does nothing with empty input"
-    (is (nil? (ui/submit-messages {:form            {:user-input ""}
-                                   :active-topic-id "t1"
-                                   :topics          {"t1" {:model "claude-3-5-haiku-latest"}}}))))
+(def sample-excerpt
+  {:id "e1"
+   :text "hello"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph
+                           :index 2
+                           :start-line 3
+                           :end-line 3
+                           :block-text-snippet "hello world"}
+             :end-block {:kind :paragraph
+                         :index 2
+                         :start-line 3
+                         :end-line 3
+                         :block-text-snippet "hello world"}
+             :start-offset 0
+             :end-offset 5}})
 
-  (testing "submits message with valid input, reads model from active topic"
-    (let [effects (ui/submit-messages {:form            {:user-input "Hello"}
-                                       :active-topic-id "t1"
-                                       :topics          {"t1" {:model "claude-3-5-haiku-latest"}}})
-          message (nth (first effects) 1)]
-      (is (= 5 (count effects)))
-      (is (= :messages.actions/add-to-chat (ffirst effects)))
-      (is (number? (:id message)))
-      (is (= :user (:type message)))
-      (is (= "Hello" (:text message)))
-      (is (= :form.actions/clear-input (first (second effects))))
-      (is (= :acp.actions/send-prompt (first (last effects)))))))
+(deftest submit-without-text-is-noop-test
+  (let [state {:form {:user-input ""}
+               :active-topic-id "t1"
+               :topics {"t1" {:staged-selections []}}}]
+    (is (nil? (ui/submit-messages state)))))
+
+(deftest submit-without-staged-selections-sends-plain-message-test
+  (let [state {:form {:user-input "hello"}
+               :active-topic-id "t1"
+               :topics {"t1" {:staged-selections []}}}
+        [add-msg _ _ _ send] (ui/submit-messages state)
+        [_ message] add-msg
+        [_ sent-message] send]
+    (is (= :messages.actions/add-to-chat (first add-msg)))
+    (is (= :user (:type message)))
+    (is (= "hello" (:text message)))
+    (is (not (contains? message :context)))
+    (is (= :acp.actions/send-prompt (first send)))
+    (is (= message sent-message))))
+
+(deftest submit-with-staged-selections-attaches-context-test
+  (let [state {:form {:user-input "reword these"}
+               :active-topic-id "t1"
+               :topics {"t1" {:staged-selections [sample-excerpt]}}}
+        [add-msg _ _ _ send] (ui/submit-messages state)
+        [_ message] add-msg
+        [_ sent-message] send]
+    (is (= "reword these" (:text message)))
+    (is (= {:excerpts [sample-excerpt]} (:context message)))
+    (is (= message sent-message))))
 
 (deftest test-handle-submit-keys
   (testing "Enter without Shift returns prevent-default and submit effects"
