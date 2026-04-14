@@ -3,9 +3,23 @@
             [gremllm.renderer.ui.elements :as e]
             [gremllm.renderer.ui.markdown :as md]))
 
-(defn- render-user-message [message]
-  [e/user-message
-    [:span (:text message)]])
+(defn- excerpt-block-label
+  "Short advisory locator label like p3 or h1 -> p2."
+  [{{:keys [start-block end-block]} :locator}]
+  (let [prefix (fn [{:keys [kind]}]
+                 (case kind
+                   :heading "h"
+                   :paragraph "p"
+                   :list-item "li"
+                   :code-block "code"
+                   :blockquote "bq"
+                   :table "tbl"
+                   (name kind)))
+        start (str (prefix start-block) (:index start-block))
+        end (str (prefix end-block) (:index end-block))]
+    (if (= start end) start (str start " -> " end))))
+
+(def ^:private excerpt-snippet-cap 40)
 
 (defn- render-assistant-message [message]
   [e/assistant-message
@@ -18,6 +32,28 @@
 (defn- render-tool-use-message [message]
   [e/tool-use-message
    [:span (:text message)]])
+
+(defn- truncate [s n]
+  (if (> (count s) n)
+    (str (subs s 0 n) "…")
+    s))
+
+(defn- render-excerpt-pill [excerpt]
+  [:span.excerpt-pill
+   [:span.excerpt-pill__label (excerpt-block-label excerpt)]
+   [:span.excerpt-pill__text (truncate (:text excerpt) excerpt-snippet-cap)]])
+
+(defn- render-references [excerpts]
+  [:div.message-references
+   [:span.message-references__label "References:"]
+   (into [:span.message-references__pills]
+         (map render-excerpt-pill excerpts))])
+
+(defn- render-user-message [{:keys [text context]}]
+  [e/user-message
+   [:span text]
+   (when-let [excerpts (seq (:excerpts context))]
+     (render-references excerpts))])
 
 (defn- render-message [message]
   (case (:type message)
@@ -47,17 +83,12 @@
    (when awaiting-response?
      (render-loading-indicator))])
 
-(defn- truncate [s n]
-  (if (> (count s) n)
-    (str (subs s 0 n) "…")
-    s))
-
 (defn- render-staged-selections [staged-selections]
   (when (seq staged-selections)
     [:div.staged-selections
-     (for [{:keys [id selection]} staged-selections]
+     (for [{:keys [id text]} staged-selections]
        [:span.staged-pill {:key id}
-        "selection: " (truncate (:text selection) 30)
+        "selection: " (truncate text 30)
         [:button.dismiss
          {:type "button"
           :on {:click [[:staging.actions/unstage id]]}}
