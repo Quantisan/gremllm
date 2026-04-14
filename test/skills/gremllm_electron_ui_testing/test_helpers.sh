@@ -46,3 +46,15 @@ assert_file_contains() {
   assert_file_exists "$path"
   grep -Fq -- "$needle" "$path" || fail "expected file [$path] to contain [$needle]"
 }
+
+assert_command_fails() {
+  local output status
+  set +e
+  output="$("$@" 2>&1)"
+  status=$?
+  set -e
+  if [[ "$status" -eq 0 ]]; then
+    fail "expected command to fail: $*"
+  fi
+  printf '%s\n' "$output"
+}
