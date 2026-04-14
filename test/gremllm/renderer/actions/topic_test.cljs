@@ -71,6 +71,21 @@
             actions (topic/auto-save state topic-id)]
         (is (= [[:topic.effects/save-topic topic-id]] actions))))))
 
+(def sample-excerpt
+  {:id "e1"
+   :text "hello"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph
+                           :index 2
+                           :start-line 3
+                           :end-line 3
+                           :block-text-snippet "hello world"}
+             :end-block {:kind :paragraph
+                         :index 2
+                         :start-line 3
+                         :end-line 3
+                         :block-text-snippet "hello world"}}})
+
 (deftest delete-topic-success-test
   (testing "triggers workspace reload after successful deletion"
     (let [topic-id "topic-123"
@@ -94,38 +109,55 @@
                            :topics {topic-id {:id topic-id :staged-selections []}}})
 
 (deftest stage-test
-  (let [selection schema-fixtures/single-word-selection
-        [[effect path staged-vec]] (topic/stage base-state selection)
-        item (first staged-vec)]
-
-    (is (= :effects/save effect))
-    (is (= (topic-state/staged-selections-path topic-id) path))
-    (is (= 1 (count staged-vec)))
-    (is (string? (:id item)))
-    (is (clojure.string/starts-with? (:id item) "staged-"))
-    (is (= selection (:selection item)))))
+  (let [actions (topic/stage base-state sample-excerpt)]
+    (is (= [:effects/save
+            (topic-state/staged-selections-path topic-id)
+            [sample-excerpt]]
+           (first actions)))
+    (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
+    (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))
 
 (deftest unstage-test
-  (let [item-a {:id "staged-a" :selection schema-fixtures/single-word-selection}
-        item-b {:id "staged-b" :selection schema-fixtures/mixed-format-selection}
+  (let [item-a sample-excerpt
+        item-b (assoc sample-excerpt :id "e2" :text "world")
         state  (assoc-in base-state [:topics topic-id :staged-selections] [item-a item-b])]
 
     (testing "removes item by id"
-      (let [[[_ _ staged-vec]] (topic/unstage state "staged-a")]
-        (is (= 1 (count staged-vec)))
-        (is (= "staged-b" (:id (first staged-vec))))))
+      (let [actions (topic/unstage state "e1")]
+        (is (= [:effects/save
+                (topic-state/staged-selections-path topic-id)
+                [item-b]]
+               (first actions)))
+        (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
+        (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))
 
     (testing "no-op when id not found"
-      (let [[[_ _ staged-vec]] (topic/unstage state "staged-unknown")]
-        (is (= 2 (count staged-vec)))))))
+      (let [actions (topic/unstage state "staged-unknown")]
+        (is (= [:effects/save
+                (topic-state/staged-selections-path topic-id)
+                [item-a item-b]]
+               (first actions)))
+        (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
+        (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))))
 
 (deftest clear-staged-test
-  (let [item {:id "staged-a" :selection schema-fixtures/single-word-selection}
+  (let [item sample-excerpt
         state (assoc-in base-state [:topics topic-id :staged-selections] [item])
-        [[_ path staged-vec]] (topic/clear-staged state)]
+        actions (topic/clear-staged state)]
+    (is (= [:effects/save
+            (topic-state/staged-selections-path topic-id)
+            []]
+           (first actions)))
+    (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
+    (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))
 
-    (is (= (topic-state/staged-selections-path topic-id) path))
-    (is (= [] staged-vec))))
+(deftest auto-save-fires-when-staged-selections-present-with-no-messages-test
+  (let [state {:active-topic-id "t1"
+               :topics {"t1" {:id "t1"
+                              :messages []
+                              :staged-selections [sample-excerpt]}}}]
+    (is (= [[:topic.effects/save-topic "t1"]]
+           (topic/auto-save state "t1")))))
 
 (deftest clear-staged-across-topics-test
   (let [state {:topics {"t1" {:id "t1" :staged-selections [{:id "a"}]}
