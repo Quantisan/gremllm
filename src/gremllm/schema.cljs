@@ -22,16 +22,6 @@
    [:mime-type :string]  ; MIME type (e.g., 'image/png')
    [:size :int]])        ; File size in bytes
 
-(def Message
-  [:map
-   [:id :int]
-   [:type MessageType]
-   [:text :string]
-   [:attachments {:optional true} [:vector AttachmentRef]]])
-
-(def Messages
-  [:vector Message])
-
 (defn generate-message-id
   "Generates numeric message IDs for chat messages."
   []
@@ -178,12 +168,18 @@
      [:start-offset {:optional true} :int]
      [:end-offset {:optional true} :int]]]])
 
-(def StagedSelection
-  "A user-selected excerpt staged as AI context for the active topic."
-  ;; TODO: Revisit the persisted staged-selection payload; highlight replay currently has to rediscover live document ranges from browser/render-specific data.
+(def Message
   [:map
-   [:id :string]
-   [:selection CapturedSelection]])
+   [:id :int]
+   [:type MessageType]
+   [:text :string]
+   [:attachments {:optional true} [:vector AttachmentRef]]
+   [:context {:optional true}
+    [:map
+     [:excerpts [:vector DocumentExcerpt]]]]])
+
+(def Messages
+  [:vector Message])
 
 ;; ========================================
 ;; Topics & Workspaces
@@ -217,7 +213,7 @@
    [:name {:default "New Topic"}        :string]
    [:session {:default {}}              AcpSession]
    [:messages {:default []}             [:vector Message]]
-   [:staged-selections {:default []}    [:vector StagedSelection]]])
+   [:staged-selections {:default []}    [:vector DocumentExcerpt]]])
 
 ;; TODO: Pivot domain model -- Topic should be Session.
 (def Topic
