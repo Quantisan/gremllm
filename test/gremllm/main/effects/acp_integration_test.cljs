@@ -143,7 +143,7 @@
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
-                         "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else."
+                         {:text "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else."}
                          @doc-path))))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
