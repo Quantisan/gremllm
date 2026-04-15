@@ -41,6 +41,12 @@
     (let [result (excerpt/capture {} nil)]
       (is (= [[:excerpt.actions/dismiss-popover]] result))))
 
+  (testing "nil locator-hints - dispatches dismiss-popover"
+    (let [result (excerpt/capture {} {:selection schema-test/single-word-selection
+                                      :anchor anchor-context
+                                      :locator-hints nil})]
+      (is (= [[:excerpt.actions/dismiss-popover]] result))))
+
   (testing "valid composite saves selection, anchor, and locator hints"
     (let [result (excerpt/capture {} composite-selection)]
       (is (= [:effects/save excerpt-state/captured-path schema-test/single-word-selection]

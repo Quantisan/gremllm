@@ -11,7 +11,7 @@
    :locator locator-hints})
 
 (defn capture [_state {:keys [selection anchor locator-hints]}]
-  (if selection
+  (if (and selection locator-hints)
     [[:effects/save excerpt-state/captured-path selection]
      [:effects/save excerpt-state/anchor-path anchor]
      [:effects/save excerpt-state/locator-hints-path locator-hints]]

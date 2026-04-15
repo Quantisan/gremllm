@@ -74,7 +74,7 @@ This wrapper is a no-op identity. All other `createIPCBoundary` exports (`acpNew
 
 ### Important
 
-#### 4. Domain name drift: excerpt / staging / staged-selections
+#### [FIXED] 4. Domain name drift: excerpt / staging / staged-selections
 Three names for one concept:
 - `excerpt` — the schema entity (`DocumentExcerpt`)
 - `staging` — the action namespace (`:staging.actions/*`)
@@ -120,7 +120,7 @@ The guard prevents auto-saving a topic whose only content is staged excerpts. Th
 
 ---
 
-#### 8. Locator failure is not fail-closed
+#### [FIXED] 8. Locator failure is not fail-closed
 **Files:** `src/gremllm/renderer/actions.cljs:86`, `src/gremllm/renderer/ui/document/locator.cljs:121-139`, `src/gremllm/renderer/actions/excerpt.cljs:24-30`, `src/gremllm/schema.cljs:163-169`
 
 `selection-locator-from-dom` returns `nil` when either selection endpoint lacks a block-selector ancestor. The call site (`renderer/actions.cljs:86`) passes that `nil` as `locator-hints`. `excerpt/stage` then hands it directly to `capture->excerpt`, which sets `:locator nil` on the resulting `DocumentExcerpt`.
