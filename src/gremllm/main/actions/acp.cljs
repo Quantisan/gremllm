@@ -16,13 +16,10 @@
                  (name kind))]
     (str prefix index)))
 
-(defn- locator-label [{:keys [start-block end-block start-offset end-offset]}]
+(defn- locator-label [{:keys [start-block end-block]}]
   (let [start (block-label start-block)
-        end (block-label end-block)
-        base (if (= start end) start (str start " -> " end))]
-    (if (and start-offset end-offset (= start end))
-      (str base " offset " start-offset "-" end-offset)
-      base)))
+        end   (block-label end-block)]
+    (if (= start end) start (str start " -> " end))))
 
 (defn- render-excerpt [idx {:keys [text locator]}]
   (let [{:keys [start-block]} locator]
