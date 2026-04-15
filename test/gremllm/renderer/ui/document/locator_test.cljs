@@ -17,12 +17,16 @@
     (is (= [] (locator/block-records "")))))
 
 (deftest selection-locator-test
-  (let [para-block {:kind :paragraph :index 2 :start-line 3 :end-line 3
-                    :text "Our Gremllm launched on a Tuesday."}
+  (let [para-block    {:kind :paragraph :index 2 :start-line 3 :end-line 3
+                       :text "Our Gremllm launched on a Tuesday."}
         heading-block {:kind :heading :index 1 :start-line 1 :end-line 1
                        :text "Gremllm Launch Log"}]
-    (testing "same-block selection produces identical start/end BlockRefs with offsets"
-      (let [result (locator/selection-locator para-block para-block "launched on a Tuesday")]
+
+    (testing "same-block passes caller-supplied offsets through verbatim"
+      ;; Pure assembler: whatever offsets the DOM caller computed arrive unchanged.
+      ;; Under the old .indexOf implementation this call would receive 12 as
+      ;; selected-text, find nothing, and return a locator with no offsets.
+      (let [result (locator/selection-locator para-block para-block 12 33)]
         (is (= "document.md" (:document-relative-path result)))
         (is (= {:kind :paragraph
                 :index 2
@@ -34,8 +38,14 @@
         (is (= 12 (:start-offset result)))
         (is (= 33 (:end-offset result)))))
 
-    (testing "cross-block selection omits offsets"
-      (let [result (locator/selection-locator heading-block para-block "Gremllm...Our Gremllm")]
+    (testing "same-block without offsets omits offset keys"
+      (let [result (locator/selection-locator para-block para-block)]
+        (is (= (:start-block result) (:end-block result)))
+        (is (not (contains? result :start-offset)))
+        (is (not (contains? result :end-offset)))))
+
+    (testing "cross-block omits offsets"
+      (let [result (locator/selection-locator heading-block para-block)]
         (is (= {:kind :heading
                 :index 1
                 :start-line 1
@@ -48,11 +58,5 @@
                 :end-line 3
                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
                (:end-block result)))
-        (is (not (contains? result :start-offset)))
-        (is (not (contains? result :end-offset)))))
-
-    (testing "same-block selection whose text is not found returns locator without offsets"
-      (let [result (locator/selection-locator para-block para-block "not-in-block-text")]
-        (is (= (:start-block result) (:end-block result)))
         (is (not (contains? result :start-offset)))
         (is (not (contains? result :end-offset)))))))
