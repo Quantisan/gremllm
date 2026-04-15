@@ -155,8 +155,7 @@
 
 (def DocumentExcerpt
   "Durable user-curated document reference. Paired with a user message
-   as AI context. Locator is advisory rendered-block metadata.
-   Same-block selections may include :start-offset / :end-offset."
+   as AI context. Locator is advisory rendered-block metadata."
   [:map
    [:id :string]
    [:text :string]
@@ -164,9 +163,7 @@
     [:map
      [:document-relative-path :string]
      [:start-block BlockRef]
-     [:end-block BlockRef]
-     [:start-offset {:optional true} :int]
-     [:end-offset {:optional true} :int]]]])
+     [:end-block BlockRef]]]])
 
 (def Message
   [:map
