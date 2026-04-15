@@ -85,26 +85,22 @@
    :end-line end-line
    :block-text-snippet (or text "")})
 
+;; Character offsets within a block are intentionally not recorded. Any
+;; post-hoc string search (indexOf) always returns the first occurrence, so
+;; when the selected text appears more than once in a block — common in tables,
+;; code fences, and repetitive prose — the stored offset is wrong and misleads
+;; the agent. Accurate offsets require deriving them from the DOM Range at
+;; selection time, which we've deferred until we have a DOM-capable test
+;; harness. The agent disambiguates via the quoted excerpt text and the
+;; surrounding :block-text-snippet.
+
 (defn selection-locator
   "Pure transform: build advisory DocumentExcerpt.locator from rendered-block
-   records (with :text) and the selected text. Offsets are populated only when
-   start and end blocks are the same block and the selected text appears inside
-   the start block text."
-  [start-block end-block selected-text]
-  (let [same-block? (and (= (:index start-block) (:index end-block))
-                         (= (:kind start-block) (:kind end-block)))
-        base {:document-relative-path "document.md"
-              :start-block (->block-ref start-block)
-              :end-block   (->block-ref end-block)}]
-    (if same-block?
-      (let [block-text (or (:text start-block) "")
-            idx        (.indexOf block-text selected-text)]
-        (if (neg? idx)
-          base
-          (assoc base
-                 :start-offset idx
-                 :end-offset   (+ idx (count selected-text)))))
-      base)))
+   records (with :text) and the selected text."
+  [start-block end-block _selected-text]
+  {:document-relative-path "document.md"
+   :start-block (->block-ref start-block)
+   :end-block   (->block-ref end-block)})
 
 (defn sync-block-metadata! [article markdown-text]
   (let [blocks   (block-records markdown-text)
