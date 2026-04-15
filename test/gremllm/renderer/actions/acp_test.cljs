@@ -2,7 +2,8 @@
   (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
-            [gremllm.renderer.actions.acp :as acp]))
+            [gremllm.renderer.actions.acp :as acp]
+            [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
   (testing "appends chunk text to last message in active topic"
@@ -106,22 +107,23 @@
           "window"
           #js {:electronAPI #js {:acpPrompt (fn [_ _ _] (js/Promise.resolve nil))}})
     (try
-      (let [message {:id 1
-                     :type :user
-                     :text "reword these"
-                     :context {:excerpts [{:id "e1"
-                                           :text "x"
-                                           :locator {:document-relative-path "document.md"
-                                                     :start-block {:kind :paragraph
+      (let [message (schema-test/create-message
+                      {:id 1
+                       :type :user
+                       :text "reword these"
+                       :context {:excerpts [{:id "e1"
+                                             :text "x"
+                                             :locator {:document-relative-path "document.md"
+                                                       :start-block {:kind :paragraph
+                                                                     :index 2
+                                                                     :start-line 3
+                                                                     :end-line 3
+                                                                     :block-text-snippet "x"}
+                                                       :end-block {:kind :paragraph
                                                                    :index 2
                                                                    :start-line 3
                                                                    :end-line 3
-                                                                   :block-text-snippet "x"}
-                                                     :end-block {:kind :paragraph
-                                                                 :index 2
-                                                                 :start-line 3
-                                                                 :end-line 3
-                                                                 :block-text-snippet "x"}}}]}}
+                                                                   :block-text-snippet "x"}}}]}})
             state {:active-topic-id "t1"
                    :topics {"t1" {:id "t1" :session {:id "s1"}}}}
             [[_ _ _] promise-effect] (acp/send-prompt state message)
