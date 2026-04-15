@@ -2,6 +2,7 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.renderer.state.excerpt :as excerpt-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema-test :as schema-test]))
 
 ;; Anchor context fixture matching AnchorContext schema
@@ -92,9 +93,12 @@
           result (excerpt/capture->excerpt captured hints "xyz")]
       (is (not (contains? (:locator result) :start-offset))))))
 
-(deftest stage-builds-document-excerpt-test
-  (testing "stage reads captured + locator-hints, dispatches staging.actions/stage with a DocumentExcerpt"
-    (let [state {:excerpt {:captured {:text "hello"}
+(deftest add-builds-and-persists-document-excerpt-test
+  (testing "add reads captured excerpt data, appends it to topic excerpts, and dismisses the popover"
+    (let [topic-id "t1"
+          state {:active-topic-id topic-id
+                 :topics {topic-id {:id topic-id :messages [] :excerpts []}}
+                 :excerpt {:captured {:text "hello"}
                            :locator-hints {:document-relative-path "document.md"
                                            :start-block {:kind :paragraph
                                                          :index 2
@@ -108,11 +112,14 @@
                                                        :block-text-snippet "hello world"}
                                            :start-offset 0
                                            :end-offset 5}}}
-          result (excerpt/stage state)
-          [[stage-action excerpt] [dismiss-action]] result]
-      (is (= :staging.actions/stage stage-action))
-      (is (= "hello" (:text excerpt)))
-      (is (string? (:id excerpt)))
+          result (excerpt/add state)
+          [save-action mark-unsaved-action auto-save-action dismiss-action] result
+          [_ save-path excerpts] save-action
+          [saved-excerpt] excerpts]
+      (is (= :effects/save (first save-action)))
+      (is (= (topic-state/excerpts-path topic-id) save-path))
+      (is (= "hello" (:text saved-excerpt)))
+      (is (string? (:id saved-excerpt)))
       (is (= {:document-relative-path "document.md"
               :start-block {:kind :paragraph
                             :index 2
@@ -126,8 +133,10 @@
                           :block-text-snippet "hello world"}
               :start-offset 0
               :end-offset 5}
-             (:locator excerpt)))
-      (is (= :excerpt.actions/dismiss-popover dismiss-action)))))
+             (:locator saved-excerpt)))
+      (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
+      (is (= [:topic.effects/auto-save topic-id] auto-save-action))
+      (is (= [:excerpt.actions/dismiss-popover] dismiss-action)))))
 
-(deftest stage-without-capture-is-noop-test
-  (is (nil? (excerpt/stage {}))))
+(deftest add-without-capture-is-noop-test
+  (is (nil? (excerpt/add {}))))

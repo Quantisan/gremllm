@@ -213,7 +213,7 @@
    [:name {:default "New Topic"}        :string]
    [:session {:default {}}              AcpSession]
    [:messages {:default []}             [:vector Message]]
-   [:staged-selections {:default []}    [:vector DocumentExcerpt]]])
+   [:excerpts {:default []}             [:vector DocumentExcerpt]]])
 
 ;; TODO: Pivot domain model -- Topic should be Session.
 (def Topic

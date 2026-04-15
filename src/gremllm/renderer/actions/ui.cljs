@@ -23,12 +23,12 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when-not (empty? text)
-      (let [staged (or (topic-state/get-staged-selections state) [])
+      (let [excerpts (or (topic-state/get-excerpts state) [])
             base-message {:id   (schema/generate-message-id)
                           :type :user
                           :text text}
-            message (if (seq staged)
-                      (assoc base-message :context {:excerpts (vec staged)})
+            message (if (seq excerpts)
+                      (assoc base-message :context {:excerpts (vec excerpts)})
                       base-message)]
         [[:messages.actions/add-to-chat message]
          [:form.actions/clear-input]

@@ -9,8 +9,8 @@
       (is (= [:effects/save document-state/content-path "# Replaced"]
              (first effects))))
 
-    (testing "dispatches cross-topic staged-selection invalidation"
-      (is (some #{[:staging.actions/clear-staged-across-topics]} effects)))
+    (testing "dispatches cross-topic excerpt invalidation"
+      (is (some #{[:excerpt.actions/clear-across-topics]} effects)))
 
     (testing "dismisses live capture state"
       (is (some #{[:excerpt.actions/dismiss-popover]} effects)))))

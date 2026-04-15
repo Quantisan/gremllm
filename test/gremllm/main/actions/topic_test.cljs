@@ -13,7 +13,7 @@
           plan (topic/topic->save-plan topic topics-dir)]
       (is (= topics-dir (:dir plan)))
       (is (= "/test/dir/topic-123.edn" (:filepath plan)))
-      (is (= {:id "topic-123" :name "Test Topic" :messages [] :session {:pending-diffs []} :staged-selections []}
+      (is (= {:id "topic-123" :name "Test Topic" :messages [] :session {:pending-diffs []} :excerpts []}
              (edn/read-string (:content plan))))))
 
   (testing "strips transient fields before saving"
@@ -28,6 +28,5 @@
               :name "Test Topic"
               :messages []
               :session {:pending-diffs []}
-              :staged-selections []}
+              :excerpts []}
              (edn/read-string (:content plan)))))))
-

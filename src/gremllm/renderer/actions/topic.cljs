@@ -47,9 +47,9 @@
   (let [topic-id (or topic-id (topic-state/get-active-topic-id state))
         messages (when topic-id
                    (topic-state/get-topic-field state topic-id :messages))
-        staged-selections (when topic-id
-                            (topic-state/get-topic-field state topic-id :staged-selections))]
-    (when (or (seq messages) (seq staged-selections))
+        excerpts (when topic-id
+                   (topic-state/get-topic-field state topic-id :excerpts))]
+    (when (or (seq messages) (seq excerpts))
       [[:topic.effects/save-topic topic-id]])))
 
 (defn append-pending-diffs [state diffs]
@@ -57,40 +57,6 @@
   (let [topic-id (topic-state/get-active-topic-id state)
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
-
-(defn stage [state excerpt]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)
-        existing (or (get-in state path) [])]
-    [[:effects/save path (conj existing excerpt)]
-     [:topic.actions/mark-active-unsaved]
-     [:topic.effects/auto-save topic-id]]))
-
-(defn unstage [state id]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)
-        existing (or (get-in state path) [])]
-    [[:effects/save path (vec (remove #(= (:id %) id) existing))]
-     [:topic.actions/mark-active-unsaved]
-     [:topic.effects/auto-save topic-id]]))
-
-(defn clear-active-staged [state]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)]
-    [[:effects/save path []]
-     [:topic.actions/mark-active-unsaved]
-     [:topic.effects/auto-save topic-id]]))
-
-(defn clear-staged [_state topic-id]
-  (let [path (topic-state/staged-selections-path topic-id)]
-    [[:effects/save path []]
-     [:topic.actions/mark-unsaved topic-id]
-     [:topic.effects/auto-save topic-id]]))
-
-(defn clear-staged-across-topics [state]
-  (mapv (fn [topic-id]
-          [:effects/save (topic-state/staged-selections-path topic-id) []])
-        (keys (topic-state/get-topics-map state))))
 
 (defn set-active
   "Set the active topic and initialize its ACP session."
