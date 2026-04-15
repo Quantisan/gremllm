@@ -44,6 +44,10 @@
    [:span.excerpt-pill__text (truncate (:text excerpt) excerpt-snippet-cap)]])
 
 (defn- render-references [excerpts]
+  ;; TODO(ui): This References row is an interim presentation. Excerpts should
+  ;; render as visually distinct DOM nodes in the chat thread, not as content
+  ;; inside the user message bubble. Leave the exact thread structure open for
+  ;; follow-up work.
   [:div.message-references
    [:span.message-references__label "References:"]
    (into [:span.message-references__pills]

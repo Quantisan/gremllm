@@ -100,7 +100,7 @@ Marked with its own `TODO(design)`. The action's name declares it sets content; 
 
 ---
 
-#### 6. `block-label` logic duplicated
+#### [IGNORE] 6. `block-label` logic duplicated
 **Files:** `src/gremllm/main/actions/acp.cljs:6-17` and `src/gremllm/renderer/ui/chat.cljs:6-20`
 
 Both implement the same kind→prefix table independently. Adding a new block kind (e.g. `:figure`) requires editing two files and risks inconsistent prompt vs. UI labels.
