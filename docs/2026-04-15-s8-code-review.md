@@ -109,7 +109,7 @@ Both implement the same kind→prefix table independently. Adding a new block ki
 
 ---
 
-#### 7. Empty-messages guard treats excerpts as second-class
+#### [IGNORE] 7. Empty-messages guard treats excerpts as second-class
 **File:** `src/gremllm/renderer/actions/topic.cljs:52`
 
 ```clojure
