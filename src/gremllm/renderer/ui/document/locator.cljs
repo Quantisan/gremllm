@@ -86,19 +86,25 @@
    :block-text-snippet (or text "")})
 
 (defn selection-locator
-  "Pure assembler: build advisory DocumentExcerpt.locator from block records.
-   Offsets are caller-supplied; pass nil or omit to produce a locator without
-   offset keys. The DOM caller (selection-locator-from-dom) is responsible for
-   computing accurate offsets via the Range API."
-  ([start-block end-block]
-   (selection-locator start-block end-block nil nil))
-  ([start-block end-block start-offset end-offset]
-   (let [base {:document-relative-path "document.md"
-               :start-block (->block-ref start-block)
-               :end-block   (->block-ref end-block)}]
-     (if (and (some? start-offset) (some? end-offset))
-       (assoc base :start-offset start-offset :end-offset end-offset)
-       base))))
+  "Pure transform: build advisory DocumentExcerpt.locator from rendered-block
+   records (with :text) and the selected text. Offsets are populated only when
+   start and end blocks are the same block and the selected text appears inside
+   the start block text."
+  [start-block end-block selected-text]
+  (let [same-block? (and (= (:index start-block) (:index end-block))
+                         (= (:kind start-block) (:kind end-block)))
+        base {:document-relative-path "document.md"
+              :start-block (->block-ref start-block)
+              :end-block   (->block-ref end-block)}]
+    (if same-block?
+      (let [block-text (or (:text start-block) "")
+            idx        (.indexOf block-text selected-text)]
+        (if (neg? idx)
+          base
+          (assoc base
+                 :start-offset idx
+                 :end-offset   (+ idx (count selected-text)))))
+      base)))
 
 (defn sync-block-metadata! [article markdown-text]
   (let [blocks   (block-records markdown-text)
@@ -112,21 +118,10 @@
       (.setAttribute el "data-grem-block-start-line" (str (:start-line block)))
       (.setAttribute el "data-grem-block-end-line" (str (:end-line block))))))
 
-(defn- prefix-length
-  "Characters of block-el .textContent preceding (container, container-offset).
-   Uses the Range API so nested elements (tables, syntax-highlighted code) are
-   handled without a manual tree walk."
-  [block-el container container-offset]
-  (let [r (.createRange js/document)]
-    (.selectNodeContents r block-el)
-    (.setEnd r container container-offset)
-    (.-length (.toString r))))
-
 (defn selection-locator-from-dom
   "Read rendered-block data-* attrs via the DOM Range and return a locator map
    shaped like DocumentExcerpt.locator. Returns nil when endpoints lack block
-   ancestors. For same-block selections, offsets are derived from the Range via
-   prefix-length so repeated substrings in the block are disambiguated."
+   ancestors."
   [article sel]
   (let [range         (.getRangeAt sel 0)
         start-element (some-> (.-startContainer range) .-parentElement (.closest block-selector))
@@ -141,10 +136,4 @@
         start-block   (parse-block start-element)
         end-block     (parse-block end-element)]
     (when (and start-block end-block)
-      (if (= start-element end-element)
-        (let [start-offset (prefix-length start-element
-                                          (.-startContainer range)
-                                          (.-startOffset range))
-              end-offset   (+ start-offset (.-length (.toString range)))]
-          (selection-locator start-block end-block start-offset end-offset))
-        (selection-locator start-block end-block)))))
+      (selection-locator start-block end-block (.toString sel)))))
