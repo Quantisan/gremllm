@@ -36,13 +36,21 @@ const createIPCBoundary = (channel) => {
 	};
 };
 
-const acpNewSession = createIPCBoundary("acp/new-session");
-const acpResumeSession = createIPCBoundary("acp/resume-session");
 /**
- * Send a structured user message to an existing ACP session.
- * @param {string} sessionId
- * @param {object} message
- * @returns {Promise<{stopReason: string}>}
+ * @returns {Promise<string>} New ACP session ID.
+ */
+const acpNewSession = createIPCBoundary("acp/new-session");
+
+/**
+ * @param {string} sessionId Stored ACP session ID.
+ * @returns {Promise<string>} Resumed ACP session ID.
+ */
+const acpResumeSession = createIPCBoundary("acp/resume-session");
+
+/**
+ * @param {string} sessionId Topic ACP session ID.
+ * @param {object} message Structured user message.
+ * @returns {Promise<{stopReason: string}>} ACP prompt result.
  */
 const acpPrompt = createIPCBoundary("acp/prompt");
 
