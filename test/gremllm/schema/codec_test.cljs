@@ -1,32 +1,39 @@
 (ns gremllm.schema.codec-test
   (:require [cljs.test :refer [deftest is testing]]
+            [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
-            [gremllm.schema-test :as schema-test]))
+            [gremllm.schema-test :as schema-test]
+            [malli.core :as m]
+            [malli.transform :as mt]))
+
+(defn create-message
+  "Build a schema/Message fixture from Malli defaults and explicit overrides."
+  [overrides]
+  (merge (m/decode schema/Message {} mt/default-value-transformer)
+         overrides))
 
 (deftest user-message-from-ipc-test
   (testing "coerces a JS-shaped user message payload into schema/Message"
-    (let [js-data (clj->js {:id 42
-                            :type :user
-                            :text "reword these"
-                            :context {:excerpts [{:id "e1"
-                                                  :text "launched on a Tuesday"
-                                                  :locator {:document-relative-path "document.md"
-                                                            :start-block {:kind :paragraph
-                                                                          :index 2
-                                                                          :start-line 3
-                                                                          :end-line 3
-                                                                          :block-text-snippet "Our Gremllm launched on a Tuesday."}
-                                                            :end-block {:kind :heading
-                                                                        :index 1
-                                                                        :start-line 1
-                                                                        :end-line 1
-                                                                        :block-text-snippet "Launch Log"}}}]}})
+    (let [expected-message
+          (create-message {:id 42
+                           :type :user
+                           :text "reword these"
+                           :context {:excerpts [{:id "e1"
+                                                 :text "launched on a Tuesday"
+                                                 :locator {:document-relative-path "document.md"
+                                                           :start-block {:kind :paragraph
+                                                                         :index 2
+                                                                         :start-line 3
+                                                                         :end-line 3
+                                                                         :block-text-snippet "Our Gremllm launched on a Tuesday."}
+                                                           :end-block {:kind :heading
+                                                                       :index 1
+                                                                       :start-line 1
+                                                                       :end-line 1
+                                                                       :block-text-snippet "Launch Log"}}}]}})
+          js-data (clj->js expected-message)
           result (codec/user-message-from-ipc js-data)]
-      (is (= :user (:type result)))
-      (is (= :paragraph (get-in result [:context :excerpts 0 :locator :start-block :kind])))
-      (is (= :heading (get-in result [:context :excerpts 0 :locator :end-block :kind])))
-      (is (= "launched on a Tuesday"
-             (get-in result [:context :excerpts 0 :text]))))))
+      (is (= expected-message result)))))
 
 (deftest test-acp-read-display-label
   (testing "returns 'Read — filename (N lines)' when tool-response meta present"
