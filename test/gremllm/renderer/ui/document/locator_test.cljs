@@ -21,7 +21,7 @@
                     :text "Our Gremllm launched on a Tuesday."}
         heading-block {:kind :heading :index 1 :start-line 1 :end-line 1
                        :text "Gremllm Launch Log"}]
-    (testing "same-block selection produces identical start/end BlockRefs with offsets"
+    (testing "same-block selection produces identical start/end BlockRefs, no offsets"
       (let [result (locator/selection-locator para-block para-block "launched on a Tuesday")]
         (is (= "document.md" (:document-relative-path result)))
         (is (= {:kind :paragraph
@@ -31,10 +31,10 @@
                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
                (:start-block result)))
         (is (= (:start-block result) (:end-block result)))
-        (is (= 12 (:start-offset result)))
-        (is (= 33 (:end-offset result)))))
+        (is (not (contains? result :start-offset)))
+        (is (not (contains? result :end-offset)))))
 
-    (testing "cross-block selection omits offsets"
+    (testing "cross-block selection"
       (let [result (locator/selection-locator heading-block para-block "Gremllm...Our Gremllm")]
         (is (= {:kind :heading
                 :index 1
@@ -47,12 +47,4 @@
                 :start-line 3
                 :end-line 3
                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
-               (:end-block result)))
-        (is (not (contains? result :start-offset)))
-        (is (not (contains? result :end-offset)))))
-
-    (testing "same-block selection whose text is not found returns locator without offsets"
-      (let [result (locator/selection-locator para-block para-block "not-in-block-text")]
-        (is (= (:start-block result) (:end-block result)))
-        (is (not (contains? result :start-offset)))
-        (is (not (contains? result :end-offset)))))))
+               (:end-block result)))))))

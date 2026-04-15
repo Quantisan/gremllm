@@ -21,9 +21,7 @@
                :index 2
                :start-line 3
                :end-line 3
-               :block-text-snippet "Our Gremllm launched on a Tuesday."}
-   :start-offset 5
-   :end-offset 14})
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}})
 
 ;; Composite input that the :event/text-selection placeholder produces,
 ;; with both sides already coerced at the codec boundary.
@@ -82,22 +80,6 @@
       (is (= "launched on a Tuesday" (:text result)))
       (is (= hints (:locator result))))))
 
-(deftest capture->excerpt-cross-block-test
-  (testing "cross-block excerpt has no offsets"
-    (let [captured {:text "Gremllm...Our Gremllm"}
-          hints {:document-relative-path "document.md"
-                 :start-block {:kind :heading
-                               :index 1
-                               :start-line 1
-                               :end-line 1
-                               :block-text-snippet "Gremllm Launch Log"}
-                 :end-block {:kind :paragraph
-                             :index 2
-                             :start-line 3
-                             :end-line 3
-                             :block-text-snippet "Our Gremllm..."}}
-          result (excerpt/capture->excerpt captured hints "xyz")]
-      (is (not (contains? (:locator result) :start-offset))))))
 
 (deftest add-builds-and-persists-document-excerpt-test
   (testing "add reads captured excerpt data, appends it to topic excerpts, and dismisses the popover"
@@ -115,9 +97,7 @@
                                                        :index 2
                                                        :start-line 3
                                                        :end-line 3
-                                                       :block-text-snippet "hello world"}
-                                           :start-offset 0
-                                           :end-offset 5}}}
+                                                       :block-text-snippet "hello world"}}}}
           result (excerpt/add state)
           [save-action mark-unsaved-action auto-save-action dismiss-action] result
           [_ save-path excerpts] save-action
@@ -136,9 +116,7 @@
                           :index 2
                           :start-line 3
                           :end-line 3
-                          :block-text-snippet "hello world"}
-              :start-offset 0
-              :end-offset 5}
+                          :block-text-snippet "hello world"}}
              (:locator saved-excerpt)))
       (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
       (is (= [:topic.effects/auto-save topic-id] auto-save-action))

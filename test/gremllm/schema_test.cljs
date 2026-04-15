@@ -162,15 +162,13 @@
                :start-line 3
                :end-line 3
                :block-text-snippet "Our Gremllm launched on a Tuesday."}]
-    (testing "same-block excerpt with offsets"
+    (testing "same-block excerpt"
       (is (m/validate schema/DocumentExcerpt
                       {:id "excerpt-abc"
                        :text "launched on a Tuesday"
                        :locator {:document-relative-path "document.md"
                                  :start-block block
-                                 :end-block block
-                                 :start-offset 4
-                                 :end-offset 25}})))
+                                 :end-block block}})))
     (testing "cross-block excerpt without offsets"
       (is (m/validate schema/DocumentExcerpt
                       {:id "excerpt-xyz"
@@ -200,9 +198,7 @@
                                        :index 2
                                        :start-line 3
                                        :end-line 3
-                                       :block-text-snippet "Our Gremllm..."}
-                           :start-offset 4
-                           :end-offset 11}}]
+                                       :block-text-snippet "Our Gremllm..."}}}]
     (testing "message with excerpt context"
       (is (m/validate schema/Message
                       (create-message {:id 1

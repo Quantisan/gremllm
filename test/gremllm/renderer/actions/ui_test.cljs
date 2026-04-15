@@ -15,9 +15,7 @@
                          :index 2
                          :start-line 3
                          :end-line 3
-                         :block-text-snippet "hello world"}
-             :start-offset 0
-             :end-offset 5}})
+                         :block-text-snippet "hello world"}}})
 
 (deftest submit-without-text-is-noop-test
   (let [state {:form {:user-input ""}
