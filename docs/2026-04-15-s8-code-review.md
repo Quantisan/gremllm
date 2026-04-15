@@ -131,7 +131,7 @@ The guard prevents auto-saving a topic whose only content is staged excerpts. Th
 
 ---
 
-#### 9. Same-block offsets use first-text-match, not the actual selection position
+#### [FIXED] 9. Same-block offsets use first-text-match, not the actual selection position
 **File:** `src/gremllm/renderer/ui/document/locator.cljs:99-107`
 
 When start and end blocks are the same, `selection-locator` computes offsets via `(.indexOf block-text selected-text)`. This returns the **first** occurrence of the selected text in the block, regardless of which occurrence the user highlighted.
