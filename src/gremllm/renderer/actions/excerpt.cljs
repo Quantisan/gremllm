@@ -1,5 +1,6 @@
 (ns gremllm.renderer.actions.excerpt
-  (:require [gremllm.renderer.state.excerpt :as excerpt-state]))
+  (:require [gremllm.renderer.state.excerpt :as excerpt-state]
+            [gremllm.renderer.state.topic :as topic-state]))
 
 (defn capture->excerpt
   "Pure transform: ephemeral capture + locator-hints -> durable DocumentExcerpt.
@@ -21,10 +22,41 @@
    [:effects/save excerpt-state/anchor-path nil]
    [:effects/save excerpt-state/locator-hints-path nil]])
 
-(defn stage [state]
+(defn add [state]
   (when-let [captured (get-in state excerpt-state/captured-path)]
-    (let [locator-hints (get-in state excerpt-state/locator-hints-path)
-          id (str "excerpt-" (random-uuid))
-          excerpt (capture->excerpt captured locator-hints id)]
-      [[:staging.actions/stage excerpt]
-       [:excerpt.actions/dismiss-popover]])))
+    (when-let [topic-id (topic-state/get-active-topic-id state)]
+      (let [locator-hints (get-in state excerpt-state/locator-hints-path)
+            path          (topic-state/excerpts-path topic-id)
+            existing      (or (get-in state path) [])
+            id            (str "excerpt-" (random-uuid))
+            excerpt       (capture->excerpt captured locator-hints id)]
+        [[:effects/save path (conj existing excerpt)]
+         [:topic.actions/mark-active-unsaved]
+         [:topic.effects/auto-save topic-id]
+         [:excerpt.actions/dismiss-popover]]))))
+
+(defn remove-excerpt [state id]
+  (when-let [topic-id (topic-state/get-active-topic-id state)]
+    (let [path     (topic-state/excerpts-path topic-id)
+          existing (or (get-in state path) [])]
+      [[:effects/save path (vec (clojure.core/remove #(= (:id %) id) existing))]
+       [:topic.actions/mark-active-unsaved]
+       [:topic.effects/auto-save topic-id]])))
+
+(defn clear-active [state]
+  (when-let [topic-id (topic-state/get-active-topic-id state)]
+    (let [path (topic-state/excerpts-path topic-id)]
+      [[:effects/save path []]
+       [:topic.actions/mark-active-unsaved]
+       [:topic.effects/auto-save topic-id]])))
+
+(defn clear [_state topic-id]
+  (let [path (topic-state/excerpts-path topic-id)]
+    [[:effects/save path []]
+     [:topic.actions/mark-unsaved topic-id]
+     [:topic.effects/auto-save topic-id]]))
+
+(defn clear-across-topics [state]
+  (mapv (fn [topic-id]
+          [:effects/save (topic-state/excerpts-path topic-id) []])
+        (keys (topic-state/get-topics-map state))))

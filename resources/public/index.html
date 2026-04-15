@@ -147,14 +147,14 @@
             resize: none;
         }
 
-        .staged-selections {
+        .excerpt-list {
             display: flex;
             flex-wrap: wrap;
             gap: 0.25rem;
             margin-bottom: 0.5rem;
         }
 
-        .staged-pill {
+        .excerpt-chip {
             display: inline-flex;
             align-items: center;
             gap: 0.25rem;
@@ -165,7 +165,7 @@
             color: var(--pico-muted-color);
         }
 
-        .staged-pill .dismiss {
+        .excerpt-chip .dismiss {
             all: unset;
             cursor: pointer;
             padding: 0 0.125rem;
@@ -282,7 +282,7 @@
             border-radius: 2px;
         }
 
-        ::highlight(staged-excerpt) {
+        ::highlight(excerpt) {
             background-color: color-mix(in srgb, var(--tva-amber) 18%, transparent);
             border-radius: 2px;
         }

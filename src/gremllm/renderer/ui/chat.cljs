@@ -83,20 +83,20 @@
    (when awaiting-response?
      (render-loading-indicator))])
 
-(defn- render-staged-selections [staged-selections]
-  (when (seq staged-selections)
-    [:div.staged-selections
-     (for [{:keys [id text]} staged-selections]
-       [:span.staged-pill {:key id}
-        "selection: " (truncate text 30)
+(defn- render-composer-excerpts [excerpts]
+  (when (seq excerpts)
+    [:div.excerpt-list
+     (for [{:keys [id text]} excerpts]
+       [:span.excerpt-chip {:key id}
+        "excerpt: " (truncate text 30)
         [:button.dismiss
          {:type "button"
-          :on {:click [[:staging.actions/unstage id]]}}
+          :on {:click [[:excerpt.actions/remove id]]}}
          "✕"]])
-     (when (> (count staged-selections) 1)
+     (when (> (count excerpts) 1)
        [:button {:type "button"
-                 :on {:click [[:staging.actions/clear-active-staged]]}}
-        "Clear all"])]))
+                 :on {:click [[:excerpt.actions/clear-active]]}}
+        "Clear excerpts"])]))
 
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)
@@ -111,11 +111,11 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments staged-selections]}]
+(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments excerpts]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
-    (render-staged-selections staged-selections)
+    (render-composer-excerpts excerpts)
     (render-attachment-indicator pending-attachments)
     [:fieldset {:role "group"}
      [:textarea {:class "chat-input"

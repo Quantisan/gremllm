@@ -196,17 +196,14 @@
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
-;; Staging
-(nxr/register-action! :staging.actions/stage topic/stage)
-(nxr/register-action! :staging.actions/unstage topic/unstage)
-(nxr/register-action! :staging.actions/clear-active-staged topic/clear-active-staged)
-(nxr/register-action! :staging.actions/clear-staged topic/clear-staged)
-(nxr/register-action! :staging.actions/clear-staged-across-topics topic/clear-staged-across-topics)
-
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
 (nxr/register-action! :excerpt.actions/dismiss-popover excerpt/dismiss-popover)
-(nxr/register-action! :excerpt.actions/stage excerpt/stage)
+(nxr/register-action! :excerpt.actions/add excerpt/add)
+(nxr/register-action! :excerpt.actions/remove excerpt/remove-excerpt)
+(nxr/register-action! :excerpt.actions/clear-active excerpt/clear-active)
+(nxr/register-action! :excerpt.actions/clear excerpt/clear)
+(nxr/register-action! :excerpt.actions/clear-across-topics excerpt/clear-across-topics)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)

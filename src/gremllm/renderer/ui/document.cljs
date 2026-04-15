@@ -22,15 +22,15 @@
                                  "Reject"]]]))
               segments)))
 
-(defn- on-render-sync [content staged-selections]
+(defn- on-render-sync [content excerpts]
   (fn [{:replicant/keys [node life-cycle]}]
     (if (= :replicant.life-cycle/unmount life-cycle)
       (highlights/clear!)
       (do
         (locator/sync-block-metadata! node content)
-        (highlights/sync! node staged-selections)))))
+        (highlights/sync! node excerpts)))))
 
-(defn render-document [content pending-diffs staged-selections]
+(defn render-document [content pending-diffs excerpts]
   (if content
     (if (seq pending-diffs)
       (let [segments (diffs/compose content pending-diffs)]
@@ -40,7 +40,7 @@
       [:article {:on                   {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
                  ;; Replicant lifecycle hook: after markdown renders, sync DOM
                  ;; highlight ranges against the live article node.
-                 :replicant/on-render  (on-render-sync content staged-selections)}
+                 :replicant/on-render  (on-render-sync content excerpts)}
        (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
