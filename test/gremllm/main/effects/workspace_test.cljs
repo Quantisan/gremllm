@@ -27,9 +27,7 @@
                          :index 2
                          :start-line 3
                          :end-line 3
-                         :block-text-snippet "Our Gremllm crew tuned the launch checklist."}
-             :start-offset 0
-             :end-offset 17}})
+                         :block-text-snippet "Our Gremllm crew tuned the launch checklist."}}})
 
 (deftest test-parse-topic-content
   (testing "parses valid topic content"

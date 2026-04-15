@@ -14,7 +14,7 @@
            :name "document.md"}]
          (acp/prompt-content-blocks {:text "hello"} "/workspace/document.md"))))
 
-(deftest same-block-excerpt-includes-text-label-and-offsets-test
+(deftest same-block-excerpt-includes-text-and-label-test
   (let [excerpt {:id "e1"
                  :text "launched on a Tuesday"
                  :locator {:document-relative-path "document.md"
@@ -27,9 +27,7 @@
                                        :index 2
                                        :start-line 3
                                        :end-line 3
-                                       :block-text-snippet "Our Gremllm launched on a Tuesday."}
-                           :start-offset 4
-                           :end-offset 25}}
+                                       :block-text-snippet "Our Gremllm launched on a Tuesday."}}}
         message {:text "reword these"
                  :context {:excerpts [excerpt]}}
         [text-block] (acp/prompt-content-blocks message nil)
@@ -39,7 +37,7 @@
     (is (re-find #"References:" body))
     (is (re-find #"launched on a Tuesday" body))
     (is (re-find #"p2" body))
-    (is (re-find #"offset 4-25" body))
+    (is (not (re-find #"offset" body)))
     (is (re-find #"Our Gremllm launched on a Tuesday\." body))))
 
 (deftest cross-block-excerpt-no-offsets-test

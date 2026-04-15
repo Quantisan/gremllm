@@ -44,9 +44,7 @@
                          :index 3
                          :start-line 5
                          :end-line 5
-                         :block-text-snippet "full block text"}
-             :start-offset 0
-             :end-offset 52}})
+                         :block-text-snippet "full block text"}}})
 
 (def cross-block-excerpt
   {:id "e2"
