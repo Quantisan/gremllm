@@ -129,9 +129,9 @@
             [[_ _ _] promise-effect] (acp/send-prompt state message)
             on-success (get-in promise-effect [1 :on-success])
             on-error (get-in promise-effect [1 :on-error])]
-        (is (some #{[:staging.actions/clear-staged]} on-success)
-            "success clears staged selections")
-        (is (not (some #{[:staging.actions/clear-staged]} on-error))
+        (is (some #{[:staging.actions/clear-staged "t1"]} on-success)
+            "success clears staged selections for the originating topic")
+        (is (not (some #{[:staging.actions/clear-staged "t1"]} on-error))
             "error preserves staged selections"))
       (finally
         (if (nil? old-window)

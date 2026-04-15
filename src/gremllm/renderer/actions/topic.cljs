@@ -74,11 +74,17 @@
      [:topic.actions/mark-active-unsaved]
      [:topic.effects/auto-save topic-id]]))
 
-(defn clear-staged [state]
+(defn clear-active-staged [state]
   (let [topic-id (topic-state/get-active-topic-id state)
         path     (topic-state/staged-selections-path topic-id)]
     [[:effects/save path []]
      [:topic.actions/mark-active-unsaved]
+     [:topic.effects/auto-save topic-id]]))
+
+(defn clear-staged [_state topic-id]
+  (let [path (topic-state/staged-selections-path topic-id)]
+    [[:effects/save path []]
+     [:topic.actions/mark-unsaved topic-id]
      [:topic.effects/auto-save topic-id]]))
 
 (defn clear-staged-across-topics [state]
