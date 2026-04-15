@@ -86,7 +86,7 @@ Stage/unstage handlers live in `renderer/actions/topic.cljs` but dispatch under 
 
 ---
 
-#### 5. `:document.actions/set-content` silently clears all staged excerpts across all topics
+#### [PUNTED] 5. `:document.actions/set-content` silently clears all staged excerpts across all topics
 **File:** `src/gremllm/renderer/actions/document.cljs:18-21`
 
 Marked with its own `TODO(design)`. The action's name declares it sets content; the implementation also invalidates excerpts on every topic in the workspace. Two problems:
