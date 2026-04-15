@@ -48,7 +48,7 @@ The handler does `(js->clj message :keywordize-keys true)` and passes straight i
 
 ---
 
-#### 2. Staging cleanup races on topic switch during in-flight prompt
+#### [FIXED] 2. Staging cleanup races on topic switch during in-flight prompt
 **Files:** `src/gremllm/renderer/actions/acp.cljs:99-112`, `src/gremllm/renderer/actions/topic.cljs:77-82`
 
 `send-prompt` captures the originating `topic-id` from the active topic at send time, but `[:staging.actions/clear-staged]` in the `on-success` vector does not receive that id. `clear-staged` (`topic.cljs:77`) re-reads `(topic-state/get-active-topic-id state)` at resolve time, so it clears whichever topic is active when the promise resolves — not the originating one. `mark-active-unsaved` in that chain (`topic.cljs:41-43`) has the same problem.
