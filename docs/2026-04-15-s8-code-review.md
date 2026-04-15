@@ -48,7 +48,18 @@ The handler does `(js->clj message :keywordize-keys true)` and passes straight i
 
 ---
 
-#### 2. Preload double-wraps `acpPrompt`
+#### 2. Staging cleanup races on topic switch during in-flight prompt
+**Files:** `src/gremllm/renderer/actions/acp.cljs:99-112`, `src/gremllm/renderer/actions/topic.cljs:77-82`
+
+`send-prompt` captures the originating `topic-id` from the active topic at send time, but `[:staging.actions/clear-staged]` in the `on-success` vector does not receive that id. `clear-staged` (`topic.cljs:77`) re-reads `(topic-state/get-active-topic-id state)` at resolve time, so it clears whichever topic is active when the promise resolves — not the originating one. `mark-active-unsaved` in that chain (`topic.cljs:41-43`) has the same problem.
+
+**Behavior:** if the user switches topics while ACP is in flight, the newly-active topic's staged selections are wiped and auto-saved, while the originating topic retains its stale staged selections.
+
+**Fix:** make `clear-staged` accept an explicit `topic-id` argument; dispatch it from `send-prompt` with the captured `topic-id`. Replace `[:staging.actions/clear-staged]` with `[:staging.actions/clear-staged topic-id]` and replace `mark-active-unsaved` with `mark-unsaved topic-id` in the success chain. Add a test that flips `:active-topic-id` before the promise resolves.
+
+---
+
+#### 3. Preload double-wraps `acpPrompt`
 **File:** `resources/public/js/preload.js:41,61`
 
 `acpPrompt` is produced by `createIPCBoundary`, then immediately re-wrapped as:
@@ -63,7 +74,7 @@ This wrapper is a no-op identity. All other `createIPCBoundary` exports (`acpNew
 
 ### Important
 
-#### 3. Domain name drift: excerpt / staging / staged-selections
+#### 4. Domain name drift: excerpt / staging / staged-selections
 Three names for one concept:
 - `excerpt` — the schema entity (`DocumentExcerpt`)
 - `staging` — the action namespace (`:staging.actions/*`)
@@ -75,7 +86,7 @@ Stage/unstage handlers live in `renderer/actions/topic.cljs` but dispatch under 
 
 ---
 
-#### 4. `:document.actions/set-content` silently clears all staged excerpts across all topics
+#### 5. `:document.actions/set-content` silently clears all staged excerpts across all topics
 **File:** `src/gremllm/renderer/actions/document.cljs:18-21`
 
 Marked with its own `TODO(design)`. The action's name declares it sets content; the implementation also invalidates excerpts on every topic in the workspace. Two problems:
@@ -85,9 +96,11 @@ Marked with its own `TODO(design)`. The action's name declares it sets content; 
 
 **Options:** (a) Rename to `document.actions/replace-content` with an explicit docstring stating the invalidation contract, or (b) drop the clearing behavior — excerpts carry their own snapshot text and can survive reloads.
 
+**Note on option (a):** `clear-staged-across-topics` (`topic.cljs:84-87`) only emits `[:effects/save … []]` per topic — no `mark-unsaved`, no `auto-save`. The clear is in-memory-only. A workspace reload re-hydrates topics from disk, resurrecting excerpts that were supposedly invalidated. Option (a) is incomplete unless each cleared topic is also marked unsaved and auto-saved. This is an additional argument for option (b).
+
 ---
 
-#### 5. `block-label` logic duplicated
+#### 6. `block-label` logic duplicated
 **Files:** `src/gremllm/main/actions/acp.cljs:6-17` and `src/gremllm/renderer/ui/chat.cljs:6-20`
 
 Both implement the same kind→prefix table independently. Adding a new block kind (e.g. `:figure`) requires editing two files and risks inconsistent prompt vs. UI labels.
@@ -96,7 +109,7 @@ Both implement the same kind→prefix table independently. Adding a new block ki
 
 ---
 
-#### 6. Empty-messages guard treats excerpts as second-class
+#### 7. Empty-messages guard treats excerpts as second-class
 **File:** `src/gremllm/renderer/actions/topic.cljs:52`
 
 ```clojure
@@ -107,22 +120,46 @@ The guard prevents auto-saving a topic whose only content is staged excerpts. Th
 
 ---
 
+#### 8. Locator failure is not fail-closed
+**Files:** `src/gremllm/renderer/actions.cljs:86`, `src/gremllm/renderer/ui/document/locator.cljs:121-139`, `src/gremllm/renderer/actions/excerpt.cljs:24-30`, `src/gremllm/schema.cljs:163-169`
+
+`selection-locator-from-dom` returns `nil` when either selection endpoint lacks a block-selector ancestor. The call site (`renderer/actions.cljs:86`) passes that `nil` as `locator-hints`. `excerpt/stage` then hands it directly to `capture->excerpt`, which sets `:locator nil` on the resulting `DocumentExcerpt`.
+
+`DocumentExcerpt.locator` is a **required** map in the schema (`schema.cljs:163-169`). The staging action succeeds; the schema violation surfaces later when the next auto-save runs `topic-to-ipc` → `m/coerce schema/Topic`, which throws. Net effect: the user stages an excerpt successfully, then the background save blows up silently.
+
+**Fix:** refuse to stage when `locator-hints` is nil — return `[[:excerpt.actions/dismiss-popover]]` (optionally with a warning in state). This matches the "auditable first-class context" intent better than staging an invalid excerpt. Alternatively, extend the schema to allow a `:no-locator` shape and propagate that through the pipeline.
+
+---
+
+#### 9. Same-block offsets use first-text-match, not the actual selection position
+**File:** `src/gremllm/renderer/ui/document/locator.cljs:99-107`
+
+When start and end blocks are the same, `selection-locator` computes offsets via `(.indexOf block-text selected-text)`. This returns the **first** occurrence of the selected text in the block, regardless of which occurrence the user highlighted.
+
+For blocks with repeated substrings (common in lists and tables), the stored `:start-offset` / `:end-offset` is wrong, and the ACP prompt's `offset 4-25` label actively misleads the agent.
+
+**Fix options:** (a) drop offsets entirely — the quoted text in `render-excerpt` already identifies the content, making offsets redundant and potentially wrong; (b) derive block-relative offsets from the DOM Range in `selection-locator-from-dom` rather than via post-hoc string search.
+
+---
+
 ### Minor
 
-7. `render-excerpt` uses `pr-str` to quote user text in the ACP prompt body (`main/actions/acp.cljs:30-31`) — leaks Clojure quoting conventions into the agent prompt. Consider Markdown fences or plain indented lines.
+9. `render-excerpt` uses `pr-str` to quote user text in the ACP prompt body (`main/actions/acp.cljs:30-31`) — leaks Clojure quoting conventions into the agent prompt. Consider Markdown fences or plain indented lines.
 
-8. `generate-message-id` returns `js/Date.now` (`schema.cljs:25-28`) — two calls in the same millisecond collide. Pre-existing issue, but `streaming-chunk-effects` now also generates IDs per chunk in the same tick.
+10. `generate-message-id` returns `js/Date.now` (`schema.cljs:25-28`) — two calls in the same millisecond collide. Pre-existing issue, but `streaming-chunk-effects` now also generates IDs per chunk in the same tick.
 
-9. `AcpSession` has a `TODO: id should be required` (`schema.cljs:206`). Cleanup candidate, especially if you rename `:staged-selections` per issue #3.
-
-10. `locator-label` appends byte offsets (`p2 offset 4-25`) that duplicate info already present in the quoted text returned by `render-excerpt`. The label is advisory; consider omitting the offsets.
+11. `AcpSession` has a `TODO: id should be required` (`schema.cljs:206`). Cleanup candidate, especially if you rename `:staged-selections` per issue #4.
 
 ---
 
 ## Overall assessment
 
-**Not mergeable as-is.** Fix issue #1 before merge — it is the exact trust-boundary lapse the project's own standards describe, and it conceals a live `:kind` keywordization bug that tests do not catch. Issue #2 is a one-liner to clean up in the same pass.
+**Not mergeable as-is.** There are three critical issues:
 
-Issues #3 and #4 are structural concerns most likely to cause friction in Bicycle-stage work (specialized agents, managed context). Recommended: address them in a follow-up commit on this branch before merging rather than deferring to the next milestone.
+1. **IPC boundary lacks coercion** (issue #1) — violates the project's explicit trust-boundary contract and conceals a live `:kind` keywordization bug that tests do not catch. Issue #3 (preload double-wrap) is a one-liner to clean up in the same pass.
+2. **Staging cleanup races on topic switch** (issue #2) — `clear-staged` uses the active topic at resolve time, not the originating topic at send time. A realistic user action (switching topics during a slow ACP call) silently corrupts the wrong topic's staged selections.
+3. **Nil locator stages invalid durable state** (issue #8) — a selection outside a block-selector element produces a nil locator, stages successfully, then throws at the next auto-save.
+
+Issues #4, #5, and #9 are structural concerns most likely to cause friction in Bicycle-stage work (specialized agents, managed context). Recommended: address them in a follow-up commit on this branch before merging rather than deferring to the next milestone.
 
 The overall shape — a single `DocumentExcerpt` value flowing document panel → topic state → user message → ACP prompt → chat render — is a clean decomplection win.
