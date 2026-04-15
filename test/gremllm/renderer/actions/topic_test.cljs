@@ -140,15 +140,29 @@
         (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
         (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))))
 
-(deftest clear-staged-test
+(deftest clear-active-staged-test
   (let [item sample-excerpt
         state (assoc-in base-state [:topics topic-id :staged-selections] [item])
-        actions (topic/clear-staged state)]
+        actions (topic/clear-active-staged state)]
     (is (= [:effects/save
             (topic-state/staged-selections-path topic-id)
             []]
            (first actions)))
     (is (= [:topic.actions/mark-active-unsaved] (nth actions 1)))
+    (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))
+
+(deftest clear-staged-targets-explicit-topic-test
+  (let [state {:active-topic-id "topic-999"
+               :topics {topic-id {:id topic-id
+                                  :staged-selections [sample-excerpt]}
+                        "topic-999" {:id "topic-999"
+                                     :staged-selections [(assoc sample-excerpt :id "e2")]}}}
+        actions (topic/clear-staged state topic-id)]
+    (is (= [:effects/save
+            (topic-state/staged-selections-path topic-id)
+            []]
+           (first actions)))
+    (is (= [:topic.actions/mark-unsaved topic-id] (nth actions 1)))
     (is (= [:topic.effects/auto-save topic-id] (nth actions 2)))))
 
 (deftest auto-save-fires-when-staged-selections-present-with-no-messages-test

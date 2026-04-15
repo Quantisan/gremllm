@@ -199,6 +199,7 @@
 ;; Staging
 (nxr/register-action! :staging.actions/stage topic/stage)
 (nxr/register-action! :staging.actions/unstage topic/unstage)
+(nxr/register-action! :staging.actions/clear-active-staged topic/clear-active-staged)
 (nxr/register-action! :staging.actions/clear-staged topic/clear-staged)
 (nxr/register-action! :staging.actions/clear-staged-across-topics topic/clear-staged-across-topics)
 

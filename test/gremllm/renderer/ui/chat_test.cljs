@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [clojure.walk :as walk]
             [gremllm.renderer.ui.chat :as chat-ui]
+            [gremllm.schema-test :as schema-test]
             [lookup.core :as lookup]))
 
 (deftest render-input-form-test
@@ -63,16 +64,18 @@
                          :block-text-snippet "Body"}}})
 
 (deftest plain-user-message-has-no-references-test
-  (let [hiccup (#'chat-ui/render-message {:id 1 :type :user :text "hello"})]
+  (let [hiccup (#'chat-ui/render-message
+                (schema-test/create-message {:id 1 :type :user :text "hello"}))]
     (is (not (contains-text? hiccup "References")))
     (is (contains-text? hiccup "hello"))))
 
 (deftest user-message-with-same-block-excerpt-renders-compact-pill-test
   (let [hiccup (#'chat-ui/render-message
-                {:id 1
-                 :type :user
-                 :text "reword these"
-                 :context {:excerpts [same-block-excerpt]}})]
+                (schema-test/create-message
+                  {:id 1
+                   :type :user
+                   :text "reword these"
+                   :context {:excerpts [same-block-excerpt]}}))]
     (is (contains-text? hiccup "reword these"))
     (is (contains-text? hiccup "p3"))
     (is (contains-text? hiccup "this is a selection longer than forty c"))
@@ -81,8 +84,9 @@
 
 (deftest user-message-with-cross-block-excerpt-renders-arrow-label-test
   (let [hiccup (#'chat-ui/render-message
-                {:id 1
-                 :type :user
-                 :text "compare"
-                 :context {:excerpts [cross-block-excerpt]}})]
+                (schema-test/create-message
+                  {:id 1
+                   :type :user
+                   :text "compare"
+                   :context {:excerpts [cross-block-excerpt]}}))]
     (is (contains-text? hiccup "h1 -> p2"))))

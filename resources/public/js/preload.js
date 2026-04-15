@@ -36,8 +36,22 @@ const createIPCBoundary = (channel) => {
 	};
 };
 
+/**
+ * @returns {Promise<string>} New ACP session ID.
+ */
 const acpNewSession = createIPCBoundary("acp/new-session");
+
+/**
+ * @param {string} sessionId Stored ACP session ID.
+ * @returns {Promise<string>} Resumed ACP session ID.
+ */
 const acpResumeSession = createIPCBoundary("acp/resume-session");
+
+/**
+ * @param {string} sessionId Topic ACP session ID.
+ * @param {object} message Structured user message.
+ * @returns {Promise<{stopReason: string}>} ACP prompt result.
+ */
 const acpPrompt = createIPCBoundary("acp/prompt");
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -58,5 +72,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	// ACP API
 	acpNewSession,
 	acpResumeSession,
-	acpPrompt: (sessionId, message) => acpPrompt(sessionId, message),
+	acpPrompt,
 });
