@@ -213,7 +213,7 @@
       (is (m/validate schema/Message
                       (create-message {:id 1 :type :user :text "hello"}))))))
 
-(deftest persisted-topic-staged-selections-are-document-excerpts-test
+(deftest persisted-topic-excerpts-are-document-excerpts-test
   (let [excerpt {:id "e1"
                  :text "snippet"
                  :locator {:document-relative-path "document.md"
@@ -232,4 +232,4 @@
                      :name "T"
                      :session {:pending-diffs []}
                      :messages []
-                     :staged-selections [excerpt]}))))
+                     :excerpts [excerpt]}))))

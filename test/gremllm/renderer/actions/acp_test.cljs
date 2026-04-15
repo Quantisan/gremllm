@@ -101,7 +101,7 @@
       (testing "ignores unsupported update types"
         (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
 
-(deftest send-prompt-with-message-and-staged-clears-on-success-test
+(deftest send-prompt-with-message-and-excerpts-clears-on-success-test
   (let [old-window (.-window js/globalThis)]
     (aset js/globalThis
           "window"
@@ -129,10 +129,10 @@
             [[_ _ _] promise-effect] (acp/send-prompt state message)
             on-success (get-in promise-effect [1 :on-success])
             on-error (get-in promise-effect [1 :on-error])]
-        (is (some #{[:staging.actions/clear-staged "t1"]} on-success)
-            "success clears staged selections for the originating topic")
-        (is (not (some #{[:staging.actions/clear-staged "t1"]} on-error))
-            "error preserves staged selections"))
+        (is (some #{[:excerpt.actions/clear "t1"]} on-success)
+            "success clears excerpts for the originating topic")
+        (is (not (some #{[:excerpt.actions/clear "t1"]} on-error))
+            "error preserves excerpts"))
       (finally
         (if (nil? old-window)
           (js-delete js/globalThis "window")

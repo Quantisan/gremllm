@@ -22,13 +22,13 @@
 (deftest submit-without-text-is-noop-test
   (let [state {:form {:user-input ""}
                :active-topic-id "t1"
-               :topics {"t1" {:staged-selections []}}}]
+               :topics {"t1" {:excerpts []}}}]
     (is (nil? (ui/submit-messages state)))))
 
-(deftest submit-without-staged-selections-sends-plain-message-test
+(deftest submit-without-excerpts-sends-plain-message-test
   (let [state {:form {:user-input "hello"}
                :active-topic-id "t1"
-               :topics {"t1" {:staged-selections []}}}
+               :topics {"t1" {:excerpts []}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
         [_ message] add-msg
         [_ sent-message] send]
@@ -39,10 +39,10 @@
     (is (= :acp.actions/send-prompt (first send)))
     (is (= message sent-message))))
 
-(deftest submit-with-staged-selections-attaches-context-test
+(deftest submit-with-excerpts-attaches-context-test
   (let [state {:form {:user-input "reword these"}
                :active-topic-id "t1"
-               :topics {"t1" {:staged-selections [sample-excerpt]}}}
+               :topics {"t1" {:excerpts [sample-excerpt]}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
         [_ message] add-msg
         [_ sent-message] send]
