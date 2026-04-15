@@ -95,7 +95,7 @@
          "✕"]])
      (when (> (count staged-selections) 1)
        [:button {:type "button"
-                 :on {:click [[:staging.actions/clear-staged]]}}
+                 :on {:click [[:staging.actions/clear-active-staged]]}}
         "Clear all"])]))
 
 (defn- render-attachment-indicator [pending-attachments]

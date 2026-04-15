@@ -1,7 +1,14 @@
 (ns gremllm.schema-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.schema :as schema]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.transform :as mt]))
+
+(defn create-message
+  "Build a schema/Message fixture from Malli defaults and explicit overrides."
+  [overrides]
+  (merge (m/decode schema/Message {} mt/default-value-transformer)
+         overrides))
 
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
@@ -198,13 +205,13 @@
                            :end-offset 11}}]
     (testing "message with excerpt context"
       (is (m/validate schema/Message
-                      {:id 1
-                       :type :user
-                       :text "reword these"
-                       :context {:excerpts [excerpt]}})))
+                      (create-message {:id 1
+                                       :type :user
+                                       :text "reword these"
+                                       :context {:excerpts [excerpt]}}))))
     (testing "message without context still valid"
       (is (m/validate schema/Message
-                      {:id 1 :type :user :text "hello"})))))
+                      (create-message {:id 1 :type :user :text "hello"}))))))
 
 (deftest persisted-topic-staged-selections-are-document-excerpts-test
   (let [excerpt {:id "e1"

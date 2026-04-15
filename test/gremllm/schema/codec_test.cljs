@@ -3,6 +3,29 @@
             [gremllm.schema.codec :as codec]
             [gremllm.schema-test :as schema-test]))
 
+(deftest user-message-from-ipc-test
+  (testing "coerces a JS-shaped user message payload into schema/Message"
+    (let [expected-message
+          (schema-test/create-message {:id 42
+                                       :type :user
+                                       :text "reword these"
+                                       :context {:excerpts [{:id "e1"
+                                                             :text "launched on a Tuesday"
+                                                             :locator {:document-relative-path "document.md"
+                                                                       :start-block {:kind :paragraph
+                                                                                     :index 2
+                                                                                     :start-line 3
+                                                                                     :end-line 3
+                                                                                     :block-text-snippet "Our Gremllm launched on a Tuesday."}
+                                                                       :end-block {:kind :heading
+                                                                                   :index 1
+                                                                                   :start-line 1
+                                                                                   :end-line 1
+                                                                                   :block-text-snippet "Launch Log"}}}]}})
+          js-data (clj->js expected-message)
+          result (codec/user-message-from-ipc js-data)]
+      (is (= expected-message result)))))
+
 (deftest test-acp-read-display-label
   (testing "returns 'Read — filename (N lines)' when tool-response meta present"
     (is (= "Read — document.md (37 lines)"

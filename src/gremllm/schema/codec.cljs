@@ -90,6 +90,14 @@
     (js->clj $ :keywordize-keys true)
     (m/coerce schema/Topic $ mt/json-transformer)))
 
+(defn user-message-from-ipc
+  "Transforms structured user message data from IPC into internal Message schema.
+   Throws if invalid."
+  [message-js]
+  (as-> message-js $
+    (js->clj $ :keywordize-keys true)
+    (m/coerce schema/Message $ mt/json-transformer)))
+
 (defn workspace-sync-from-ipc
   "Validates and transforms workspace sync data from IPC. Throws if invalid."
   [workspace-data-js]

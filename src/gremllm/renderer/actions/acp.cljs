@@ -106,7 +106,6 @@
                                  acp-session-id
                                  (clj->js message))
          :on-success [[:loading.actions/set-loading? topic-id false]
-                      [:staging.actions/clear-staged]
-                      [:topic.effects/auto-save topic-id]]
+                      [:staging.actions/clear-staged topic-id]]
          :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
       (js/console.error "[ACP] No session for prompt"))))
