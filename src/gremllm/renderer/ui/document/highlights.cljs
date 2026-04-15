@@ -76,7 +76,7 @@
                  (conj parts text)
                  (conj spans [node pos (+ pos len)])))))))
 
-(def ^:private highlight-name "staged-excerpt")
+(def ^:private highlight-name "excerpt")
 
 (defn- make-range
   "Builds a DOM Range from a locate-range result and the containing document."
@@ -91,7 +91,7 @@
 
 ;; TODO: is there a simpler way to do this?
 (defn sync!
-  "Rebuilds the staged excerpt highlight registry entry from the given excerpts
+  "Rebuilds the excerpt highlight registry entry from the given excerpts
    against article's current text content. Safe to call
    on every render; missing matches are silently dropped."
   [article excerpts]
@@ -104,7 +104,7 @@
     (.set js/CSS.highlights highlight-name hl)))
 
 (defn clear!
-  "Removes the staged excerpt highlight registry entry. Call on article
+  "Removes the excerpt highlight registry entry. Call on article
    unmount to avoid leaving ranges that point to detached nodes."
   []
   (.delete js/CSS.highlights highlight-name))

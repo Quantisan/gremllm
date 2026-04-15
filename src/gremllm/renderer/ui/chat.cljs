@@ -85,10 +85,10 @@
 
 (defn- render-composer-excerpts [excerpts]
   (when (seq excerpts)
-    [:div.staged-selections
+    [:div.excerpt-list
      (for [{:keys [id text]} excerpts]
-       [:span.staged-pill {:key id}
-        "selection: " (truncate text 30)
+       [:span.excerpt-chip {:key id}
+        "excerpt: " (truncate text 30)
         [:button.dismiss
          {:type "button"
           :on {:click [[:excerpt.actions/remove id]]}}
@@ -96,7 +96,7 @@
      (when (> (count excerpts) 1)
        [:button {:type "button"
                  :on {:click [[:excerpt.actions/clear-active]]}}
-        "Clear all"])]))
+        "Clear excerpts"])]))
 
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)

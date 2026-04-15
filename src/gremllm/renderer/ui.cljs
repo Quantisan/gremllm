@@ -61,7 +61,7 @@
                           :cursor        "pointer"}
                   :on {:mousedown [[:effects/stop-propagation]]
                        :click     [[:excerpt.actions/add]]}}
-         "Stage"])]
+         "Add excerpt"])]
 
      ;; Zone 3: Chat panel
      [e/chat-panel
