@@ -1657,7 +1657,7 @@ git commit -m "docs(skill): add gremllm electron ui testing skill"
 - Verify only: `.agents/skills/gremllm-electron-ui-testing/`
 - Verify only: `resources/gremllm-launch-log.md`
 
-- [ ] **Step 1: Run the focused automated checks first**
+- [x] **Step 1: Run the focused automated checks first**
 
 Run:
 
@@ -1671,6 +1671,12 @@ node --test test/skills/gremllm_electron_ui_testing/cdp_eval_test.mjs test/skill
 Expected:
 - PASS for all shell and Node tests
 - No failures before the real-app session starts
+
+Observed on 2026-04-15:
+- `bash test/skills/gremllm_electron_ui_testing/test_prepare_fixture.sh` passed
+- `bash test/skills/gremllm_electron_ui_testing/test_launch_app.sh` passed
+- `bash test/skills/gremllm_electron_ui_testing/test_applescript.sh` passed
+- `node --test test/skills/gremllm_electron_ui_testing/cdp_eval_test.mjs test/skills/gremllm_electron_ui_testing/cdp_capture_test.mjs` passed with 5/5 tests green
 
 - [ ] **Step 2: Run one real local validation session**
 
@@ -1711,7 +1717,17 @@ Expected:
 - `cdp_eval.js` returns a non-empty selected string
 - `/tmp/gremllm-ui-console.json` includes a `Runtime.consoleAPICalled` entry showing the selection evidence
 
-- [ ] **Step 3: Confirm validation did not mutate the repo**
+Observed on 2026-04-15 attempt:
+- `prepare_fixture.sh` created a disposable workspace at `/tmp/gremllm-fixture-GjXn49` from `resources/gremllm-launch-log.md`
+- `launch_app.sh` succeeded and returned `{"status":"launched","port":9222,"title":"Gremllm","webSocketDebuggerUrl":"ws://127.0.0.1:9222/devtools/page/F46A94C6DF57820BDC15E1BC01801570","pid":68179}`
+- `focus_app.applescript` returned without error
+- The run paused at `open_workspace.applescript` with `open_workspace.applescript failed for /tmp/gremllm-fixture-GjXn49: Timed out waiting for Go to the folder sheet. (-2700)`
+- Because the workspace did not open, `node .agents/skills/gremllm-electron-ui-testing/scripts/cdp_capture.js dom --selector '.document-panel article'` returned `{"command":"dom","target":{"id":"F46A94C6DF57820BDC15E1BC01801570","title":"Gremllm"},"capture":{"found":false,"selector":".document-panel article"}}`
+- Because no document article was present, `cdp_eval.js` returned `{"ok":false,"step":"cdp_eval","message":"Uncaught"}`
+- `/tmp/gremllm-ui-console.json` captured only the standard Electron CSP warning and did not contain the expected `ui-test-selection` console entry
+- Resume from here next time: debug why `open_workspace.applescript` does not reach the "Go to the folder" sheet after `Cmd+O` and `Cmd+Shift+G` in the live app on this machine
+
+- [x] **Step 3: Confirm validation did not mutate the repo**
 
 Run:
 
@@ -1722,6 +1738,10 @@ git status --short
 Expected:
 - No unexpected file modifications from the validation pass
 - Temporary evidence remains in `/tmp`, not in tracked repo files
+
+Observed on 2026-04-15:
+- `git status --short` was clean immediately after the validation attempt
+- This plan-file note is the only intentional tracked change after that clean check
 
 ## Self-Review
 
