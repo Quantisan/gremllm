@@ -122,7 +122,7 @@
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
                        [[:acp.effects/send-prompt
-                         acp-session-id (js->clj message :keywordize-keys true)
+                         acp-session-id (codec/user-message-from-ipc message)
                          (state/get-workspace-dir @store)]]))))
 
 (defn- setup-system-resources [store]
