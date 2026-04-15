@@ -73,17 +73,22 @@
 (nxr/register-effect! :effects/promise promise->actions)
 
 ;; Register placeholder for text selection events.
-;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil}
+;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil :locator-hints LocatorHints-or-nil}
 ;; when a non-collapsed selection exists, nil otherwise.
+;; locator-hints is nil when selection endpoints lack block-selector ancestors;
+;; excerpt/capture treats that as a non-stageable selection.
 (nxr/register-placeholder! :event/text-selection
   (fn [{:replicant/keys [dom-event]}]
     (let [sel     (js/document.getSelection)
           panel   (when dom-event (.. dom-event -target (closest ".document-panel")))
           article (when panel (.querySelector panel "article"))]
       (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        {:selection     (codec/captured-selection-from-dom sel)
-         :anchor        (when panel (codec/anchor-context-from-dom panel))
-         :locator-hints (when article (locator/selection-locator-from-dom article sel))}))))
+        (let [locator-hints (when article (locator/selection-locator-from-dom article sel))]
+          (when (and article (nil? locator-hints))
+            (js/console.warn "[excerpt] Selection has no block-anchored locator; popover suppressed."))
+          {:selection     (codec/captured-selection-from-dom sel)
+           :anchor        (when panel (codec/anchor-context-from-dom panel))
+           :locator-hints locator-hints})))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
