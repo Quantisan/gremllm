@@ -59,7 +59,7 @@ The handler does `(js->clj message :keywordize-keys true)` and passes straight i
 
 ---
 
-#### 3. Preload double-wraps `acpPrompt`
+#### [FIXED] 3. Preload double-wraps `acpPrompt`
 **File:** `resources/public/js/preload.js:41,61`
 
 `acpPrompt` is produced by `createIPCBoundary`, then immediately re-wrapped as:

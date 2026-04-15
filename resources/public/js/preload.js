@@ -38,6 +38,12 @@ const createIPCBoundary = (channel) => {
 
 const acpNewSession = createIPCBoundary("acp/new-session");
 const acpResumeSession = createIPCBoundary("acp/resume-session");
+/**
+ * Send a structured user message to an existing ACP session.
+ * @param {string} sessionId
+ * @param {object} message
+ * @returns {Promise<{stopReason: string}>}
+ */
 const acpPrompt = createIPCBoundary("acp/prompt");
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -58,5 +64,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	// ACP API
 	acpNewSession,
 	acpResumeSession,
-	acpPrompt: (sessionId, message) => acpPrompt(sessionId, message),
+	acpPrompt,
 });
