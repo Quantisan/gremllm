@@ -37,7 +37,7 @@ Related docs:
 
 ### Critical
 
-#### 1. No coercion/validation at the `acp/prompt` IPC boundary
+#### [FIXED] 1. No coercion/validation at the `acp/prompt` IPC boundary
 **File:** `src/gremllm/main/core.cljs:120`
 
 The handler does `(js->clj message :keywordize-keys true)` and passes straight into `prompt-content-blocks`. This violates the project's explicit boundary contract (see `CLAUDE.md` — "Schema validation at every boundary (IPC, disk, HTTP, etc.)"). The pattern already exists in `schema/codec.cljs` for secrets, topics, and workspaces; it is absent here.
