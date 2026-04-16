@@ -97,7 +97,7 @@
 (defn selection-locator
   "Pure transform: build advisory DocumentExcerpt.locator from rendered-block
    records (with :text) and the selected text."
-  [start-block end-block _selected-text]
+  [start-block end-block]
   {:document-relative-path "document.md"
    :start-block (->block-ref start-block)
    :end-block   (->block-ref end-block)})
@@ -132,4 +132,4 @@
         start-block   (parse-block start-element)
         end-block     (parse-block end-element)]
     (when (and start-block end-block)
-      (selection-locator start-block end-block (.toString sel)))))
+      (selection-locator start-block end-block))))
