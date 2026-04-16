@@ -61,6 +61,27 @@
     (is (re-find #"h1 -> p2" body))
     (is (not (re-find #"offset" body)))))
 
+(deftest excerpt-text-renders-as-blockquote-test
+  (testing "excerpt text is rendered as markdown blockquote, not pr-str quoted"
+    (let [excerpt {:id "e1"
+                   :text "launched on a Tuesday"
+                   :locator {:document-relative-path "document.md"
+                             :start-block {:kind :paragraph
+                                           :index 2
+                                           :start-line 3
+                                           :end-line 3
+                                           :block-text-snippet "Our Gremllm launched on a Tuesday."}
+                             :end-block {:kind :paragraph
+                                         :index 2
+                                         :start-line 3
+                                         :end-line 3
+                                         :block-text-snippet "Our Gremllm launched on a Tuesday."}}}
+          message {:text "reword" :context {:excerpts [excerpt]}}
+          [text-block] (acp/prompt-content-blocks message nil)
+          body (:text text-block)]
+      (is (re-find #"      > launched on a Tuesday" body))
+      (is (not (re-find #"\"launched" body))))))
+
 (deftest excerpt-with-document-path-appends-resource-link-test
   (let [excerpt {:id "e1"
                  :text "x"
