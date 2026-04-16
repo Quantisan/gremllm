@@ -27,15 +27,15 @@
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
                  :active-topic-id "t1"}
           effects (acp/streaming-chunk-effects state :assistant "Hi!" 456)]
-      (is (= [[:messages.actions/add-to-chat-no-save {:id 456
-                                                      :type :assistant
-                                                      :text "Hi!"}]]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1" {:id 456
+                                                           :type :assistant
+                                                           :text "Hi!"}]]
              effects)))))
 
 (deftest test-handle-tool-event
   (testing "returns tool-use for Read tool-call-update with file payload"
     (let [effects (acp/handle-tool-event
-                    {}
+                    {:active-topic-id "t1"}
                     {:session-update :tool-call-update
                      :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
                      :meta {:claude-code {:tool-name "Read"
@@ -43,7 +43,7 @@
                                                                  :totalLines 16}
                                                           :type "text"}}}}
                     456)]
-      (is (= [[:messages.actions/add-to-chat-no-save
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
                {:id 456
                 :type :tool-use
                 :text "Read — gremllm-launch-log.md (16 lines)"}]]

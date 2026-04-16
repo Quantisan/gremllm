@@ -7,23 +7,13 @@
    [:topic.actions/mark-unsaved topic-id]
    [:ui.actions/scroll-chat-to-bottom]])
 
-(defn- require-active-topic-id [state]
-  (or (topic-state/get-active-topic-id state)
-      (throw (js/Error. "Cannot add message: no active topic."))))
+(defn add-message [_state topic-id message]
+  (into (base-add-message-effects topic-id message)
+        [;; TODO: we should not save if the last message was an Error
+         [:topic.effects/auto-save topic-id]]))
 
-(defn add-message
-  ([state message]
-   (add-message state (require-active-topic-id state) message))
-  ([_state topic-id message]
-   (into (base-add-message-effects topic-id message)
-         [;; TODO: we should not save if the last message was an Error
-          [:topic.effects/auto-save topic-id]])))
-
-(defn add-message-no-save
-  ([state message]
-   (add-message-no-save state (require-active-topic-id state) message))
-  ([_state topic-id message]
-   (base-add-message-effects topic-id message)))
+(defn add-message-no-save [_state topic-id message]
+  (base-add-message-effects topic-id message))
 
 (defn build-conversation-with-new-message
   "Builds complete conversation history including the new user message."
