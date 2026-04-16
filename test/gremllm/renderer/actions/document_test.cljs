@@ -10,7 +10,7 @@
              (first effects))))
 
     (testing "dispatches cross-topic excerpt invalidation"
-      (is (some #{[:excerpt.actions/clear-across-topics]} effects)))
+      (is (some #{[:excerpt.actions/invalidate-across-topics]} effects)))
 
     (testing "dismisses live capture state"
       (is (some #{[:excerpt.actions/dismiss-popover]} effects)))))
