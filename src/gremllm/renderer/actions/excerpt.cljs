@@ -23,14 +23,14 @@
    [:effects/save excerpt-state/locator-hints-path nil]])
 
 (defn add [state]
-  (when-let [captured (get-in state excerpt-state/captured-path)]
-    (when-let [topic-id (topic-state/get-active-topic-id state)]
-      (let [locator-hints (get-in state excerpt-state/locator-hints-path)
-            path          (topic-state/excerpts-path topic-id)
-            existing      (or (get-in state path) [])
-            id            (str "excerpt-" (random-uuid))
-            excerpt       (capture->excerpt captured locator-hints id)]
-        [[:effects/save path (conj existing excerpt)]
+  (let [captured (excerpt-state/get-captured state)
+        topic-id (topic-state/get-active-topic-id state)]
+    (when (and captured topic-id)
+      (let [path    (topic-state/excerpts-path topic-id)
+            excerpt (capture->excerpt captured
+                                      (excerpt-state/get-locator-hints state)
+                                      (str "excerpt-" (random-uuid)))]
+        [[:effects/save path (conj (get-in state path []) excerpt)]
          [:topic.actions/mark-active-unsaved]
          [:topic.effects/auto-save topic-id]
          [:excerpt.actions/dismiss-popover]]))))
