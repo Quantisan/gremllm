@@ -22,7 +22,7 @@
         heading-block {:kind :heading :index 1 :start-line 1 :end-line 1
                        :text "Gremllm Launch Log"}]
     (testing "same-block selection produces identical start/end BlockRefs, no offsets"
-      (let [result (locator/selection-locator para-block para-block "launched on a Tuesday")]
+      (let [result (locator/selection-locator para-block para-block)]
         (is (= "document.md" (:document-relative-path result)))
         (is (= {:kind :paragraph
                 :index 2
@@ -35,7 +35,7 @@
         (is (not (contains? result :end-offset)))))
 
     (testing "cross-block selection"
-      (let [result (locator/selection-locator heading-block para-block "Gremllm...Our Gremllm")]
+      (let [result (locator/selection-locator heading-block para-block)]
         (is (= {:kind :heading
                 :index 1
                 :start-line 1
