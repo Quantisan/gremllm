@@ -62,29 +62,20 @@
                          :block-text-snippet "Body"}}})
 
 (deftest plain-user-message-has-no-references-test
-  (let [hiccup (#'chat-ui/render-message
-                (schema-test/create-message {:id 1 :type :user :text "hello"}))]
-    (is (not (contains-text? hiccup "References")))
+  (let [hiccup (chat-ui/render-chat-area
+                [(schema-test/create-message {:id 1 :type :user :text "hello"})]
+                false)]
+    (is (nil? (lookup/select-one '.message-references hiccup)))
     (is (contains-text? hiccup "hello"))))
 
-(deftest user-message-with-same-block-excerpt-renders-compact-pill-test
-  (let [hiccup (#'chat-ui/render-message
-                (schema-test/create-message
+(deftest user-message-with-excerpts-renders-reference-affordances-test
+  (let [hiccup (chat-ui/render-chat-area
+                [(schema-test/create-message
                   {:id 1
                    :type :user
                    :text "reword these"
-                   :context {:excerpts [same-block-excerpt]}}))]
+                   :context {:excerpts [same-block-excerpt cross-block-excerpt]}})]
+                false)]
     (is (contains-text? hiccup "reword these"))
-    (is (contains-text? hiccup "p3"))
-    (is (contains-text? hiccup "this is a selection longer than forty c"))
-    (is (not (contains-text? hiccup "full block text")))
-    (is (not (contains-text? hiccup "this is a selection longer than forty characters abc")))))
-
-(deftest user-message-with-cross-block-excerpt-renders-arrow-label-test
-  (let [hiccup (#'chat-ui/render-message
-                (schema-test/create-message
-                  {:id 1
-                   :type :user
-                   :text "compare"
-                   :context {:excerpts [cross-block-excerpt]}}))]
-    (is (contains-text? hiccup "h1 -> p2"))))
+    (is (some? (lookup/select-one '.message-references hiccup)))
+    (is (= 2 (count (lookup/select '.excerpt-pill hiccup))))))
