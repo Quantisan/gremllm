@@ -214,6 +214,8 @@
 (nxr/register-action! :acp.actions/new-session acp/new-session)
 (nxr/register-action! :acp.actions/resume-session acp/resume-session)
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
+(nxr/register-action! :acp.actions/prompt-succeeded acp/prompt-succeeded)
+(nxr/register-action! :acp.actions/prompt-failed acp/prompt-failed)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 (nxr/register-action! :acp.events/session-update acp/session-update)
