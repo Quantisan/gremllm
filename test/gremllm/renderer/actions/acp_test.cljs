@@ -101,38 +101,40 @@
       (testing "ignores unsupported update types"
         (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
 
-(deftest send-prompt-with-message-and-excerpts-clears-on-success-test
+(deftest send-prompt-with-message-and-excerpts-routes-through-explicit-callback-actions-test
   (let [old-window (.-window js/globalThis)]
     (aset js/globalThis
           "window"
           #js {:electronAPI #js {:acpPrompt (fn [_ _ _] (js/Promise.resolve nil))}})
     (try
       (let [message (schema-test/create-message
-                      {:id 1
-                       :type :user
-                       :text "reword these"
-                       :context {:excerpts [{:id "e1"
-                                             :text "x"
-                                             :locator {:document-relative-path "document.md"
-                                                       :start-block {:kind :paragraph
-                                                                     :index 2
-                                                                     :start-line 3
-                                                                     :end-line 3
-                                                                     :block-text-snippet "x"}
-                                                       :end-block {:kind :paragraph
-                                                                   :index 2
-                                                                   :start-line 3
-                                                                   :end-line 3
-                                                                   :block-text-snippet "x"}}}]}})
+                     {:id 1
+                      :type :user
+                      :text "reword these"
+                      :context {:excerpts [{:id "e1"
+                                            :text "x"
+                                            :locator {:document-relative-path "document.md"
+                                                      :start-block {:kind :paragraph
+                                                                    :index 2
+                                                                    :start-line 3
+                                                                    :end-line 3
+                                                                    :block-text-snippet "x"}
+                                                      :end-block {:kind :paragraph
+                                                                  :index 2
+                                                                  :start-line 3
+                                                                  :end-line 3
+                                                                  :block-text-snippet "x"}}}]}})
             state {:active-topic-id "t1"
                    :topics {"t1" {:id "t1" :session {:id "s1"}}}}
             [[_ _ _] promise-effect] (acp/send-prompt state message)
             on-success (get-in promise-effect [1 :on-success])
             on-error (get-in promise-effect [1 :on-error])]
-        (is (some #{[:excerpt.actions/clear "t1"]} on-success)
-            "success clears excerpts for the originating topic")
-        (is (not (some #{[:excerpt.actions/clear "t1"]} on-error))
-            "error preserves excerpts"))
+        (is (some #{[:acp.actions/prompt-succeeded "t1"]} on-success)
+            "success routes through explicit ACP callback action")
+        (is (not (some #{[:excerpt.actions/clear "t1"]} on-success))
+            "success no longer clears excerpts directly")
+        (is (some #{[:acp.actions/prompt-failed "t1"]} on-error)
+            "error routes through explicit ACP callback action"))
       (finally
         (if (nil? old-window)
           (js-delete js/globalThis "window")
