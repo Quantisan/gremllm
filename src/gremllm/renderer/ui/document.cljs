@@ -26,6 +26,12 @@
   (fn [{:replicant/keys [node life-cycle]}]
     (if (= :replicant.life-cycle/unmount life-cycle)
       (highlights/clear!)
+      ;; Replicant re-renders markdown into a fresh DOM subtree, which drops
+      ;; any prior block decorations. Re-apply both after every render:
+      ;; - sync-block-metadata! stamps source-line data-* attrs on each block
+      ;;   so mouseup selections resolve to markdown coords via DOM .closest()
+      ;;   (see locator/selection-locator-from-dom).
+      ;; - highlights/sync! re-paints excerpt ranges against the new nodes.
       (do
         (locator/sync-block-metadata! node content)
         (highlights/sync! node excerpts)))))
@@ -37,10 +43,8 @@
         ;; Intentionally no selection capture in diff mode: review is modal here,
         ;; so accept/reject is the only allowed interaction (see 58cd32e).
         [:article.diff-mode (render-diff-segments segments)])
-      [:article {:on                   {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
-                 ;; Replicant lifecycle hook: after markdown renders, sync DOM
-                 ;; highlight ranges against the live article node.
-                 :replicant/on-render  (on-render-sync content excerpts)}
+      [:article {:on                  {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
+                 :replicant/on-render (on-render-sync content excerpts)}
        (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
