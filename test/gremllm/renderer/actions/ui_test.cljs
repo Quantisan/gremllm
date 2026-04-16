@@ -28,9 +28,10 @@
                :active-topic-id "t1"
                :topics {"t1" {:excerpts []}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
-        [_ message] add-msg
+        [_ topic-id message] add-msg
         [_ sent-message] send]
     (is (= :messages.actions/add-to-chat (first add-msg)))
+    (is (= "t1" topic-id))
     (is (= :user (:type message)))
     (is (= "hello" (:text message)))
     (is (not (contains? message :context)))
@@ -42,8 +43,9 @@
                :active-topic-id "t1"
                :topics {"t1" {:excerpts [sample-excerpt]}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
-        [_ message] add-msg
+        [_ topic-id message] add-msg
         [_ sent-message] send]
+    (is (= "t1" topic-id))
     (is (= "reword these" (:text message)))
     (is (= {:excerpts [sample-excerpt]} (:context message)))
     (is (= message sent-message))))
