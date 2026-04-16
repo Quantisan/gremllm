@@ -44,8 +44,7 @@
 
 (defn auto-save
   [state topic-id]
-  (let [topic-id (or topic-id (topic-state/get-active-topic-id state))
-        messages (when topic-id
+  (let [messages (when topic-id
                    (topic-state/get-topic-field state topic-id :messages))
         excerpts (when topic-id
                    (topic-state/get-topic-field state topic-id :excerpts))]
