@@ -1,0 +1,40 @@
+display_name = "gremllm"
+
+# Preserve review context while iterating on a feature branch
+review_context_count = 3
+reuse_review_session = true
+
+# Default review depth for this repo.
+review_reasoning = "thorough"
+
+review_guidelines = """
+Optimize for clean, maintainable startup code for humans, not industrial-grade robustness.
+
+Prioritize:
+- conceptual fit with the repo's document-first product model
+- clarity of domain modeling and naming
+- simplicity of responsibilities and ownership
+- respect for intentional distinctions already encoded in comments, specs, and plans
+- violations of explicit architectural boundaries over cosmetic issues
+
+This project's stable architectural constraints:
+- Document-first, not chat-first. The artifact/document is the center of gravity.
+- Strict FCIS: business logic and transformations stay pure; side effects stay in registered effects, IPC handlers, and other imperative-shell boundaries.
+- Modelarity: namespaces, action names, state shapes, and IPC channels should reflect domain concepts directly.
+- Validate/coerce data at boundaries such as IPC, disk, and external protocol payloads.
+- Keep main-process responsibilities, renderer responsibilities, and schema/codec boundary responsibilities clear.
+- Prefer simple, explicit data shapes over clever indirection.
+
+Flag changes that:
+- drift from the documented domain model
+- blur durable domain state with ephemeral UI/runtime state
+- spread one responsibility across multiple layers without a clear owner
+- introduce naming drift that weakens the mental model
+- bypass trust boundaries, schema boundaries, or codec boundaries
+- add complexity without clear domain value
+
+Do not flag as problems:
+- intentional distinctions called out in comments/specs/plans merely because they could be unified
+- future-stage architecture that repo docs explicitly mark as later work
+- lack of backward-compatibility requirements unless the change specifically introduces a compatibility contract
+"""
