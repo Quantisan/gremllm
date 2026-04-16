@@ -53,7 +53,7 @@
 (defn consume [_state topic-id]
   [[:effects/save (topic-state/excerpts-path topic-id) []]])
 
-(defn clear-across-topics [state]
+(defn invalidate-across-topics [state]
   (mapv (fn [topic-id]
           [:effects/save (topic-state/excerpts-path topic-id) []])
         (keys (topic-state/get-topics-map state))))

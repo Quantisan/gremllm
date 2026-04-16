@@ -209,7 +209,7 @@
 (nxr/register-action! :excerpt.actions/remove excerpt/remove-excerpt)
 (nxr/register-action! :excerpt.actions/clear-active excerpt/clear-active)
 (nxr/register-action! :excerpt.actions/consume excerpt/consume)
-(nxr/register-action! :excerpt.actions/clear-across-topics excerpt/clear-across-topics)
+(nxr/register-action! :excerpt.actions/invalidate-across-topics excerpt/invalidate-across-topics)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
