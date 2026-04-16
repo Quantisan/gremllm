@@ -52,6 +52,14 @@
     (when (or (seq messages) (seq excerpts))
       [[:topic.effects/save-topic topic-id]])))
 
+(defn finalize-turn
+  "Prompt success workflow: consume excerpts used by the turn and persist
+   the topic after streamed assistant updates have landed in state."
+  [_state topic-id]
+  [[:excerpt.actions/consume topic-id]
+   [:topic.actions/mark-unsaved topic-id]
+   [:topic.effects/auto-save topic-id]])
+
 (defn append-pending-diffs [state diffs]
   ;; TODO: incoming diffs should be matched with acp-session-id
   (let [topic-id (topic-state/get-active-topic-id state)

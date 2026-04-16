@@ -109,3 +109,10 @@
                               :excerpts [sample-excerpt]}}}]
     (is (= [[:topic.effects/save-topic "t1"]]
            (topic/auto-save state "t1")))))
+
+(deftest finalize-turn-test
+  (let [topic-id "t1"]
+    (is (= [[:excerpt.actions/consume topic-id]
+            [:topic.actions/mark-unsaved topic-id]
+            [:topic.effects/auto-save topic-id]]
+           (topic/finalize-turn {} topic-id)))))

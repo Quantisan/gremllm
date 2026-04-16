@@ -179,6 +179,7 @@
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 (nxr/register-action! :topic.actions/delete-success topic/delete-topic-success)
 (nxr/register-action! :topic.actions/delete-error topic/delete-topic-error)
+(nxr/register-action! :topic.actions/finalize-turn topic/finalize-turn)
 
 ;; Auto-save effect - reads live state to check if messages exist before saving.
 ;; This must be an effect (not an action) to avoid stale state when called from async promises.
@@ -207,7 +208,7 @@
 (nxr/register-action! :excerpt.actions/add excerpt/add)
 (nxr/register-action! :excerpt.actions/remove excerpt/remove-excerpt)
 (nxr/register-action! :excerpt.actions/clear-active excerpt/clear-active)
-(nxr/register-action! :excerpt.actions/clear excerpt/clear)
+(nxr/register-action! :excerpt.actions/consume excerpt/consume)
 (nxr/register-action! :excerpt.actions/clear-across-topics excerpt/clear-across-topics)
 
 ;; ACP
