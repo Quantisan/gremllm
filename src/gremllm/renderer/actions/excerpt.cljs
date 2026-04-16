@@ -50,11 +50,8 @@
        [:topic.actions/mark-active-unsaved]
        [:topic.effects/auto-save topic-id]])))
 
-(defn clear [_state topic-id]
-  (let [path (topic-state/excerpts-path topic-id)]
-    [[:effects/save path []]
-     [:topic.actions/mark-unsaved topic-id]
-     [:topic.effects/auto-save topic-id]]))
+(defn consume [_state topic-id]
+  [[:effects/save (topic-state/excerpts-path topic-id) []]])
 
 (defn clear-across-topics [state]
   (mapv (fn [topic-id]
