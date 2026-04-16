@@ -66,6 +66,8 @@
     "code_block" (.-content token)
     (some-> (matching-inline-token tokens idx token) inline-text)))
 
+;; ---- Pure: markdown → block records ----
+
 (defn block-records [markdown-text]
   (let [tokens (vec (array-seq (markdown-js/tokenize #js {} (or markdown-text ""))))]
     (->> tokens
@@ -101,6 +103,9 @@
   {:document-relative-path "document.md"
    :start-block (->block-ref start-block)
    :end-block   (->block-ref end-block)})
+
+;; ---- DOM interop (impure) ----
+;; Everything below reads from or mutates the rendered article element.
 
 (defn sync-block-metadata! [article markdown-text]
   (let [blocks   (block-records markdown-text)
