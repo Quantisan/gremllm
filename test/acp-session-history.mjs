@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 import { Writable, Readable } from "node:stream";
 import * as acp from "@agentclientprotocol/sdk";
 
+const CLAUDE_AGENT_PACKAGE_SPEC = "@agentclientprotocol/claude-agent-acp@0.29.2";
+
 let response = "";
 
 let historyUpdates = [];
@@ -31,7 +33,7 @@ const client = {
 };
 
 async function createConnection() {
-  const proc = spawn("npx", ["@zed-industries/claude-agent-acp"], {
+  const proc = spawn("npx", [CLAUDE_AGENT_PACKAGE_SPEC], {
     stdio: ["pipe", "pipe", "inherit"],
     env: process.env
   });
