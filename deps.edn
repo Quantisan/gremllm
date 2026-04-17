@@ -1,15 +1,15 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.12.4"}
-        thheller/shadow-cljs {:mvn/version "3.3.6"}
+        thheller/shadow-cljs {:mvn/version "3.4.4"}
         no.cjohansen/nexus {:mvn/version "2025.11.1"}
         no.cjohansen/replicant {:mvn/version "2025.12.1"}
-        metosin/malli {:mvn/version "0.20.0"}
+        metosin/malli {:mvn/version "0.20.1"}
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
-        io.github.nextjournal/markdown {:mvn/version "0.7.222"}}
+        io.github.nextjournal/markdown {:mvn/version "0.7.225"}}
  :aliases
  {:dev
   {:extra-paths ["test" "dev"]
-   :extra-deps {no.cjohansen/lookup {:mvn/version "2025.12.1"}
+   :extra-deps {no.cjohansen/lookup {:mvn/version "2026.03.4"}
                 no.cjohansen/dataspex {:mvn/version "2026.01.1"}}}
   :outdated {:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}}
              :main-opts ["-m" "antq.core"]}}}
