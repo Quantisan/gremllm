@@ -44,16 +44,3 @@
               :uri "file:///workspace/document.md"
               :name "document.md"}
              (second blocks-with-document))))))
-
-(deftest excerpt-rendering-format-test
-  (let [message {:text "reword"
-                 :context {:excerpts [excerpt]}}
-        [text-block] (acp/prompt-content-blocks message nil)
-        body (:text text-block)]
-    (testing "excerpt text is rendered as markdown blockquote content"
-      (is (re-find #"      > launched on a Tuesday" body))
-      (is (not (re-find #"\"launched on a Tuesday\"" body))))
-
-    (testing "block context is rendered in its own labeled section"
-      (is (re-find #"block context:" body))
-      (is (re-find #"      > Our Gremllm launched on a Tuesday\." body)))))

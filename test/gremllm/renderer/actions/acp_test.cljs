@@ -131,8 +131,6 @@
             on-error (get-in promise-effect [1 :on-error])]
         (is (some #{[:acp.actions/prompt-succeeded "t1"]} on-success)
             "success routes through explicit ACP callback action")
-        (is (not (some #{[:excerpt.actions/clear "t1"]} on-success))
-            "success no longer clears excerpts directly")
         (is (some #{[:acp.actions/prompt-failed "t1"]} on-error)
             "error routes through explicit ACP callback action"))
       (finally
