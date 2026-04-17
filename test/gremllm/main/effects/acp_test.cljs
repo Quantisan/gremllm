@@ -112,18 +112,19 @@
    :env-patch (js->clj (.-envPatch config))})
 
 (deftest test-build-npx-agent-package-config
-  (let [build (.. acp-module -__test__ -buildNpxAgentPackageConfig)]
+  (let [build        (.. acp-module -__test__ -buildNpxAgentPackageConfig)
+        package-spec (.. acp-module -__test__ -claudeAgentPackageSpec)]
     (testing "latest mode forces online package resolution"
       (is (= {:command   "npx"
               :args      ["--yes"
-                          "--package=@zed-industries/claude-agent-acp@latest"
+                          (str "--package=" package-spec)
                           "--"
                           "claude-agent-acp"]
               :env-patch {"npm_config_prefer_online" "true"}}
              (spawn-config->map (build "latest")))))
-    (testing "cached mode uses default package"
+    (testing "cached mode uses the installed package binary"
       (is (= {:command   "npx"
-              :args      ["@zed-industries/claude-agent-acp"]
+              :args      ["claude-agent-acp"]
               :env-patch {}}
              (spawn-config->map (build "cached")))))
     (testing "invalid mode falls back to cached"
