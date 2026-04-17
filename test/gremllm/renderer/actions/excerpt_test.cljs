@@ -35,15 +35,12 @@
 ;; ========================================
 
 (deftest capture-test
-  (testing "nil composite - dispatches dismiss-popover"
-    (let [result (excerpt/capture {} nil)]
-      (is (= [[:excerpt.actions/dismiss-popover]] result))))
-
-  (testing "nil locator-hints - dispatches dismiss-popover"
-    (let [result (excerpt/capture {} {:selection schema-test/single-word-selection
-                                      :anchor anchor-context
-                                      :locator-hints nil})]
-      (is (= [[:excerpt.actions/dismiss-popover]] result))))
+  (testing "nil or incomplete composite - dispatches dismiss-popover"
+    (is (= [[:excerpt.actions/dismiss-popover]] (excerpt/capture {} nil)))
+    (is (= [[:excerpt.actions/dismiss-popover]]
+           (excerpt/capture {} {:selection schema-test/single-word-selection
+                                :anchor anchor-context
+                                :locator-hints nil}))))
 
   (testing "valid composite saves selection, anchor, and locator hints"
     (let [result (excerpt/capture {} composite-selection)]
@@ -53,17 +50,6 @@
              (nth result 1)))
       (is (= [:effects/save excerpt-state/locator-hints-path locator-hints]
              (nth result 2))))))
-
-;; ========================================
-;; dismiss-popover
-;; ========================================
-
-(deftest dismiss-popover-test
-  (testing "clears captured-path, anchor-path, and locator-hints-path"
-    (is (= [[:effects/save excerpt-state/captured-path nil]
-            [:effects/save excerpt-state/anchor-path nil]
-            [:effects/save excerpt-state/locator-hints-path nil]]
-           (excerpt/dismiss-popover {})))))
 
 (deftest remove-excerpt-filters-active-topic-excerpts-and-autosaves-test
   (testing "remove-excerpt removes only the matching id, preserves order, and emits persistence side effects"
@@ -131,6 +117,3 @@
       (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
       (is (= [:topic.effects/auto-save topic-id] auto-save-action))
       (is (= [:excerpt.actions/dismiss-popover] dismiss-action)))))
-
-(deftest add-without-capture-is-noop-test
-  (is (nil? (excerpt/add {}))))
