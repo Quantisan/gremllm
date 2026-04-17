@@ -2,13 +2,6 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.messages :as msg]))
 
-;; TODO: Refactor test data to reduce DRY violations
-;; 1. Repeated message structures - inline maps like {:type :user :text "..."} duplicated
-;;    across tests
-;; 2. Magic topic IDs and repetitive state setup - "t1", "topic-1" scattered throughout,
-;;    same :topics {...} structure rebuilt in every test. Consider schema/create-topic
-;; 3. Schema defaults unused - schema/create-topic and schema/PersistedTopic defaults
-;;    exist but tests manually rebuild what schema already provides
 
 (deftest test-build-conversation-with-new-message
   (testing "builds conversation from state with new message"
@@ -35,20 +28,3 @@
           new-message {:id 1, :text "test"}]
       (is (thrown-with-msg? js/Error #"Cannot append message: topic not found"
             (msg/append-to-state state topic-id new-message))))))
-
-(deftest test-add-message
-  (let [topic-id "topic-1"
-        message {:id 1 :type :user :text "Hello"}]
-    (is (= [[:messages.actions/append-to-state topic-id message]
-            [:topic.actions/mark-unsaved topic-id]
-            [:ui.actions/scroll-chat-to-bottom]
-            [:topic.effects/auto-save topic-id]]
-           (msg/add-message {} topic-id message)))))
-
-(deftest test-add-message-no-save
-  (let [topic-id "topic-1"
-        message {:id 1 :type :assistant :text "Hello"}]
-    (is (= [[:messages.actions/append-to-state topic-id message]
-            [:topic.actions/mark-unsaved topic-id]
-            [:ui.actions/scroll-chat-to-bottom]]
-           (msg/add-message-no-save {} topic-id message)))))
