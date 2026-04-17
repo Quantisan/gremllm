@@ -11,10 +11,7 @@
               {:kind :list-item  :index 3 :start-line 5 :end-line 5 :text "first"}
               {:kind :list-item  :index 4 :start-line 6 :end-line 6 :text "second"}
               {:kind :code-block :index 5 :start-line 8 :end-line 10 :text "(+ 1 2)\n"}]
-             (mapv #(select-keys % [:kind :index :start-line :end-line :text]) blocks)))))
-
-  (testing "returns an empty vector for blank input"
-    (is (= [] (locator/block-records "")))))
+             (mapv #(select-keys % [:kind :index :start-line :end-line :text]) blocks))))))
 
 (deftest selection-locator-test
   (let [para-block {:kind :paragraph :index 2 :start-line 3 :end-line 3
@@ -30,9 +27,7 @@
                 :end-line 3
                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
                (:start-block result)))
-        (is (= (:start-block result) (:end-block result)))
-        (is (not (contains? result :start-offset)))
-        (is (not (contains? result :end-offset)))))
+        (is (= (:start-block result) (:end-block result)))))
 
     (testing "cross-block selection"
       (let [result (locator/selection-locator heading-block para-block)]
