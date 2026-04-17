@@ -29,7 +29,7 @@
         captured              (excerpt-state/get-captured state)
         anchor                (excerpt-state/get-anchor state)
         popover-pos           (excerpt-state/popover-position captured anchor)
-        staged-selections     (topic-state/get-staged-selections state)]
+        excerpts              (topic-state/get-excerpts state)]
     [e/app-layout
      ;; Zone 1: Nav strip
      [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}
@@ -45,7 +45,7 @@
             :active-topic-id   active-topic-id
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
-      (document-ui/render-document document-content pending-diffs staged-selections)
+      (document-ui/render-document document-content pending-diffs excerpts)
       ;; TODO: not domain obvious... perhaps rename or comment?
       (when popover-pos
         [:button {:style {:position      "absolute"
@@ -60,8 +60,8 @@
                           :border        "none"
                           :cursor        "pointer"}
                   :on {:mousedown [[:effects/stop-propagation]]
-                       :click     [[:excerpt.actions/stage]]}}
-         "Stage"])]
+                       :click     [[:excerpt.actions/add]]}}
+         "Add excerpt"])]
 
      ;; Zone 3: Chat panel
      [e/chat-panel
@@ -79,7 +79,7 @@
          :loading?             (loading-state/loading? state active-topic-id)
          :has-any-api-key?     has-any-api-key?
          :pending-attachments  (form-state/get-pending-attachments state)
-         :staged-selections    staged-selections})
+         :excerpts             excerpts})
 
       (settings-ui/render-settings-modal
        (merge (sensitive-state/settings-view-props state)
@@ -89,4 +89,3 @@
   (if (workspace-state/loaded? state)
     (render-workspace state)
     (welcome-ui/render-welcome)))
-

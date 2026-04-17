@@ -14,37 +14,24 @@
 
 ;; TODO: DRY: use schema/PersistedTopic default instead of hardcoding instances
 
-(def ^:private staged-selection-fixture
+(def ^:private excerpt-fixture
   {:id "staged-1"
-   :selection {:text "Our Gremllm crew"
-               :range-count 1
-               :anchor-node "#text"
-               :anchor-offset 0
-               :focus-node "#text"
-               :focus-offset 5
-               :range {:bounding-rect {:height 17
-                                       :left 76
-                                       :top 75.5
-                                       :width 120.9375}
-                       :client-rects [{:height 17
-                                       :left 76
-                                       :top 75.5
-                                       :width 27.640625}
-                                      {:height 17
-                                       :left 161.9375
-                                       :top 75.5
-                                       :width 35}]
-                       :common-ancestor "P"
-                       :start-container "#text"
-                       :start-text "Our "
-                       :start-offset 0
-                       :end-container "#text"
-                       :end-text " crew tuned the "
-                       :end-offset 5}}})
+   :text "Our Gremllm crew"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph
+                           :index 2
+                           :start-line 3
+                           :end-line 3
+                           :block-text-snippet "Our Gremllm crew tuned the launch checklist."}
+             :end-block {:kind :paragraph
+                         :index 2
+                         :start-line 3
+                         :end-line 3
+                         :block-text-snippet "Our Gremllm crew tuned the launch checklist."}}})
 
 (deftest test-parse-topic-content
   (testing "parses valid topic content"
-    (let [topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :staged-selections []}
+    (let [topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}
           content (pr-str topic)
           result (#'workspace/parse-topic-content content "test.edn")]
       (is (= topic result))))
@@ -71,7 +58,7 @@
                         :reasoning? true
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]
                         :session {:pending-diffs []}
-                        :staged-selections []}
+                        :excerpts []}
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (workspace/save-topic {:dir temp-dir
@@ -81,8 +68,8 @@
               loaded (get all-topics (:id topic))]
           (is (= topic loaded)))))))
 
-(deftest test-save-load-round-trip-with-staged-selection
-  (testing "save and load preserves a non-empty staged selection"
+(deftest test-save-load-round-trip-with-excerpt
+  (testing "save and load preserves a non-empty excerpt"
     (with-temp-dir "topic-save-load-staged"
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
@@ -91,7 +78,7 @@
                         :reasoning? true
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]
                         :session {:pending-diffs []}
-                        :staged-selections [staged-selection-fixture]}
+                        :excerpts [excerpt-fixture]}
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (workspace/save-topic {:dir temp-dir
@@ -100,7 +87,7 @@
               all-topics (workspace/load-topics temp-dir)
               loaded (get all-topics (:id topic))]
           (is (= topic loaded))
-          (is (= [staged-selection-fixture] (:staged-selections loaded))))))))
+          (is (= [excerpt-fixture] (:excerpts loaded))))))))
 
 (deftest test-create-document
   (testing "creates document file and returns content"
@@ -136,8 +123,8 @@
     (with-temp-dir "load-topics"
       (fn [dir]
         ;; Simple test topics with just the essentials
-        (let [topic-1 {:id "topic-1-a" :name "First" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :staged-selections []}
-              topic-2 {:id "topic-2-b" :name "Second" :model "claude-sonnet-4-5-20250929" :reasoning? false :messages [] :session {:pending-diffs []} :staged-selections []}]
+        (let [topic-1 {:id "topic-1-a" :name "First" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}
+              topic-2 {:id "topic-2-b" :name "Second" :model "claude-sonnet-4-5-20250929" :reasoning? false :messages [] :session {:pending-diffs []} :excerpts []}]
 
           ;; Write valid topic files
           (write-topic-file dir topic-1)
@@ -154,7 +141,7 @@
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [good-topic {:id "topic-111-good" :name "Valid" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :staged-selections []}]
+        (let [good-topic {:id "topic-111-good" :name "Valid" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}]
           ;; Write one valid and one corrupt file
           (write-topic-file dir good-topic)
           (write-file dir "topic-999-bad.edn" "{:broken")

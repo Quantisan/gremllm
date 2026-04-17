@@ -10,6 +10,7 @@
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
+            [gremllm.renderer.ui.document.locator :as locator]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
@@ -68,19 +69,41 @@
       (.catch (fn [error]
                 (when on-error (dispatch (mapv #(conj % error) on-error)))))))
 
+(defn- active-text-selection
+  "Returns the current user selection only when excerpt capture has non-empty text to stage."
+  []
+  (let [selection (js/document.getSelection)]
+    (when (and selection
+               (pos? (.-rangeCount selection))
+               (not (.-isCollapsed selection)))
+      selection)))
+
+(defn- selection-locator-hints
+  "Builds advisory document anchors for a staged excerpt and warns when the selection cannot be block-located."
+  [article selection]
+  (let [locator-hints (some-> article
+                              (locator/selection-locator-from-dom selection))]
+    (when (and article (nil? locator-hints))
+      (js/console.warn "[excerpt] Selection has no block-anchored locator; popover suppressed."))
+    locator-hints))
+
 ;; Generic promise effect
 (nxr/register-effect! :effects/promise promise->actions)
 
 ;; Register placeholder for text selection events.
-;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil}
+;; Returns {:selection CapturedSelection :anchor AnchorContext-or-nil :locator-hints LocatorHints-or-nil}
 ;; when a non-collapsed selection exists, nil otherwise.
+;; locator-hints is nil when selection endpoints lack block-selector ancestors;
+;; excerpt/capture treats that as a non-stageable selection.
 (nxr/register-placeholder! :event/text-selection
   (fn [{:replicant/keys [dom-event]}]
-    (let [sel   (js/document.getSelection)
-          panel (when dom-event (.. dom-event -target (closest ".document-panel")))]
-      (when (and sel (pos? (.-rangeCount sel)) (not (.-isCollapsed sel)))
-        {:selection (codec/captured-selection-from-dom sel)
-         :anchor    (when panel (codec/anchor-context-from-dom panel))}))))
+    (when-let [selection (active-text-selection)]
+      (let [panel         (some-> dom-event .-target (.closest ".document-panel"))
+            article       (some-> panel (.querySelector "article"))
+            locator-hints (selection-locator-hints article selection)]
+        {:selection     (codec/captured-selection-from-dom selection)
+         :anchor        (some-> panel codec/anchor-context-from-dom)
+         :locator-hints locator-hints}))))
 
 ; DOM placeholders
 (nxr/register-placeholder! :dom/element-by-id
@@ -171,6 +194,7 @@
 (nxr/register-action! :topic.actions/save-error topic/save-topic-error)
 (nxr/register-action! :topic.actions/delete-success topic/delete-topic-success)
 (nxr/register-action! :topic.actions/delete-error topic/delete-topic-error)
+(nxr/register-action! :topic.actions/finalize-turn topic/finalize-turn)
 
 ;; Auto-save effect - reads live state to check if messages exist before saving.
 ;; This must be an effect (not an action) to avoid stale state when called from async promises.
@@ -193,20 +217,21 @@
 (nxr/register-action! :settings.actions/remove-success settings/remove-success)
 (nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
-;; Staging
-(nxr/register-action! :staging.actions/stage topic/stage)
-(nxr/register-action! :staging.actions/unstage topic/unstage)
-(nxr/register-action! :staging.actions/clear-staged topic/clear-staged)
-
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)
 (nxr/register-action! :excerpt.actions/dismiss-popover excerpt/dismiss-popover)
-(nxr/register-action! :excerpt.actions/stage excerpt/stage)
+(nxr/register-action! :excerpt.actions/add excerpt/add)
+(nxr/register-action! :excerpt.actions/remove excerpt/remove-excerpt)
+(nxr/register-action! :excerpt.actions/clear-active excerpt/clear-active)
+(nxr/register-action! :excerpt.actions/consume excerpt/consume)
+(nxr/register-action! :excerpt.actions/invalidate-across-topics excerpt/invalidate-across-topics)
 
 ;; ACP
 (nxr/register-action! :acp.actions/new-session acp/new-session)
 (nxr/register-action! :acp.actions/resume-session acp/resume-session)
 (nxr/register-action! :acp.actions/send-prompt acp/send-prompt)
+(nxr/register-action! :acp.actions/prompt-succeeded acp/prompt-succeeded)
+(nxr/register-action! :acp.actions/prompt-failed acp/prompt-failed)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 (nxr/register-action! :acp.events/session-update acp/session-update)

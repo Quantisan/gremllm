@@ -44,42 +44,26 @@
 
 (defn auto-save
   [state topic-id]
-  (let [topic-id (or topic-id (topic-state/get-active-topic-id state))
-        messages (when topic-id
-                   (topic-state/get-topic-field state topic-id :messages))]
-    (when (seq messages)
+  (let [messages (when topic-id
+                   (topic-state/get-topic-field state topic-id :messages))
+        excerpts (when topic-id
+                   (topic-state/get-topic-field state topic-id :excerpts))]
+    (when (or (seq messages) (seq excerpts))
       [[:topic.effects/save-topic topic-id]])))
+
+(defn finalize-turn
+  "Prompt success workflow: consume excerpts used by the turn and persist
+   the topic after streamed assistant updates have landed in state."
+  [_state topic-id]
+  [[:excerpt.actions/consume topic-id]
+   [:topic.actions/mark-unsaved topic-id]
+   [:topic.effects/auto-save topic-id]])
 
 (defn append-pending-diffs [state diffs]
   ;; TODO: incoming diffs should be matched with acp-session-id
   (let [topic-id (topic-state/get-active-topic-id state)
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
-
-;; TODO(S7.3 persistence): These staging actions currently only mutate renderer
-;; state via :effects/save. A later manual or incidental topic save will persist
-;; :staged-selections because the whole topic is serialized through PersistedTopic,
-;; but stage/unstage/clear do not themselves mark the topic unsaved or trigger
-;; auto-save like other persisted topic mutations. Route staged-selection updates
-;; through the shared persisted-topic mutation flow instead of relying on a later
-;; save to pick them up.
-(defn stage [state selection]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)
-        existing (or (get-in state path) [])
-        item     {:id (str "staged-" (random-uuid)) :selection selection}]
-    [[:effects/save path (conj existing item)]]))
-
-(defn unstage [state id]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)
-        existing (or (get-in state path) [])]
-    [[:effects/save path (vec (remove #(= (:id %) id) existing))]]))
-
-(defn clear-staged [state]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        path     (topic-state/staged-selections-path topic-id)]
-    [[:effects/save path []]]))
 
 (defn set-active
   "Set the active topic and initialize its ACP session."

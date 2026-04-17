@@ -21,30 +21,34 @@
 
 (defn- start-response
   "Creates a new assistant message (first chunk of a new turn)."
-  [message-type chunk-text message-id]
+  [topic-id message-type chunk-text message-id]
   (let [message {:id message-id :type message-type :text chunk-text}]
     (when-not (m/validate schema/Message message)
       (throw (js/Error. (str "Invalid Message: " (pr-str (m/explain schema/Message message))))))
-    [[:messages.actions/add-to-chat-no-save message]]))
+    [[:messages.actions/add-to-chat-no-save topic-id message]]))
 
 (defn streaming-chunk-effects
   "Builds effects for an incoming assistant message chunk.
    Appends to existing response or starts a new one."
   [state message-type chunk-text message-id]
-  (let [continuing? (continuing? state message-type)]
+  (let [continuing? (continuing? state message-type)
+        topic-id    (topic-state/get-active-topic-id state)]
     (if continuing?
       [(append-to-response state chunk-text)]
-      (start-response message-type chunk-text message-id))))
+      (start-response topic-id message-type chunk-text message-id))))
 
 (defn handle-tool-event
   "Handles ACP tool-related session updates.
    Returns chat effects for displayable tool calls and reads,
    or diff effects for tool-call-updates with diffs."
-  [_state update message-id]
+  [state update message-id]
   (cond
     (and (codec/tool-response-read-event? update)
          (codec/tool-response-read-with-file-metadata? update))
-    (start-response :tool-use (codec/acp-read-display-label update) message-id)
+    (start-response (topic-state/get-active-topic-id state)
+                    :tool-use
+                    (codec/acp-read-display-label update)
+                    message-id)
 
     (codec/tool-response-has-diffs? update)
     [[:topic.actions/append-pending-diffs (codec/tool-response-diffs update)]]))
@@ -96,14 +100,24 @@
      :on-success [[:acp.actions/session-ready topic-id]]
      :on-error   [[:acp.actions/session-error topic-id]]}]])
 
-(defn send-prompt [state text]
+(defn prompt-succeeded
+  [_state topic-id _result]
+  [[:loading.actions/set-loading? topic-id false]
+   [:topic.actions/finalize-turn topic-id]])
+
+(defn prompt-failed
+  [_state topic-id _error]
+  [[:loading.actions/set-loading? topic-id false]])
+
+(defn send-prompt [state message]
   (let [topic-id       (topic-state/get-active-topic-id state)
         acp-session-id (topic-state/get-acp-session-id state topic-id)]
     (if acp-session-id
       [[:loading.actions/set-loading? topic-id true]
        [:effects/promise
-        {:promise    (.acpPrompt js/window.electronAPI acp-session-id text)
-         :on-success [[:loading.actions/set-loading? topic-id false]
-                      [:topic.effects/auto-save topic-id]]
-         :on-error   [[:loading.actions/set-loading? topic-id false]]}]]
+        {:promise    (.acpPrompt js/window.electronAPI
+                                 acp-session-id
+                                 (clj->js message))
+         :on-success [[:acp.actions/prompt-succeeded topic-id]]
+         :on-error   [[:acp.actions/prompt-failed topic-id]]}]]
       (js/console.error "[ACP] No session for prompt"))))

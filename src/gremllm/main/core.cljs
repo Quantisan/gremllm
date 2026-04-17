@@ -117,13 +117,11 @@
 
   (.on ipcMain "acp/prompt"
        ;; TODO: we should pass the document path from Renderer to here
-       (fn [event ipc-correlation-id acp-session-id text]
+       (fn [event ipc-correlation-id acp-session-id message]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.effects/send-prompt
-                         acp-session-id text
-                         (state/get-workspace-dir @store)]]))))
+                       [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-workspace-dir @store)]]))))
 
 (defn- setup-system-resources [store]
   (let [user-data-dir   (.getPath app "userData")

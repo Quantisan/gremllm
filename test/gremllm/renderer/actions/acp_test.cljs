@@ -2,7 +2,8 @@
   (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
-            [gremllm.renderer.actions.acp :as acp]))
+            [gremllm.renderer.actions.acp :as acp]
+            [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
   (testing "appends chunk text to last message in active topic"
@@ -26,15 +27,15 @@
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
                  :active-topic-id "t1"}
           effects (acp/streaming-chunk-effects state :assistant "Hi!" 456)]
-      (is (= [[:messages.actions/add-to-chat-no-save {:id 456
-                                                      :type :assistant
-                                                      :text "Hi!"}]]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1" {:id 456
+                                                           :type :assistant
+                                                           :text "Hi!"}]]
              effects)))))
 
 (deftest test-handle-tool-event
   (testing "returns tool-use for Read tool-call-update with file payload"
     (let [effects (acp/handle-tool-event
-                    {}
+                    {:active-topic-id "t1"}
                     {:session-update :tool-call-update
                      :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
                      :meta {:claude-code {:tool-name "Read"
@@ -42,7 +43,7 @@
                                                                  :totalLines 16}
                                                           :type "text"}}}}
                     456)]
-      (is (= [[:messages.actions/add-to-chat-no-save
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
                {:id 456
                 :type :tool-use
                 :text "Read — gremllm-launch-log.md (16 lines)"}]]
@@ -99,3 +100,49 @@
 
       (testing "ignores unsupported update types"
         (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
+
+(deftest send-prompt-forwards-structured-user-message-with-excerpts-to-acp-prompt-test
+  (let [old-window (.-window js/globalThis)
+        captured-call (atom nil)
+        promise (js/Promise.resolve nil)]
+    (aset js/globalThis
+          "window"
+          #js {:electronAPI #js {:acpPrompt (fn [& args]
+                                              (let [[acp-session-id payload] args]
+                                                (reset! captured-call
+                                                        {:argc  (count args)
+                                                         :session-id acp-session-id
+                                                         :payload payload})
+                                                promise))}})
+    (try
+      (let [message (schema-test/create-message
+                      {:id 1
+                       :type :user
+                       :text "reword these"
+                       :context {:excerpts [{:id "e1"
+                                             :text "x"
+                                             :locator {:document-relative-path "document.md"
+                                                       :start-block {:kind :paragraph
+                                                                     :index 2
+                                                                     :start-line 3
+                                                                     :end-line 3
+                                                                     :block-text-snippet "x"}
+                                                       :end-block {:kind :paragraph
+                                                                   :index 2
+                                                                   :start-line 3
+                                                                   :end-line 3
+                                                                   :block-text-snippet "x"}}}]}})
+            state {:active-topic-id "t1"
+                   :topics {"t1" {:id "t1" :session {:id "s1"}}}}
+            _effects (acp/send-prompt state message)]
+        (is (= 2 (:argc @captured-call))
+            "send-prompt should invoke acpPrompt with only the session id and message payload")
+        (is (= "s1" (:session-id @captured-call))
+            "send-prompt should use the active topic's ACP session id")
+        (is (= message
+               (codec/user-message-from-ipc (:payload @captured-call)))
+            "send-prompt should forward the full structured user message, including excerpt context, across the IPC boundary"))
+      (finally
+        (if (nil? old-window)
+          (js-delete js/globalThis "window")
+          (aset js/globalThis "window" old-window))))))

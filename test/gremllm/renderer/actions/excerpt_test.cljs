@@ -2,6 +2,7 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.renderer.state.excerpt :as excerpt-state]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema-test :as schema-test]))
 
 ;; Anchor context fixture matching AnchorContext schema
@@ -9,34 +10,110 @@
   {:panel-rect {:top 100 :left 50 :width 800 :height 600}
    :panel-scroll-top 20})
 
+(def locator-hints
+  {:document-relative-path "document.md"
+   :start-block {:kind :paragraph
+                 :index 2
+                 :start-line 3
+                 :end-line 3
+                 :block-text-snippet "Our Gremllm launched on a Tuesday."}
+   :end-block {:kind :paragraph
+               :index 2
+               :start-line 3
+               :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}})
+
 ;; Composite input that the :event/text-selection placeholder produces,
 ;; with both sides already coerced at the codec boundary.
 (def composite-selection
   {:selection schema-test/single-word-selection
-   :anchor anchor-context})
+   :anchor anchor-context
+   :locator-hints locator-hints})
 
 ;; ========================================
 ;; capture
 ;; ========================================
 
 (deftest capture-test
-  (testing "nil composite - dispatches dismiss-popover"
-    (let [result (excerpt/capture {} nil)]
-      (is (= [[:excerpt.actions/dismiss-popover]] result))))
+  (testing "nil or incomplete composite - dispatches dismiss-popover"
+    (is (= [[:excerpt.actions/dismiss-popover]] (excerpt/capture {} nil)))
+    (is (= [[:excerpt.actions/dismiss-popover]]
+           (excerpt/capture {} {:selection schema-test/single-word-selection
+                                :anchor anchor-context
+                                :locator-hints nil}))))
 
-  (testing "valid composite - saves selection at captured-path and anchor at anchor-path"
+  (testing "valid composite saves selection, anchor, and locator hints"
     (let [result (excerpt/capture {} composite-selection)]
       (is (= [:effects/save excerpt-state/captured-path schema-test/single-word-selection]
-             (first result)))
+             (nth result 0)))
       (is (= [:effects/save excerpt-state/anchor-path anchor-context]
-             (second result))))))
+             (nth result 1)))
+      (is (= [:effects/save excerpt-state/locator-hints-path locator-hints]
+             (nth result 2))))))
 
-;; ========================================
-;; dismiss-popover
-;; ========================================
+(deftest remove-excerpt-filters-active-topic-excerpts-and-autosaves-test
+  (testing "remove-excerpt removes only the matching id, preserves order, and emits persistence side effects"
+    (let [topic-id "t1"
+          first-excerpt {:id "e-1"
+                         :text "keep first"
+                         :locator locator-hints}
+          removed-excerpt {:id "e-2"
+                           :text "remove me"
+                           :locator locator-hints}
+          last-excerpt {:id "e-3"
+                        :text "keep last"
+                        :locator locator-hints}
+          state {:active-topic-id topic-id
+                 :topics {topic-id {:id topic-id
+                                    :messages []
+                                    :excerpts [first-excerpt removed-excerpt last-excerpt]}}}
+          result (excerpt/remove-excerpt state "e-2")
+          [save-action mark-unsaved-action auto-save-action] result]
+      (is (= [:effects/save
+              (topic-state/excerpts-path topic-id)
+              [first-excerpt last-excerpt]]
+             save-action))
+      (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
+      (is (= [:topic.effects/auto-save topic-id] auto-save-action)))))
 
-(deftest dismiss-popover-test
-  (testing "clears captured-path and anchor-path"
-    (is (= [[:effects/save excerpt-state/captured-path nil]
-            [:effects/save excerpt-state/anchor-path nil]]
-           (excerpt/dismiss-popover {})))))
+
+(deftest add-builds-and-persists-document-excerpt-test
+  (testing "add reads captured excerpt data, appends it to topic excerpts, and dismisses the popover"
+    (let [topic-id "t1"
+          state {:active-topic-id topic-id
+                 :topics {topic-id {:id topic-id :messages [] :excerpts []}}
+                 :excerpt {:captured {:text "hello"}
+                           :locator-hints {:document-relative-path "document.md"
+                                           :start-block {:kind :paragraph
+                                                         :index 2
+                                                         :start-line 3
+                                                         :end-line 3
+                                                         :block-text-snippet "hello world"}
+                                           :end-block {:kind :paragraph
+                                                       :index 2
+                                                       :start-line 3
+                                                       :end-line 3
+                                                       :block-text-snippet "hello world"}}}}
+          result (excerpt/add state)
+          [save-action mark-unsaved-action auto-save-action dismiss-action] result
+          [_ save-path excerpts] save-action
+          [saved-excerpt] excerpts]
+      (is (= :effects/save (first save-action)))
+      (is (= (topic-state/excerpts-path topic-id) save-path))
+      (is (= "hello" (:text saved-excerpt)))
+      (is (string? (:id saved-excerpt)))
+      (is (= {:document-relative-path "document.md"
+              :start-block {:kind :paragraph
+                            :index 2
+                            :start-line 3
+                            :end-line 3
+                            :block-text-snippet "hello world"}
+              :end-block {:kind :paragraph
+                          :index 2
+                          :start-line 3
+                          :end-line 3
+                          :block-text-snippet "hello world"}}
+             (:locator saved-excerpt)))
+      (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
+      (is (= [:topic.effects/auto-save topic-id] auto-save-action))
+      (is (= [:excerpt.actions/dismiss-popover] dismiss-action)))))

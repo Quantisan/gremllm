@@ -2,10 +2,8 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
-            [gremllm.schema-test :as schema-fixtures]
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
@@ -71,6 +69,21 @@
             actions (topic/auto-save state topic-id)]
         (is (= [[:topic.effects/save-topic topic-id]] actions))))))
 
+(def sample-excerpt
+  {:id "e1"
+   :text "hello"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph
+                           :index 2
+                           :start-line 3
+                           :end-line 3
+                           :block-text-snippet "hello world"}
+             :end-block {:kind :paragraph
+                         :index 2
+                         :start-line 3
+                         :end-line 3
+                         :block-text-snippet "hello world"}}})
+
 (deftest delete-topic-success-test
   (testing "triggers workspace reload after successful deletion"
     (let [topic-id "topic-123"
@@ -89,40 +102,17 @@
         (is (= [] actions)
             "should return empty actions vector")))))
 
-(def ^:private topic-id "topic-123")
-(def ^:private base-state {:active-topic-id topic-id
-                           :topics {topic-id {:id topic-id :staged-selections []}}})
+(deftest auto-save-fires-when-excerpts-present-with-no-messages-test
+  (let [state {:active-topic-id "t1"
+               :topics {"t1" {:id "t1"
+                              :messages []
+                              :excerpts [sample-excerpt]}}}]
+    (is (= [[:topic.effects/save-topic "t1"]]
+           (topic/auto-save state "t1")))))
 
-(deftest stage-test
-  (let [selection schema-fixtures/single-word-selection
-        [[effect path staged-vec]] (topic/stage base-state selection)
-        item (first staged-vec)]
-
-    (is (= :effects/save effect))
-    (is (= (topic-state/staged-selections-path topic-id) path))
-    (is (= 1 (count staged-vec)))
-    (is (string? (:id item)))
-    (is (clojure.string/starts-with? (:id item) "staged-"))
-    (is (= selection (:selection item)))))
-
-(deftest unstage-test
-  (let [item-a {:id "staged-a" :selection schema-fixtures/single-word-selection}
-        item-b {:id "staged-b" :selection schema-fixtures/mixed-format-selection}
-        state  (assoc-in base-state [:topics topic-id :staged-selections] [item-a item-b])]
-
-    (testing "removes item by id"
-      (let [[[_ _ staged-vec]] (topic/unstage state "staged-a")]
-        (is (= 1 (count staged-vec)))
-        (is (= "staged-b" (:id (first staged-vec))))))
-
-    (testing "no-op when id not found"
-      (let [[[_ _ staged-vec]] (topic/unstage state "staged-unknown")]
-        (is (= 2 (count staged-vec)))))))
-
-(deftest clear-staged-test
-  (let [item {:id "staged-a" :selection schema-fixtures/single-word-selection}
-        state (assoc-in base-state [:topics topic-id :staged-selections] [item])
-        [[_ path staged-vec]] (topic/clear-staged state)]
-
-    (is (= (topic-state/staged-selections-path topic-id) path))
-    (is (= [] staged-vec))))
+(deftest finalize-turn-test
+  (let [topic-id "t1"]
+    (is (= [[:excerpt.actions/consume topic-id]
+            [:topic.actions/mark-unsaved topic-id]
+            [:topic.effects/auto-save topic-id]]
+           (topic/finalize-turn {} topic-id)))))

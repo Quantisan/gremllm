@@ -1,7 +1,14 @@
 (ns gremllm.schema-test
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.schema :as schema]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.transform :as mt]))
+
+(defn create-message
+  "Build a schema/Message fixture from Malli defaults and explicit overrides."
+  [overrides]
+  (merge (m/decode schema/Message {} mt/default-value-transformer)
+         overrides))
 
 (deftest test-provider->api-key-keyword
   (testing "maps Anthropic to anthropic-api-key"
@@ -136,3 +143,77 @@
     (is (m/validate schema/AnchorContext
                     {:panel-rect {:top 100 :left 50 :width 800 :height 600}
                      :panel-scroll-top 20}))))
+
+(deftest block-ref-test
+  (testing "valid BlockRef"
+    (is (m/validate schema/BlockRef
+                    {:kind :paragraph
+                     :index 2
+                     :start-line 3
+                     :end-line 3
+                     :block-text-snippet "Our Gremllm launched on a Tuesday."})))
+  (testing "missing required field fails"
+    (is (not (m/validate schema/BlockRef
+                         {:kind :paragraph :index 2 :start-line 3 :end-line 3})))))
+
+(deftest document-excerpt-test
+  (let [block {:kind :paragraph
+               :index 2
+               :start-line 3
+               :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}]
+    (testing "valid DocumentExcerpt validates"
+      (is (m/validate schema/DocumentExcerpt
+                      {:id "excerpt-abc"
+                       :text "launched on a Tuesday"
+                       :locator {:document-relative-path "document.md"
+                                 :start-block block
+                                 :end-block block}})))
+    (testing "missing :locator fails"
+      (is (not (m/validate schema/DocumentExcerpt
+                           {:id "e" :text "t"}))))))
+
+(deftest message-with-context-test
+  (let [excerpt {:id "e1"
+                 :text "snippet"
+                 :locator {:document-relative-path "document.md"
+                           :start-block {:kind :paragraph
+                                         :index 2
+                                         :start-line 3
+                                         :end-line 3
+                                         :block-text-snippet "Our Gremllm..."}
+                           :end-block {:kind :paragraph
+                                       :index 2
+                                       :start-line 3
+                                       :end-line 3
+                                       :block-text-snippet "Our Gremllm..."}}}]
+    (testing "message with excerpt context"
+      (is (m/validate schema/Message
+                      (create-message {:id 1
+                                       :type :user
+                                       :text "reword these"
+                                       :context {:excerpts [excerpt]}}))))
+    (testing "message without context still valid"
+      (is (m/validate schema/Message
+                      (create-message {:id 1 :type :user :text "hello"}))))))
+
+(deftest persisted-topic-excerpts-are-document-excerpts-test
+  (let [excerpt {:id "e1"
+                 :text "snippet"
+                 :locator {:document-relative-path "document.md"
+                           :start-block {:kind :paragraph
+                                         :index 2
+                                         :start-line 3
+                                         :end-line 3
+                                         :block-text-snippet "Our..."}
+                           :end-block {:kind :paragraph
+                                       :index 2
+                                       :start-line 3
+                                       :end-line 3
+                                       :block-text-snippet "Our..."}}}]
+    (is (m/validate schema/PersistedTopic
+                    {:id "t1"
+                     :name "T"
+                     :session {:pending-diffs []}
+                     :messages []
+                     :excerpts [excerpt]}))))
