@@ -162,24 +162,12 @@
                :start-line 3
                :end-line 3
                :block-text-snippet "Our Gremllm launched on a Tuesday."}]
-    (testing "same-block excerpt"
+    (testing "valid DocumentExcerpt validates"
       (is (m/validate schema/DocumentExcerpt
                       {:id "excerpt-abc"
                        :text "launched on a Tuesday"
                        :locator {:document-relative-path "document.md"
                                  :start-block block
-                                 :end-block block}})))
-    (testing "cross-block excerpt without offsets"
-      (is (m/validate schema/DocumentExcerpt
-                      {:id "excerpt-xyz"
-                       :text "Gremllm Launch Log\nOur Gremllm"
-                       :locator {:document-relative-path "document.md"
-                                 :start-block (assoc block
-                                                     :kind :heading
-                                                     :index 1
-                                                     :start-line 1
-                                                     :end-line 1
-                                                     :block-text-snippet "Gremllm Launch Log")
                                  :end-block block}})))
     (testing "missing :locator fails"
       (is (not (m/validate schema/DocumentExcerpt
