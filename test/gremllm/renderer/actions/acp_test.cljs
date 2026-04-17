@@ -101,38 +101,47 @@
       (testing "ignores unsupported update types"
         (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
 
-(deftest send-prompt-with-message-and-excerpts-routes-through-explicit-callback-actions-test
-  (let [old-window (.-window js/globalThis)]
+(deftest send-prompt-forwards-structured-user-message-with-excerpts-to-acp-prompt-test
+  (let [old-window (.-window js/globalThis)
+        captured-call (atom nil)
+        promise (js/Promise.resolve nil)]
     (aset js/globalThis
           "window"
-          #js {:electronAPI #js {:acpPrompt (fn [_ _ _] (js/Promise.resolve nil))}})
+          #js {:electronAPI #js {:acpPrompt (fn [& args]
+                                              (let [[acp-session-id payload] args]
+                                                (reset! captured-call
+                                                        {:argc  (count args)
+                                                         :session-id acp-session-id
+                                                         :payload payload})
+                                                promise))}})
     (try
       (let [message (schema-test/create-message
-                     {:id 1
-                      :type :user
-                      :text "reword these"
-                      :context {:excerpts [{:id "e1"
-                                            :text "x"
-                                            :locator {:document-relative-path "document.md"
-                                                      :start-block {:kind :paragraph
-                                                                    :index 2
-                                                                    :start-line 3
-                                                                    :end-line 3
-                                                                    :block-text-snippet "x"}
-                                                      :end-block {:kind :paragraph
-                                                                  :index 2
-                                                                  :start-line 3
-                                                                  :end-line 3
-                                                                  :block-text-snippet "x"}}}]}})
+                      {:id 1
+                       :type :user
+                       :text "reword these"
+                       :context {:excerpts [{:id "e1"
+                                             :text "x"
+                                             :locator {:document-relative-path "document.md"
+                                                       :start-block {:kind :paragraph
+                                                                     :index 2
+                                                                     :start-line 3
+                                                                     :end-line 3
+                                                                     :block-text-snippet "x"}
+                                                       :end-block {:kind :paragraph
+                                                                   :index 2
+                                                                   :start-line 3
+                                                                   :end-line 3
+                                                                   :block-text-snippet "x"}}}]}})
             state {:active-topic-id "t1"
                    :topics {"t1" {:id "t1" :session {:id "s1"}}}}
-            [[_ _ _] promise-effect] (acp/send-prompt state message)
-            on-success (get-in promise-effect [1 :on-success])
-            on-error (get-in promise-effect [1 :on-error])]
-        (is (some #{[:acp.actions/prompt-succeeded "t1"]} on-success)
-            "success routes through explicit ACP callback action")
-        (is (some #{[:acp.actions/prompt-failed "t1"]} on-error)
-            "error routes through explicit ACP callback action"))
+            _effects (acp/send-prompt state message)]
+        (is (= 2 (:argc @captured-call))
+            "send-prompt should invoke acpPrompt with only the session id and message payload")
+        (is (= "s1" (:session-id @captured-call))
+            "send-prompt should use the active topic's ACP session id")
+        (is (= message
+               (codec/user-message-from-ipc (:payload @captured-call)))
+            "send-prompt should forward the full structured user message, including excerpt context, across the IPC boundary"))
       (finally
         (if (nil? old-window)
           (js-delete js/globalThis "window")
