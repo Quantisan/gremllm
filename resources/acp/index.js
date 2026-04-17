@@ -2,14 +2,31 @@
 const { spawn } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
+const claudeAgentPackage = require("@agentclientprotocol/claude-agent-acp/package.json");
 const { makeResolver, requestedToolName } = require("./permission");
 const permission = require("./permission");
 
 const sessionCwdMap = new Map();
-const CLAUDE_AGENT_PACKAGE = "@agentclientprotocol/claude-agent-acp";
-const CLAUDE_AGENT_VERSION = "0.29.2";
-const CLAUDE_AGENT_PACKAGE_SPEC = `${CLAUDE_AGENT_PACKAGE}@${CLAUDE_AGENT_VERSION}`;
-const CLAUDE_AGENT_BIN = "claude-agent-acp";
+
+function getClaudeAgentPackageInfo() {
+  const packageName = claudeAgentPackage.name;
+  const version = claudeAgentPackage.version;
+  const bin = "claude-agent-acp";
+
+  return {
+    packageName,
+    version,
+    packageSpec: `${packageName}@${version}`,
+    bin
+  };
+}
+
+const {
+  packageName: CLAUDE_AGENT_PACKAGE,
+  version: CLAUDE_AGENT_VERSION,
+  packageSpec: CLAUDE_AGENT_PACKAGE_SPEC,
+  bin: CLAUDE_AGENT_BIN
+} = getClaudeAgentPackageInfo();
 
 function rememberToolName(toolNamesByCallId, params) {
   const update = params?.update;
@@ -145,6 +162,7 @@ module.exports = {
   createConnection,
   __test__: {
     buildNpxAgentPackageConfig,
+    getClaudeAgentPackageInfo,
     enrichPermissionParams,
     rememberToolName,
     makeResolver,

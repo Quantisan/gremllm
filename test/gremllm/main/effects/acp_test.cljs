@@ -131,6 +131,18 @@
       (is (= (spawn-config->map (build "cached"))
              (spawn-config->map (build "not-a-valid-mode")))))))
 
+(deftest test-claude-agent-package-info
+  (let [get-package-info (.. acp-module -__test__ -getClaudeAgentPackageInfo)
+        ^js package-json (js/require "@agentclientprotocol/claude-agent-acp/package.json")]
+    (is (fn? get-package-info))
+    (when (fn? get-package-info)
+      (let [info (js->clj (get-package-info) :keywordize-keys true)]
+        (is (= {:packageName (.-name package-json)
+                :version     (.-version package-json)
+                :packageSpec (str (.-name package-json) "@" (.-version package-json))
+                :bin         "claude-agent-acp"}
+               info))))))
+
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
     (async done
