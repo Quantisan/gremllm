@@ -65,20 +65,30 @@
             [:effects/save excerpt-state/locator-hints-path nil]]
            (excerpt/dismiss-popover {})))))
 
-(deftest capture->excerpt-same-block-test
-  (testing "builds DocumentExcerpt from captured text and same-block locator-hints"
-    (let [captured {:text "launched on a Tuesday"
-                    :range-count 1
-                    :anchor-node "#text"
-                    :anchor-offset 4
-                    :focus-node "#text"
-                    :focus-offset 25
-                    :range {}}
-          hints locator-hints
-          result (excerpt/capture->excerpt captured hints "abc-123")]
-      (is (= "abc-123" (:id result)))
-      (is (= "launched on a Tuesday" (:text result)))
-      (is (= hints (:locator result))))))
+(deftest remove-excerpt-filters-active-topic-excerpts-and-autosaves-test
+  (testing "remove-excerpt removes only the matching id, preserves order, and emits persistence side effects"
+    (let [topic-id "t1"
+          first-excerpt {:id "e-1"
+                         :text "keep first"
+                         :locator locator-hints}
+          removed-excerpt {:id "e-2"
+                           :text "remove me"
+                           :locator locator-hints}
+          last-excerpt {:id "e-3"
+                        :text "keep last"
+                        :locator locator-hints}
+          state {:active-topic-id topic-id
+                 :topics {topic-id {:id topic-id
+                                    :messages []
+                                    :excerpts [first-excerpt removed-excerpt last-excerpt]}}}
+          result (excerpt/remove-excerpt state "e-2")
+          [save-action mark-unsaved-action auto-save-action] result]
+      (is (= [:effects/save
+              (topic-state/excerpts-path topic-id)
+              [first-excerpt last-excerpt]]
+             save-action))
+      (is (= [:topic.actions/mark-active-unsaved] mark-unsaved-action))
+      (is (= [:topic.effects/auto-save topic-id] auto-save-action)))))
 
 
 (deftest add-builds-and-persists-document-excerpt-test
