@@ -109,20 +109,38 @@
       (catch :default e
         (js/console.error "ACP write request coercion failed" e params)))))
 
+(defn- make-read-callback
+  "Wrap read-fn with an optional tap. Returns read-fn unchanged when on-read is nil."
+  [read-fn on-read]
+  (if on-read
+    (fn [^js params]
+      (try
+        (on-read {:path  (.-path params)
+                  :line  (.-line params)
+                  :limit (.-limit params)})
+        (catch :default e
+          (js/console.error "ACP read tap failed" e)))
+      (read-fn params))
+    read-fn))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    on-session-update: callback receiving raw JS session update params from SDK.
    is-packaged?: Electron app packaging state used to select ACP agent package
    mode policy.
    on-permission: optional tap receiving coerced permission request params.
-   on-write: optional tap receiving coerced writeTextFile params."
+   on-write: optional tap receiving coerced writeTextFile params.
+   on-read: optional tap receiving coerced readTextFile params."
   ([on-session-update is-packaged?]
-   (initialize on-session-update is-packaged? nil nil))
+   (initialize on-session-update is-packaged? nil nil nil))
 
   ([on-session-update is-packaged? on-permission]
-   (initialize on-session-update is-packaged? on-permission nil))
+   (initialize on-session-update is-packaged? on-permission nil nil))
 
   ([on-session-update is-packaged? on-permission on-write]
+   (initialize on-session-update is-packaged? on-permission on-write nil))
+
+  ([on-session-update is-packaged? on-permission on-write on-read]
    (cond
      @state
      (js/Promise.resolve nil)
@@ -132,13 +150,13 @@
 
      :else
      (let [^js result (create-connection
-                        #js {:onSessionUpdate     on-session-update
-                             :onReadTextFile       read-text-file
-                             :agentPackageMode     (agent-package-mode (boolean is-packaged?))
-                             :onRequestPermission  (when on-permission
-                                                     (make-permission-callback on-permission))
-                             :onWriteTextFile      (when on-write
-                                                     (make-write-callback on-write))})
+                        #js {:onSessionUpdate    on-session-update
+                             :onReadTextFile      (make-read-callback read-text-file on-read)
+                             :agentPackageMode    (agent-package-mode (boolean is-packaged?))
+                             :onRequestPermission (when on-permission
+                                                    (make-permission-callback on-permission))
+                             :onWriteTextFile     (when on-write
+                                                    (make-write-callback on-write))})
            init-promise
            (start-connection! (.-connection result)
                               (.-subprocess result)

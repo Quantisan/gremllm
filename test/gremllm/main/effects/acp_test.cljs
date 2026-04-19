@@ -341,3 +341,29 @@
                                        (.rm fs dir #js {:recursive true
                                                         :force true})))))))
             (.finally (fn [] (done))))))))
+
+(deftest test-on-read-tap-fires
+  (testing "on-read tap is called when onReadTextFile is invoked"
+    (async done
+      (let [reads         (atom [])
+            captured-read (atom nil)
+            {:keys [result]} (make-fake-env)]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-read (.-onReadTextFile opts))
+                        result)
+                      acp/read-text-file
+                      (fn [_] (js/Promise.resolve #js {:content "mock"}))]
+          (-> (acp/initialize (fn [_] nil) false nil nil #(swap! reads conj %))
+              (.then (fn [_]
+                       (@captured-read #js {:path      "/doc.md"
+                                            :line      nil
+                                            :limit     nil
+                                            :sessionId "s-1"})))
+              (.then (fn [_]
+                       (is (= 1 (count @reads)))
+                       (is (= {:path "/doc.md" :line nil :limit nil}
+                              (first @reads)))))
+              (.finally (fn []
+                          (acp/shutdown)
+                          (done)))))))))
