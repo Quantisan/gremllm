@@ -42,7 +42,9 @@ It does not cover:
 
 ## Option A: Direct File Import
 
-Change the ACP bridge import away from package-style resolution and load the bridge directly from repo-local source, e.g. `../resources/acp/index.js`, from both production and test entrypoints.
+Change the ACP bridge import away from package-style resolution and load the bridge directly from repo-local source, from both production and test entrypoints.
+
+**Path semantics note:** Shadow-cljs `:require` paths are resolved relative to the *source* CLJS file, not the compiled output. From `src/gremllm/main/effects/acp.cljs` the source-relative path is `../../../../resources/acp/index.js`. Whether shadow rewrites this to a node-resolvable `require()` in `target/main.js` is an empirical question that must be verified before committing to this option.
 
 ### Advantages
 
@@ -53,11 +55,11 @@ Change the ACP bridge import away from package-style resolution and load the bri
 
 ### Tradeoffs
 
-- The import becomes coupled to the current compiled output layout under `target/`.
+- Source-relative path semantics in shadow-cljs must be verified empirically before implementation.
 - Internal consumers lose the convenience alias `require("acp")`.
 - If the build output path changes later, the relative import path must be updated too.
 
-## Option B: Preserve Package-Style Import
+## Option B: Preserve Package-Style Import via Packaging Changes
 
 Keep `require("acp")`, but change dependency materialization or packaging behavior so the packaged app contains a resolvable ACP module instead of an `asar`-broken symlink.
 
@@ -74,16 +76,55 @@ Keep `require("acp")`, but change dependency materialization or packaging behavi
 - Risks turning a local code-loading problem into a more fragile release-only packaging rule.
 - Has no validated implementation in this repo yet.
 
+## Option C: Shadow-CLJS `:js-options :resolve` Remap
+
+Add one line to `shadow-cljs.edn` so shadow resolves the bare `"acp"` import directly to the bridge file, bypassing npm entirely:
+
+```clojure
+:js-options {:resolve {"acp" {:target :file :file "resources/acp/index.js"}}}
+```
+
+Then delete `"acp": "file:./resources/acp"` from `package.json` and delete `resources/acp/package.json`. The `node_modules/acp` symlink disappears on the next `npm install`.
+
+### Advantages
+
+- Preserves `(:require ["acp" :as acp-factory])` unchanged in CLJS production and test files — zero call-site edits.
+- Removes the symlink and pseudo-package alias via a documented shadow-cljs mechanism, not a packaging hack.
+- Minimal diff: one `shadow-cljs.edn` line added, two files deleted.
+- Lowest test-file churn of all options.
+
+### Tradeoffs
+
+- Shadow's emitted `require()` for `:target :file` must be verified empirically to confirm it resolves at runtime from `target/main.js` and from within `app.asar`.
+- Less familiar mechanism than a plain relative import; the resolution indirection lives in build config rather than source.
+
+## Option D: Move Bridge into `src/`
+
+Move `resources/acp/index.js` and `resources/acp/permission.js` into `src/js/acp/` (or an equivalent location on the shadow-cljs source path) and use a source-relative CLJS `:require`.
+
+### Advantages
+
+- Removes the whole pseudo-package fiction: bridge code lives with the code that uses it.
+- Shadow-cljs source-relative JS requires are idiomatic and well-trodden in this build setup.
+- No symlink, no npm alias, no packaging special case.
+
+### Tradeoffs
+
+- Larger diff: two files move.
+- `test/acp-session-history.mjs:9` hard-codes `require("../resources/acp/index.js")` and would need a path update.
+- Requires choosing and validating the new source path against shadow-cljs classpath configuration.
+
 ## Comparison
 
-| Criterion | Option A: Direct import | Option B: Keep local package |
-|-----------|-------------------------|------------------------------|
-| Addresses verified root cause directly | Yes | Indirectly |
-| Keeps current `require("acp")` shape | No | Yes |
-| Adds packaging complexity | Low | Medium to high |
-| Depends on current build output layout | Yes | Less directly |
-| Already matches a working repo pattern | Yes | No |
-| Packaged runtime validated yet | Partially, by direct archive require | No |
+| Criterion | Option A: Direct import | Option B: Packaging changes | Option C: shadow `:resolve` | Option D: Move to `src/` |
+|-----------|-------------------------|-----------------------------|------------------------------|--------------------------|
+| Addresses verified root cause directly | Yes | Indirectly | Yes | Yes |
+| Keeps current `require("acp")` shape | No | Yes | Yes | No |
+| Adds packaging complexity | Low | Medium to high | None | None |
+| Call-site edits required | 2 files (CLJS + test) | None | None | 2 files (CLJS + mjs) |
+| Shadow-cljs emission must be verified | Yes | No | Yes | No (idiomatic) |
+| Already matches a working repo pattern | Partially | No | No | Yes (source-relative JS) |
+| Packaged runtime validated yet | Partially, by direct archive require | No | No | No |
 
 ## Decision Criteria
 
@@ -97,6 +138,10 @@ The chosen fix must:
 
 ## Working Recommendation
 
-Current evidence favors Option A because it removes the exact failing indirection and simplifies the model.
+Current evidence favors **Option C** (shadow `:js-options :resolve`) because it removes the exact failing indirection, requires no call-site edits, and adds no packaging complexity. Option C's shadow emission behavior must be verified empirically before committing: compile `target/main.js` with the change in place and confirm the emitted `require()` is node-resolvable from both `target/` and inside `app.asar`.
 
-This design intentionally remains decision-open for review. Option B stays viable only if it can meet the same verification bar without adding more packaging complexity than Option A.
+If Option C's emitted require cannot be validated, **Option D** (move to `src/`) is the next cleanest choice — it uses a well-understood shadow-cljs mechanism at the cost of moving two files.
+
+**Option A** is the fallback if both C and D fail empirical verification. Its path-semantics behavior under shadow compilation also needs to be verified before implementation.
+
+**Option B** stays viable only if review rejects all other options on design grounds.
