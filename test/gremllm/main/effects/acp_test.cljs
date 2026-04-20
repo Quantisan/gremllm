@@ -16,7 +16,7 @@
                       :new-session []
                       :resume-session []
                       :prompt []
-                      :kill []})
+                      :dispose-count 0})
          conn  #js {:initialize
                     (fn [payload]
                       (swap! calls update :initialize conj payload)
@@ -33,10 +33,11 @@
                     (fn [payload]
                       (swap! calls update :prompt conj payload)
                       (js/Promise.resolve #js {:stopReason "end_turn"}))}
-         subprocess #js {:kill (fn [signal]
-                                 (swap! calls update :kill conj signal))}
+         dispose-agent (fn []
+                         (swap! calls update :dispose-count inc)
+                         (js/Promise.resolve nil))
          result #js {:connection conn
-                     :subprocess subprocess
+                     :disposeAgent dispose-agent
                      :protocolVersion "test-protocol"}]
      {:calls calls
       :result result})))
@@ -52,9 +53,9 @@
                        (:result (nth envs (dec i)))))}))
 
 (defn- initialize-dev
-  "Initialize ACP in test default mode (non-packaged)."
+  "Initialize ACP in test default mode."
   [on-update]
-  (acp/initialize {:on-session-update on-update :is-packaged? false}))
+  (acp/initialize {:on-session-update on-update}))
 
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
@@ -106,43 +107,6 @@
                           (acp/shutdown)
                           (done)))))))))
 
-(defn- spawn-config->map [^js config]
-  {:command   (.-command config)
-   :args      (vec (js->clj (.-args config)))
-   :env-patch (js->clj (.-envPatch config))})
-
-(deftest test-build-npx-agent-package-config
-  (let [build        (.. acp-module -__test__ -buildNpxAgentPackageConfig)
-        package-spec (.. acp-module -__test__ -claudeAgentPackageSpec)]
-    (testing "latest mode forces online package resolution"
-      (is (= {:command   "npx"
-              :args      ["--yes"
-                          (str "--package=" package-spec)
-                          "--"
-                          "claude-agent-acp"]
-              :env-patch {"npm_config_prefer_online" "true"}}
-             (spawn-config->map (build "latest")))))
-    (testing "cached mode uses the installed package binary"
-      (is (= {:command   "npx"
-              :args      ["claude-agent-acp"]
-              :env-patch {}}
-             (spawn-config->map (build "cached")))))
-    (testing "invalid mode falls back to cached"
-      (is (= (spawn-config->map (build "cached"))
-             (spawn-config->map (build "not-a-valid-mode")))))))
-
-(deftest test-claude-agent-package-info
-  (let [get-package-info (.. acp-module -__test__ -getClaudeAgentPackageInfo)
-        ^js package-json (js/require "@agentclientprotocol/claude-agent-acp/package.json")]
-    (is (fn? get-package-info))
-    (when (fn? get-package-info)
-      (let [info (js->clj (get-package-info) :keywordize-keys true)]
-        (is (= {:packageName (.-name package-json)
-                :version     (.-version package-json)
-                :packageSpec (str (.-name package-json) "@" (.-version package-json))
-                :bin         "claude-agent-acp"}
-               info))))))
-
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
     (async done
@@ -176,7 +140,7 @@
                           (done)))))))))
 
 (deftest test-lifecycle-guardrails
-  (testing "double initialize is idempotent, shutdown kills subprocess, post-shutdown throws"
+  (testing "double initialize is idempotent, shutdown disposes agent, post-shutdown throws"
     (async done
       (let [{:keys [calls result]} (make-fake-env)
             create-count (atom 0)]
@@ -189,7 +153,7 @@
               (.then (fn [_]
                        (is (= 1 @create-count))
                        (acp/shutdown)
-                       (is (= ["SIGTERM"] (:kill @calls)))
+                       (is (= 1 (:dispose-count @calls)))
                        (is (thrown-with-msg? js/Error #"ACP not initialized"
                              (acp/new-session "/tmp/ws")))))
               (.finally (fn []
@@ -210,7 +174,7 @@
                        (is false "Expected first initialize call to fail")))
               (.catch (fn [err]
                         (is (= "init failed" (.-message err)))
-                        (is (= ["SIGTERM"] (:kill @(:calls failing-env))))
+                        (is (= 1 (:dispose-count @(:calls failing-env))))
                         (is (thrown-with-msg? js/Error #"ACP not initialized"
                               (acp/new-session "/tmp/ws")))
                         ;; Re-bind for retry because async Promise callbacks run
