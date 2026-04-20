@@ -1,8 +1,9 @@
 # Design: ACP Packaged-App Agent Launch Investigation
 
 **Date:** 2026-04-20
-**Status:** Investigating
+**Status:** Option space narrowed; research and spikes planned
 **Related:** [docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md), [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js), [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js)
+**Plan:** [docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md](/Users/paul/Projects/gremllm/docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md)
 
 ## Goal
 
@@ -61,6 +62,17 @@ spawn npx ENOENT
 - Even if `npx` happened to exist on the developer machine, treating it as a production runtime dependency is fragile for a signed, packaged desktop app.
 - The in-process ACP path is no longer merely theoretical. The current package set already supports it with the published library API and the existing ACP SDK transport primitives.
 - The "packaged launcher" path is also more concrete than originally stated: at least one upstream-aligned helper-binary approach exists today (single-file Bun), and a "ship your own Node runtime" variant is mechanically possible even if heavier.
+
+## Resolution of Open Questions
+
+The following open questions from this investigation were settled through design review:
+
+- **Is preserving a hard process boundary a requirement, or merely a preference?** Strong preference, not a hard requirement. In-process hosting is acceptable if the ACP library is well-behaved in a real session and a hard-boundary option's transport cost is material.
+- **Is "packaged app is self-contained" a product requirement?** Yes. Option F is ruled out on that basis.
+- **Which concrete launcher variant is best if we pursue Option B?** Deferred pending research. The B-variant question is gated on what other Electron-based agent apps actually ship (web research items R1, R2 in the plan).
+- **Options E and F status:** Both eliminated. E reverses an explicit security-hardening choice with no gain over A/B/D. F conflicts with the self-containment requirement.
+
+Active candidates for validation: **A (utilityProcess)**, **C (in-process)**, **D (worker thread)**. Option B held in reserve pending research and spike outcomes.
 
 ## Scope
 
@@ -289,6 +301,8 @@ Variants:
 | Adds packaging complexity | Medium | High | Low | Low to medium | Medium | Low |
 | Keeps app self-contained | Likely | Likely | Yes | Yes | Likely | No |
 | Current evidence level | Docs only | Docs + concrete variants | Docs + local POC | Docs only | Docs only | Current broken behavior |
+
+**E** is eliminated (security-posture regression with no gain over A/B/D). **F** is eliminated (conflicts with self-containment requirement). Active candidates: **A, C, D**. **B** held in reserve.
 
 ## Decision Criteria
 
