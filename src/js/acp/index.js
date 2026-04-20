@@ -1,31 +1,9 @@
-const { spawn } = require("node:child_process");
-const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");
-const claudeAgentPackage = require("@agentclientprotocol/claude-agent-acp/package.json");
+const { ClaudeAcpAgent } = require("@agentclientprotocol/claude-agent-acp/dist/lib.js");
 const { makeResolver, requestedToolName } = require("./permission");
 const permission = require("./permission");
 
 const sessionCwdMap = new Map();
-
-function getClaudeAgentPackageInfo() {
-  const packageName = claudeAgentPackage.name;
-  const version = claudeAgentPackage.version;
-  const bin = "claude-agent-acp";
-
-  return {
-    packageName,
-    version,
-    packageSpec: `${packageName}@${version}`,
-    bin
-  };
-}
-
-const {
-  packageName: CLAUDE_AGENT_PACKAGE,
-  version: CLAUDE_AGENT_VERSION,
-  packageSpec: CLAUDE_AGENT_PACKAGE_SPEC,
-  bin: CLAUDE_AGENT_BIN
-} = getClaudeAgentPackageInfo();
 
 function rememberToolName(toolNamesByCallId, params) {
   const update = params?.update;
@@ -58,50 +36,23 @@ function enrichPermissionParams(toolNamesByCallId, params) {
   };
 }
 
-function logConfiguredAgentVersion() {
-  console.log("[ACP] claude-agent-acp@" + CLAUDE_AGENT_VERSION);
-}
-
-function normalizeAgentPackageMode(agentPackageMode) {
-  return agentPackageMode === "latest" ? "latest" : "cached";
-}
-
-function buildNpxAgentPackageConfig(agentPackageMode) {
-  if (normalizeAgentPackageMode(agentPackageMode) === "cached") {
-    return {
-      command: "npx",
-      args: [CLAUDE_AGENT_BIN],
-      envPatch: {}
-    };
-  }
-
-  return {
-    command: "npx",
-    args: [
-      "--yes",
-      `--package=${CLAUDE_AGENT_PACKAGE_SPEC}`,
-      "--",
-      CLAUDE_AGENT_BIN
-    ],
-    envPatch: {
-      npm_config_prefer_online: "true"
-    }
-  };
-}
-
 function createConnection(options = {}) {
   const callbacks = options;
-  const { command, args, envPatch } = buildNpxAgentPackageConfig(options.agentPackageMode);
   const toolNamesByCallId = new Map();
 
-  const subprocess = spawn(command, args, {
-    stdio: ["pipe", "pipe", "inherit"],
-    env: { ...process.env, ...envPatch }
-  });
+  // Paired transform streams for in-process bidirectional message passing
+  const clientToAgent = new TransformStream();
+  const agentToClient = new TransformStream();
 
-  if (normalizeAgentPackageMode(options.agentPackageMode) === "latest") {
-    logConfiguredAgentVersion();
-  }
+  const clientStream = acp.ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = acp.ndJsonStream(agentToClient.writable, clientToAgent.readable);
+
+  // Agent is captured synchronously — AgentSideConnection calls the factory immediately
+  let agent;
+  new acp.AgentSideConnection((client) => {
+    agent = new ClaudeAcpAgent(client);
+    return agent;
+  }, agentStream);
 
   const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
 
@@ -135,10 +86,7 @@ function createConnection(options = {}) {
     }
   };
 
-  const input = Writable.toWeb(subprocess.stdin);
-  const output = Readable.toWeb(subprocess.stdout);
-  const stream = acp.ndJsonStream(input, output);
-  const connection = new acp.ClientSideConnection(() => client, stream);
+  const connection = new acp.ClientSideConnection(() => client, clientStream);
 
   const originalNewSession = connection.newSession.bind(connection);
   connection.newSession = async (params) => {
@@ -154,9 +102,17 @@ function createConnection(options = {}) {
     return result;
   };
 
+  async function disposeAgent() {
+    if (agent) {
+      await agent.dispose().catch(() => {});
+    }
+    clientToAgent.writable.close().catch(() => {});
+    agentToClient.writable.close().catch(() => {});
+  }
+
   return {
     connection,
-    subprocess,
+    disposeAgent,
     protocolVersion: acp.PROTOCOL_VERSION
   };
 }
@@ -164,14 +120,10 @@ function createConnection(options = {}) {
 module.exports = {
   createConnection,
   __test__: {
-    buildNpxAgentPackageConfig,
-    getClaudeAgentPackageInfo,
     enrichPermissionParams,
     rememberToolName,
     makeResolver,
     permissionRequestedToolName: requestedToolName,
-    permissionRequestedPath: permission.__test__.requestedPath,
-    claudeAgentPackageSpec: CLAUDE_AGENT_PACKAGE_SPEC,
-    claudeAgentVersion: CLAUDE_AGENT_VERSION
+    permissionRequestedPath: permission.__test__.requestedPath
   }
 };
