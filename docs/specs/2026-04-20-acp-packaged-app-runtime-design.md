@@ -40,91 +40,113 @@ It does not cover:
 - signing or notarization
 - non-macOS packaging
 
-## Option A: Direct File Import
+## Shadow-CLJS Resolution Primer (verified against official docs)
 
-Change the ACP bridge import away from package-style resolution and load the bridge directly from repo-local source, from both production and test entrypoints.
+Shadow-CLJS resolves CLJS `:require` strings in three ways, per the official [JS Dependencies](https://github.com/shadow-cljs/shadow-cljs.github.io/blob/master/docs/js-deps.adoc) guide:
 
-**Path semantics note:** Shadow-cljs `:require` paths are resolved relative to the *source* CLJS file, not the compiled output. From `src/gremllm/main/effects/acp.cljs` the source-relative path is `../../../../resources/acp/index.js`. Whether shadow rewrites this to a node-resolvable `require()` in `target/main.js` is an empirical question that must be verified before committing to this option.
+1. **Bare string** (e.g. `"acp"`) → looked up in `node_modules`.
+2. **Absolute classpath** (e.g. `"/js/acp/index"`) → file must exist on the CLJS classpath as `js/acp/index.js`. The shadow-cljs docs recommend this explicitly for "local JS files you wrote."
+3. **Relative classpath** (e.g. `"./bridge"`) → resolved relative to the current CLJS namespace's classpath location. Cannot climb above the classpath root.
+
+Project classpath (`deps.edn:1`, `:dev` alias): `src`, `test`, `dev`. `resources/` is **not** on the classpath.
+
+Additional mechanism: `:js-options {:resolve {"name" {:target :file :file "..."}}}` remaps a bare require to a specific file. Docs note this has **limitations under `:js-provider :require` (Node.js targets)** because "downstream requires escape control." Our `:node-script` builds use this provider by default, and the bridge has downstream requires for `@agentclientprotocol/sdk`, `./permission`, etc., so this mechanism is in the warned-against region.
+
+## Option A: Move Bridge to `src/` and Use Classpath Require
+
+Move `resources/acp/index.js` → `src/js/acp/index.js` and `resources/acp/permission.js` → `src/js/acp/permission.js`. Update the CLJS import:
+
+```clojure
+(:require ["/js/acp/index" :as acp-factory])
+```
+
+Or keep the file next to existing main effects and use a relative require:
+
+```clojure
+(:require ["./acp/bridge" :as acp-factory])
+```
+
+Delete `"acp": "file:./resources/acp"` from `package.json` and delete `resources/acp/package.json`. The `node_modules/acp` symlink disappears on next `npm install`. Update `test/gremllm/main/effects/acp_test.cljs` to the new require. Update `test/acp-session-history.mjs:9`'s plain-Node `require` path.
 
 ### Advantages
 
-- Removes the exact failing `asar` symlink boundary.
-- Matches an existing working repo pattern in `test/acp-session-history.mjs`.
-- Simplifies package metadata by removing the artificial local package alias.
-- Keeps the ACP bridge clearly repo-local instead of packaging it as a pseudo-dependency.
+- Matches the shadow-cljs docs' explicit recommendation for authored-local JS files.
+- Removes the whole pseudo-package fiction: bridge code lives on the classpath with the CLJS that uses it.
+- No symlink, no npm alias, no packaging special case.
+- No dependency on `:js-provider :require` behavior with remapped resolves.
 
 ### Tradeoffs
 
-- Source-relative path semantics in shadow-cljs must be verified empirically before implementation.
-- Internal consumers lose the convenience alias `require("acp")`.
-- If the build output path changes later, the relative import path must be updated too.
+- Largest diff: two files move, three requires update.
+- Bridge directory moves out of `resources/` — a convention change some readers may find unexpected.
 
-## Option B: Preserve Package-Style Import via Packaging Changes
+## Option B: Add `resources` to the Classpath and Classpath-Require from There
 
-Keep `require("acp")`, but change dependency materialization or packaging behavior so the packaged app contains a resolvable ACP module instead of an `asar`-broken symlink.
+Add `resources` to the shadow-cljs source paths (either via `shadow-cljs.edn :source-paths` or `deps.edn :paths`) and use a classpath require:
+
+```clojure
+(:require ["/acp/index" :as acp-factory])
+```
+
+Delete `"acp": "file:./resources/acp"` and `resources/acp/package.json`.
 
 ### Advantages
 
-- Preserves the current import shape in CLJS and tests.
-- Keeps call sites looking like normal dependency imports.
-- Avoids a direct relative path from compiled output back into `resources/`.
+- Keeps bridge files where they are.
+- Uses the same documented classpath-require pattern as Option A.
 
 ### Tradeoffs
 
-- Adds packaging-specific complexity to a local source module.
-- Must still satisfy both Shadow-CLJS dev/watch behavior and packaged Electron runtime behavior.
-- Risks turning a local code-loading problem into a more fragile release-only packaging rule.
-- Has no validated implementation in this repo yet.
+- Adding `resources/` to the CLJS classpath pulls everything else in `resources/` (public assets, images) onto the classpath too. Wider scope than needed for a bridge loader.
+- Mixes build-output assets and source JS under one source path.
+- Not an idiomatic shadow-cljs layout.
 
-## Option C: Shadow-CLJS `:js-options :resolve` Remap
+## Option C: `:js-options :resolve` Remap (Keep `require("acp")`)
 
-Add one line to `shadow-cljs.edn` so shadow resolves the bare `"acp"` import directly to the bridge file, bypassing npm entirely:
+Add to `shadow-cljs.edn`:
 
 ```clojure
 :js-options {:resolve {"acp" {:target :file :file "resources/acp/index.js"}}}
 ```
 
-Then delete `"acp": "file:./resources/acp"` from `package.json` and delete `resources/acp/package.json`. The `node_modules/acp` symlink disappears on the next `npm install`.
+Delete `"acp": "file:./resources/acp"` and `resources/acp/package.json`.
 
 ### Advantages
 
-- Preserves `(:require ["acp" :as acp-factory])` unchanged in CLJS production and test files — zero call-site edits.
-- Removes the symlink and pseudo-package alias via a documented shadow-cljs mechanism, not a packaging hack.
-- Minimal diff: one `shadow-cljs.edn` line added, two files deleted.
-- Lowest test-file churn of all options.
+- Preserves `(:require ["acp" :as acp-factory])` unchanged — zero call-site edits.
+- Smallest diff if it works.
 
 ### Tradeoffs
 
-- Shadow's emitted `require()` for `:target :file` must be verified empirically to confirm it resolves at runtime from `target/main.js` and from within `app.asar`.
-- Less familiar mechanism than a plain relative import; the resolution indirection lives in build config rather than source.
+- Shadow-cljs docs flag `:resolve :target :file` as having **limitations under `:js-provider :require`** (Node.js targets) because "downstream requires escape control." The bridge depends on `@agentclientprotocol/sdk`, `claude-agent-acp/package.json`, and `./permission` — all downstream requires that would escape control.
+- Resolution indirection lives in build config, invisible from the call site.
 
-## Option D: Move Bridge into `src/`
+## Option D: Packaging-Side Fix (Keep the `file:` Dependency)
 
-Move `resources/acp/index.js` and `resources/acp/permission.js` into `src/js/acp/` (or an equivalent location on the shadow-cljs source path) and use a source-relative CLJS `:require`.
+Keep `require("acp")` and fix the packaging so `node_modules/acp` materializes as real files (not a symlink) in the packaged `app.asar`. Candidate mechanisms: `@electron/packager`'s `derefSymlinks` (already defaults to `true` and still fails for us), `asar.unpack` to exclude the bridge from asar, or replacing the `file:` dep with a build-time copy step.
 
 ### Advantages
 
-- Removes the whole pseudo-package fiction: bridge code lives with the code that uses it.
-- Shadow-cljs source-relative JS requires are idiomatic and well-trodden in this build setup.
-- No symlink, no npm alias, no packaging special case.
+- No CLJS changes.
+- Leaves bridge code in `resources/` as-is.
 
 ### Tradeoffs
 
-- Larger diff: two files move.
-- `test/acp-session-history.mjs:9` hard-codes `require("../resources/acp/index.js")` and would need a path update.
-- Requires choosing and validating the new source path against shadow-cljs classpath configuration.
+- Root cause is a known-bad interaction between `file:` symlink deps and asar (multiple upstream GitHub issues). Works best case; fragile worst case.
+- Adds release-only packaging special cases that are not exercised in dev.
+- Still depends on shadow-cljs emitting `require("acp")` and node's module resolution finding it — the thing that already fails.
 
 ## Comparison
 
-| Criterion | Option A: Direct import | Option B: Packaging changes | Option C: shadow `:resolve` | Option D: Move to `src/` |
-|-----------|-------------------------|-----------------------------|------------------------------|--------------------------|
-| Addresses verified root cause directly | Yes | Indirectly | Yes | Yes |
-| Keeps current `require("acp")` shape | No | Yes | Yes | No |
-| Adds packaging complexity | Low | Medium to high | None | None |
-| Call-site edits required | 2 files (CLJS + test) | None | None | 2 files (CLJS + mjs) |
-| Shadow-cljs emission must be verified | Yes | No | Yes | No (idiomatic) |
-| Already matches a working repo pattern | Partially | No | No | Yes (source-relative JS) |
-| Packaged runtime validated yet | Partially, by direct archive require | No | No | No |
+| Criterion | A: Move to `src/` | B: Classpath `resources/` | C: `:resolve` remap | D: Packaging fix |
+|-----------|-------------------|----------------------------|----------------------|-------------------|
+| Matches documented shadow-cljs recommendation | Yes (classpath-js) | Partially | No (warned for node-script) | No |
+| Addresses verified root cause directly | Yes | Yes | Yes | Indirectly |
+| Keeps current `require("acp")` shape | No | No | Yes | Yes |
+| Adds packaging complexity | None | None | None | Medium to high |
+| Widens CLJS classpath scope | No | Yes (all of `resources/`) | No | No |
+| Files changed | 2 moves + 3 requires | 1 config + 1 require | 1 config line | Packaging rules |
+| Empirical verification still needed | Low (idiomatic pattern) | Low | High (`:js-provider :require` caveat) | High |
 
 ## Decision Criteria
 
@@ -138,10 +160,10 @@ The chosen fix must:
 
 ## Working Recommendation
 
-Current evidence favors **Option C** (shadow `:js-options :resolve`) because it removes the exact failing indirection, requires no call-site edits, and adds no packaging complexity. Option C's shadow emission behavior must be verified empirically before committing: compile `target/main.js` with the change in place and confirm the emitted `require()` is node-resolvable from both `target/` and inside `app.asar`.
+**Preferred: Option A — move the bridge into `src/` and use a classpath require.** This matches the shadow-cljs user guide's explicit recommendation for "local JS files you wrote" (classpath-js). It removes the pseudo-package fiction that caused the problem, uses well-documented semantics, and has no dependency on the `:js-provider :require` edge case that affects Option C.
 
-If Option C's emitted require cannot be validated, **Option D** (move to `src/`) is the next cleanest choice — it uses a well-understood shadow-cljs mechanism at the cost of moving two files.
+**Fallback 1: Option B** if keeping the bridge under `resources/` is important to reviewers. Accept the tradeoff that `resources/` becomes a CLJS source path.
 
-**Option A** is the fallback if both C and D fail empirical verification. Its path-semantics behavior under shadow compilation also needs to be verified before implementation.
+**Fallback 2: Option C** only if reviewers strongly want `require("acp")` preserved at call sites. Must be validated empirically against the `:node-script` target — the shadow-cljs docs flag `:resolve :target :file` as having limitations in this provider.
 
-**Option B** stays viable only if review rejects all other options on design grounds.
+**Last resort: Option D** (packaging-side fix). Same class of problem as the current failure; keeps the symlink fragility on the release path.
