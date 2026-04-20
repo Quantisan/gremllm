@@ -54,7 +54,7 @@
 (defn- initialize-dev
   "Initialize ACP in test default mode (non-packaged)."
   [on-update]
-  (acp/initialize on-update false))
+  (acp/initialize {:on-session-update on-update :is-packaged? false}))
 
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
@@ -341,8 +341,3 @@
                                        (.rm fs dir #js {:recursive true
                                                         :force true})))))))
             (.finally (fn [] (done))))))))
-
-(deftest test-initialize-rejects-read-tap-arity
-  (testing "initialize does not expose a read instrumentation callback"
-    (is (thrown-with-msg? js/Error #"Invalid arity"
-          (apply acp/initialize [(fn [_] nil) false nil nil (fn [_] nil)])))))
