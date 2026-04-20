@@ -135,8 +135,8 @@
     ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
     ;; from runtime capabilities - other ACP effects handle user operations.
     (acp-effects/initialize
-      (acp-effects/make-session-update-callback store nil)
-      (.-isPackaged app))))
+      {:on-session-update (acp-effects/make-session-update-callback store nil)
+       :is-packaged?      (.-isPackaged app)})))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

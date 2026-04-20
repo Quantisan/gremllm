@@ -54,7 +54,7 @@
 (defn- initialize-dev
   "Initialize ACP in test default mode (non-packaged)."
   [on-update]
-  (acp/initialize on-update false))
+  (acp/initialize {:on-session-update on-update :is-packaged? false}))
 
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
