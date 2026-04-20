@@ -77,7 +77,7 @@
                        (.copyFile fsp src-path dest))))
             (.then (fn [_]
                      (acp/initialize
-                       (acp/make-session-update-callback store (:on-update recorder))
+                       (acp/make-session-update-callback store (:on-session-update recorder))
                        false
                        (:on-permission recorder)
                        (:on-write recorder)
@@ -132,7 +132,7 @@
                        (.mkdir fsp dir #js {:recursive true}))))
             (.then (fn [_]
                      (acp/initialize
-                       (acp/make-session-update-callback store (:on-update recorder))
+                       (acp/make-session-update-callback store (:on-session-update recorder))
                        false
                        (:on-permission recorder)
                        (:on-write recorder)
@@ -261,7 +261,7 @@
                        (.copyFile fsp src-path dest))))
             (.then (fn [_]
                      (acp/initialize
-                       (acp/make-session-update-callback store (:on-update recorder))
+                       (acp/make-session-update-callback store (:on-session-update recorder))
                        false
                        (:on-permission recorder)
                        (:on-write recorder)

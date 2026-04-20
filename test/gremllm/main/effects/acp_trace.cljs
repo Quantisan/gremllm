@@ -3,39 +3,43 @@
             ["path" :as path]
             [clojure.string :as str]))
 
+(defn- safe-version [pkg-path]
+  (try (.-version (js/require pkg-path))
+       (catch :default _ nil)))
+
 (defn versions
-  "Read installed package version strings."
+  "Read installed package version strings. Returns nil for any package
+   whose package.json cannot be located."
   []
-  (let [sdk-pkg   (js/require "@agentclientprotocol/sdk/package.json")
-        agent-pkg (js/require "@agentclientprotocol/claude-agent-acp/package.json")]
-    {:claude-agent-acp (.-version agent-pkg)
-     :acp-sdk          (.-version sdk-pkg)}))
+  {:claude-agent-acp (safe-version "@agentclientprotocol/claude-agent-acp/package.json")
+   :acp-sdk          (safe-version "@agentclientprotocol/sdk/package.json")
+   :gremllm          (safe-version "../../../package.json")})
 
 (defn make-recorder
   "Create a new event recorder.
-   Returns {:events atom :on-update fn :on-permission fn :on-write fn :on-read fn}.
+   Returns {:events atom :on-session-update fn :on-permission fn :on-write fn :on-read fn}.
 
    Wire the taps into acp/initialize:
-     (acp/make-session-update-callback store (:on-update r))  -> on-session-update arg
-     (:on-permission r)                                        -> on-permission arg
-     (:on-write r)                                             -> on-write arg
-     (:on-read r)                                              -> on-read arg"
+     (acp/make-session-update-callback store (:on-session-update r))  -> on-session-update arg
+     (:on-permission r)                                                -> on-permission arg
+     (:on-write r)                                                     -> on-write arg
+     (:on-read r)                                                      -> on-read arg"
   []
-  (let [start  (js/Date.now)
+  (let [start  (js/performance.now)
         events (atom [])]
-    {:events        events
-     :on-update
+    {:events             events
+     :on-session-update
      (fn [coerced]
-       (swap! events conj {:ts (- (js/Date.now) start) :kind :session-update :payload coerced}))
+       (swap! events conj {:ts (- (js/performance.now) start) :kind :session-update :payload coerced}))
      :on-permission
      (fn [coerced]
-       (swap! events conj {:ts (- (js/Date.now) start) :kind :permission :payload coerced}))
+       (swap! events conj {:ts (- (js/performance.now) start) :kind :permission :payload coerced}))
      :on-write
      (fn [params]
-       (swap! events conj {:ts (- (js/Date.now) start) :kind :write :payload params}))
+       (swap! events conj {:ts (- (js/performance.now) start) :kind :write :payload params}))
      :on-read
      (fn [params]
-       (swap! events conj {:ts (- (js/Date.now) start) :kind :read :payload params}))}))
+       (swap! events conj {:ts (- (js/performance.now) start) :kind :read :payload params}))}))
 
 (defn write-trace!
   "Serialize recorded events to target-dir/scenario-<ISO>.edn.

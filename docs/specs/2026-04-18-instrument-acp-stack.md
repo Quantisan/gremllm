@@ -41,7 +41,7 @@ Add an `on-read` tap to `initialize`, paralleling existing `on-permission` / `on
 **B. `test/gremllm/main/effects/acp_trace.cljs` — new namespace (test support)**
 Pure helpers + thin shell:
 
-- `(make-recorder)` → `{:events-atom atom :on-session-update fn :on-read fn :on-write fn :on-permission fn}`; each tap appends `{:ts <monotonic-ns> :kind :session-update|:read|:write|:permission :payload <coerced-map>}` to `events-atom` in arrival order (single atom; interleaving is the point).
+- `(make-recorder)` → `{:events atom :on-session-update fn :on-read fn :on-write fn :on-permission fn}`; each tap appends `{:ts <monotonic-ms> :kind :session-update|:read|:write|:permission :payload <coerced-map>}` to `events` in arrival order (single atom; interleaving is the point).
 - `(write-trace! dir scenario events metadata)` serializes one EDN map to `target/acp-traces/<scenario>-<ISO8601>.edn` via `pr-str`. Metadata includes versions (read from the three `package.json`s), prompt text, workspace path, and `:result {:stop-reason …}` when available.
 - No assertions here. Pure observation.
 

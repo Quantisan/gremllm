@@ -8,17 +8,17 @@
 
 (deftest test-make-recorder-shape
   (testing "returns an events atom and four tap functions"
-    (let [{:keys [events on-update on-permission on-write on-read]} (acp-trace/make-recorder)]
+    (let [{:keys [events on-session-update on-permission on-write on-read]} (acp-trace/make-recorder)]
       (is (= cljs.core/Atom (type events)))
-      (is (fn? on-update))
+      (is (fn? on-session-update))
       (is (fn? on-permission))
       (is (fn? on-write))
       (is (fn? on-read)))))
 
 (deftest test-events-accumulate-in-order
   (testing "all four taps append to the same atom in arrival order"
-    (let [{:keys [events on-update on-permission on-write on-read]} (acp-trace/make-recorder)]
-      (on-update {:session-update :agent-message-chunk :acp-session-id "s1"})
+    (let [{:keys [events on-session-update on-permission on-write on-read]} (acp-trace/make-recorder)]
+      (on-session-update {:session-update :agent-message-chunk :acp-session-id "s1"})
       (on-read {:path "/doc.md" :line nil :limit nil})
       (on-write {:path "/doc.md" :session-id "s1" :content-length 10})
       (on-permission {:acp-session-id "s1" :tool-call {:tool-call-id "tc1"}})

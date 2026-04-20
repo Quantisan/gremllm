@@ -571,31 +571,7 @@ git commit -m "feat(test): add write-new-file ACP trace scenario"
 
 ## Task 6: Update `.gitignore`
 
-**Files:**
-- Modify: `.gitignore`
-
-- [ ] **Step 1: Add trace output directory**
-
-Open `.gitignore` and add:
-
-```
-target/acp-traces/
-```
-
-- [ ] **Step 2: Verify it's ignored**
-
-```bash
-git status
-```
-
-Expected: `target/acp-traces/` does not appear as untracked.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add .gitignore
-git commit -m "chore: ignore ACP trace output directory"
-```
+Already covered by the existing `target/` entry in `.gitignore` — no change needed.
 
 ---
 
