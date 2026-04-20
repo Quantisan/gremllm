@@ -54,12 +54,6 @@
   [opts]
   (acp-factory/createConnection opts))
 
-(defn agent-package-mode
-  "ACP agent package mode policy: packaged apps prefer cached/default package
-   resolution, development prefers latest package resolution."
-  [is-packaged?]
-  (if is-packaged? "cached" "latest"))
-
 (def ^:private client-info
   #js {:name "gremllm" :title "Gremllm" :version "0.1.0"})
 
@@ -68,19 +62,18 @@
        :terminal false})
 
 (defn- start-connection!
-  "Perform ACP handshake, update state atoms, and kill subprocess on failure.
+  "Perform ACP handshake, update state atoms, and call dispose-agent on failure.
    Returns the initialization promise."
-  [^js conn ^js subprocess ^js protocol-version]
+  [^js conn ^js protocol-version dispose-agent]
   (-> (.initialize conn
         #js {:protocolVersion    protocol-version
              :clientCapabilities client-capabilities
              :clientInfo         client-info})
       (.then (fn [_]
-               (reset! state {:connection conn :subprocess subprocess})
+               (reset! state {:connection conn :dispose-agent dispose-agent})
                nil))
       (.catch (fn [err]
-                (when subprocess
-                  (.kill subprocess "SIGTERM"))
+                (dispose-agent)
                 (throw err)))
       (.finally (fn []
                   (reset! initialize-in-flight nil)))))
@@ -113,10 +106,9 @@
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
      :on-session-update  callback receiving raw JS session update params from SDK.
-     :is-packaged?       Electron app packaging state; selects ACP agent package mode policy.
      :on-permission      optional tap receiving coerced permission request params.
      :on-write           optional tap receiving coerced writeTextFile params."
-  [{:keys [on-session-update is-packaged? on-permission on-write]}]
+  [{:keys [on-session-update on-permission on-write]}]
   (cond
     @state
     (js/Promise.resolve nil)
@@ -125,20 +117,19 @@
     (:promise @initialize-in-flight)
 
     :else
-    (let [^js result (create-connection
-                       #js {:onSessionUpdate     on-session-update
-                            :onReadTextFile      read-text-file
-                            :agentPackageMode    (agent-package-mode (boolean is-packaged?))
-                            :onRequestPermission (when on-permission
-                                                   (make-permission-callback on-permission))
-                            :onWriteTextFile     (when on-write
-                                                   (make-write-callback on-write))})
-          init-promise
-          (start-connection! (.-connection result)
-                             (.-subprocess result)
-                             (.-protocolVersion result))]
-      (reset! initialize-in-flight {:promise init-promise
-                                    :subprocess (.-subprocess result)})
+    (let [^js result       (create-connection
+                             #js {:onSessionUpdate     on-session-update
+                                  :onReadTextFile      read-text-file
+                                  :onRequestPermission (when on-permission
+                                                         (make-permission-callback on-permission))
+                                  :onWriteTextFile     (when on-write
+                                                         (make-write-callback on-write))})
+          dispose-agent    (.-disposeAgent result)
+          init-promise     (start-connection! (.-connection result)
+                                              (.-protocolVersion result)
+                                              dispose-agent)]
+      (reset! initialize-in-flight {:promise       init-promise
+                                    :dispose-agent dispose-agent})
       init-promise)))
 
 (defn- ^js conn! []
@@ -179,14 +170,14 @@
         (js/console.error "ACP session update coercion failed" e params)))))
 
 (defn shutdown
-  "Terminate ACP subprocess."
+  "Tear down in-process ACP agent."
   []
-  (let [^js initialized-subprocess (:subprocess @state)
-        ^js inflight-subprocess    (:subprocess @initialize-in-flight)]
-    (when initialized-subprocess
-      (.kill initialized-subprocess "SIGTERM"))
-    (when (and inflight-subprocess
-               (not (identical? inflight-subprocess initialized-subprocess)))
-      (.kill inflight-subprocess "SIGTERM"))
+  (let [initialized-dispose (:dispose-agent @state)
+        inflight-dispose    (:dispose-agent @initialize-in-flight)]
+    (when initialized-dispose
+      (initialized-dispose))
+    (when (and inflight-dispose
+               (not (identical? inflight-dispose initialized-dispose)))
+      (inflight-dispose))
     (reset! initialize-in-flight nil)
     (reset! state nil)))
