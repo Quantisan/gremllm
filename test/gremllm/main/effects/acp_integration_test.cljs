@@ -29,6 +29,15 @@
   (when-let [^js res result]
     {:stop-reason (.-stopReason res)}))
 
+(defn- make-read-recorder
+  [on-read]
+  (let [delegate acp/read-text-file]
+    (fn [^js params]
+      (on-read {:path  (.-path params)
+                :line  (.-line params)
+                :limit (.-limit params)})
+      (delegate params))))
+
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
@@ -76,12 +85,12 @@
                        (reset! doc-path dest)
                        (.copyFile fsp src-path dest))))
             (.then (fn [_]
-                     (acp/initialize
-                       (acp/make-session-update-callback store (:on-session-update recorder))
-                       false
-                       (:on-permission recorder)
-                       (:on-write recorder)
-                       (:on-read recorder))))
+                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
+                       (acp/initialize
+                         (acp/make-session-update-callback store (:on-session-update recorder))
+                         false
+                         (:on-permission recorder)
+                         (:on-write recorder)))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
             (.then (fn [session-id]
                      (acp/prompt session-id
@@ -131,12 +140,12 @@
                        (reset! tmp-dir dir)
                        (.mkdir fsp dir #js {:recursive true}))))
             (.then (fn [_]
-                     (acp/initialize
-                       (acp/make-session-update-callback store (:on-session-update recorder))
-                       false
-                       (:on-permission recorder)
-                       (:on-write recorder)
-                       (:on-read recorder))))
+                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
+                       (acp/initialize
+                         (acp/make-session-update-callback store (:on-session-update recorder))
+                         false
+                         (:on-permission recorder)
+                         (:on-write recorder)))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
             (.then (fn [session-id]
                      (acp/prompt session-id
@@ -260,12 +269,12 @@
                        (reset! doc-path dest)
                        (.copyFile fsp src-path dest))))
             (.then (fn [_]
-                     (acp/initialize
-                       (acp/make-session-update-callback store (:on-session-update recorder))
-                       false
-                       (:on-permission recorder)
-                       (:on-write recorder)
-                       (:on-read recorder))))
+                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
+                       (acp/initialize
+                         (acp/make-session-update-callback store (:on-session-update recorder))
+                         false
+                         (:on-permission recorder)
+                         (:on-write recorder)))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
             (.then (fn [session-id]
                      (acp/prompt session-id
