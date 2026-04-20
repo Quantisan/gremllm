@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-20
 **Status:** Investigating
-**Related:** [docs/specs/2026-04-20-acp-packaged-app-runtime-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-runtime-design.md), [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js), [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js)
+**Related:** [docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md), [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js), [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js)
 
 ## Goal
 
