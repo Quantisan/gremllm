@@ -1,5 +1,5 @@
 (ns gremllm.main.effects.acp-test
-  (:require ["acp" :as acp-module]
+  (:require ["/js/acp/index" :as acp-module]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.acp :as acp]
             [gremllm.schema.codec :as codec]))
