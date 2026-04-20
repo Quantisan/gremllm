@@ -1,7 +1,7 @@
 # Design: ACP Packaged-App Runtime Fix
 
 **Date:** 2026-04-20
-**Status:** Draft for review
+**Status:** Accepted
 **Related:** [docs/specs/2026-04-20-macos-only-packaging-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-macos-only-packaging-design.md), [docs/plans/2026-04-20-macos-only-packaging-cleanup.md](/Users/paul/Projects/gremllm/docs/plans/2026-04-20-macos-only-packaging-cleanup.md)
 
 ## Goal
@@ -167,3 +167,20 @@ The chosen fix must:
 **Fallback 2: Option C** only if reviewers strongly want `require("acp")` preserved at call sites. Must be validated empirically against the `:node-script` target — the shadow-cljs docs flag `:resolve :target :file` as having limitations in this provider.
 
 **Last resort: Option D** (packaging-side fix). Same class of problem as the current failure; keeps the symlink fragility on the release path.
+
+## Final Decision
+
+Option A was selected and implemented.
+
+Validation notes:
+
+- The packaged-main smoke runner reproduced the original failure on the pre-fix build: `ENOENT, resources/acp not found in .../app.asar`.
+- After switching the main-process bridge import to `"/js/acp/index"` and loading the bridge from `src/js/acp/`, that specific `resources/acp` packaged startup failure no longer appeared.
+- The same `ELECTRON_RUN_AS_NODE=1` smoke path then failed later on `require("electron/main")`. This is a limitation of the smoke harness mode rather than evidence that the ACP bridge fix failed; `electron/main` is not available in that `RunAsNode` context.
+- Because of that harness limitation, the smoke result is recorded as sufficient evidence that the ACP bridge resolution failure was removed, but it is not treated as the final ship gate.
+
+Ship gate:
+
+- `npm run test:ci`
+- `npm run package`
+- full packaged-app verification via `npm run make` and installed-app launch
