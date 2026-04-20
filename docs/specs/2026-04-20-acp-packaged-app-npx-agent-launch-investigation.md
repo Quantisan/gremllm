@@ -1,8 +1,9 @@
 # Design: ACP Packaged-App Agent Launch Investigation
 
 **Date:** 2026-04-20
-**Status:** Investigating
+**Status:** Option space narrowed; research and spikes planned
 **Related:** [docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md), [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js), [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js)
+**Plan:** [docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md](/Users/paul/Projects/gremllm/docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md)
 
 ## Goal
 
@@ -47,11 +48,31 @@ EOF
 spawn npx ENOENT
 ```
 
+- The bundled `@agentclientprotocol/claude-agent-acp` package is not CLI-only. Its published library entrypoint exports `ClaudeAcpAgent`, `runAcp`, and related helpers from `dist/lib.js`.
+- The bundled `@agentclientprotocol/sdk` transport layer is not stdio-specific. `ndJsonStream()` accepts generic Web `ReadableStream` / `WritableStream` pairs, and the SDK's own tests construct client/agent pairs entirely with in-memory `TransformStream`s.
+- A local proof of concept in this repo successfully completed ACP `initialize` and `newSession` in a single Node process using `ClientSideConnection`, `AgentSideConnection`, `ClaudeAcpAgent`, and paired `TransformStream`s. No `npx` or subprocess launch was involved. The probe emitted non-fatal `EMFILE` settings-watcher warnings in this sandbox, but ACP handshake and session creation succeeded.
+- The upstream Anthropic SDK and ACP adapter already contain explicit single-file Bun support surfaces:
+  - `@anthropic-ai/claude-agent-sdk/embed` documents Bun `--compile` usage and extracts the embedded CLI from `$bunfs` so it can be spawned by child processes.
+  - `claude-agent-acp` has a `CLAUDE_AGENT_ACP_IS_SINGLE_FILE_BUN` code path when resolving the Claude CLI.
+
 ## Inference From Evidence
 
 - The packaged app is depending on host installation details for Node/npm tooling, even in `"cached"` mode where the agent package itself is already bundled.
 - Finder / LaunchServices app launches may provide a PATH that does not include Homebrew-installed Node tools. We have not yet logged the actual PATH from the installed app process, but the failure shape is consistent with that environment difference.
 - Even if `npx` happened to exist on the developer machine, treating it as a production runtime dependency is fragile for a signed, packaged desktop app.
+- The in-process ACP path is no longer merely theoretical. The current package set already supports it with the published library API and the existing ACP SDK transport primitives.
+- The "packaged launcher" path is also more concrete than originally stated: at least one upstream-aligned helper-binary approach exists today (single-file Bun), and a "ship your own Node runtime" variant is mechanically possible even if heavier.
+
+## Resolution of Open Questions
+
+The following open questions from this investigation were settled through design review:
+
+- **Is preserving a hard process boundary a requirement, or merely a preference?** Strong preference, not a hard requirement. In-process hosting is acceptable if the ACP library is well-behaved in a real session and a hard-boundary option's transport cost is material.
+- **Is "packaged app is self-contained" a product requirement?** Yes. Option F is ruled out on that basis.
+- **Which concrete launcher variant is best if we pursue Option B?** Deferred pending research. The B-variant question is gated on what other Electron-based agent apps actually ship (web research items R1, R2 in the plan).
+- **Options E and F status:** Both eliminated. E reverses an explicit security-hardening choice with no gain over A/B/D. F conflicts with the self-containment requirement.
+
+Active candidates for validation: **A (utilityProcess)**, **C (in-process)**, **D (worker thread)**. Option B held in reserve pending research and spike outcomes.
 
 ## Scope
 
@@ -78,6 +99,9 @@ References:
 - [Electron app](https://www.electronjs.org/docs/latest/api/app)
 - [Electron process](https://www.electronjs.org/docs/latest/api/process)
 - [Node.js `child_process.spawn()`](https://nodejs.org/download/release/v22.19.0/docs/api/child_process.html)
+- [Node.js worker_threads](https://nodejs.org/download/release/latest-v22.x/docs/api/worker_threads.html)
+- [Node.js Single Executable Applications](https://nodejs.org/download/release/latest-jod/docs/api/single-executable-applications.html)
+- [Bun single-file executables](https://bun.sh/docs/bundler/executables)
 
 ### 1. `spawn()` is PATH-sensitive
 
@@ -144,9 +168,10 @@ Package a concrete agent launcher outside `app.asar` and execute it via `execFil
 
 Examples of what "real launcher" could mean:
 
-- a standalone executable
+- a standalone Bun-compiled executable for the ACP adapter
 - a helper app / helper binary
 - a JS entrypoint plus a packaged runtime capable of executing it
+- a Node single-executable-app wrapper after bundling to a CommonJS entrypoint
 
 ### Advantages
 
@@ -159,6 +184,10 @@ Examples of what "real launcher" could mean:
 - Introduces packaging and distribution complexity.
 - A plain JS file is not enough by itself if there is no reliable runtime to execute it in packaged mode.
 - May require asar unpacking, helper-binary signing, or other release-path special handling.
+- The variants are not equally attractive:
+  - Bun helper: concrete and upstream-aligned, but adds Bun to the release toolchain.
+  - Bundled Node runtime + JS entrypoint: straightforward model-wise, but larger and requires shipping/signing an extra runtime.
+  - Node SEA wrapper: possible in principle, but Node's official SEA docs still describe the embedded app as a single CommonJS script, which is a poor fit for today's ESM `claude-agent-acp` package without an extra bundling layer.
 
 ### Open Technical Unknowns
 
@@ -174,19 +203,45 @@ Stop launching the ACP agent as an external process in packaged mode and instead
 - Eliminates the `npx` / PATH problem entirely.
 - Reuses code that is already bundled in `app.asar`.
 - Avoids subprocess-launch packaging edge cases.
+- Stronger than originally assumed: local evidence shows that ACP handshake and session creation already work with published library APIs and in-memory streams.
+- May require less protocol-layer churn than Option A, because the same ACP SDK `ClientSideConnection` / `AgentSideConnection` types can be reused without stdio.
 
 ### Tradeoffs
 
 - Collapses the current process boundary between Gremllm and the ACP agent.
 - Reduces crash isolation and may complicate resource cleanup.
 - Couples Gremllm more directly to the ACP package's library surface and lifecycle assumptions.
+- Runs agent work on the app-owned runtime unless we combine this with a worker or utility-process host.
+- The local probe surfaced `EMFILE` settings-watcher warnings in this sandbox, which may indicate SDK-side background watchers or may be an artifact of this environment. That needs one more round of validation in the actual app.
 
 ### Open Technical Unknowns
 
 - Whether the package's exported library API is stable and sufficient for this use case without relying on CLI-only behavior.
-- What adapter is needed to replace the current subprocess stdio transport with an in-process connection.
+- Whether the settings-watcher warnings seen in the local probe matter in a real app session.
 
-## Option D: Re-enable `RunAsNode` and Use a Fork-Based Launch
+## Option D: Host `claude-agent-acp` In a Node Worker Thread
+
+Create a dedicated `worker_threads` host for the ACP agent and communicate over `MessagePort` (or a small stream adapter) instead of running the agent directly on the Electron main thread.
+
+### Advantages
+
+- Removes the `npx` / PATH dependency without relaxing the current fuse posture.
+- Keeps the solution entirely inside the app-bundled Node/Electron runtime.
+- Preserves more isolation than main-thread in-process hosting for CPU-heavy work and ordinary JS failures.
+- Uses standard Node primitives that are already available in Electron's main-process runtime.
+
+### Tradeoffs
+
+- Still does not preserve a hard OS process boundary the way `utilityProcess` or `execFile` would.
+- Requires a custom port/stream bridge, similar in spirit to Option A.
+- Introduces worker lifecycle, error-forwarding, and shutdown plumbing that the current design does not need.
+
+### Open Technical Unknowns
+
+- Whether the worker entrypoint should live inside `app.asar` or be unpacked.
+- How much real crash/isolation benefit this buys relative to simply hosting in the main process.
+
+## Option E: Re-enable `RunAsNode` and Use a Fork-Based Launch
 
 Change the fuse policy to allow `RunAsNode` again, then launch a bundled JS agent entrypoint using a Node-style child-process API such as `fork`.
 
@@ -206,14 +261,21 @@ Change the fuse policy to allow `RunAsNode` again, then launch a bundled JS agen
 - Whether the team is willing to relax the current packaged security posture for this functionality.
 - Whether the operational simplicity gain is worth the fuse-policy reversal.
 
-## Option E: Keep `npx`, But Treat Host Node/npm As a Prerequisite
+## Option F: Keep External Node/npm Tooling as a Prerequisite
 
-Retain the current launch path, but detect missing `npx` at startup and show a clear environment error instead of crashing unexpectedly.
+Retain an external-tooling launch path, but treat host Node/npm availability as an explicit prerequisite instead of an implicit assumption.
+
+Variants:
+
+- resolve/import a fuller shell PATH before spawning `npx`
+- detect missing `npx` and surface a clear environment error instead of crashing
+- defer ACP initialization until first ACP use so the whole app does not fail during boot
 
 ### Advantages
 
 - Smallest implementation change.
 - Preserves the current subprocess and ACP transport shape.
+- May be acceptable as a short-term diagnostic or internal-testing bridge while a self-contained launch mode is developed.
 
 ### Tradeoffs
 
@@ -221,6 +283,8 @@ Retain the current launch path, but detect missing `npx` at startup and show a c
 - Keeps startup behavior dependent on PATH and host tool installation.
 - Produces a weaker first-run experience for end users and testers.
 - Leaves production behavior coupled to developer-machine conventions.
+- PATH-import variants reduce one symptom but not the underlying packaging dependency.
+- Lazy init avoids crashing on app boot, but it does not solve the missing-runtime problem.
 
 ### Open Technical Unknowns
 
@@ -228,14 +292,17 @@ Retain the current launch path, but detect missing `npx` at startup and show a c
 
 ## Comparison
 
-| Criterion | A: `utilityProcess` | B: packaged launcher + `execFile` | C: in-process ACP | D: re-enable `RunAsNode` | E: keep `npx` prerequisite |
-|-----------|---------------------|-----------------------------------|-------------------|--------------------------|----------------------------|
-| Removes external PATH dependency | Yes | Yes | Yes | Yes | No |
-| Preserves subprocess boundary | Yes | Yes | No | Yes | Yes |
-| Fits current fuse posture | Yes | Yes | Yes | No | Yes |
-| Requires ACP transport changes | High | Medium | Medium | Low to medium | None |
-| Adds packaging complexity | Medium | High | Low to medium | Medium | Low |
-| Keeps app self-contained | Likely | Likely | Yes | Likely | No |
+| Criterion | A: `utilityProcess` | B: packaged launcher + `execFile` | C: in-process ACP | D: worker thread | E: re-enable `RunAsNode` | F: external tooling prerequisite |
+|-----------|---------------------|-----------------------------------|-------------------|------------------|--------------------------|----------------------------------|
+| Removes external PATH dependency | Yes | Yes | Yes | Yes | Yes | No |
+| Preserves hard process boundary | Yes | Yes | No | No | Yes | Yes |
+| Fits current fuse posture | Yes | Yes | Yes | Yes | No | Yes |
+| Requires ACP transport changes | High | Medium | Low to medium | Medium | Low to medium | None |
+| Adds packaging complexity | Medium | High | Low | Low to medium | Medium | Low |
+| Keeps app self-contained | Likely | Likely | Yes | Yes | Likely | No |
+| Current evidence level | Docs only | Docs + concrete variants | Docs + local POC | Docs only | Docs only | Current broken behavior |
+
+**E** is eliminated (security-posture regression with no gain over A/B/D). **F** is eliminated (conflicts with self-containment requirement). Active candidates: **A, C, D**. **B** held in reserve.
 
 ## Decision Criteria
 
@@ -251,7 +318,9 @@ Any eventual solution should:
 
 - What PATH does the installed app actually see at the point where ACP initialization runs?
 - Can `utilityProcess.fork()` load an entrypoint directly from `app.asar`, or should that script be unpacked?
-- If we pursue a packaged-launcher design, what runtime executes it once `RunAsNode` remains disabled?
+- If we pursue a packaged-launcher design, which concrete variant is best: Bun helper, bundled Node runtime, or something else?
+- Are the `EMFILE` settings-watcher warnings from the in-process probe a sandbox artifact or a real integration concern?
+- Can a worker-thread host give enough isolation to be worthwhile, or is the choice really "main process" versus "real subprocess"?
 - Is preserving a hard process boundary a requirement, or merely a preference carried forward from the current implementation?
 - Is "packaged app is self-contained" a product requirement for this release path, or is an external toolchain prerequisite still considered acceptable?
 
@@ -261,5 +330,6 @@ Before selecting an option, the next round of evidence should ideally answer:
 
 - installed-app runtime PATH logging at ACP init time
 - whether a minimal `utilityProcess` proof of concept can host the agent bridge shape we need
-- whether a packaged absolute-path launcher can be executed cleanly under current fuse and asar constraints
-- whether the in-process ACP library path is viable without depending on unstable internal APIs
+- whether a packaged Bun helper launched via `execFile` works cleanly under signing / asar constraints
+- whether the in-process ACP library path still behaves cleanly when exercised inside the packaged app rather than a standalone Node probe
+- whether a worker-thread host buys enough isolation to justify the extra transport plumbing
