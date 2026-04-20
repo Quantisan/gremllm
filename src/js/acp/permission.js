@@ -43,6 +43,9 @@ function makeResolver(getSessionCwd) {
       return { outcome: { outcome: "cancelled" } };
     }
 
+    // TODO(security): Do not auto-approve all "read" tool calls.
+    // Restrict reads to an allowlist (for example, workspace root and explicitly linked files);
+    // otherwise reject/cancel to avoid exposing sensitive local files.
     if (toolKind === "read") {
       const approveOption = selectOptionByKind(
         options,
@@ -57,6 +60,17 @@ function makeResolver(getSessionCwd) {
       const normalizedCwd = normalizePath(cwd);
       const normalizedRequested = normalizePath(requestedPath(toolCall));
       if (normalizedCwd && normalizedRequested && isWithinRoot(normalizedRequested, normalizedCwd)) {
+        // Critical workflow nuance: for Gremllm, approving an in-workspace
+        // edit/write means "allow the agent to produce a diff proposal", not
+        // "write the file immediately". The ACP bridge keeps writeTextFile as a
+        // dry-run no-op, so the successful path here is still non-mutating.
+        // Rejecting permission changes the semantics entirely: Claude reports
+        // that the user refused the tool, and the proposal step fails instead
+        // of returning a reviewable diff.
+        // Prefer allow_once so every Edit re-enters this resolver and gets a
+        // fresh path check. allow_always would create a session-scoped rule
+        // keyed only on toolName, bypassing the workspace-root guard for all
+        // subsequent edits—including ones outside the workspace root.
         const approveOption = selectOptionByKind(
           options,
           ["allow_once", "allow_always"],
