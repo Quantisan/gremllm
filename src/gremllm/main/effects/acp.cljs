@@ -4,7 +4,7 @@
   (:require [clojure.string :as str]
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
-            ["acp" :as acp-factory]
+            ["/js/acp/index" :as acp-factory]
             ["fs/promises" :as fsp]))
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component

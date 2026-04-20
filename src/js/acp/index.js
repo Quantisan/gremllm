@@ -1,4 +1,3 @@
-// resources/acp/index.js
 const { spawn } = require("node:child_process");
 const { Writable, Readable } = require("node:stream");
 const acp = require("@agentclientprotocol/sdk");

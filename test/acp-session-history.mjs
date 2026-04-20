@@ -1,4 +1,4 @@
-// Minimal test - reuses resources/acp/index.js logic
+// Minimal test - reuses src/js/acp/index.js logic
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Writable, Readable } from "node:stream";
@@ -7,7 +7,7 @@ import * as acp from "@agentclientprotocol/sdk";
 const require = createRequire(import.meta.url);
 const {
   __test__: { claudeAgentPackageSpec: CLAUDE_AGENT_PACKAGE_SPEC }
-} = require("../resources/acp/index.js");
+} = require("../src/js/acp/index.js");
 
 let response = "";
 

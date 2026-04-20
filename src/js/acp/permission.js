@@ -1,4 +1,3 @@
-// resources/acp/permission.js
 const path = require("node:path");
 
 function normalizePath(value) {
