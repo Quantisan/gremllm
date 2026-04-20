@@ -1,7 +1,7 @@
 # Plan: Research and Spikes for ACP Packaged-App Agent Launch
 
 **Date:** 2026-04-20
-**Status:** Updated post R1–R4 research
+**Status:** Updated post R1–R4 research and primary-source review of `claude-agent-acp@0.29.2`
 **Input spec:** [docs/specs/2026-04-20-acp-packaged-app-npx-agent-launch-investigation.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-npx-agent-launch-investigation.md)
 
 ## Context
@@ -9,15 +9,27 @@
 The investigation spec enumerated six options (A–F) for fixing the packaged-app `spawn npx ENOENT` failure. We need an evidence-based decision, but only C has a local POC and only B has concrete variants documented — the rest are docs-only. This plan closes those gaps by:
 
 1. **Web research** to surface real-world precedent and de-risk unknowns before committing engineering time.
-2. **Two spikes** to validate the top candidates (A, then C as fallback) against real packaged-app behavior, not sandbox probes.
+2. **Two spikes** to validate the top candidates against real packaged-app behavior, not sandbox probes.
 
 User priors (from brainstorming):
 
-- Hard OS-process boundary: **strong preference, not a hard requirement** — willing to accept in-process if the ACP library is well-behaved and A's transport cost is material.
+- Hard OS-process boundary: **strong preference, not a hard requirement** — willing to accept in-process if the ACP library is well-behaved.
 - Release-toolchain additions: **open, pending research** — whether adding Bun or a bundled Node runtime is worth it depends on what other Electron agent apps actually ship.
-- Decision factors are **all of: library behavior (C), transport-rewrite cost (A), real-world precedent (research)** — multi-factor, not binary.
+- Decision factors are **all of: library behavior (C), runtime-resolution story, real-world precedent (research)** — multi-factor, not binary.
 
-Viable set after R1–R4: **A (utilityProcess)**, **C (in-process)**. B held in reserve.
+### Reframing: runtime resolution is the first gate, not host model
+
+Primary-source review of the pinned adapter revealed that `claude-agent-acp@0.29.2` hardcodes `executable: isStaticBinary() ? undefined : process.execPath` when constructing its Claude Code SDK query (`node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1133`). In a packaged Electron app with the Fuse `RunAsNode: false` (see `forge.config.js:41`), `process.execPath` resolves to the Gremllm Electron binary, which refuses to run arbitrary JS. A `utilityProcess` child inherits the same `process.execPath` — so **Option A does not solve runtime resolution; it inherits the same failure mode as today's broken code**.
+
+Override surface in the pinned adapter:
+- `CLAUDE_CODE_EXECUTABLE` env → sets `pathToClaudeCodeExecutable` (`acp-agent.js:1134-1135`). Points at the *target* JS entry; still needs a runtime.
+- `CLAUDE_AGENT_ACP_IS_SINGLE_FILE_BUN` env → triggers `isStaticBinary()` branch (`acp-agent.js:38-44`), which leaves `executable` undefined and uses `@anthropic-ai/claude-agent-sdk/embed` as the CLI path (precompiled single-file binary).
+- In-code comment at `acp-agent.js:1131-1132` documents that `executable` accepts an absolute path: "passing an absolute path here works to find Zed's managed node version." This is Zed's documented-in-code pattern for packaged runtime control.
+- `settingSources: ["user","project","local"]` at `acp-agent.js:1112` is spread *before* `...userProvidedOptions`, so a caller-provided `_meta.claudeCode.options.settingSources: []` overrides it — useful for reducing SDK-side watcher pressure during the spike.
+
+**Consequence for the plan:** the A-vs-C host-model question is secondary to the runtime-resolution question. Both A and C must resolve the same underlying problem ("what interpreter runs Claude Code CLI in our packaged app"). C is the simpler substrate to probe that question on, and the POC already works at the library-integration layer.
+
+Viable set after research and primary-source review: **C (in-process)** as the lead substrate, **A (utilityProcess)** as the fallback if C's library behavior is unacceptable in main. B enters the picture if *runtime resolution* itself proves unsolvable in-Electron.
 Dropped during research: D (workers share parent OS process — no fd isolation, only sync crash containment; not a flagged risk).
 Eliminated: E (security regression), F (not self-contained).
 
@@ -79,13 +91,71 @@ Only if B is reopened. R1 establishes this sub-variant (Zed's managed-Node-runti
 
 **Tells us:** whether the bundled-Node B variant is production-realistic as a fallback if A and C both fail.
 
-**Research stop condition:** when R1–R4 converge on a direction, stop. R5 only runs if B becomes a contender.
+### R6. `claude-agent-acp` runtime-resolution surface *(primary-source, already reviewed)*
 
-## Spike 1: `utilityProcess`-Hosted ACP (Option A) *(run first)*
+Review of the pinned `claude-agent-acp@0.29.2` source established the `executable: process.execPath` hardcoding, the `CLAUDE_CODE_EXECUTABLE` / `CLAUDE_AGENT_ACP_IS_SINGLE_FILE_BUN` override envs, the `settingSources` override path, and the in-code Zed-managed-Node pattern comment. See Context reframing above. No further web research needed on this item before Spike 1 — the spike itself produces the empirical runtime-resolution answer.
+
+**Tells us:** the override surface we have available. Shapes Spike 1's first step.
+
+**Research stop condition:** when R1–R4 converge on a direction, stop. R5 only runs if B becomes a contender. R6 is already complete.
+
+## Spike 1: Harden In-Process ACP (Option C) *(run first)*
 
 ### Goal
 
-Determine the real transport-rewrite cost of A, and whether `utilityProcess`'s stdin-ignore constraint is prohibitive in practice. R1 (Zed) establishes subprocess-with-embedded-runtime as the production precedent for ACP agent hosting; this spike validates that Electron's native subprocess primitive fits the shape.
+Answer two questions the plan cannot resolve from code-reading alone:
+
+1. **Runtime resolution:** what override makes `claude-agent-acp`'s internal Claude Code CLI launch succeed in a packaged Electron app where `process.execPath` is the Electron binary and `RunAsNode` is fused off?
+2. **Main-process hosting stability:** once runtime resolution is solved, does the adapter library behave well in Electron's main process for full real sessions?
+
+The POC already cleared the library-integration layer; the unknowns are packaged-runtime resolution and long-session stability.
+
+### Hypothesis being tested
+
+> With a suitable `executable` / `pathToClaudeCodeExecutable` / `isStaticBinary` override strategy, `claude-agent-acp` can run inside Electron's main process (via `ClaudeAcpAgent` + `AgentSideConnection` + paired `TransformStream`s) for a full real session without fd leaks, event-loop pauses, or environment-assumption failures.
+
+### Scope
+
+1. **Runtime-resolution probe (first, before any host wiring).** In packaged mode, reproduce the default `spawn` failure and capture the exact executable/args the adapter attempts. Enumerate the override strategies available from `acp-agent.js:1133-1138`:
+   - `CLAUDE_CODE_EXECUTABLE=<path>` pointing at a resolvable JS entry (still needs an interpreter — only useful if combined with strategy 2 or 3).
+   - `executable=<absolute path to Node>` (Zed's documented-in-code pattern at `acp-agent.js:1131-1132`; requires bundling Node, B-adjacent).
+   - `CLAUDE_AGENT_ACP_IS_SINGLE_FILE_BUN=1` + `@anthropic-ai/claude-agent-sdk/embed` (precompiled single-file binary; verify the pinned `@anthropic-ai/claude-agent-sdk` version ships this `embed` entry).
+   Pick the lowest-effort strategy that works; document the decision.
+2. Build a minimal main-process ACP host using the POC shape: `ClientSideConnection` ↔ paired `TransformStream`s ↔ `AgentSideConnection` ↔ `ClaudeAcpAgent`.
+3. Wire it behind a feature flag in [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js) so dev mode can toggle between subprocess and in-process; default off until the spike passes.
+4. Reduce nondeterminism during the spike by passing `settingSources: []` via `_meta.claudeCode.options` — `acp-agent.js:1112` spreads `userProvidedOptions` after the default, so this override lands. Removes SDK-side filesystem watcher load; the adapter's own `SettingsManager` watchers (`settings.js:153`) remain.
+5. Verify `claude-agent-acp` PR #454 (watcher leak fix) is present in pinned `0.29.2`; patch or upgrade if not.
+6. Verify dev mode: real session with `document.md` read, pending-diff streaming, multi-turn, resume-session.
+7. Verify packaged mode: install to `/Applications`, launch from Finder, run the same session end-to-end.
+
+### Exit criteria (must all pass)
+
+- **Runtime resolution:** a named override strategy makes the packaged launch succeed end-to-end, with the exact config captured in the spike notes (env vars, resource paths, `asarUnpack` entries).
+- Clean session ≥10 minutes of real document work; no crashes, no event-loop stalls.
+- Watcher fd ceiling measured: known origin (adapter `SettingsManager` + SDK settings), known lifecycle (per-session create/dispose), documented bound.
+- fd count stable across **N full sessions** (create + tear down cycle), not just N prompts within one session.
+- No regression in pending-diff rendering (`schema.codec` normalization still produces correct shape).
+- `acp/resume-session` works across app restarts in packaged mode.
+
+### What we'd learn
+
+- Whether a single override flag (likely `isStaticBinary` or a bundled Node + `executable` path) unblocks packaged launch, and what packaging/`asarUnpack` entries that strategy requires.
+- Whether main-process hosting is stable enough to ship. If yes → pick C and stop.
+- **Failure-mode routing for the next step:**
+  - If runtime resolution itself proves unsolvable in-Electron → pivot to **Option B** (explicit runtime control: bundled Node, or static Claude binary). **Not Spike 2 (A)** — A inherits the same `process.execPath` problem.
+  - If runtime resolution works but main-process hosting is unacceptable (event-loop pauses, fd pressure past PR #454) → **then** run Spike 2 (A) for the OS-process isolation it provides.
+
+### Rollback
+
+Feature flag defaults off; subprocess path remains untouched.
+
+## Spike 2: `utilityProcess`-Hosted ACP (Option A) *(run only if Spike 1 fails on main-process library stability, not on runtime resolution)*
+
+### Goal
+
+Determine whether moving the adapter out of the main process (into a `utilityProcess` child) provides enough isolation value to justify the transport-adapter cost, *given* that Spike 1 already solved runtime resolution.
+
+Note: this spike is only worth running if Spike 1 revealed unacceptable main-process library behavior. A `utilityProcess` child inherits the same `process.execPath` as the parent (`acp-agent.js:1133`), so it does not by itself solve packaged runtime resolution — Spike 1's override strategy is a prerequisite.
 
 ### Hypothesis being tested
 
@@ -96,96 +166,60 @@ Determine the real transport-rewrite cost of A, and whether `utilityProcess`'s s
 1. Create a packaged child entrypoint (JS) that constructs `ClaudeAcpAgent` and exposes its ACP transport as a MessagePort-backed stream pair.
 2. `utilityProcess.fork()` it from the main process; set up MessagePort.
 3. Adapt the main-process ACP client to feed `ClientSideConnection` a `ReadableStream`/`WritableStream` pair that reads/writes MessagePort messages instead of stdin/stdout bytes.
-4. Verify dev mode first: real session with document.md read, pending-diff streaming, multi-turn, resume-session.
-5. Verify packaged mode: install to `/Applications`, launch from Finder, run the same session end-to-end.
-6. Determine empirically whether the utility-process entrypoint loads from `app.asar` or needs `asarUnpack`.
-7. Expose a `CLAUDE_AGENT_ACP_EXECUTABLE`-style env override for local dev/debug (analogous to Zed's `CLAUDE_CODE_EXECUTABLE`).
+4. Apply Spike 1's runtime-resolution override strategy inside the child entrypoint (same `executable` / env fix, now in the child context).
+5. Verify dev mode first: real session with document.md read, pending-diff streaming, multi-turn, resume-session.
+6. Verify packaged mode: install to `/Applications`, launch from Finder, run the same session end-to-end.
+7. Determine empirically whether the utility-process entrypoint loads from `app.asar` or needs `asarUnpack`.
 
 ### Exit criteria (must all pass)
 
 - Full session works through MessagePort transport in packaged mode.
-- Transport adapter ≤~100 lines total (main side + child side). This is the **cost bound** — if it blows past, "low transport cost" is falsified and the spike tells us to prefer C.
+- Transport adapter ≤~100 lines total (main side + child side). This is the **cost bound** — if it blows past, "low transport cost" is falsified.
 - Utility-process child survives parent-process signals correctly (clean shutdown, restart).
 - Asar-loading question has a definitive answer (works / needs unpack / needs bundling step).
 - No regression in pending-diff rendering (`schema.codec` normalization still produces correct shape).
 - `acp/resume-session` works across app restarts in packaged mode.
-- Adapter-internal Claude Code CLI subprocess launches correctly in packaged mode; `asarUnpack` need for the vendored CLI determined.
 
 ### What we'd learn
 
 - The real answer to "is A a meaningful rewrite, or a clean refactor?"
-- Whether Electron's officially-recommended primitive fits the ACP bridge shape.
+- Whether Electron's officially-recommended primitive fits the ACP bridge shape once runtime resolution is already in hand.
 - If A passes, we ship — no further spikes needed.
 
 ### Rollback
 
 Spike runs on a branch; no production paths touched until a decision is made.
 
-## Spike 2: Harden In-Process ACP (Option C) *(fallback — run only if Spike 1 fails)*
-
-### Goal
-
-Determine whether in-process hosting is production-viable, or whether the POC's clean result was a sandbox artifact that won't survive a real packaged-app session.
-
-### Hypothesis being tested
-
-> `claude-agent-acp` can run inside Electron's main process (via `ClaudeAcpAgent` + `AgentSideConnection` + paired `TransformStream`s) for a full real session without fd leaks, event-loop pauses, or environment-assumption failures.
-
-### Scope
-
-1. Build a minimal main-process ACP host using the already-proven POC shape: `ClientSideConnection` ↔ paired `TransformStream`s ↔ `AgentSideConnection` ↔ `ClaudeAcpAgent`.
-2. Wire it behind a feature flag in [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js) so dev mode can toggle between subprocess and in-process.
-3. Verify dev mode first: real session with document.md read, pending-diff streaming, multi-turn, resume-session.
-4. Verify packaged mode: install to `/Applications`, launch from Finder, run the same session end-to-end.
-5. Verify `claude-agent-acp` PR #454 (watcher leak fix) is present in the bundled version; patch or upgrade if not.
-6. Confirm adapter-internal Claude Code CLI subprocess launches correctly in packaged mode (same asar concern as Spike 1).
-
-### Exit criteria (must all pass)
-
-- Clean session ≥10 minutes of real document work; no crashes, no event-loop stalls.
-- EMFILE warning root cause identified (per R4: per-session `SettingsManager` watchers + SDK `settingSources` watchers) and either eliminated or documented as stable with a measured ceiling.
-- fd count stable across **N full sessions** (create + tear down cycle), not just N prompts within one session. Watcher lifecycle is per-session; this is the correct signal.
-- No regression in pending-diff rendering (`schema.codec` normalization still produces correct shape).
-- `acp/resume-session` works across app restarts in packaged mode.
-- Adapter-internal Claude Code CLI subprocess launches correctly in packaged mode; `asarUnpack` need for the vendored CLI determined.
-
-### What we'd learn
-
-- Is C production-viable as a fallback? If yes, and A's transport adapter exceeded its cost bound, pick C.
-- Failure mode shapes the B decision: library environment assumptions → B likely needed; runtime fragility → B still needed; watcher fd exhaustion → document ceiling and accept.
-
-### Rollback
-
-Feature flag defaults off; subprocess path remains untouched.
-
 ## What We Explicitly Defer
 
-- **Option D (`worker_threads`)** — deferred. Workers share the parent OS process, so they do not isolate the watcher fd pressure R4 identified. Sync-crash containment is D's only remaining hedge and is not a flagged risk.
-- **Option B spikes** — only attempt if A and C both fail their exit criteria. Research (R5) runs only if B becomes a live contender. If B opens, prefer the bundled-Node-runtime + JS-entrypoint variant (Zed precedent, R1). Bun and Node SEA are not priority variants.
+- **Option D (`worker_threads`)** — deferred. Workers share the parent OS process, so they do not isolate the watcher fd pressure R4 identified, and they inherit `process.execPath` the same way `utilityProcess` does, so they do not help runtime resolution either. Sync-crash containment is D's only remaining hedge and is not a flagged risk.
+- **Option B** — now a first-class fallback, not a last resort. Triggered specifically by Spike 1 failing on runtime resolution. If B opens, prefer the bundled-Node-runtime + JS-entrypoint variant (Zed precedent, R1 + in-code comment at `acp-agent.js:1131-1132`). Bun and Node SEA are not priority variants. R5 research runs at that point.
 - **Option E (re-enable `RunAsNode`)** — security-posture regression, no gain over A/C/B.
 - **Option F (external tooling prerequisite)** — already ruled out by self-containment direction.
 
 ## Decision Framework (after spikes)
 
-R1–R4 research is complete. Apply in order:
+R1–R4 research and primary-source review of the pinned adapter are complete. Apply in order:
 
-1. **Spike 1 (A) passes its exit criteria** → pick A. R1 establishes subprocess-with-embedded-runtime as the production precedent (Zed); `utilityProcess` is Electron's native equivalent. Ship.
-2. **Spike 1 fails, Spike 2 (C) passes** → pick C. Accept the loss of OS-process isolation; the spike proved the library behaves in main-process hosting and fd pressure is within a documented ceiling.
-3. **Both fail** → re-open B. Run R5 research on bundled-Node-runtime packaging mechanics; pick that variant (not Bun or SEA).
+1. **Spike 1 (C) passes runtime resolution and main-process stability** → pick C. Ship. Record the exact override strategy (env vars, resource paths, `asarUnpack` entries) as the integration contract.
+2. **Spike 1 passes runtime resolution but fails main-process stability** (event-loop pauses, fd pressure past PR #454's fix, or other library-in-main pathologies) → run Spike 2 (A). The runtime-resolution override strategy from Spike 1 carries over directly; A adds OS-process isolation on top.
+3. **Spike 1 fails runtime resolution** (no override strategy works in a packaged Electron app) → pivot to **Option B** (explicit runtime control: bundled Node runtime + JS entrypoint, or static Claude binary). Run R5 research then. **Do not run Spike 2 (A)** in this branch — A inherits the same `process.execPath` failure mode and cannot rescue runtime resolution on its own.
+
+Retired from the earlier framing: "Zed precedent ⇒ A-first." Zed's precedent supports *managed subprocess + controlled runtime*, which maps to B (runtime control as a first-class axis), not to `utilityProcess` + MessagePort.
 
 ## Estimated Effort
 
-- Research: complete (R1–R4 done).
-- Spike 1 (A): ~1–2 days — transport adapter is the unknown; packaging questions add variance.
-- Spike 2 (C): ~1 day — POC already exists; hardening and packaged verification is the work. Only runs if Spike 1 fails.
+- Research: complete (R1–R4 done; R6 primary-source review done).
+- Spike 1 (C): ~1–2 days — runtime-resolution probe is the new unknown; POC covers library integration; packaged verification adds variance.
+- Spike 2 (A): ~1–2 days — only runs in the "runtime resolution works but main-process hosting is unstable" branch. Transport adapter (~100 line bound) + packaging variance.
 
-**Sequencing note:** run Spike 1 (A) first, standalone. If it passes, stop. If it fails, run Spike 2 (C).
+**Sequencing note:** run Spike 1 (C) first. If it passes on both runtime resolution and stability, stop and ship C. If it fails on stability only, run Spike 2 (A). If it fails on runtime resolution, pivot to B (do not run Spike 2).
 
 ## Critical Files
 
 - [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js) — current subprocess launch site; both spikes modify or guard this.
 - [src/gremllm/main/effects/acp.cljs](/Users/paul/Projects/gremllm/src/gremllm/main/effects/acp.cljs) — ACP connection lifecycle; bridges Clojure side to the JS bridge.
-- [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js) — packaging config; Spike 1 (A) may need `asarUnpack` entries for the utility-process entrypoint and/or vendored CLI.
+- [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js) — packaging config; may need `asarUnpack` entries depending on runtime-resolution strategy chosen in Spike 1.
 - [src/gremllm/main/core.cljs](/Users/paul/Projects/gremllm/src/gremllm/main/core.cljs) — ACP init site; the "eager init at boot" behavior matters for both spikes' verification.
 
 ## Verification
