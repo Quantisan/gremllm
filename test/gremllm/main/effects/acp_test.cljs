@@ -353,35 +353,3 @@
                              (.finally (fn [] (done)))))))
               (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
 
-(deftest test-initialize-waits-for-shutdown-dispose
-  (testing "initialize called during async shutdown defers until dispose settles"
-    (async done
-      (let [resolve-dispose (atom nil)
-            deferred        (js/Promise. (fn [r _] (reset! resolve-dispose r)))
-            dispose-settled (atom false)
-            conn            #js {:initialize
-                                 (fn [_] (js/Promise.resolve #js {:agentCapabilities #js {}}))}
-            dispose-agent   (fn []
-                              (.then deferred (fn [_] (reset! dispose-settled true))))
-            result          #js {:connection   conn
-                                 :disposeAgent dispose-agent
-                                 :protocolVersion "v"}
-            create-count    (atom 0)]
-        (with-redefs [acp/create-connection (fn [_] (swap! create-count inc) result)]
-          (-> (initialize-dev (fn [_] nil))
-              (.then (fn [_]
-                       (acp/shutdown)
-                       ;; Immediately call initialize while dispose is still pending
-                       (let [init-p (initialize-dev (fn [_] nil))]
-                         ;; KEY: no new connection created synchronously
-                         (is (= 1 @create-count)
-                             "new connection should not be created until dispose settles")
-                         (@resolve-dispose nil)
-                         ;; Wait for init-p to settle (resolve or reject — real create-connection
-                         ;; is used here since with-redefs has unwound for the async retry)
-                         (-> (.allSettled js/Promise #js [init-p])
-                             (.then (fn [_]
-                                      (is (= true @dispose-settled)
-                                          "dispose must settle before init-p can settle")))
-                             (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))
-              (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))

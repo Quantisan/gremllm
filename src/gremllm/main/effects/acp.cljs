@@ -2,6 +2,7 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
+            [gremllm.main.effects.acp.claude-adapter :as claude-adapter]
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
@@ -10,10 +11,6 @@
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 (defonce ^:private initialize-in-flight (atom nil))
-;; Tracks an in-flight shutdown dispose. Atoms (state, initialize-in-flight) are reset
-;; synchronously in shutdown; this atom lets initialize wait for the async dispose to
-;; settle before creating a new connection (init-during-shutdown race).
-(defonce ^:private shutdown-promise (atom nil))
 
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
@@ -120,9 +117,6 @@
     @initialize-in-flight
     (:promise @initialize-in-flight)
 
-    @shutdown-promise
-    (.then @shutdown-promise (fn [_] (initialize opts)))
-
     :else
     (let [^js result       (create-connection
                              #js {:onSessionUpdate     on-session-update
@@ -143,42 +137,17 @@
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
-;; TODO: session-meta embeds adapter-internal knobs whose shape is keyed to the
-;; pinned claude-agent-acp session setup path (local package
-;; node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
-;; This effect file currently owns three concerns: connection lifecycle, ACP public API,
-;; and Claude-adapter overrides. The overrides want their own home before non-spike use.
-(def ^:private session-meta
-  "Adapter reads params._meta.claudeCode.options, merges env, and defaults
-   settingSources in the pinned session-setup path above. It then hardcodes
-   executable: process.execPath for the non-static-binary branch, so
-   _meta.claudeCode.options.executable is not a working override in this repo's
-   pinned adapter version.
-
-   Gremllm therefore injects:
-   - ELECTRON_RUN_AS_NODE=1 so the packaged Electron binary (process.execPath)
-     acts as a Node interpreter instead of relaunching the app window. This
-     depends on FuseV1Options.RunAsNode remaining enabled; see
-     https://packages.electronjs.org/fuses
-   - settingSources: [] to suppress Claude Code SDK user/project/local settings
-     loading for Gremllm sessions. The adapter's own SettingsManager lifecycle
-     remains separate."
-  #js {:claudeCode
-       #js {:options
-            #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
-                 :settingSources #js []}}})
-
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
-  (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta session-meta})
+  (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta claude-adapter/session-meta})
       (.then (fn [result] (.-sessionId result)))))
 
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
   (-> (.unstable_resumeSession (conn!)
-        #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta session-meta})
+        #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta claude-adapter/session-meta})
       (.then (fn [_] acp-session-id))))
 
 (defn prompt
@@ -216,9 +185,5 @@
     (reset! initialize-in-flight nil)
     (reset! state nil)
     (if (seq promises)
-      (let [p (-> (js/Promise.all (clj->js promises))
-                  (.then (fn [_] (reset! shutdown-promise nil))))]
-        (reset! shutdown-promise p)
-        p)
-      (do (reset! shutdown-promise nil)
-          (js/Promise.resolve nil)))))
+      (js/Promise.all (into-array promises))
+      (js/Promise.resolve nil))))
