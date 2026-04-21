@@ -14,14 +14,20 @@ That promotes Claude-runtime resolution to the primary gate, demotes A-vs-C host
 
 Replace the `npx`-spawn path with an in-process ACP host: `ClientSideConnection` ↔ paired `TransformStream`s ↔ `AgentSideConnection` ↔ `ClaudeAcpAgent`, all in the Electron main process. Prove Claude-runtime resolution works in packaged mode or document precisely how it fails.
 
+## Status (2026-04-21)
+
+- Substrate landed: in-process bridge (step 2) + CLJS lifecycle adaptation (step 4). Tests updated.
+- Open: dispose-promise chaining (step 4a — newly added), runtime-resolution probe (step 3), `settingSources` plumbing (step 5), packaging measurements (step 6).
+- Next gate: step 3. Until the packaged-mode runtime probe runs, the spike has not validated its primary hypothesis — only the substrate.
+
 ## Approach
 
-### 1. Isolate the spike
+### 1. Isolate the spike  **— Done**
 
 - New worktree (parallel to `feat/packaged-agent-launch`), new branch `spike/acp-in-process`.
 - Replace the subprocess path outright — **no feature flag**. Rollback is "abandon the branch."
 
-### 2. Rewrite `src/js/acp/index.js`
+### 2. Rewrite `src/js/acp/index.js`  **— Done**
 
 - Remove `spawn`, `buildNpxAgentPackageConfig`, `logConfiguredAgentVersion`, subprocess stdin/stdout wiring.
 - Import `ClaudeAcpAgent` from `@agentclientprotocol/claude-agent-acp` and `AgentSideConnection` from `@agentclientprotocol/sdk`.
@@ -29,7 +35,7 @@ Replace the `npx`-spawn path with an in-process ACP host: `ClientSideConnection`
 - Return `{ connection, disposeAgent, protocolVersion }`. `disposeAgent` closes streams and calls any explicit teardown the library exposes.
 - **Reuse unchanged:** `src/js/acp/permission.js`, `rememberToolName`, `enrichPermissionParams`, `sessionCwdMap`, the `newSession`/`unstable_resumeSession` interception that records cwd.
 
-### 3. Runtime-resolution probe — run FIRST
+### 3. Runtime-resolution probe — run FIRST  **— Pending**
 
 Before any other correctness work, run the packaged app and capture what `claude-agent-acp` actually spawns. Known override levers (from adapter source):
 
@@ -39,28 +45,37 @@ Before any other correctness work, run the packaged app and capture what `claude
 
 Try in order: `CLAUDE_CODE_EXECUTABLE` pointing at a resolved, interpretable Claude CLI entry; if that requires a Node interpreter the packaged app doesn't have, spike fails → B.
 
-### 4. Update `src/gremllm/main/effects/acp.cljs`
+### 4. Update `src/gremllm/main/effects/acp.cljs`  **— Done**
 
 - State slot `:subprocess` → `:dispose-agent` (a 0-arity fn returned by the JS module).
 - `shutdown` calls `dispose-agent` instead of `.kill(subprocess "SIGTERM")`. Same handling in both the `:state` and `:initialize-in-flight` branches.
 - `start-connection!`'s `.catch` calls `dispose-agent` on failure.
 - Delete `agent-package-mode` and its `:is-packaged?` argument — dead after the rewrite.
 
-### 5. Opportunistically reduce settings-watcher pressure
+### 4a. Chain the async dispose promise  **— Pending**
 
-Pass `settingSources: []` through session `_meta.claudeCode.options` (in `main.actions.acp`'s prompt construction) to disable SDK-side filesystem settings watchers. The adapter's own per-session `SettingsManager` (`dist/settings.js`) is separate and already disposed on teardown — acceptable.
+`disposeAgent` (`src/js/acp/index.js:105`) is `async`; CLJS callers currently drop the returned promise. Tighten three sites in `src/gremllm/main/effects/acp.cljs`:
 
-### 6. Forge packaging
+- `start-connection!`'s `.catch` (line 75): chain so the rethrow happens after dispose settles.
+- `shutdown` (line 172): collect the dispose promise(s), `Promise.all` them, `reset!` the atoms in a `.then`, and return the promise so a future `before-quit` hook can await it.
+- `initialize`: await any in-flight dispose before starting a fresh connection — closes the init-failure-retry race where two agents' per-session settings watchers can briefly coexist.
+
+Severity is low for shutdown (process exits anyway) but real for init-failure retry. Small, no behavior risk; do it before the runtime probe in step 3 adds load.
+
+### 5. Opportunistically reduce settings-watcher pressure  **— Pending**
+
+Pass `settingSources: []` through `_meta.claudeCode.options` on **session-creation** params (`newSession` and `unstable_resumeSession` in `main.effects.acp`) — upstream reads `userProvidedOptions = params._meta?.claudeCode?.options` inside the session-setup body (`acp-agent.js:1095`), not in `prompt`. Prompt construction in `main.actions.acp` is the wrong call site. The adapter's own per-session `SettingsManager` (`dist/settings.js`) is separate and already disposed on teardown — acceptable.
+
+### 6. Forge packaging  **— Pending**
 
 - `forge.config.js` starts untouched.
 - Only add `asarUnpack` entries if step 3 empirically shows the Claude CLI asset must live outside asar to be interpretable. Measure, don't pre-optimize.
 
 ## Files
 
-- `src/js/acp/index.js` — rewrite (subprocess → in-process).
-- `src/gremllm/main/effects/acp.cljs` — lifecycle + teardown adaptation.
-- `src/gremllm/main/actions/acp.cljs` — add `settingSources: []` to prompt `_meta`.
-- `forge.config.js` — conditional `asarUnpack`, only if measurement demands.
+- `src/js/acp/index.js` — rewrite (subprocess → in-process). **Done.**
+- `src/gremllm/main/effects/acp.cljs` — lifecycle + teardown adaptation (step 4 done); dispose-promise chaining (step 4a pending); `_meta.claudeCode.options` on `newSession`/`unstable_resumeSession` (steps 3 + 5 pending).
+- `forge.config.js` — conditional `asarUnpack`, only if measurement demands. Pending.
 - `src/js/acp/permission.js` — reused unchanged.
 
 ## Verification (exit criteria, in order)
