@@ -204,10 +204,10 @@
                               (conj (inflight-dispose)))]
     (reset! initialize-in-flight nil)
     (reset! state nil)
-    (reset! shutdown-promise nil)
     (if (seq promises)
       (let [p (-> (js/Promise.all (clj->js promises))
                   (.then (fn [_] (reset! shutdown-promise nil))))]
         (reset! shutdown-promise p)
         p)
-      (js/Promise.resolve nil))))
+      (do (reset! shutdown-promise nil)
+          (js/Promise.resolve nil)))))

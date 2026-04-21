@@ -3,8 +3,6 @@ const { ClaudeAcpAgent } = require("@agentclientprotocol/claude-agent-acp/dist/l
 const { makeResolver, requestedToolName } = require("./permission");
 const permission = require("./permission");
 
-const sessionCwdMap = new Map();
-
 function rememberToolName(toolNamesByCallId, params) {
   const update = params?.update;
   const toolCallId = update?.toolCallId;
@@ -47,12 +45,17 @@ function createConnection(options = {}) {
   const clientStream = acp.ndJsonStream(clientToAgent.writable, agentToClient.readable);
   const agentStream = acp.ndJsonStream(agentToClient.writable, clientToAgent.readable);
 
+  const sessionCwdMap = new Map();
+
   // Agent is captured synchronously — AgentSideConnection calls the factory immediately
   let agent;
   new acp.AgentSideConnection((client) => {
     agent = new ClaudeAcpAgent(client);
     return agent;
   }, agentStream);
+  if (!agent) {
+    throw new Error("AgentSideConnection did not invoke factory synchronously");
+  }
 
   const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
 
