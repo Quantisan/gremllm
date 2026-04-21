@@ -19,8 +19,9 @@ Replace the `npx`-spawn path with an in-process ACP host: `ClientSideConnection`
 - Substrate landed: in-process bridge (step 2) + CLJS lifecycle adaptation (step 4). Tests updated.
 - Dispose-promise chaining (step 4a) done: `start-connection!` catch chains rethrow after dispose; `shutdown` returns an awaitable promise; `initialize` defers behind in-flight shutdown dispose. 123 tests, 0 failures.
 - Runtime-resolution probe (step 3) **done — Option C viable**. Finding: `process.execPath` in packaged mode is the Electron binary; `FuseV1Options.RunAsNode: true` is required to allow Node interpretation. Without `ELECTRON_RUN_AS_NODE=1` in the child env the binary boots a new Electron window instead. Fix: inject via `_meta.claudeCode.options.env` on every `newSession`/`unstable_resumeSession` call (`session-meta` in `main.effects.acp`). Correction to original plan: `_meta.claudeCode.options.executable` is **not** a working override — the adapter hardcodes `executable: process.execPath` *after* spreading `userProvidedOptions`, so user values are overwritten. SDK cli.js resolves from inside `app.asar` and loads correctly — no `asarUnpack` needed.
-- Open: `settingSources` plumbing (step 5), packaging measurements (step 6).
-- Next gate: step 5 (`settingSources: []` on session creation), then step 6 (fd stability, session resume, host-tooling independence).
+- `settingSources: []` plumbing (step 5) **done**: added to `session-meta` alongside `ELECTRON_RUN_AS_NODE` in `main.effects.acp`.
+- Forge packaging (step 6) **done (no-op)**: step 3's empirical finding confirms no `asarUnpack` entries are needed; `forge.config.js` unchanged.
+- Next gate: verification criteria 1-7 (dev-mode end-to-end, packaged launch, fd stability, resume, diff regression, host-tooling independence).
 
 ## Approach
 
@@ -64,11 +65,11 @@ Try in order: `CLAUDE_CODE_EXECUTABLE` pointing at a resolved, interpretable Cla
 
 Severity is low for shutdown (process exits anyway) but real for init-failure retry. Small, no behavior risk; do it before the runtime probe in step 3 adds load.
 
-### 5. Opportunistically reduce settings-watcher pressure  **— Pending**
+### 5. Opportunistically reduce settings-watcher pressure  **— Done**
 
 Pass `settingSources: []` through `_meta.claudeCode.options` on **session-creation** params (`newSession` and `unstable_resumeSession` in `main.effects.acp`) — upstream reads `userProvidedOptions = params._meta?.claudeCode?.options` inside the session-setup body (`acp-agent.js:1095`), not in `prompt`. Prompt construction in `main.actions.acp` is the wrong call site. The adapter's own per-session `SettingsManager` (`dist/settings.js`) is separate and already disposed on teardown — acceptable.
 
-### 6. Forge packaging  **— Pending**
+### 6. Forge packaging  **— Done (no-op)**
 
 - `forge.config.js` starts untouched.
 - Only add `asarUnpack` entries if step 3 empirically shows the Claude CLI asset must live outside asar to be interpretable. Measure, don't pre-optimize.
@@ -76,8 +77,8 @@ Pass `settingSources: []` through `_meta.claudeCode.options` on **session-creati
 ## Files
 
 - `src/js/acp/index.js` — rewrite (subprocess → in-process). **Done.**
-- `src/gremllm/main/effects/acp.cljs` — lifecycle + teardown adaptation (step 4 done); dispose-promise chaining (step 4a pending); `_meta.claudeCode.options` on `newSession`/`unstable_resumeSession` (steps 3 + 5 pending).
-- `forge.config.js` — conditional `asarUnpack`, only if measurement demands. Pending.
+- `src/gremllm/main/effects/acp.cljs` — lifecycle + teardown adaptation (step 4 done); dispose-promise chaining (step 4a done); `_meta.claudeCode.options` with `ELECTRON_RUN_AS_NODE` + `settingSources: []` on `newSession`/`unstable_resumeSession` (steps 3 + 5 done).
+- `forge.config.js` — no changes needed; `asarUnpack` not required (step 6 done).
 - `src/js/acp/permission.js` — reused unchanged.
 
 ## Verification (exit criteria, in order)
