@@ -38,7 +38,11 @@ function createConnection(options = {}) {
   const callbacks = options;
   const toolNamesByCallId = new Map();
 
-  // Paired transform streams for in-process bidirectional message passing.
+  // The ACP SDK accepts generic streams for ndjson transport (see the pinned
+  // local packages node_modules/@agentclientprotocol/sdk/dist/acp.js and
+  // node_modules/@agentclientprotocol/sdk/dist/stream.js), so Gremllm hosts
+  // claude-agent-acp in-process and bridges client/agent traffic with paired
+  // TransformStreams instead of subprocess stdio.
   // TODO: failure propagation is unexamined — if the agent side throws mid-message or the
   // ndjson codec encounters a malformed frame, it's unclear whether the error surfaces to
   // the connection's promise chain or is silently dropped.

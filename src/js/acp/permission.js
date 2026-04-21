@@ -61,9 +61,10 @@ function makeResolver(getSessionCwd) {
       const normalizedRequested = normalizePath(requestedPath(toolCall));
       if (normalizedCwd && normalizedRequested && isWithinRoot(normalizedRequested, normalizedCwd)) {
         // Critical workflow nuance: for Gremllm, approving an in-workspace
-        // edit/write means "allow the agent to produce a diff proposal", not
+        // edit/write means "allow the agent to complete the proposal path", not
         // "write the file immediately". The ACP bridge keeps writeTextFile as a
-        // dry-run no-op, so the successful path here is still non-mutating.
+        // dry-run no-op, so the successful path here is still non-mutating and
+        // disk changes remain gated behind Gremllm's later accept/reject flow.
         // Rejecting permission changes the semantics entirely: Claude reports
         // that the user refused the tool, and the proposal step fails instead
         // of returning a reviewable diff.

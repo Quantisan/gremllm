@@ -143,18 +143,26 @@
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
-;; TODO: session-meta embeds adapter-internal knobs whose shape is keyed to acp-agent.js:1095.
-;; This effect file currently owns three concerns: connection lifecycle, ACP public API, and
-;; Claude-adapter overrides. The overrides want their own home before non-spike use.
+;; TODO: session-meta embeds adapter-internal knobs whose shape is keyed to the
+;; pinned claude-agent-acp session setup path (local package
+;; node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
+;; This effect file currently owns three concerns: connection lifecycle, ACP public API,
+;; and Claude-adapter overrides. The overrides want their own home before non-spike use.
 (def ^:private session-meta
-  "Adapter spreads params._meta.claudeCode.options into the child-spawn config.
-   - ELECTRON_RUN_AS_NODE=1 is required so the Electron binary (process.execPath
-     in packaged mode) behaves as a Node interpreter instead of booting a new app
-     window. See acp-agent.js:1115 for the env merge.
-   - settingSources: [] disables the Claude Code SDK's loading of user/project/local
-     settings files, reducing filesystem-watcher pressure. The adapter's own
-     SettingsManager is separate and already disposed on session teardown.
-     See acp-agent.js:1112-1114 for the override path."
+  "Adapter reads params._meta.claudeCode.options, merges env, and defaults
+   settingSources in the pinned session-setup path above. It then hardcodes
+   executable: process.execPath for the non-static-binary branch, so
+   _meta.claudeCode.options.executable is not a working override in this repo's
+   pinned adapter version.
+
+   Gremllm therefore injects:
+   - ELECTRON_RUN_AS_NODE=1 so the packaged Electron binary (process.execPath)
+     acts as a Node interpreter instead of relaunching the app window. This
+     depends on FuseV1Options.RunAsNode remaining enabled; see
+     https://packages.electronjs.org/fuses
+   - settingSources: [] to suppress Claude Code SDK user/project/local settings
+     loading for Gremllm sessions. The adapter's own SettingsManager lifecycle
+     remains separate."
   #js {:claudeCode
        #js {:options
             #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
