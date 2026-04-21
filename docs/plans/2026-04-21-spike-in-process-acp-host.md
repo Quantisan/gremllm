@@ -17,8 +17,10 @@ Replace the `npx`-spawn path with an in-process ACP host: `ClientSideConnection`
 ## Status (2026-04-21)
 
 - Substrate landed: in-process bridge (step 2) + CLJS lifecycle adaptation (step 4). Tests updated.
-- Open: dispose-promise chaining (step 4a — newly added), runtime-resolution probe (step 3), `settingSources` plumbing (step 5), packaging measurements (step 6).
-- Next gate: step 3. Until the packaged-mode runtime probe runs, the spike has not validated its primary hypothesis — only the substrate.
+- Dispose-promise chaining (step 4a) done: `start-connection!` catch chains rethrow after dispose; `shutdown` returns an awaitable promise; `initialize` defers behind in-flight shutdown dispose. 123 tests, 0 failures.
+- Runtime-resolution probe (step 3) **done — Option C viable**. Finding: `process.execPath` in packaged mode is the Electron binary; `FuseV1Options.RunAsNode: true` is required to allow Node interpretation. Without `ELECTRON_RUN_AS_NODE=1` in the child env the binary boots a new Electron window instead. Fix: inject via `_meta.claudeCode.options.env` on every `newSession`/`unstable_resumeSession` call (`session-meta` in `main.effects.acp`). Correction to original plan: `_meta.claudeCode.options.executable` is **not** a working override — the adapter hardcodes `executable: process.execPath` *after* spreading `userProvidedOptions`, so user values are overwritten. SDK cli.js resolves from inside `app.asar` and loads correctly — no `asarUnpack` needed.
+- Open: `settingSources` plumbing (step 5), packaging measurements (step 6).
+- Next gate: step 5 (`settingSources: []` on session creation), then step 6 (fd stability, session resume, host-tooling independence).
 
 ## Approach
 
@@ -35,7 +37,7 @@ Replace the `npx`-spawn path with an in-process ACP host: `ClientSideConnection`
 - Return `{ connection, disposeAgent, protocolVersion }`. `disposeAgent` closes streams and calls any explicit teardown the library exposes.
 - **Reuse unchanged:** `src/js/acp/permission.js`, `rememberToolName`, `enrichPermissionParams`, `sessionCwdMap`, the `newSession`/`unstable_resumeSession` interception that records cwd.
 
-### 3. Runtime-resolution probe — run FIRST  **— Pending**
+### 3. Runtime-resolution probe — run FIRST  **— Done**
 
 Before any other correctness work, run the packaged app and capture what `claude-agent-acp` actually spawns. Known override levers (from adapter source):
 
@@ -52,7 +54,7 @@ Try in order: `CLAUDE_CODE_EXECUTABLE` pointing at a resolved, interpretable Cla
 - `start-connection!`'s `.catch` calls `dispose-agent` on failure.
 - Delete `agent-package-mode` and its `:is-packaged?` argument — dead after the rewrite.
 
-### 4a. Chain the async dispose promise  **— Pending**
+### 4a. Chain the async dispose promise  **— Done**
 
 `disposeAgent` (`src/js/acp/index.js:105`) is `async`; CLJS callers currently drop the returned promise. Tighten three sites in `src/gremllm/main/effects/acp.cljs`:
 
