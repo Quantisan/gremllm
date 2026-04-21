@@ -58,29 +58,6 @@
   [opts]
   (acp-factory/createConnection opts))
 
-(defn- log-runtime-probe!
-  "One-shot diagnostic at ACP init. Exposes what the claude-agent-acp adapter
-   will see when it spawns the Claude CLI: process.execPath (used as the
-   child-process interpreter), whether ELECTRON_RUN_AS_NODE is set (required
-   for the Electron binary to behave as Node), and resolver output for the
-   SDK's cli.js.
-   TODO(spike-in-process-acp-host): remove after runtime-resolution probe closes."
-  []
-  (let [probe #js {:execPath                js/process.execPath
-                   :electronRunAsNode       (-> js/process .-env .-ELECTRON_RUN_AS_NODE)
-                   :claudeCodeExecutable    (-> js/process .-env .-CLAUDE_CODE_EXECUTABLE)
-                   :nodeVersion             (-> js/process .-versions .-node)
-                   :electronVersion         (-> js/process .-versions .-electron)
-                   :resourcesPath           (.-resourcesPath js/process)
-                   :defaultApp              (.-defaultApp js/process)
-                   :execArgv                (.-execArgv js/process)}]
-    (js/console.log "[acp-runtime-probe] init" probe)
-    (try
-      (js/console.log "[acp-runtime-probe] claude-agent-sdk resolved at"
-                      (js/require.resolve "@anthropic-ai/claude-agent-sdk"))
-      (catch :default e
-        (js/console.log "[acp-runtime-probe] claude-agent-sdk resolve failed" (.-message e))))))
-
 (def ^:private client-info
   #js {:name "gremllm" :title "Gremllm" :version "0.1.0"})
 
@@ -147,8 +124,7 @@
     (.then @shutdown-promise (fn [_] (initialize opts)))
 
     :else
-    (let [_                (log-runtime-probe!)
-          ^js result       (create-connection
+    (let [^js result       (create-connection
                              #js {:onSessionUpdate     on-session-update
                                   :onReadTextFile      read-text-file
                                   :onRequestPermission (when on-permission
@@ -179,17 +155,8 @@
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
-  (js/console.log "[acp-runtime-probe] newSession start" #js {:cwd cwd})
   (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta session-meta})
-      (.then (fn [result]
-               (js/console.log "[acp-runtime-probe] newSession ok"
-                               #js {:sessionId (.-sessionId result)})
-               (.-sessionId result)))
-      (.catch (fn [err]
-                (js/console.error "[acp-runtime-probe] newSession failed"
-                                  #js {:message (.-message err)
-                                       :stack   (.-stack err)})
-                (throw err)))))
+      (.then (fn [result] (.-sessionId result)))))
 
 (defn resume-session
   "Resume existing ACP session by ID."
