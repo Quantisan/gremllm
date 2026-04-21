@@ -1,7 +1,7 @@
 # Document-First Pivot — Scooter Master Plan (Vertical Slices)
 
 **Date:** 2026-02-11
-**Supersedes:** `2026-02-09-document-first-pivot.md`
+**Supersedes:** earlier abstraction-first document-first pivot planning from 2026-02-09
 **References:** `test/acp-native-tools-spike.mjs` (read behavior), `test/acp-agent-document-interaction.mjs` (write/diff behavior — primary evidence for S4b schema gaps)
 
 ## Vision
