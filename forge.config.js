@@ -37,7 +37,7 @@ module.exports = {
 		// at package time, before code signing the application
 		new FusesPlugin({
 			version: FuseVersion.V1,
-			[FuseV1Options.RunAsNode]: false,
+			[FuseV1Options.RunAsNode]: true,
 			[FuseV1Options.EnableCookieEncryption]: true,
 			[FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
 			[FuseV1Options.EnableNodeCliInspectArguments]: false,
