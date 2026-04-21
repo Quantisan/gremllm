@@ -38,7 +38,10 @@ function createConnection(options = {}) {
   const callbacks = options;
   const toolNamesByCallId = new Map();
 
-  // Paired transform streams for in-process bidirectional message passing
+  // Paired transform streams for in-process bidirectional message passing.
+  // TODO: failure propagation is unexamined — if the agent side throws mid-message or the
+  // ndjson codec encounters a malformed frame, it's unclear whether the error surfaces to
+  // the connection's promise chain or is silently dropped.
   const clientToAgent = new TransformStream();
   const agentToClient = new TransformStream();
 
@@ -47,7 +50,9 @@ function createConnection(options = {}) {
 
   const sessionCwdMap = new Map();
 
-  // Agent is captured synchronously — AgentSideConnection calls the factory immediately
+  // Agent is captured synchronously — AgentSideConnection calls the factory immediately.
+  // Load-bearing: disposeAgent below depends on `agent` being set at construction time.
+  // TODO: verify this is a guaranteed SDK contract, not an observed implementation detail.
   let agent;
   new acp.AgentSideConnection((client) => {
     agent = new ClaudeAcpAgent(client);
