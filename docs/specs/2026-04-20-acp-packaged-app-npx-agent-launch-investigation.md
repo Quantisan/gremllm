@@ -1,9 +1,9 @@
 # Design: ACP Packaged-App Agent Launch Investigation
 
 **Date:** 2026-04-20
-**Status:** Option space narrowed; research and spikes planned
+**Status:** Historical option-space record; final outcome captured in the closeout note
 **Related:** [docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md](/Users/paul/Projects/gremllm/docs/specs/2026-04-20-acp-packaged-app-bridge-loading-fix-design.md), [forge.config.js](/Users/paul/Projects/gremllm/forge.config.js), [src/js/acp/index.js](/Users/paul/Projects/gremllm/src/js/acp/index.js)
-**Plan:** [docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md](/Users/paul/Projects/gremllm/docs/plans/2026-04-20-acp-packaged-app-launch-research-spikes.md)
+**Closeout:** [docs/2026-04-21-acp-packaged-host-closeout.md](/Users/paul/Projects/gremllm/.worktrees/spike-in-process-acp-host/docs/2026-04-21-acp-packaged-host-closeout.md)
 
 ## Goal
 
