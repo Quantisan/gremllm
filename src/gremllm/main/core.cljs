@@ -128,15 +128,14 @@
         secrets-filepath (io/secrets-file-path user-data-dir)]
     (register-domain-handlers store secrets-filepath)
     (menu/create-menu store)
-    ;; Initialize ACP connection eagerly - subprocess starts at launch.
+    ;; Initialize ACP in-process agent eagerly at launch.
     ;; Session update callback receives raw JS params from SDK, coerces
     ;; via codec, and dispatches as a Nexus action.
     ;;
     ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
     ;; from runtime capabilities - other ACP effects handle user operations.
     (acp-effects/initialize
-      {:on-session-update (acp-effects/make-session-update-callback store nil)
-       :is-packaged?      (.-isPackaged app)})))
+      {:on-session-update (acp-effects/make-session-update-callback store nil)})))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

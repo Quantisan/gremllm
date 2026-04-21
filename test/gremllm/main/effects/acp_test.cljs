@@ -16,7 +16,7 @@
                       :new-session []
                       :resume-session []
                       :prompt []
-                      :kill []})
+                      :dispose-count 0})
          conn  #js {:initialize
                     (fn [payload]
                       (swap! calls update :initialize conj payload)
@@ -33,10 +33,11 @@
                     (fn [payload]
                       (swap! calls update :prompt conj payload)
                       (js/Promise.resolve #js {:stopReason "end_turn"}))}
-         subprocess #js {:kill (fn [signal]
-                                 (swap! calls update :kill conj signal))}
+         dispose-agent (fn []
+                         (swap! calls update :dispose-count inc)
+                         (js/Promise.resolve nil))
          result #js {:connection conn
-                     :subprocess subprocess
+                     :disposeAgent dispose-agent
                      :protocolVersion "test-protocol"}]
      {:calls calls
       :result result})))
@@ -52,9 +53,9 @@
                        (:result (nth envs (dec i)))))}))
 
 (defn- initialize-dev
-  "Initialize ACP in test default mode (non-packaged)."
+  "Initialize ACP in test default mode."
   [on-update]
-  (acp/initialize {:on-session-update on-update :is-packaged? false}))
+  (acp/initialize {:on-session-update on-update}))
 
 (deftest test-initialize-wiring
   (testing "passes client info and callback to connection"
@@ -75,8 +76,7 @@
                          (is (= "0.1.0" (.. payload -clientInfo -version)))
                          (is (= false (.. payload -clientCapabilities -terminal))))))
               (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
+                          (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-callback-fires-and-coerces-diffs
   (testing "onSessionUpdate callback receives raw JS, coerces to CLJS, tool-response-has-diffs? true"
@@ -103,45 +103,7 @@
                            (is (= "s-test" (:acp-session-id coerced)))
                            (is (codec/tool-response-has-diffs? (:update coerced)))))))
               (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
-
-(defn- spawn-config->map [^js config]
-  {:command   (.-command config)
-   :args      (vec (js->clj (.-args config)))
-   :env-patch (js->clj (.-envPatch config))})
-
-(deftest test-build-npx-agent-package-config
-  (let [build        (.. acp-module -__test__ -buildNpxAgentPackageConfig)
-        package-spec (.. acp-module -__test__ -claudeAgentPackageSpec)]
-    (testing "latest mode forces online package resolution"
-      (is (= {:command   "npx"
-              :args      ["--yes"
-                          (str "--package=" package-spec)
-                          "--"
-                          "claude-agent-acp"]
-              :env-patch {"npm_config_prefer_online" "true"}}
-             (spawn-config->map (build "latest")))))
-    (testing "cached mode uses the installed package binary"
-      (is (= {:command   "npx"
-              :args      ["claude-agent-acp"]
-              :env-patch {}}
-             (spawn-config->map (build "cached")))))
-    (testing "invalid mode falls back to cached"
-      (is (= (spawn-config->map (build "cached"))
-             (spawn-config->map (build "not-a-valid-mode")))))))
-
-(deftest test-claude-agent-package-info
-  (let [get-package-info (.. acp-module -__test__ -getClaudeAgentPackageInfo)
-        ^js package-json (js/require "@agentclientprotocol/claude-agent-acp/package.json")]
-    (is (fn? get-package-info))
-    (when (fn? get-package-info)
-      (let [info (js->clj (get-package-info) :keywordize-keys true)]
-        (is (= {:packageName (.-name package-json)
-                :version     (.-version package-json)
-                :packageSpec (str (.-name package-json) "@" (.-version package-json))
-                :bin         "claude-agent-acp"}
-               info))))))
+                          (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-session-and-prompt-delegation
   (testing "delegates new-session, resume-session, and prompt to connection"
@@ -172,11 +134,10 @@
                            (is (= "text" (.-type first-block)))
                            (is (= "Say only: Hello" (.-text first-block)))))))
               (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
+                          (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-lifecycle-guardrails
-  (testing "double initialize is idempotent, shutdown kills subprocess, post-shutdown throws"
+  (testing "double initialize is idempotent, shutdown disposes agent, post-shutdown throws"
     (async done
       (let [{:keys [calls result]} (make-fake-env)
             create-count (atom 0)]
@@ -189,12 +150,11 @@
               (.then (fn [_]
                        (is (= 1 @create-count))
                        (acp/shutdown)
-                       (is (= ["SIGTERM"] (:kill @calls)))
+                       (is (= 1 (:dispose-count @calls)))
                        (is (thrown-with-msg? js/Error #"ACP not initialized"
                              (acp/new-session "/tmp/ws")))))
               (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
+                          (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-initialize-failure-does-not-poison-state
   (testing "failed initialize cleans up and allows retry"
@@ -210,7 +170,7 @@
                        (is false "Expected first initialize call to fail")))
               (.catch (fn [err]
                         (is (= "init failed" (.-message err)))
-                        (is (= ["SIGTERM"] (:kill @(:calls failing-env))))
+                        (is (= 1 (:dispose-count @(:calls failing-env))))
                         (is (thrown-with-msg? js/Error #"ACP not initialized"
                               (acp/new-session "/tmp/ws")))
                         ;; Re-bind for retry because async Promise callbacks run
@@ -222,8 +182,7 @@
                        (is (= "s-456" session-id))
                        (is (= 2 @create-count))))
               (.finally (fn []
-                          (acp/shutdown)
-                          (done)))))))))
+                          (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-remember-and-enrich-tool-name
   (let [remember-tool-name     (.. acp-module -__test__ -rememberToolName)
@@ -236,9 +195,9 @@
     (let [^js enriched (enrich-permission-params
                          tool-names
                          #js {:sessionId "session-1"
-                              :toolCall  #js {:toolCallId "toolu_01"
+                              :toolCall  #js {:toolCallId "toolu_01"}
                                              :title      "Edit `/tmp/test.md`"
-                                             :rawInput   #js {:file_path "/tmp/test.md"}}
+                                             :rawInput   #js {:file_path "/tmp/test.md"}
                               :options   #js []})]
       (is (= "mcp__acp__Edit" (.. enriched -toolCall -toolName))))))
 
@@ -341,3 +300,56 @@
                                        (.rm fs dir #js {:recursive true
                                                         :force true})))))))
             (.finally (fn [] (done))))))))
+
+;; --- Step 4a: async dispose-promise chaining ---
+
+(deftest test-start-connection-catch-chains-rethrow-after-dispose
+  (testing "initialization failure: error only propagates after dispose promise settles"
+    (async done
+      (let [events          (atom [])
+            resolve-dispose (atom nil)
+            deferred        (js/Promise. (fn [r _] (reset! resolve-dispose r)))
+            dispose-agent   (fn []
+                              (swap! events conj :dispose-called)
+                              (.then deferred (fn [_] (swap! events conj :dispose-settled))))
+            conn            #js {:initialize (fn [_] (js/Promise.reject (js/Error. "boom")))}
+            result          #js {:connection   conn
+                                 :disposeAgent dispose-agent
+                                 :protocolVersion "v"}]
+        ;; Resolve the deferred dispose after current sync + microtask work completes
+        (js/setTimeout (fn [] (@resolve-dispose nil)) 0)
+        (with-redefs [acp/create-connection (fn [_] result)]
+          (-> (initialize-dev (fn [_] nil))
+              (.catch (fn [err]
+                        (is (= "boom" (.-message err)))
+                        (is (= [:dispose-called :dispose-settled] @events)
+                            "rethrow should chain after dispose settles")))
+              (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))
+
+(deftest test-shutdown-returns-promise-that-awaits-dispose
+  (testing "shutdown returns a promise that resolves after dispose settles"
+    (async done
+      (let [events          (atom [])
+            resolve-dispose (atom nil)
+            deferred        (js/Promise. (fn [r _] (reset! resolve-dispose r)))
+            conn            #js {:initialize
+                                 (fn [_] (js/Promise.resolve #js {:agentCapabilities #js {}}))}
+            dispose-agent   (fn []
+                              (.then deferred (fn [_] (swap! events conj :dispose-settled))))
+            result          #js {:connection   conn
+                                 :disposeAgent dispose-agent
+                                 :protocolVersion "v"}]
+        (js/setTimeout (fn [] (@resolve-dispose nil)) 0)
+        (with-redefs [acp/create-connection (fn [_] result)]
+          (-> (initialize-dev (fn [_] nil))
+              (.then (fn [_]
+                       (let [p (acp/shutdown)]
+                         (is (instance? js/Promise p)
+                             "shutdown should return a promise")
+                         (-> p
+                             (.then (fn [_]
+                                      (is (= [:dispose-settled] @events)
+                                          "dispose should have settled before shutdown promise resolves")))
+                             (.finally (fn [] (done)))))))
+              (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
+

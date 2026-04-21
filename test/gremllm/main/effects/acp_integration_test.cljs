@@ -44,8 +44,7 @@
       (let [store    (atom {})
             captured (atom [])
             cwd      (.cwd js/process)]
-        (-> (acp/initialize {:on-session-update (acp/make-session-update-callback store #(swap! captured conj %))
-                              :is-packaged?      false})
+        (-> (acp/initialize {:on-session-update (acp/make-session-update-callback store #(swap! captured conj %))})
             (.then (fn [_] (acp/new-session cwd)))
             (.then (fn [session-id]
                      (is (string? session-id))
@@ -89,7 +88,6 @@
                      (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
                        (acp/initialize
                          {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :is-packaged?      false
                           :on-permission     (:on-permission recorder)
                           :on-write          (:on-write recorder)}))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
@@ -144,7 +142,6 @@
                      (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
                        (acp/initialize
                          {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :is-packaged?      false
                           :on-permission     (:on-permission recorder)
                           :on-write          (:on-write recorder)}))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
@@ -273,7 +270,6 @@
                      (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
                        (acp/initialize
                          {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :is-packaged?      false
                           :on-permission     (:on-permission recorder)
                           :on-write          (:on-write recorder)}))))
             (.then (fn [_] (acp/new-session @tmp-dir)))
