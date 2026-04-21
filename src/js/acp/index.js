@@ -54,17 +54,13 @@ function createConnection(options = {}) {
 
   const sessionCwdMap = new Map();
 
-  // Agent is captured synchronously — AgentSideConnection calls the factory immediately.
-  // Load-bearing: disposeAgent below depends on `agent` being set at construction time.
-  // TODO: verify this is a guaranteed SDK contract, not an observed implementation detail.
-  let agent;
-  new acp.AgentSideConnection((client) => {
-    agent = new ClaudeAcpAgent(client);
-    return agent;
-  }, agentStream);
-  if (!agent) {
-    throw new Error("AgentSideConnection did not invoke factory synchronously");
-  }
+  const agentReady = new Promise((resolve) => {
+    new acp.AgentSideConnection((client) => {
+      const agent = new ClaudeAcpAgent(client);
+      resolve(agent);
+      return agent;
+    }, agentStream);
+  });
 
   const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
 
@@ -115,9 +111,8 @@ function createConnection(options = {}) {
   };
 
   async function disposeAgent() {
-    if (agent) {
-      await agent.dispose().catch(() => {});
-    }
+    const agent = await agentReady;
+    await agent.dispose().catch((err) => console.error("[ACP] agent dispose failed", err));
     clientToAgent.writable.close().catch(() => {});
     agentToClient.writable.close().catch(() => {});
   }
