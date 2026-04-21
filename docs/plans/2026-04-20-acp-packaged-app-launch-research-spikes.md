@@ -99,6 +99,38 @@ Review of the pinned `claude-agent-acp@0.29.2` source established the `executabl
 
 **Research stop condition:** when R1–R4 converge on a direction, stop. R5 only runs if B becomes a contender. R6 is already complete.
 
+## Spike 1 Findings (2026-04-21)
+
+Runtime-resolution question is closed. Spike branch: `spike/in-process-acp-host`.
+
+### What actually works
+
+**Two changes required, both necessary:**
+
+1. `forge.config.js`: `FuseV1Options.RunAsNode: true`
+   — Allows the packaged Electron binary to be used as a Node interpreter when `ELECTRON_RUN_AS_NODE=1` is set in its environment. Without this fuse flip, the Electron binary refuses to run arbitrary JS regardless of env vars.
+
+2. `_meta.claudeCode.options.env: { ELECTRON_RUN_AS_NODE: "1" }` on every `newSession` / `unstable_resumeSession` call.
+   — The adapter merges `userProvidedOptions?.env` into the child-spawn env (`acp-agent.js:1115`). This propagates the flag into every Claude CLI subprocess. Without it, each spawn boots a full Electron window instead of a Node interpreter — the app cascades new windows on session create.
+
+### Corrections to the original analysis
+
+**`_meta.claudeCode.options.executable` is NOT a working override.**
+The original analysis (and probe plan) claimed the adapter spreads `...userProvidedOptions` *after* its `executable:` default, making `_meta.claudeCode.options.executable` a public override path. The code does the opposite: `...userProvidedOptions` is spread at line 1114, then `executable: process.execPath` is hardcoded at line 1133 — after the user spread — so user-provided values are overwritten. Zed's "absolute path" pattern documented in the adapter comment (`acp-agent.js:1131-1132`) is only reachable by setting `executable` in the SDK's `query()` options directly, not via `_meta`.
+
+**Option E (`RunAsNode: true`) is not a pure regression.**
+The deferred-options section called `RunAsNode: true` a security-posture regression with no gain over A/C/B. In practice it is the enabling condition for Option C: `RunAsNode: true` + `ELECTRON_RUN_AS_NODE=1` in the child env is what lets `process.execPath` work as a Node interpreter. The security trade-off is real (any process that receives `ELECTRON_RUN_AS_NODE=1` can run arbitrary JS via the Electron binary), but it is gated by code-signing in production and is strictly narrower than shipping a bundled Node runtime (Option B).
+
+### asar loading
+
+SDK cli.js resolves to `app.asar/node_modules/@anthropic-ai/claude-agent-sdk/cli.js` and loads correctly in the `ELECTRON_RUN_AS_NODE=1` child. Electron's asar fs hooks remain active in that mode. No `asarUnpack` entries required for the SDK path.
+
+### Status
+
+Runtime resolution ✓. Main-process stability verification (parent-plan Steps 5/6: `settingSources` plumbing, fd stability, session-resume, host-tooling independence) still pending.
+
+---
+
 ## Spike 1: Harden In-Process ACP (Option C) *(run first)*
 
 ### Goal
