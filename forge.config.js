@@ -37,6 +37,10 @@ module.exports = {
 		// at package time, before code signing the application
 		new FusesPlugin({
 			version: FuseVersion.V1,
+			// Required for in-process ACP host: ELECTRON_RUN_AS_NODE=1 (injected via session-meta)
+			// makes the packaged Electron binary behave as a Node interpreter rather than launching
+			// a new app window. Trade-off: anyone who can set that env var and reach the binary can
+			// run arbitrary JS — evaluate before shipping beyond spike.
 			[FuseV1Options.RunAsNode]: true,
 			[FuseV1Options.EnableCookieEncryption]: true,
 			[FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
