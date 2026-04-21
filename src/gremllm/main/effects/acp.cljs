@@ -145,12 +145,17 @@
 
 (def ^:private session-meta
   "Adapter spreads params._meta.claudeCode.options into the child-spawn config.
-   ELECTRON_RUN_AS_NODE=1 is required so the Electron binary (process.execPath
-   in packaged mode) behaves as a Node interpreter instead of booting a new app
-   window. See acp-agent.js:1115 for the env merge."
+   - ELECTRON_RUN_AS_NODE=1 is required so the Electron binary (process.execPath
+     in packaged mode) behaves as a Node interpreter instead of booting a new app
+     window. See acp-agent.js:1115 for the env merge.
+   - settingSources: [] disables the Claude Code SDK's loading of user/project/local
+     settings files, reducing filesystem-watcher pressure. The adapter's own
+     SettingsManager is separate and already disposed on session teardown.
+     See acp-agent.js:1112-1114 for the override path."
   #js {:claudeCode
        #js {:options
-            #js {:env #js {:ELECTRON_RUN_AS_NODE "1"}}}})
+            #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
+                 :settingSources #js []}}})
 
 (defn new-session
   "Create new ACP session for given working directory."
