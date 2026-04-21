@@ -10,6 +10,10 @@
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 (defonce ^:private state (atom nil))
 (defonce ^:private initialize-in-flight (atom nil))
+;; Tracks an in-flight shutdown dispose. Atoms (state, initialize-in-flight) are reset
+;; synchronously in shutdown; this atom lets initialize wait for the async dispose to
+;; settle before creating a new connection (init-during-shutdown race).
+(defonce ^:private shutdown-promise (atom nil))
 
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
@@ -73,8 +77,8 @@
                (reset! state {:connection conn :dispose-agent dispose-agent})
                nil))
       (.catch (fn [err]
-                (dispose-agent)
-                (throw err)))
+                (-> (dispose-agent)
+                    (.then (fn [_] (throw err))))))
       (.finally (fn []
                   (reset! initialize-in-flight nil)))))
 
@@ -108,13 +112,16 @@
      :on-session-update  callback receiving raw JS session update params from SDK.
      :on-permission      optional tap receiving coerced permission request params.
      :on-write           optional tap receiving coerced writeTextFile params."
-  [{:keys [on-session-update on-permission on-write]}]
+  [{:keys [on-session-update on-permission on-write] :as opts}]
   (cond
     @state
     (js/Promise.resolve nil)
 
     @initialize-in-flight
     (:promise @initialize-in-flight)
+
+    @shutdown-promise
+    (.then @shutdown-promise (fn [_] (initialize opts)))
 
     :else
     (let [^js result       (create-connection
@@ -170,14 +177,23 @@
         (js/console.error "ACP session update coercion failed" e params)))))
 
 (defn shutdown
-  "Tear down in-process ACP agent."
+  "Tear down in-process ACP agent. Returns a promise that resolves after all
+   disposes settle so callers (e.g. a before-quit hook) can await cleanup."
   []
   (let [initialized-dispose (:dispose-agent @state)
-        inflight-dispose    (:dispose-agent @initialize-in-flight)]
-    (when initialized-dispose
-      (initialized-dispose))
-    (when (and inflight-dispose
-               (not (identical? inflight-dispose initialized-dispose)))
-      (inflight-dispose))
+        inflight-dispose    (:dispose-agent @initialize-in-flight)
+        promises            (cond-> []
+                              initialized-dispose
+                              (conj (initialized-dispose))
+                              (and inflight-dispose
+                                   (not (identical? inflight-dispose initialized-dispose)))
+                              (conj (inflight-dispose)))]
     (reset! initialize-in-flight nil)
-    (reset! state nil)))
+    (reset! state nil)
+    (reset! shutdown-promise nil)
+    (if (seq promises)
+      (let [p (-> (js/Promise.all (clj->js promises))
+                  (.then (fn [_] (reset! shutdown-promise nil))))]
+        (reset! shutdown-promise p)
+        p)
+      (js/Promise.resolve nil))))
