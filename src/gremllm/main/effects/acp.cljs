@@ -143,6 +143,9 @@
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
+;; TODO: session-meta embeds adapter-internal knobs whose shape is keyed to acp-agent.js:1095.
+;; This effect file currently owns three concerns: connection lifecycle, ACP public API, and
+;; Claude-adapter overrides. The overrides want their own home before non-spike use.
 (def ^:private session-meta
   "Adapter spreads params._meta.claudeCode.options into the child-spawn config.
    - ELECTRON_RUN_AS_NODE=1 is required so the Electron binary (process.execPath
