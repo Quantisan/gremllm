@@ -95,13 +95,16 @@
              :clientCapabilities client-capabilities
              :clientInfo         client-info})
       (.then (fn [_]
-               (swap! state assoc :connection conn)
+               (when @state
+                 (swap! state assoc :connection conn))
                nil))
       (.catch (fn [err]
-                (-> (dispose-agent)
-                    (.then (fn [_]
-                             (reset! state nil)
-                             (throw err))))))))
+                (if @state
+                  (-> (dispose-agent)
+                      (.then (fn [_]
+                               (reset! state nil)
+                               (throw err))))
+                  (throw err))))))
 
 (defn- make-write-callback
   "Build a fire-and-forget write tap. Coerces raw JS params and

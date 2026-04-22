@@ -183,6 +183,24 @@
               (.finally (fn []
                           (.then (acp/shutdown) (fn [_] (done)))))))))))
 
+(deftest test-shutdown-during-pending-init-does-not-resurrect-state
+  (testing "late init success after shutdown leaves state cleared"
+    (async done
+      (let [resolve-init  (atom nil)
+            deferred      (js/Promise. (fn [r _] (reset! resolve-init r)))
+            {:keys [result]} (make-fake-env {:initialize-result deferred})]
+        (with-redefs [acp/create-connection (fn [_] result)]
+          (let [p (initialize-dev (fn [_] nil))]
+            (acp/shutdown)
+            (@resolve-init #js {:agentCapabilities #js {}})
+            (-> p
+                (.then (fn [_]
+                         (is (thrown-with-msg? js/Error #"ACP not initialized"
+                               (acp/new-session "/tmp/ws"))
+                             "late init success must not resurrect state after shutdown")))
+                (.catch (fn [_] nil))
+                (.finally (fn [] (done))))))))))
+
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
     (testing "slices from 1-indexed line with limit"
