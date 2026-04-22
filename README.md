@@ -51,6 +51,14 @@ npm run dev
 
 Dev mode automatically starts [Dataspex](https://github.com/cjohansen/dataspex) for state inspection. The UI opens at http://localhost:7117 where you can observe Nexus state changes and action flow in real-time.
 
+## Testing the macOS Artifact
+
+Download `Gremllm.app` from the GitHub Actions artifact. If you download it with Safari, remove macOS quarantine before first launch:
+
+```bash
+xattr -dr com.apple.quarantine Gremllm.app
+```
+
 ## Maintenance
 
 ```bash

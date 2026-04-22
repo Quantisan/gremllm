@@ -22,25 +22,9 @@ jobs:
       - name: Build macOS artifact
         run: npm run make
 
-      - name: Verify packaged artifacts
-        run: |
-          set -euo pipefail
-
-          if [ ! -d out/make ]; then
-            echo "Expected out/make to exist after npm run make"
-            exit 1
-          fi
-
-          if [ -z "$(find out/make -type f -print -quit)" ]; then
-            echo "Expected at least one file under out/make after npm run make"
-            exit 1
-          fi
-
-          find out/make -maxdepth 2 -type f
-
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: gremllm-macos-${{ github.ref_name }}
-          path: out/make/**
+          path: out/make/**/*.dmg
           if-no-files-found: error
+          archive: false

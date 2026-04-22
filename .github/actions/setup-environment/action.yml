@@ -11,7 +11,7 @@ runs:
         java-version: '25'
 
     - name: Install clojure tools
-      uses: DeLaGuardo/setup-clojure@13.4
+      uses: DeLaGuardo/setup-clojure@13.5.3
       with:
         cli: 1.12.4.1582
 
@@ -28,7 +28,7 @@ runs:
         restore-keys: cljdeps-
 
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '24'
         cache: 'npm'
