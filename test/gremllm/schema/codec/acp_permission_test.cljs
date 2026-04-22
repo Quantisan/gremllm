@@ -121,4 +121,15 @@
                                               :locations  #js []}
                               :options   #js []})
                        cwd)
-                     [:outcome :outcome]))))))
+                     [:outcome :outcome])))))
+
+(deftest test-permission-outcome-to-js-wire-shape
+  (testing "selected outcome uses SDK camelCase optionId"
+    (let [js-out (codec/acp-permission-outcome-to-js
+                   {:outcome {:outcome "selected" :option-id "allow-once"}})]
+      (is (= "selected"   (.. js-out -outcome -outcome)))
+      (is (= "allow-once" (.. ^js js-out -outcome -optionId)))
+      (is (nil? (aget (.-outcome js-out) "option-id")))))
+  (testing "cancelled outcome carries no optionId"
+    (let [js-out (codec/acp-permission-outcome-to-js {:outcome {:outcome "cancelled"}})]
+      (is (= "cancelled" (.. js-out -outcome -outcome)))))))
