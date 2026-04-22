@@ -409,8 +409,8 @@
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request."
   [:map
-   [:tool-call-id :string]
-   [:tool-name    :string]
+   [:tool-call-id              :string]
+   [:tool-name {:optional true} :string]
    [:kind         [:maybe AcpToolKind]]
    [:title        :string]
    [:raw-input    [:map-of :keyword :any]]
