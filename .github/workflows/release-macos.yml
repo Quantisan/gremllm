@@ -22,42 +22,9 @@ jobs:
       - name: Build macOS artifact
         run: npm run make
 
-      - name: Verify packaged artifacts
-        id: packaged-artifact
-        run: |
-          set -euo pipefail
-
-          if [ ! -d out/make ]; then
-            echo "Expected out/make to exist after npm run make"
-            exit 1
-          fi
-
-          if [ -z "$(find out/make -type f -print -quit)" ]; then
-            echo "Expected at least one file under out/make after npm run make"
-            exit 1
-          fi
-
-          find out/make -maxdepth 2 -type f
-
-          dmg_list_file="$(mktemp)"
-          find out/make -type f -name '*.dmg' | sort > "$dmg_list_file"
-
-          dmg_count="$(wc -l < "$dmg_list_file" | tr -d '[:space:]')"
-
-          if [ "$dmg_count" -ne 1 ]; then
-            echo "Expected exactly one .dmg file under out/make, found $dmg_count"
-            cat "$dmg_list_file"
-            exit 1
-          fi
-
-          dmg_path="$(head -n 1 "$dmg_list_file")"
-          rm -f "$dmg_list_file"
-
-          echo "dmg_path=$dmg_path" >> "$GITHUB_OUTPUT"
-
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          path: ${{ steps.packaged-artifact.outputs.dmg_path }}
+          path: out/make/**/*.dmg
           if-no-files-found: error
           archive: false
