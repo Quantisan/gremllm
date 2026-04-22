@@ -2,15 +2,39 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
-            [gremllm.main.effects.acp.claude-adapter :as claude-adapter]
             [gremllm.schema.codec :as codec]
+            [gremllm.schema.codec.acp-permission :as acp-permission]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
             ["fs/promises" :as fsp]))
 
+;; Claude-adapter overrides for ACP session setup.
+;;
+;; These knobs are keyed to the pinned claude-agent-acp session setup path
+;; (local package node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
+;; Adapter reads params._meta.claudeCode.options, merges env, and defaults settingSources
+;; in that path. It then hardcodes executable: process.execPath for the non-static-binary
+;; branch, so _meta.claudeCode.options.executable is not a working override in this repo's
+;; pinned adapter version.
+;;
+;; Gremllm therefore injects:
+;; - ELECTRON_RUN_AS_NODE=1 so the packaged Electron binary (process.execPath) acts as a
+;;   Node interpreter instead of relaunching the app window. This depends on
+;;   FuseV1Options.RunAsNode remaining enabled; see https://packages.electronjs.org/fuses
+;; - settingSources: [] to suppress Claude Code SDK user/project/local settings loading for
+;;   Gremllm sessions. The adapter's own SettingsManager lifecycle remains separate.
+(def ^:private session-meta
+  #js {:claudeCode
+       #js {:options
+            #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
+                 :settingSources #js []}}})
+
 ;; TODO: consider adopting https://github.com/stuartsierra/component
+;; @state is nil, or:
+;;   {:connection    <ClientSideConnection, or nil until init resolves>
+;;    :dispose-agent <fn>
+;;    :ready         <init-promise>}
 (defonce ^:private state (atom nil))
-(defonce ^:private initialize-in-flight (atom nil))
 
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
@@ -63,7 +87,7 @@
        :terminal false})
 
 (defn- start-connection!
-  "Perform ACP handshake, update state atoms, and call dispose-agent on failure.
+  "Perform ACP handshake, update state, and call dispose-agent on failure.
    Returns the initialization promise."
   [^js conn ^js protocol-version dispose-agent]
   (-> (.initialize conn
@@ -71,24 +95,16 @@
              :clientCapabilities client-capabilities
              :clientInfo         client-info})
       (.then (fn [_]
-               (reset! state {:connection conn :dispose-agent dispose-agent})
+               (when @state
+                 (swap! state assoc :connection conn))
                nil))
       (.catch (fn [err]
-                (-> (dispose-agent)
-                    (.then (fn [_] (throw err))))))
-      (.finally (fn []
-                  (reset! initialize-in-flight nil)))))
-
-(defn- make-permission-callback
-  "Build a fire-and-forget permission tap. Coerces raw JS params and
-   calls on-permission with the coerced value."
-  [on-permission]
-  (fn [params]
-    (js/console.log "ACP requestPermission tap fired" params)
-    (try
-      (on-permission (codec/acp-permission-request-from-js params))
-      (catch :default e
-        (js/console.error "ACP permission request coercion failed" e params)))))
+                (if @state
+                  (-> (dispose-agent)
+                      (.then (fn [_]
+                               (reset! state nil)
+                               (throw err))))
+                  (throw err))))))
 
 (defn- make-write-callback
   "Build a fire-and-forget write tap. Coerces raw JS params and
@@ -107,31 +123,48 @@
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
      :on-session-update  callback receiving raw JS session update params from SDK.
-     :on-permission      optional tap receiving coerced permission request params.
+     :on-permission      optional tap receiving coerced+enriched permission request params.
      :on-write           optional tap receiving coerced writeTextFile params."
-  [{:keys [on-session-update on-permission on-write] :as opts}]
-  (cond
-    @state
-    (js/Promise.resolve nil)
-
-    @initialize-in-flight
-    (:promise @initialize-in-flight)
-
-    :else
-    (let [^js result       (create-connection
-                             #js {:onSessionUpdate     on-session-update
-                                  :onReadTextFile      read-text-file
-                                  :onRequestPermission (when on-permission
-                                                         (make-permission-callback on-permission))
-                                  :onWriteTextFile     (when on-write
-                                                         (make-write-callback on-write))})
-          dispose-agent    (.-disposeAgent result)
-          init-promise     (start-connection! (.-connection result)
-                                              (.-protocolVersion result)
-                                              dispose-agent)]
-      (reset! initialize-in-flight {:promise       init-promise
-                                    :dispose-agent dispose-agent})
-      init-promise)))
+  [{:keys [on-session-update on-permission on-write]}]
+  (if-let [ready (:ready @state)]
+    ready
+    (let [;; Per-connection tool-name tracker. Seeded from session updates so
+          ;; the permission resolver can enrich requests that arrive without a
+          ;; toolName (ACP sends it in _meta.claudeCode.toolName on the session
+          ;; update, not always in the permission request directly).
+          tool-names   (atom {})
+          session-cb   (fn [raw-params]
+                         (try
+                           (swap! tool-names acp-permission/remember-tool-name
+                                  (codec/acp-session-update-from-js raw-params))
+                           (catch :default _))
+                         (when on-session-update (on-session-update raw-params)))
+          resolve-cb   (fn [^js raw-params session-cwd]
+                         (try
+                           (let [enriched (->> raw-params
+                                               codec/acp-permission-request-from-js
+                                               (acp-permission/enrich-permission-params @tool-names))
+                                 outcome  (acp-permission/resolve-permission enriched session-cwd)]
+                             (js/console.log "ACP requestPermission resolved" raw-params)
+                             (when on-permission
+                               (try (on-permission enriched)
+                                    (catch :default e
+                                      (js/console.error "ACP on-permission tap failed" e))))
+                             (codec/acp-permission-outcome-to-js outcome))
+                           (catch :default e
+                             (js/console.error "ACP permission resolve failed" e raw-params)
+                             #js {:outcome #js {:outcome "cancelled"}})))
+          ^js result   (create-connection
+                         #js {:onSessionUpdate   session-cb
+                              :onReadTextFile    read-text-file
+                              :onWriteTextFile   (when on-write (make-write-callback on-write))
+                              :resolvePermission resolve-cb})
+          dispose-agent (.-disposeAgent result)
+          ready-promise (start-connection! (.-connection result)
+                                           (.-protocolVersion result)
+                                           dispose-agent)]
+      (reset! state {:connection nil :dispose-agent dispose-agent :ready ready-promise})
+      ready-promise)))
 
 (defn- ^js conn! []
   (or (:connection @state)
@@ -140,14 +173,14 @@
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
-  (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta claude-adapter/session-meta})
+  (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta session-meta})
       (.then (fn [result] (.-sessionId result)))))
 
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
   (-> (.unstable_resumeSession (conn!)
-        #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta claude-adapter/session-meta})
+        #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta session-meta})
       (.then (fn [_] acp-session-id))))
 
 (defn prompt
@@ -171,19 +204,10 @@
         (js/console.error "ACP session update coercion failed" e params)))))
 
 (defn shutdown
-  "Tear down in-process ACP agent. Returns a promise that resolves after all
-   disposes settle so callers (e.g. a before-quit hook) can await cleanup."
+  "Tear down in-process ACP agent. Returns a promise that resolves after dispose
+   settles so callers (e.g. a before-quit hook) can await cleanup."
   []
-  (let [initialized-dispose (:dispose-agent @state)
-        inflight-dispose    (:dispose-agent @initialize-in-flight)
-        promises            (cond-> []
-                              initialized-dispose
-                              (conj (initialized-dispose))
-                              (and inflight-dispose
-                                   (not (identical? inflight-dispose initialized-dispose)))
-                              (conj (inflight-dispose)))]
-    (reset! initialize-in-flight nil)
-    (reset! state nil)
-    (if (seq promises)
-      (js/Promise.all (into-array promises))
-      (js/Promise.resolve nil))))
+  (if-let [{:keys [dispose-agent]} @state]
+    (do (reset! state nil)
+        (dispose-agent))
+    (js/Promise.resolve nil)))

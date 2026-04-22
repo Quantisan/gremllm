@@ -1,6 +1,5 @@
 (ns gremllm.main.effects.acp-test
-  (:require ["/js/acp/index" :as acp-module]
-            [cljs.test :refer [deftest is testing async]]
+  (:require [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.acp :as acp]
             [gremllm.schema.codec :as codec]))
 
@@ -184,96 +183,51 @@
               (.finally (fn []
                           (.then (acp/shutdown) (fn [_] (done)))))))))))
 
-(deftest test-remember-and-enrich-tool-name
-  (let [remember-tool-name     (.. acp-module -__test__ -rememberToolName)
-        enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
-        tool-names             (js/Map.)
-        session-update         #js {:update #js {:sessionUpdate "tool_call"
-                                                  :toolCallId    "toolu_01"
-                                                  :_meta         #js {:claudeCode #js {:toolName "mcp__acp__Edit"}}}}]
-    (remember-tool-name tool-names session-update)
-    (let [^js enriched (enrich-permission-params
-                         tool-names
-                         #js {:sessionId "session-1"
-                              :toolCall  #js {:toolCallId "toolu_01"}
-                                             :title      "Edit `/tmp/test.md`"
-                                             :rawInput   #js {:file_path "/tmp/test.md"}
-                              :options   #js []})]
-      (is (= "mcp__acp__Edit" (.. enriched -toolCall -toolName))))))
+(deftest test-shutdown-during-pending-init-does-not-resurrect-state
+  (testing "late init success after shutdown leaves state cleared"
+    (async done
+      (let [resolve-init  (atom nil)
+            deferred      (js/Promise. (fn [r _] (reset! resolve-init r)))
+            {:keys [result]} (make-fake-env {:initialize-result deferred})]
+        (with-redefs [acp/create-connection (fn [_] result)]
+          (let [p (initialize-dev (fn [_] nil))]
+            (acp/shutdown)
+            (@resolve-init #js {:agentCapabilities #js {}})
+            (-> p
+                (.then (fn [_]
+                         (is (thrown-with-msg? js/Error #"ACP not initialized"
+                               (acp/new-session "/tmp/ws"))
+                             "late init success must not resurrect state after shutdown")))
+                (.catch (fn [_] nil))
+                (.finally (fn [] (done))))))))))
 
-(deftest test-enrich-without-tracked-tool-name
-  (let [enrich-permission-params (.. acp-module -__test__ -enrichPermissionParams)
-        tool-names               (js/Map.)
-        ^js enriched             (enrich-permission-params
-                                   tool-names
-                                   #js {:sessionId "session-1"
-                                        :toolCall  #js {:toolCallId "toolu_missing"
-                                                        :title      "Edit `/tmp/test.md`"
-                                                        :rawInput   #js {:file_path "/tmp/test.md"}}
-                                        :options   #js []})]
-    (is (nil? (.. enriched -toolCall -toolName)))))
-
-(deftest test-permission-resolver-policy
-  (let [path          (js/require "path")
-        cwd           (.resolve path (.cwd js/process) "resources")
-        file-in-cwd   (.resolve path cwd "gremllm-launch-log.md")
-        file-out      (.resolve path (.cwd js/process) "README.md")
-        make-resolver (.. acp-module -__test__ -makeResolver)
-        get-cwd       (fn [session-id] (when (= session-id "session-known") cwd))
-        resolver      (make-resolver get-cwd)
-        full-options  #js [#js {:optionId "allow-always"  :kind "allow_always"  :name "allow_always"}
-                           #js {:optionId "allow-once"    :kind "allow_once"    :name "allow_once"}
-                           #js {:optionId "reject-once"   :kind "reject_once"   :name "reject_once"}
-                           #js {:optionId "reject-always" :kind "reject_always" :name "reject_always"}]
-        option-id     (fn [^js result] (.. result -outcome -optionId))]
-    (testing "read tool call is allowed regardless of path"
-      (is (= "allow-always"
-             (option-id (resolver #js {:sessionId "session-known"
-                                       :toolCall  #js {:kind "read" :toolName "mcp__acp__Read"
-                                                       :rawInput #js {:path file-in-cwd}}
-                                       :options   full-options})))))
-    (testing "edit within cwd is allowed"
-      (is (= "allow-once"
-             (option-id (resolver #js {:sessionId "session-known"
-                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
-                                                       :rawInput #js {:path file-in-cwd}}
-                                       :options   full-options})))))
-    (testing "edit outside cwd is rejected"
-      (is (= "reject-once"
-             (option-id (resolver #js {:sessionId "session-known"
-                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
-                                                       :rawInput #js {:file_path file-out}}
-                                       :options   full-options})))))
-    (testing "edit without path metadata is rejected"
-      (is (= "reject-once"
-             (option-id (resolver #js {:sessionId "session-known"
-                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
-                                                       :rawInput #js {:replace_all false}}
-                                       :options   full-options})))))
-    (testing "edit with unknown session is rejected"
-      (is (= "reject-once"
-             (option-id (resolver #js {:sessionId "session-unknown"
-                                       :toolCall  #js {:kind "edit" :toolName "mcp__acp__Edit"
-                                                       :rawInput #js {:path file-in-cwd}}
-                                       :options   full-options})))))
-    (testing "empty options yields cancelled"
-      (is (= "cancelled"
-             (.. (resolver #js {:sessionId "session-known"
-                                :toolCall  #js {:kind "read" :toolName "mcp__acp__Read"
-                                                :rawInput #js {:path file-in-cwd}}
-                                :options   #js []})
-                 -outcome -outcome))))))
-
-(deftest test-permission-requested-tool-name
-  (let [requested-tool-name (.. acp-module -__test__ -permissionRequestedToolName)]
-    (testing "prefers toolCall.toolName"
-      (is (= "mcp__acp__Edit"
-             (requested-tool-name #js {:toolName "mcp__acp__Edit"}))))
-    (testing "falls back to _meta.claudeCode.toolName"
-      (is (= "Read"
-             (requested-tool-name #js {:_meta #js {:claudeCode #js {:toolName "Read"}}}))))
-    (testing "returns nil when absent"
-      (is (nil? (requested-tool-name #js {:rawInput #js {:file_path "/tmp/test.md"}}))))))
+(deftest test-permission-tap-failure-does-not-replace-outcome
+  (testing "on-permission tap throwing does not replace the resolved outcome with cancelled"
+    (async done
+      (let [captured-cb (atom nil)
+            {:keys [result]} (make-fake-env)]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-cb (.-resolvePermission opts))
+                        result)]
+          (-> (acp/initialize
+                {:on-session-update (fn [_] nil)
+                 :on-permission     (fn [_] (throw (js/Error. "tap-fail")))})
+              (.then
+                (fn [_]
+                  (let [raw-params #js {:sessionId "s-1"
+                                        :toolCall  #js {:toolCallId "tc-1"
+                                                        :kind       "read"
+                                                        :title      "Read file"
+                                                        :rawInput   #js {}
+                                                        :locations  #js []}
+                                        :options   #js [#js {:optionId "opt-1"
+                                                              :name     "Allow"
+                                                              :kind     "allow_once"}]}
+                        ^js js-out  (@captured-cb raw-params "/workspace")]
+                    (is (= "selected" (.. js-out -outcome -outcome))
+                        "tap failure must not replace outcome with cancelled"))))
+              (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]

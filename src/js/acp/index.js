@@ -1,42 +1,8 @@
 const acp = require("@agentclientprotocol/sdk");
 const { ClaudeAcpAgent } = require("@agentclientprotocol/claude-agent-acp/dist/lib.js");
-const { makeResolver, requestedToolName } = require("./permission");
-const permission = require("./permission");
-
-function rememberToolName(toolNamesByCallId, params) {
-  const update = params?.update;
-  const toolCallId = update?.toolCallId;
-  const toolName = update?._meta?.claudeCode?.toolName;
-
-  // TODO: toolNamesByCallId Map grows unbounded per connection (one entry per tool call)
-  if (typeof toolCallId === "string" && typeof toolName === "string" && toolName.length > 0) {
-    toolNamesByCallId.set(toolCallId, toolName);
-  }
-}
-
-function enrichPermissionParams(toolNamesByCallId, params) {
-  const toolCall = params?.toolCall;
-  const toolCallId = toolCall?.toolCallId;
-  const trackedToolName =
-    requestedToolName(toolCall) ??
-    (typeof toolCallId === "string" ? toolNamesByCallId.get(toolCallId) : undefined);
-
-  if (typeof trackedToolName !== "string" || trackedToolName.length === 0) {
-    return params;
-  }
-
-  return {
-    ...params,
-    toolCall: {
-      ...toolCall,
-      toolName: trackedToolName
-    }
-  };
-}
 
 function createConnection(options = {}) {
   const callbacks = options;
-  const toolNamesByCallId = new Map();
 
   // The ACP SDK accepts generic streams for ndjson transport (see the pinned
   // local packages node_modules/@agentclientprotocol/sdk/dist/acp.js and
@@ -52,6 +18,8 @@ function createConnection(options = {}) {
   const clientStream = acp.ndJsonStream(clientToAgent.writable, agentToClient.readable);
   const agentStream = acp.ndJsonStream(agentToClient.writable, clientToAgent.readable);
 
+  // sessionCwdMap is genuinely connection-local state: cwd is captured at session
+  // creation time and passed to resolvePermission so the policy can verify paths.
   const sessionCwdMap = new Map();
 
   const agentReady = new Promise((resolve) => {
@@ -62,21 +30,17 @@ function createConnection(options = {}) {
     }, agentStream);
   });
 
-  const resolver = makeResolver((sessionId) => sessionCwdMap.get(sessionId));
-
   const client = {
     async sessionUpdate(params) {
-      rememberToolName(toolNamesByCallId, params);
       if (callbacks.onSessionUpdate) {
         callbacks.onSessionUpdate(params);
       }
     },
     async requestPermission(params) {
-      const enrichedParams = enrichPermissionParams(toolNamesByCallId, params);
       if (callbacks.onRequestPermission) {
-        callbacks.onRequestPermission(enrichedParams);
+        callbacks.onRequestPermission(params);
       }
-      return resolver(enrichedParams);
+      return callbacks.resolvePermission(params, sessionCwdMap.get(params.sessionId));
     },
     async readTextFile(params) {
       return callbacks.onReadTextFile(params);
@@ -124,13 +88,4 @@ function createConnection(options = {}) {
   };
 }
 
-module.exports = {
-  createConnection,
-  __test__: {
-    enrichPermissionParams,
-    rememberToolName,
-    makeResolver,
-    permissionRequestedToolName: requestedToolName,
-    permissionRequestedPath: permission.__test__.requestedPath
-  }
-};
+module.exports = { createConnection };

@@ -409,8 +409,8 @@
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request."
   [:map
-   [:tool-call-id :string]
-   [:tool-name    :string]
+   [:tool-call-id              :string]
+   [:tool-name {:optional true} :string]
    [:kind         [:maybe AcpToolKind]]
    [:title        :string]
    [:raw-input    [:map-of :keyword :any]]
@@ -431,3 +431,13 @@
             (mt/transformer
               acp-key-transformer
               mt/json-transformer)))
+
+(defn acp-permission-outcome-to-js
+  "Coerce a resolved permission outcome to ACP SDK wire shape.
+   Inbound: {:outcome {:outcome \"selected\" :option-id \"...\"}}
+         or {:outcome {:outcome \"cancelled\"}}
+   Returns a JS object with camelCase optionId as the SDK expects."
+  [{{:keys [outcome option-id]} :outcome}]
+  (case outcome
+    "cancelled" #js {:outcome #js {:outcome "cancelled"}}
+    "selected"  #js {:outcome #js {:outcome "selected" :optionId option-id}}))
