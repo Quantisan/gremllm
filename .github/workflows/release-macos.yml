@@ -23,6 +23,7 @@ jobs:
         run: npm run make
 
       - name: Verify packaged artifacts
+        id: packaged-artifact
         run: |
           set -euo pipefail
 
@@ -38,9 +39,18 @@ jobs:
 
           find out/make -maxdepth 2 -type f
 
+          mapfile -t dmg_files < <(find out/make -type f -name '*.dmg' | sort)
+
+          if [ "${#dmg_files[@]}" -ne 1 ]; then
+            echo "Expected exactly one .dmg file under out/make, found ${#dmg_files[@]}"
+            exit 1
+          fi
+
+          echo "dmg_path=${dmg_files[0]}" >> "$GITHUB_OUTPUT"
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: gremllm-macos-${{ github.ref_name }}
-          path: out/make/**
+          path: ${{ steps.packaged-artifact.outputs.dmg_path }}
           if-no-files-found: error
+          archive: false
