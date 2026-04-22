@@ -39,14 +39,21 @@ jobs:
 
           find out/make -maxdepth 2 -type f
 
-          mapfile -t dmg_files < <(find out/make -type f -name '*.dmg' | sort)
+          dmg_list_file="$(mktemp)"
+          find out/make -type f -name '*.dmg' | sort > "$dmg_list_file"
 
-          if [ "${#dmg_files[@]}" -ne 1 ]; then
-            echo "Expected exactly one .dmg file under out/make, found ${#dmg_files[@]}"
+          dmg_count="$(wc -l < "$dmg_list_file" | tr -d '[:space:]')"
+
+          if [ "$dmg_count" -ne 1 ]; then
+            echo "Expected exactly one .dmg file under out/make, found $dmg_count"
+            cat "$dmg_list_file"
             exit 1
           fi
 
-          echo "dmg_path=${dmg_files[0]}" >> "$GITHUB_OUTPUT"
+          dmg_path="$(head -n 1 "$dmg_list_file")"
+          rm -f "$dmg_list_file"
+
+          echo "dmg_path=$dmg_path" >> "$GITHUB_OUTPUT"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v7
