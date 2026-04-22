@@ -1,7 +1,7 @@
 {
   "name": "gremllm",
   "productName": "Gremllm",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "An Experimental IDE (Idea Development Environment)",
   "license": "MIT",
   "author": "Quantisan, LLC",
@@ -10,7 +10,7 @@
     "dev": "concurrently \"shadow-cljs watch main-dev renderer-dev\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\" \"clj -A:dev -M dev/start_dataspex.clj\" \"sleep 15 && open -g http://localhost:7117\"",
     "build": "npm run clean && shadow-cljs compile main renderer",
     "package": "npm run build && electron-forge package",
-"make": "npm run build && electron-forge make",
+    "make": "npm run build && electron-forge make",
     "repl": "shadow-cljs cljs-repl renderer",
     "clean": "rm -rf .shadow-cljs target resources/public/compiled-js",
     "test": "shadow-cljs compile test",
