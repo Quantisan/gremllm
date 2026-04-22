@@ -146,7 +146,10 @@
                                                (acp-permission/enrich-permission-params @tool-names))
                                  outcome  (acp-permission/resolve-permission enriched session-cwd)]
                              (js/console.log "ACP requestPermission resolved" raw-params)
-                             (when on-permission (on-permission enriched))
+                             (when on-permission
+                               (try (on-permission enriched)
+                                    (catch :default e
+                                      (js/console.error "ACP on-permission tap failed" e))))
                              (codec/acp-permission-outcome-to-js outcome))
                            (catch :default e
                              (js/console.error "ACP permission resolve failed" e raw-params)

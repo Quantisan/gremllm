@@ -201,6 +201,34 @@
                 (.catch (fn [_] nil))
                 (.finally (fn [] (done))))))))))
 
+(deftest test-permission-tap-failure-does-not-replace-outcome
+  (testing "on-permission tap throwing does not replace the resolved outcome with cancelled"
+    (async done
+      (let [captured-cb (atom nil)
+            {:keys [result]} (make-fake-env)]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-cb (.-resolvePermission opts))
+                        result)]
+          (-> (acp/initialize
+                {:on-session-update (fn [_] nil)
+                 :on-permission     (fn [_] (throw (js/Error. "tap-fail")))})
+              (.then
+                (fn [_]
+                  (let [raw-params #js {:sessionId "s-1"
+                                        :toolCall  #js {:toolCallId "tc-1"
+                                                        :kind       "read"
+                                                        :title      "Read file"
+                                                        :rawInput   #js {}
+                                                        :locations  #js []}
+                                        :options   #js [#js {:optionId "opt-1"
+                                                              :name     "Allow"
+                                                              :kind     "allow_once"}]}
+                        ^js js-out  (@captured-cb raw-params "/workspace")]
+                    (is (= "selected" (.. js-out -outcome -outcome))
+                        "tap failure must not replace outcome with cancelled"))))
+              (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))
+
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
     (testing "slices from 1-indexed line with limit"
