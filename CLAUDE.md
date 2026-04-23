@@ -34,34 +34,38 @@ Why PE due diligence:
 ## Architecture
 
 **Process Structure:**
-- `src/gremllm/main/` - Electron main process (IPC, file ops, system integration)
-- `src/gremllm/renderer/` - UI and app logic (browser context)
-- `resources/public/` - Web assets (index.html, compiled JS)
-- `resources/public/js/preload.js` - Preload boundary exposing intent-driven Electron APIs
+- `src/gremllm/main/` - Electron main process: app lifecycle, window/menu setup, IPC registration, file and system boundaries
+- `src/gremllm/renderer/` - Renderer app: Nexus state, Replicant UI, document-first workflows, preload-driven IPC consumption
+- `src/gremllm/schema/` - Shared schema and codec layer for disk, IPC, DOM capture, and ACP transport boundaries
+- `src/js/acp/` - In-process ACP host bridge built on paired `TransformStream`s
+- `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 
-**Key Namespaces Quick Reference:**
+**Operational Map:**
+- Main process owns Electron lifecycle, native integration, workspace and topic persistence, secrets, and ACP connection bootstrap
+- Renderer owns application state, user workflows, document rendering, excerpt capture, and pending diff presentation
+- Schema/codecs own shared contracts and boundary transforms
+- The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle, callbacks, and permission resolution
 
-| Domain | Main Process | Renderer Process |
-|--------|--------------|------------------|
-| Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings, topic, workspace |
-| State | - | `renderer.state.*` - ACP, form, messages, UI, system, topic |
-| UI | - | `renderer.ui.*` - chat, settings, topics |
-| Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
-| Core | `main.core` - app bootstrap, IPC handler registration, window/menu setup | `renderer.core` - renderer bootstrap, IPC listeners, render loop |
-| ACP | `main.actions.acp` - prompt block construction; `main.effects.acp` - in-process connection lifecycle, permission/file callbacks | `renderer.actions.acp` - streaming chunks, tool events, pending diff routing |
-| Workspace & Documents | `main.actions.workspace`, `main.actions.document`, `main.effects.workspace`, `main.state` | `renderer.actions.workspace`, `renderer.actions.document`, `renderer.state.workspace`, `renderer.state.document`, `renderer.ui.document`, `renderer.ui.welcome` |
-| Schema | `schema` - data models, validation | (shared) |
-| Codec | `schema.codec`, `schema.codec.acp-permission` - IPC/JS/ACP adaptation, wire codecs, pure ACP permission policy | (shared) |
+**Detailed Architecture Docs:**
+- `src/gremllm/main/README.md`
+- `src/gremllm/renderer/README.md`
+- `src/gremllm/schema/README.md`
+- `src/js/acp/README.md`
 
-**ACP Integration (current implementation):**
-- Gremllm hosts `claude-agent-acp` in-process through `src/js/acp/index.js`; `main.effects.acp` eagerly initializes and owns the shared ACP connection lifecycle
-- One ACP session per topic; the topic stores the ACP session id at `[:session :id]`
-- Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
-- Prompts are built from structured user messages; staged excerpts render into a References section, and prompts include a `resource_link` to workspace `document.md` when that file exists
-- ACP client capabilities enable `readTextFile` and `writeTextFile`; reads come from disk, while writes are intentionally acknowledged as dry-run so the agent can complete proposal flows without mutating workspace files directly
-- Permission requests are normalized in `schema.codec` and resolved by the pure CLJS policy in `schema.codec.acp-permission`, keeping workspace path checks and approval logic out of the JS transport bridge
-- Streaming session updates flow main → renderer via IPC events; `tool-call-update` diff payloads are normalized in `schema.codec` and accumulated at `[:topics <topic-id> :session :pending-diffs]`
-- **Note:** Current implementation uses a single generic ACP session per topic. Product direction: specialized agents for different tasks (research, analysis, synthesis, etc.). This is a known gap to be addressed.
+**Key Entry Points:**
+- `src/gremllm/main/core.cljs`
+- `src/gremllm/main/actions/acp.cljs`
+- `src/gremllm/main/effects/acp.cljs`
+- `src/gremllm/main/effects/workspace.cljs`
+- `src/gremllm/renderer/core.cljs`
+- `src/gremllm/renderer/actions.cljs`
+- `src/gremllm/renderer/ui/document.cljs`
+- `src/gremllm/renderer/ui/document/diffs.cljs`
+- `src/gremllm/schema.cljs`
+- `src/gremllm/schema/codec.cljs`
+- `src/gremllm/schema/codec/acp_permission.cljs`
+- `src/js/acp/index.js`
+- `resources/public/js/preload.js`
 
 ## Development
 
