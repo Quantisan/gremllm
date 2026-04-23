@@ -6,7 +6,7 @@
 
 Gremllm is a desktop workspace for working on high-value documents with AI — investment memos, strategy docs, product requirements. Documents that carry your name, get scrutinized, and usually take several experts to produce.
 
-You edit a single `document.md`. An AI assistant proposes tracked changes, and you accept or reject each one. To steer it, select text in the document and stage it as context for your next prompt. The artifact stays yours; the AI helps you think.
+You direct; the AI writes. You never type into the document — every change comes from the AI, and you accept, reject, or redirect each one. Select text to focus the next round. Your judgment shapes the document; the AI does the typing.
 
 ## Status
 
@@ -17,7 +17,7 @@ Early. Not ready for real work.
 - AI assistant via the Agent Client Protocol (Claude, through `claude-agent-acp`)
 - Pending diffs appear inline with accept/reject controls
 - Selected text stages as structured context for the next prompt
-- Workspaces are portable folders — files on disk, not a database
+- Workspaces are portable folders of markdown files — today one `document.md` per workspace
 
 **Next:**
 - Quick-action agents: launch a purpose-built topic from a selection (validate, research, simplify)
