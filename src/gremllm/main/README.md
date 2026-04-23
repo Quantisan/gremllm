@@ -22,6 +22,11 @@ value to `ipcRenderer.invoke`, trace the synchronous pipeline. If it should
 trigger later renderer updates, trace the Nexus-dispatched path and the matching
 IPC event.
 
+Note the mechanism split: `acp/*` handlers use `ipcMain.on` (fire-and-forget;
+no return value, the renderer never awaits the call), while all other handlers —
+including the Nexus-dispatching ones — use `ipcMain.handle`. Renderer state for
+ACP arrives exclusively through the `acp:session-update` event stream.
+
 ## Domain Map
 
 - `core.cljs`: app bootstrap, IPC handler registration, app lifecycle hooks
@@ -61,7 +66,36 @@ Start in `core.cljs` at `document/create`, then follow
 
 Start in `core.cljs` at `acp/new-session`, `acp/resume-session`, or
 `acp/prompt`. Session runtime behavior lives in `main.effects.acp`, while
-prompt content construction lives in `main.actions.acp`.
+prompt content construction lives in `main.actions.acp`. The JS transport bridge
+is at `src/js/acp/index.js`; permission policy is at
+`src/gremllm/schema/codec/acp_permission.cljs`. See those READMEs for details
+on each side of the seam.
+
+## IPC Channels
+
+All handlers are registered in `core.cljs`. The preload bridge (`resources/public/js/preload.js`) exposes promise-style wrappers and intent-driven listeners so the renderer never touches raw IPC strings.
+
+**Topic:** `topic/save`, `topic/delete`
+**Document:** `document/create`
+**Secrets:** `secrets/save`, `secrets/delete`
+**ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp:session-update` (event, main → renderer)
+**Workspace:** `workspace/pick-folder`, `workspace/reload`, `workspace:opened` (event, main → renderer)
+**System:** `system/get-info`
+**Menu:** `menu:command` (event, main → renderer)
+
+## Data Storage
+
+```
+<userData>/User/
+└── secrets.edn              # Encrypted API keys via Electron safeStorage
+
+<workspace-folder>/          # User-selected folder; portable like a git repo
+├── document.md              # Primary workspace artifact (created on demand)
+└── topics/
+    └── *.edn                # One file per topic; includes session id and pending diffs
+```
+
+See `src/gremllm/main/io.cljs` for path helpers and `src/gremllm/schema/codec.cljs` for disk codecs.
 
 ## Entry Points
 
