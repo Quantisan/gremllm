@@ -36,14 +36,17 @@ topic map, and document content.
 
 ### Prompt Submission
 
-Start in `renderer.actions.ui/submit-messages`, which builds the structured
-user message, dispatches chat updates, and calls
+Dispatched as `:form.actions/submit` (registered in `renderer/actions.cljs`),
+which calls `renderer.actions.ui/submit-messages`. That function builds the
+structured user message, dispatches chat updates, and calls
 `renderer.actions.acp/send-prompt`.
 
 ### Streaming Session Updates
 
 Start in `renderer.actions.acp/session-update`, which routes assistant chunks,
 reasoning chunks, tool events, and pending diff accumulation into topic state.
+The `AcpUpdate` coercion happens at the IPC boundary in
+`src/gremllm/schema/codec.cljs` before the update reaches this action.
 
 ### Excerpt Capture And Document Review
 
@@ -51,6 +54,13 @@ Start in `renderer.ui.document`, `renderer.actions.excerpt`, and
 `renderer.ui.document.locator`. Selection capture originates from the document
 panel, durable excerpt data is stored on the active topic, and highlights are
 re-synced after markdown re-render.
+
+### Menu Commands
+
+`onMenuCommand` listener in `renderer/core.cljs` routes `:save-topic` and
+`:show-settings` keywords from the main-process menu into Nexus dispatches.
+This lives in `core.cljs` (not `actions/`) because it is a preload-event
+subscription wired at bootstrap, not a domain action.
 
 ## Entry Points
 
@@ -63,3 +73,7 @@ re-synced after markdown re-render.
 - `src/gremllm/renderer/ui/document/diffs.cljs`
 - `src/gremllm/renderer/ui/document/locator.cljs`
 - `src/gremllm/renderer/ui/document/highlights.cljs`
+
+## Tests
+
+- `test/gremllm/renderer/actions/` — renderer action tests (excerpt, message, etc.)
