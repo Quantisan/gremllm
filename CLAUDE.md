@@ -203,6 +203,8 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ## Entry Points
 
+When exploring unfamiliar code, start here and in the Key Namespaces table before running broad searches.
+
 - `src/gremllm/main/core.cljs` - Main process start
 - `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle and native file callbacks
 - `src/gremllm/renderer/core.cljs` - Renderer start
@@ -213,6 +215,8 @@ Following FCIS principles, all state changes flow through Nexus:
 - `src/gremllm/schema.cljs` - Data models and validation
 - `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
 - `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
+- `test/gremllm/schema_test.cljs` - Schema validation tests
+- `test/gremllm/renderer/actions/` - Renderer action tests (excerpt, message, etc.)
 
 ## UI Approach
 - **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.
