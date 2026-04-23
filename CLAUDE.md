@@ -162,60 +162,12 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ## IPC & Data
 
-**IPC Channels:**
-- `topic/save` - Persist a topic EDN file
-- `topic/delete` - Delete a topic file after confirmation
-- `document/create` - Create `<workspace>/document.md`
-- `secrets/save` - Encrypt and store a secret in the user data secrets file
-- `secrets/delete` - Delete a stored secret
-- `acp/new-session` - Start a new ACP session
-- `acp/prompt` - Send a user prompt to ACP
-- `acp/resume-session` - Resume a topic-bound ACP session
-- `acp:session-update` - Stream ACP session updates to renderer
-- `workspace/pick-folder` - Folder picker dialog
-- `workspace/reload` - Request refreshed workspace data
-- `workspace:opened` - Broadcast refreshed workspace payload (`onWorkspaceOpened`)
-- `system/get-info` - System capabilities
-- `menu:command` - Broadcast app menu commands into the renderer (`onMenuCommand`)
+IPC channels and workspace layout are documented in `src/gremllm/main/README.md`.
 
-`preload.js` exposes promise-style wrappers for ACP commands and intent-driven listeners like `onWorkspaceOpened`, `onAcpSessionUpdate`, and `onMenuCommand`, so the renderer does not manipulate raw IPC strings directly outside the preload boundary.
-
-**Data Storage:**
-```
-<userData>/User/
-└── secrets.edn              # Encrypted API keys via Electron safeStorage
-
-<workspace-folder>/          # User-selected folder (anywhere)
-├── document.md              # Primary workspace document (created on demand)
-└── topics/
-    └── *.edn                # Topic/session files
-```
-
-- **Workspaces:** Portable folders, like git repos - can live anywhere
-- **Document:** `document.md` is the primary artifact in the current scooter implementation
-- **Topics:** Individual EDN files in `topics/` subdirectory (includes `[:session :id]`, `[:session :pending-diffs]`, and local message history)
-- **Schemas:** See `schema.cljs` for data structures; transport/IPC codecs live in `schema/codec.cljs`
-- **File I/O:** See `main/io.cljs` for paths and operations
-
-## Entry Points
-
-When exploring unfamiliar code, start here and in the Key Namespaces table before running broad searches.
-
-- `src/gremllm/main/core.cljs` - Main process start
-- `src/gremllm/main/actions/acp.cljs` - ACP prompt block construction from structured user messages and staged excerpts
-- `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle, permission resolution wiring, and native file callbacks
-- `src/gremllm/renderer/core.cljs` - Renderer start
-- `src/gremllm/renderer/ui.cljs` - Main UI components
-- `src/gremllm/renderer/ui/document.cljs` - Document panel rendering
-- `src/gremllm/renderer/ui/document/diffs.cljs` - Pending diff anchoring and composition
-- `src/gremllm/*/actions.cljs` - Action/effect registrations
-- `src/gremllm/schema.cljs` - Data models and validation
-- `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
-- `src/gremllm/schema/codec/acp_permission.cljs` - Pure ACP permission policy
-- `src/js/acp/index.js` - In-process ACP bridge built on paired `TransformStream`s
-- `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
-- `test/gremllm/schema_test.cljs` - Schema validation tests
-- `test/gremllm/renderer/actions/` - Renderer action tests (excerpt, message, etc.)
+Cross-cutting facts:
+- **Workspaces** are portable folders (like git repos) — can live anywhere
+- **Topics** persist `[:session :id]` and `[:session :pending-diffs]` alongside local message history
+- **Canonical data models** live in `src/gremllm/schema.cljs`; boundary coercions and transport shapes live in `src/gremllm/schema/codec.cljs`
 
 ## UI Approach
 - **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.
