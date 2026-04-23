@@ -19,6 +19,9 @@ SDK client and the in-process agent over ndjson streams.
 - `src/gremllm/main/effects/acp.cljs`: initialization, handshake, permission
   resolution, file-read callback wiring, session update dispatch, prompt and
   session APIs
+- `src/gremllm/schema/codec/acp_permission.cljs`: pure CLJS permission policy
+  invoked by `main.effects.acp`; keeps workspace-path checks and approval
+  logic out of the JS transport bridge
 
 ## Dry-Run Write Behavior
 
