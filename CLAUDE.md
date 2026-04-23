@@ -48,18 +48,19 @@ Why PE due diligence:
 | UI | - | `renderer.ui.*` - chat, settings, topics |
 | Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
 | Core | `main.core` - app bootstrap, IPC handler registration, window/menu setup | `renderer.core` - renderer bootstrap, IPC listeners, render loop |
-| ACP | `main.actions.acp`, `main.effects.acp` - prompt construction, SDK lifecycle, native file callbacks | `renderer.actions.acp` - streaming chunks, tool events, pending diff routing |
+| ACP | `main.actions.acp` - prompt block construction; `main.effects.acp` - in-process connection lifecycle, permission/file callbacks | `renderer.actions.acp` - streaming chunks, tool events, pending diff routing |
 | Workspace & Documents | `main.actions.workspace`, `main.actions.document`, `main.effects.workspace`, `main.state` | `renderer.actions.workspace`, `renderer.actions.document`, `renderer.state.workspace`, `renderer.state.document`, `renderer.ui.document`, `renderer.ui.welcome` |
 | Schema | `schema` - data models, validation | (shared) |
-| Codec | `schema.codec` - IPC/JS/ACP adaptation and codecs | (shared) |
+| Codec | `schema.codec`, `schema.codec.acp-permission` - IPC/JS/ACP adaptation, wire codecs, pure ACP permission policy | (shared) |
 
 **ACP Integration (current implementation):**
+- Gremllm hosts `claude-agent-acp` in-process through `src/js/acp/index.js`; `main.effects.acp` eagerly initializes and owns the shared ACP connection lifecycle
 - One ACP session per topic; the topic stores the ACP session id at `[:session :id]`
 - Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
-- Prompts include a `resource_link` to workspace `document.md` when that file exists
-- ACP client capabilities enable `readTextFile` and dry-run `writeTextFile` callbacks so the agent can read the document and propose edits without mutating disk during proposal capture
-- Streaming session updates flow main → renderer via IPC events
-- `tool-call-update` diff payloads are normalized in `schema.codec` and accumulated at `[:topics <topic-id> :session :pending-diffs]`
+- Prompts are built from structured user messages; staged excerpts render into a References section, and prompts include a `resource_link` to workspace `document.md` when that file exists
+- ACP client capabilities enable `readTextFile` and `writeTextFile`; reads come from disk, while writes are intentionally acknowledged as dry-run so the agent can complete proposal flows without mutating workspace files directly
+- Permission requests are normalized in `schema.codec` and resolved by the pure CLJS policy in `schema.codec.acp-permission`, keeping workspace path checks and approval logic out of the JS transport bridge
+- Streaming session updates flow main → renderer via IPC events; `tool-call-update` diff payloads are normalized in `schema.codec` and accumulated at `[:topics <topic-id> :session :pending-diffs]`
 - **Note:** Current implementation uses a single generic ACP session per topic. Product direction: specialized agents for different tasks (research, analysis, synthesis, etc.). This is a known gap to be addressed.
 
 ## Development
@@ -206,7 +207,8 @@ Following FCIS principles, all state changes flow through Nexus:
 When exploring unfamiliar code, start here and in the Key Namespaces table before running broad searches.
 
 - `src/gremllm/main/core.cljs` - Main process start
-- `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle and native file callbacks
+- `src/gremllm/main/actions/acp.cljs` - ACP prompt block construction from structured user messages and staged excerpts
+- `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle, permission resolution wiring, and native file callbacks
 - `src/gremllm/renderer/core.cljs` - Renderer start
 - `src/gremllm/renderer/ui.cljs` - Main UI components
 - `src/gremllm/renderer/ui/document.cljs` - Document panel rendering
@@ -214,6 +216,8 @@ When exploring unfamiliar code, start here and in the Key Namespaces table befor
 - `src/gremllm/*/actions.cljs` - Action/effect registrations
 - `src/gremllm/schema.cljs` - Data models and validation
 - `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
+- `src/gremllm/schema/codec/acp_permission.cljs` - Pure ACP permission policy
+- `src/js/acp/index.js` - In-process ACP bridge built on paired `TransformStream`s
 - `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 - `test/gremllm/schema_test.cljs` - Schema validation tests
 - `test/gremllm/renderer/actions/` - Renderer action tests (excerpt, message, etc.)
