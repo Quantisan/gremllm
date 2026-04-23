@@ -14,7 +14,7 @@ These principles guide every implementation decision:
 
 1. **Document-first, not chat-first** - The artifact is the center of gravity, not the conversation history
 2. **Expert judgment and taste are elevated, not hidden** - Where human expertise made the difference is visible and valued
-3. **AI assists through specialized agents you can steer** - Not one generic assistant, but specialized agents for specific tasks
+3. **You direct; the AI writes** - You shape the work by steering, accepting, rejecting, and redirecting changes. The AI does the typing.
 4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale
 5. **Simple by default, powerful when needed** - Core workflows are straightforward; advanced capabilities available when required
 
@@ -34,33 +34,38 @@ Why PE due diligence:
 ## Architecture
 
 **Process Structure:**
-- `src/gremllm/main/` - Electron main process (IPC, file ops, system integration)
-- `src/gremllm/renderer/` - UI and app logic (browser context)
-- `resources/public/` - Web assets (index.html, compiled JS)
-- `resources/public/js/preload.js` - Preload boundary exposing intent-driven Electron APIs
+- `src/gremllm/main/` - Electron main process: app lifecycle, window/menu setup, IPC registration, file and system boundaries
+- `src/gremllm/renderer/` - Renderer app: Nexus state, Replicant UI, document-first workflows, preload-driven IPC consumption
+- `src/gremllm/schema/` - Shared schema and codec layer for disk, IPC, DOM capture, and ACP transport boundaries
+- `src/js/acp/` - In-process ACP host bridge built on paired `TransformStream`s
+- `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 
-**Key Namespaces Quick Reference:**
+**Operational Map:**
+- Main process owns Electron lifecycle, native integration, workspace and topic persistence, secrets, and ACP connection bootstrap
+- Renderer owns application state, user workflows, document rendering, excerpt capture, and pending diff presentation
+- Schema/codecs own shared contracts and boundary transforms
+- The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle, callbacks, and permission resolution
 
-| Domain | Main Process | Renderer Process |
-|--------|--------------|------------------|
-| Actions | `main.actions.*` - effects, IPC | `renderer.actions.*` - UI, messages, settings, topic, workspace |
-| State | - | `renderer.state.*` - ACP, form, messages, UI, system, topic |
-| UI | - | `renderer.ui.*` - chat, settings, topics |
-| Effects | `main.effects.*` - ACP, file I/O | (handled in actions) |
-| Core | `main.core` - app bootstrap, IPC handler registration, window/menu setup | `renderer.core` - renderer bootstrap, IPC listeners, render loop |
-| ACP | `main.actions.acp`, `main.effects.acp` - prompt construction, SDK lifecycle, native file callbacks | `renderer.actions.acp` - streaming chunks, tool events, pending diff routing |
-| Workspace & Documents | `main.actions.workspace`, `main.actions.document`, `main.effects.workspace`, `main.state` | `renderer.actions.workspace`, `renderer.actions.document`, `renderer.state.workspace`, `renderer.state.document`, `renderer.ui.document`, `renderer.ui.welcome` |
-| Schema | `schema` - data models, validation | (shared) |
-| Codec | `schema.codec` - IPC/JS/ACP adaptation and codecs | (shared) |
+**Detailed Architecture Docs:**
+- `src/gremllm/main/README.md`
+- `src/gremllm/renderer/README.md`
+- `src/gremllm/schema/README.md`
+- `src/js/acp/README.md`
 
-**ACP Integration (current implementation):**
-- One ACP session per topic; the topic stores the ACP session id at `[:session :id]`
-- Session resume uses ACP resume plus locally persisted topic messages (hybrid history)
-- Prompts include a `resource_link` to workspace `document.md` when that file exists
-- ACP client capabilities enable `readTextFile` and dry-run `writeTextFile` callbacks so the agent can read the document and propose edits without mutating disk during proposal capture
-- Streaming session updates flow main → renderer via IPC events
-- `tool-call-update` diff payloads are normalized in `schema.codec` and accumulated at `[:topics <topic-id> :session :pending-diffs]`
-- **Note:** Current implementation uses a single generic ACP session per topic. Product direction: specialized agents for different tasks (research, analysis, synthesis, etc.). This is a known gap to be addressed.
+**Key Entry Points:**
+- `src/gremllm/main/core.cljs`
+- `src/gremllm/main/actions/acp.cljs`
+- `src/gremllm/main/effects/acp.cljs`
+- `src/gremllm/main/effects/workspace.cljs`
+- `src/gremllm/renderer/core.cljs`
+- `src/gremllm/renderer/actions.cljs`
+- `src/gremllm/renderer/ui/document.cljs`
+- `src/gremllm/renderer/ui/document/diffs.cljs`
+- `src/gremllm/schema.cljs`
+- `src/gremllm/schema/codec.cljs`
+- `src/gremllm/schema/codec/acp_permission.cljs`
+- `src/js/acp/index.js`
+- `resources/public/js/preload.js`
 
 ## Development
 
@@ -125,16 +130,7 @@ By aligning our code with our mental model, we reduce cognitive load, make the s
 
 ### Vision: An Idea Development Environment for Verified Knowledge Work
 
-Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The six pillars:
-
-1. **The artifact is the center of gravity** - Document-first, not chat-first. The deliverable is what matters.
-2. **Expert judgment is elevated** - Taste, experience, and intuition are first-class, not hidden. Where the human made the difference is visible and valued.
-3. **AI works through specialized agents** - Not one generic assistant, but steerable agents for specific tasks (research, analysis, synthesis, verification).
-4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale into a prompt.
-5. **Process is captured as you work** - Evidence, methodology, and reasoning are captured alongside the artifact itself.
-6. **Deliverables carry proof** - Stakeholders can verify the work by examining the methodology, evidence, and expert judgment that produced it.
-
-**The core insight:** The artifact is portable (exported, shared, presented). The proof lives in the platform (methodology, evidence, reasoning, expert judgment).
+Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The principles above define the working model: the document stays central, expert judgment stays visible, and humans direct the work while AI proposes the writing. As work progresses, Gremllm captures process, evidence, and judgment alongside the artifact so stakeholders can examine not just the deliverable, but how it was produced. **The artifact is portable; the proof lives in the platform.**
 
 ## State Management with Nexus
 
@@ -166,53 +162,12 @@ Following FCIS principles, all state changes flow through Nexus:
 
 ## IPC & Data
 
-**IPC Channels:**
-- `topic/save` - Persist a topic EDN file
-- `topic/delete` - Delete a topic file after confirmation
-- `document/create` - Create `<workspace>/document.md`
-- `secrets/save` - Encrypt and store a secret in the user data secrets file
-- `secrets/delete` - Delete a stored secret
-- `acp/new-session` - Start a new ACP session
-- `acp/prompt` - Send a user prompt to ACP
-- `acp/resume-session` - Resume a topic-bound ACP session
-- `acp:session-update` - Stream ACP session updates to renderer
-- `workspace/pick-folder` - Folder picker dialog
-- `workspace/reload` - Request refreshed workspace data
-- `workspace:opened` - Broadcast refreshed workspace payload (`onWorkspaceOpened`)
-- `system/get-info` - System capabilities
-- `menu:command` - Broadcast app menu commands into the renderer (`onMenuCommand`)
+IPC channels and workspace layout are documented in `src/gremllm/main/README.md`.
 
-`preload.js` exposes promise-style wrappers for ACP commands and intent-driven listeners like `onWorkspaceOpened`, `onAcpSessionUpdate`, and `onMenuCommand`, so the renderer does not manipulate raw IPC strings directly outside the preload boundary.
-
-**Data Storage:**
-```
-<userData>/User/
-└── secrets.edn              # Encrypted API keys via Electron safeStorage
-
-<workspace-folder>/          # User-selected folder (anywhere)
-├── document.md              # Primary workspace document (created on demand)
-└── topics/
-    └── *.edn                # Topic/session files
-```
-
-- **Workspaces:** Portable folders, like git repos - can live anywhere
-- **Document:** `document.md` is the primary artifact in the current scooter implementation
-- **Topics:** Individual EDN files in `topics/` subdirectory (includes `[:session :id]`, `[:session :pending-diffs]`, and local message history)
-- **Schemas:** See `schema.cljs` for data structures; transport/IPC codecs live in `schema/codec.cljs`
-- **File I/O:** See `main/io.cljs` for paths and operations
-
-## Entry Points
-
-- `src/gremllm/main/core.cljs` - Main process start
-- `src/gremllm/main/effects/acp.cljs` - ACP connection lifecycle and native file callbacks
-- `src/gremllm/renderer/core.cljs` - Renderer start
-- `src/gremllm/renderer/ui.cljs` - Main UI components
-- `src/gremllm/renderer/ui/document.cljs` - Document panel rendering
-- `src/gremllm/renderer/ui/document/diffs.cljs` - Pending diff anchoring and composition
-- `src/gremllm/*/actions.cljs` - Action/effect registrations
-- `src/gremllm/schema.cljs` - Data models and validation
-- `src/gremllm/schema/codec.cljs` - IPC/JS/ACP codecs and adapters
-- `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
+Cross-cutting facts:
+- **Workspaces** are portable folders (like git repos) — can live anywhere
+- **Topics** persist `[:session :id]` and `[:session :pending-diffs]` alongside local message history
+- **Canonical data models** live in `src/gremllm/schema.cljs`; boundary coercions and transport shapes live in `src/gremllm/schema/codec.cljs`
 
 ## UI Approach
 - **PicoCSS + split palette** - Semantic HTML with PicoCSS defaults. A TVA/Brutalist palette defines light zones (document panel) and dark zones (nav, chat). Element aliases in `elements.cljs` handle zone scoping automatically — don't set `data-theme` manually.
