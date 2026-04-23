@@ -14,7 +14,7 @@ These principles guide every implementation decision:
 
 1. **Document-first, not chat-first** - The artifact is the center of gravity, not the conversation history
 2. **Expert judgment and taste are elevated, not hidden** - Where human expertise made the difference is visible and valued
-3. **AI assists through specialized agents you can steer** - Not one generic assistant, but specialized agents for specific tasks
+3. **You direct; the AI writes** - You shape the work by steering, accepting, rejecting, and redirecting changes. The AI does the typing.
 4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale
 5. **Simple by default, powerful when needed** - Core workflows are straightforward; advanced capabilities available when required
 
@@ -126,16 +126,7 @@ By aligning our code with our mental model, we reduce cognitive load, make the s
 
 ### Vision: An Idea Development Environment for Verified Knowledge Work
 
-Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The six pillars:
-
-1. **The artifact is the center of gravity** - Document-first, not chat-first. The deliverable is what matters.
-2. **Expert judgment is elevated** - Taste, experience, and intuition are first-class, not hidden. Where the human made the difference is visible and valued.
-3. **AI works through specialized agents** - Not one generic assistant, but steerable agents for specific tasks (research, analysis, synthesis, verification).
-4. **Context is managed, not dumped** - Information is progressively disclosed for each task, not pasted wholesale into a prompt.
-5. **Process is captured as you work** - Evidence, methodology, and reasoning are captured alongside the artifact itself.
-6. **Deliverables carry proof** - Stakeholders can verify the work by examining the methodology, evidence, and expert judgment that produced it.
-
-**The core insight:** The artifact is portable (exported, shared, presented). The proof lives in the platform (methodology, evidence, reasoning, expert judgment).
+Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The principles above define the working model: the document stays central, expert judgment stays visible, and humans direct the work while AI proposes the writing. As work progresses, Gremllm captures process, evidence, and judgment alongside the artifact so stakeholders can examine not just the deliverable, but how it was produced. **The artifact is portable; the proof lives in the platform.**
 
 ## State Management with Nexus
 
