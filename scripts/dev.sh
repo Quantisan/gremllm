@@ -10,5 +10,5 @@ concurrently \
   --prefix-colors "cyan,yellow,green,magenta" \
   "shadow-cljs watch main-dev renderer-dev" \
   "wait-on file:target/main.js file:resources/public/compiled-js/manifest.edn && ELECTRON_IS_DEV=1 electron-forge start" \
-  "clj -A:dev -M dev/start_dataspex.clj" \
+  "clj -A:dev -M dev/start_dataspex.clj 2>/dev/null" \
   "wait-on tcp:7117 && open -g http://localhost:7117"
