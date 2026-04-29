@@ -7,7 +7,7 @@
   "author": "Quantisan, LLC",
   "main": "target/main.js",
   "scripts": {
-    "dev": "concurrently \"shadow-cljs watch main-dev renderer-dev\" \"sleep 10 && ELECTRON_IS_DEV=1 electron-forge start\" \"clj -A:dev -M dev/start_dataspex.clj\" \"sleep 15 && open -g http://localhost:7117\"",
+    "dev": "rm -f target/main.js resources/public/compiled-js/manifest.edn && concurrently \"shadow-cljs watch main-dev renderer-dev\" \"wait-on file:target/main.js file:resources/public/compiled-js/manifest.edn && ELECTRON_IS_DEV=1 electron-forge start\" \"clj -A:dev -M dev/start_dataspex.clj\" \"wait-on tcp:7117 && open -g http://localhost:7117\"",
     "build": "npm run clean && shadow-cljs compile main renderer",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
@@ -31,11 +31,12 @@
     "concurrently": "^9.2.0",
     "electron": "^41.2.1",
     "electron-reload": "^2.0.0-alpha.1",
-    "shadow-cljs": "^3.4.4"
+    "shadow-cljs": "^3.4.4",
+    "wait-on": "^9.0.5"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "^0.19.0",
     "@agentclientprotocol/claude-agent-acp": "0.29.2",
+    "@agentclientprotocol/sdk": "^0.19.0",
     "@dotenvx/dotenvx": "^1.61.0",
     "markdown-it": "14.1.1",
     "markdown-it-block-image": "0.0.3",
