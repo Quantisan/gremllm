@@ -140,6 +140,7 @@ resources/public/compiled-js/
 
 # Log files
 shadow-cljs.log
+dataspex.log
 
 # Development server pid
 .shadow-cljs/http.pid
