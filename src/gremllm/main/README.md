@@ -3,16 +3,16 @@
 ## Ownership
 
 The main process owns Electron application lifecycle, native window and menu
-setup, IPC registration, workspace and topic persistence, secrets storage, and
-the CLJS side of ACP connection management.
+setup, IPC registration, workspace and topic persistence, and the CLJS side of
+ACP connection management.
 
 ## Runtime Boundary
 
 Two IPC patterns coexist here:
 
 - synchronous handlers in `core.cljs` return values directly for
-  request-response operations such as topic save, topic delete, document
-  create, secrets operations, and system info
+  request-response operations such as topic save, topic delete, and document
+  create
 - asynchronous handlers in `core.cljs` dispatch Nexus actions for workflows
   whose results return later over IPC events, such as workspace loading and ACP
   session operations
@@ -33,7 +33,7 @@ ACP arrives exclusively through the `acp:session-update` event stream.
 - `actions.cljs`: Nexus action and effect registration for main-process
   behavior
 - `actions/`: pure planning helpers for ACP prompt content, documents, topics,
-  secrets, and workspace actions
+  and workspace actions
 - `effects/`: imperative file I/O, dialogs, IPC replies, ACP runtime
   integration, attachment storage
 - `window.cljs`: BrowserWindow sizing, preload wiring, and close handling
@@ -77,18 +77,13 @@ All handlers are registered in `core.cljs`. The preload bridge (`resources/publi
 
 **Topic:** `topic/save`, `topic/delete`
 **Document:** `document/create`
-**Secrets:** `secrets/save`, `secrets/delete`
 **ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp:session-update` (event, main → renderer)
 **Workspace:** `workspace/pick-folder`, `workspace/reload`, `workspace:opened` (event, main → renderer)
-**System:** `system/get-info`
 **Menu:** `menu:command` (event, main → renderer)
 
 ## Data Storage
 
 ```
-<userData>/User/
-└── secrets.edn              # Encrypted API keys via Electron safeStorage
-
 <workspace-folder>/          # User-selected folder; portable like a git repo
 ├── document.md              # Primary workspace artifact (created on demand)
 └── topics/

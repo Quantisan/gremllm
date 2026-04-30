@@ -31,7 +31,7 @@
 
 (deftest test-parse-topic-content
   (testing "parses valid topic content"
-    (let [topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}
+    (let [topic {:id "topic-123" :name "Test" :messages [] :session {:pending-diffs []} :excerpts []}
           content (pr-str topic)
           result (#'workspace/parse-topic-content content "test.edn")]
       (is (= topic result))))
@@ -42,7 +42,7 @@
       (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))))
 
   (testing "applies schema coercion"
-    (let [topic-without-unsaved {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []}}
+    (let [topic-without-unsaved {:id "topic-123" :name "Test" :messages [] :session {:pending-diffs []}}
           content (pr-str topic-without-unsaved)
           result (#'workspace/parse-topic-content content "test.edn")]
       ;; codec/topic-from-disk should not add :unsaved? key
@@ -54,8 +54,6 @@
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
-                        :model "claude-sonnet-4-5-20250929"
-                        :reasoning? true
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]
                         :session {:pending-diffs []}
                         :excerpts []}
@@ -74,8 +72,6 @@
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
-                        :model "claude-sonnet-4-5-20250929"
-                        :reasoning? true
                         :messages [{:id 1754952440824 :type :user :text "Hello"}]
                         :session {:pending-diffs []}
                         :excerpts [excerpt-fixture]}
@@ -123,8 +119,8 @@
     (with-temp-dir "load-topics"
       (fn [dir]
         ;; Simple test topics with just the essentials
-        (let [topic-1 {:id "topic-1-a" :name "First" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}
-              topic-2 {:id "topic-2-b" :name "Second" :model "claude-sonnet-4-5-20250929" :reasoning? false :messages [] :session {:pending-diffs []} :excerpts []}]
+        (let [topic-1 {:id "topic-1-a" :name "First" :messages [] :session {:pending-diffs []} :excerpts []}
+              topic-2 {:id "topic-2-b" :name "Second" :messages [] :session {:pending-diffs []} :excerpts []}]
 
           ;; Write valid topic files
           (write-topic-file dir topic-1)
@@ -141,7 +137,7 @@
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [good-topic {:id "topic-111-good" :name "Valid" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages [] :session {:pending-diffs []} :excerpts []}]
+        (let [good-topic {:id "topic-111-good" :name "Valid" :messages [] :session {:pending-diffs []} :excerpts []}]
           ;; Write one valid and one corrupt file
           (write-topic-file dir good-topic)
           (write-file dir "topic-999-bad.edn" "{:broken")
@@ -156,7 +152,7 @@
     (with-temp-dir "load-sync"
       (fn [temp-dir]
         (let [topics-dir (io/topics-dir-path temp-dir)
-              topic {:id "topic-123" :name "Test" :model "claude-sonnet-4-5-20250929" :reasoning? true :messages []}
+              topic {:id "topic-123" :name "Test" :messages []}
               dispatched (atom nil)]
 
           ;; Setup: write a topic file

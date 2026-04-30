@@ -10,24 +10,6 @@
   (merge (m/decode schema/Message {} mt/default-value-transformer)
          overrides))
 
-(deftest test-model->provider
-  (testing "identifies Anthropic models"
-    (is (= :anthropic (schema/model->provider "claude-3-5-haiku-latest")))
-    (is (= :anthropic (schema/model->provider "claude-3-opus-20240229"))))
-
-  (testing "identifies OpenAI models"
-    (is (= :openai (schema/model->provider "gpt-4o")))
-    (is (= :openai (schema/model->provider "gpt-4o-mini")))
-    (is (= :openai (schema/model->provider "gpt-3.5-turbo"))))
-
-  (testing "identifies Google models"
-    (is (= :google (schema/model->provider "gemini-2.0-flash-exp")))
-    (is (= :google (schema/model->provider "gemini-pro"))))
-
-  (testing "throws on unknown model prefix"
-    (is (thrown? js/Error (schema/model->provider "unknown-model")))
-    (is (thrown? js/Error (schema/model->provider "mistral-large")))))
-
 ;; ========================================
 ;; Excerpt (Selection Capture)
 ;; ========================================

@@ -1,6 +1,5 @@
 (ns gremllm.schema
-  (:require [clojure.string :as str]
-            [malli.core :as m]
+  (:require [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
 
@@ -25,19 +24,6 @@
   "Generates numeric message IDs for chat messages."
   []
   (js/Date.now))
-
-;; ========================================
-;; Providers
-;; ========================================
-
-(defn model->provider
-  "Infers provider from model string. Pure function for easy testing."
-  [model]
-  (cond
-    (str/starts-with? model "claude-") :anthropic
-    (str/starts-with? model "gpt-")    :openai
-    (str/starts-with? model "gemini-") :google
-    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
 
 ;; ========================================
 ;; Excerpt (Selection Capture)

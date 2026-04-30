@@ -52,7 +52,7 @@
 
 (deftest restore-with-topics-test
   (testing "Sets active topic without model param"
-    (let [topic (assoc (schema/create-topic) :model "claude-3-5-sonnet-20241022")
+    (let [topic (schema/create-topic)
           effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
                                                       :active-topic-id "tid"})
           [_ topic-id] (get-action effects :topic.actions/set-active)]
