@@ -9,9 +9,8 @@
 (deftest render-input-form-test
   (testing ":on-submit handler has correct structure"
     (let [hiccup (chat-ui/render-input-form
-                   {:input-value    "some input"
-                    :loading?       false
-                    :has-any-api-key?   true})
+                   {:input-value "some input"
+                    :loading?    false})
           form   (lookup/select-one 'form hiccup)]
       (is (some? form) "A :form element should be rendered.")
       (is (= [[:effects/prevent-default] [:form.actions/submit]]

@@ -8,10 +8,6 @@
                     {:label (.getName app)
                      :submenu [{:role "about"}
                                {:type "separator"}
-                               {:label "Settings..."
-                                :accelerator "Cmd+,"
-                                :click #(nxr/dispatch store {} [[:menu.actions/show-settings]])}
-                               {:type "separator"}
                                {:role "services"
                                 :submenu []}
                                {:type "separator"}
@@ -35,12 +31,6 @@
                                       :accelerator (if is-mac "Cmd+O" "Ctrl+O")
                                       :click #(nxr/dispatch store {} [[:menu.actions/open-folder]])}
 
-                                     (when-not is-mac
-                                       {:type "separator"})
-                                     (when-not is-mac
-                                       {:label "Settings..."
-                                        :accelerator "Ctrl+,"
-                                        :click #(nxr/dispatch store {} [[:menu.actions/show-settings]])})
                                      {:type "separator"}
                                      (if is-mac
                                        {:role "close"}

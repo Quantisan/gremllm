@@ -115,7 +115,7 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? has-any-api-key? pending-attachments excerpts]}]
+(defn render-input-form [{:keys [input-value loading? pending-attachments excerpts]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
@@ -125,9 +125,7 @@
      [:textarea {:class "chat-input"
                  :rows 2
                  :value input-value
-                 :placeholder (if has-any-api-key?
-                                "Type a message... (Shift+Enter for new line)"
-                                "Add API key to start chatting...")
+                 :placeholder "Type a message... (Shift+Enter for new line)"
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
                       :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
                       :dragover [[:form.actions/handle-dragover]]
@@ -136,5 +134,5 @@
                  :autofocus true}]
 
      [:button {:type "submit"
-               :disabled (or loading? (not has-any-api-key?) (str/blank? input-value))}
+               :disabled (or loading? (str/blank? input-value))}
       "Send"]]]])

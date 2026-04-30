@@ -3,12 +3,9 @@
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.system :as system-state]
-            [gremllm.renderer.state.sensitive :as sensitive-state]
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.state.excerpt :as excerpt-state]
-            [gremllm.renderer.ui.settings :as settings-ui]
             [gremllm.renderer.ui.chat :as chat-ui]
             [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.welcome :as welcome-ui]
@@ -18,8 +15,7 @@
 
 (defn- render-workspace [state]
   ;; TODO: all these state crumbs... is there a more organized method?
-  (let [has-any-api-key?      (system-state/has-any-api-key? state)
-        workspace             (workspace-state/get-workspace state)
+  (let [workspace             (workspace-state/get-workspace state)
         document-content      (document-state/get-content state)
         pending-diffs         (topic-state/get-pending-diffs state)
         active-topic-id       (topic-state/get-active-topic-id state)
@@ -65,9 +61,7 @@
 
      ;; Zone 3: Chat panel
      [e/chat-panel
-      [e/top-bar
-       (when-not has-any-api-key?
-         (settings-ui/render-api-key-warning))]
+      [e/top-bar]
 
       (let [messages (topic-state/get-messages state)
             awaiting-response? (and (loading-state/loading? state active-topic-id)
@@ -77,13 +71,8 @@
       (chat-ui/render-input-form
         {:input-value          (form-state/get-user-input state)
          :loading?             (loading-state/loading? state active-topic-id)
-         :has-any-api-key?     has-any-api-key?
          :pending-attachments  (form-state/get-pending-attachments state)
-         :excerpts             excerpts})
-
-      (settings-ui/render-settings-modal
-       (merge (sensitive-state/settings-view-props state)
-              {:open? (ui-state/showing-settings? state)}))]]))
+         :excerpts             excerpts})]]))
 
 (defn render-app [state]
   (if (workspace-state/loaded? state)
