@@ -64,16 +64,6 @@
 (defn clear-pending-attachments [_state]
   [[:effects/save form-state/pending-attachments-path []]])
 
-(defn show-settings [_state]
-  ;; Refresh system info to ensure settings modal displays current API key status
-  [[:system.actions/request-info]
-   [:effects/save ui-state/showing-settings-path true]])
-
-(defn hide-settings [_state]
-  ;; Refresh system info to ensure has-any-api-key? is up-to-date
-  [[:system.actions/request-info]
-   [:effects/save ui-state/showing-settings-path false]])
-
 (defn toggle-nav [state]
   (let [expanded? (ui-state/nav-expanded? state)]
     [[:effects/save ui-state/nav-expanded-path (not expanded?)]]))

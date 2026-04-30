@@ -5,8 +5,6 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.document :as document]
-            [gremllm.renderer.actions.system :as system]
-            [gremllm.renderer.actions.settings :as settings]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
@@ -143,8 +141,6 @@
 (nxr/register-action! :form.actions/handle-dragover ui/handle-dragover)
 (nxr/register-action! :form.actions/handle-file-drop ui/handle-file-drop)
 (nxr/register-action! :ui.actions/clear-pending-attachments ui/clear-pending-attachments)
-(nxr/register-action! :ui.actions/show-settings ui/show-settings)
-(nxr/register-action! :ui.actions/hide-settings ui/hide-settings)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
 (nxr/register-action! :ui.actions/focus-chat-input ui/focus-chat-input)
 (nxr/register-action! :ui.actions/toggle-nav ui/toggle-nav)
@@ -203,19 +199,6 @@
   (fn [{:keys [dispatch]} store topic-id]
     (when-let [effects (topic/auto-save @store topic-id)]
       (dispatch effects))))
-
-(nxr/register-action! :system.actions/request-info system/request-info)
-(nxr/register-action! :system.actions/set-info system/set-info)
-(nxr/register-action! :system.actions/request-error system/request-error)
-
-;; Settings
-(nxr/register-action! :settings.actions/update-input settings/update-input)
-(nxr/register-action! :settings.actions/save-key settings/save-key)
-(nxr/register-action! :settings.actions/remove-key settings/remove-key)
-(nxr/register-action! :settings.actions/save-success settings/save-success)
-(nxr/register-action! :settings.actions/save-error settings/save-error)
-(nxr/register-action! :settings.actions/remove-success settings/remove-success)
-(nxr/register-action! :settings.actions/remove-error settings/remove-error)
 
 ;; Excerpt
 (nxr/register-action! :excerpt.actions/capture excerpt/capture)

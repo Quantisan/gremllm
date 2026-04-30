@@ -36,8 +36,7 @@
     (.onMenuCommand js/window.electronAPI "menu:command"
                     (fn [_ command-str]
                       (case (keyword command-str)
-                        :save-topic    (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
-                        :show-settings (nxr/dispatch store {} [[:ui.actions/show-settings]])
+                        :save-topic (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
                         nil)))
 
     ;; Handle workspace sync from main process
@@ -66,5 +65,4 @@
 
     ;; Trigger the first render
     (nxr/dispatch store {}
-                  [[:system.actions/request-info]
-                   [:workspace.actions/bootstrap]]))))
+                  [[:workspace.actions/bootstrap]]))))
