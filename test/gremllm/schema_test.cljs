@@ -10,30 +10,6 @@
   (merge (m/decode schema/Message {} mt/default-value-transformer)
          overrides))
 
-(deftest test-provider->api-key-keyword
-  (testing "maps Anthropic to anthropic-api-key"
-    (is (= :anthropic-api-key (schema/provider->api-key-keyword :anthropic))))
-
-  (testing "maps OpenAI to openai-api-key"
-    (is (= :openai-api-key (schema/provider->api-key-keyword :openai))))
-
-  (testing "maps Google to gemini-api-key"
-    (is (= :gemini-api-key (schema/provider->api-key-keyword :google)))))
-
-(deftest test-keyword-to-provider
-  (testing "maps anthropic-api-key to :anthropic"
-    (is (= :anthropic (schema/keyword-to-provider :anthropic-api-key))))
-
-  (testing "maps openai-api-key to :openai"
-    (is (= :openai (schema/keyword-to-provider :openai-api-key))))
-
-  (testing "maps gemini-api-key to :google"
-    (is (= :google (schema/keyword-to-provider :gemini-api-key))))
-
-  (testing "throws on unknown storage keyword"
-    (is (thrown? js/Error (schema/keyword-to-provider :unknown-api-key)))
-    (is (thrown? js/Error (schema/keyword-to-provider :mistral-api-key)))))
-
 (deftest test-model->provider
   (testing "identifies Anthropic models"
     (is (= :anthropic (schema/model->provider "claude-3-5-haiku-latest")))
@@ -51,16 +27,6 @@
   (testing "throws on unknown model prefix"
     (is (thrown? js/Error (schema/model->provider "unknown-model")))
     (is (thrown? js/Error (schema/model->provider "mistral-large")))))
-
-(deftest test-provider-display-name
-  (testing "returns display name for Anthropic"
-    (is (= "Anthropic" (schema/provider-display-name :anthropic))))
-
-  (testing "returns display name for OpenAI"
-    (is (= "OpenAI" (schema/provider-display-name :openai))))
-
-  (testing "returns display name for Google"
-    (is (= "Google" (schema/provider-display-name :google)))))
 
 ;; ========================================
 ;; Excerpt (Selection Capture)

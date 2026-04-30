@@ -23,49 +23,6 @@
 ;; IPC Codecs
 ;; ========================================
 
-(def FlatSecrets
-  "Secrets structure as received from IPC (main process).
-   Flat map with provider-specific key names.
-   Derived from provider-storage-key-map."
-  (into [:map]
-        (map (fn [[_provider storage-key]]
-               [storage-key {:optional true} [:maybe :string]])
-             schema/provider-storage-key-map)))
-
-(def SystemInfo
-  "System info structure as received from main process.
-   Contains platform capabilities and secrets."
-  [:map
-   [:encryption-available? :boolean]
-   [:secrets {:optional true} FlatSecrets]])
-
-(defn secrets-from-ipc
-  "Transforms flat IPC secrets to nested api-keys structure. Throws if invalid.
-   {:anthropic-api-key 'sk-ant-xyz'} → {:api-keys {:anthropic 'sk-ant-xyz'}}"
-  [flat-secrets]
-  (m/coerce schema/NestedSecrets
-            {:api-keys (into {}
-                             (keep (fn [provider]
-                                     (when-let [value (get flat-secrets (schema/provider->api-key-keyword provider))]
-                                       [provider value]))
-                                   schema/supported-providers))}
-            mt/json-transformer))
-
-(defn system-info-from-ipc
-  "Validates system info from IPC and transforms secrets. Throws if invalid."
-  [system-info-js]
-  (as-> system-info-js $
-    (js->clj $ :keywordize-keys true)
-    (if (:secrets $)
-      (update $ :secrets secrets-from-ipc)
-      $)
-    (m/coerce SystemInfo $ mt/json-transformer)))
-
-(defn system-info-to-ipc
-  "Validates and prepares system info for IPC transmission. Throws if invalid."
-  [system-info]
-  (m/coerce SystemInfo system-info mt/strip-extra-keys-transformer))
-
 (defn topic-id-from-ipc
   "Validates topic identifier received via IPC. Throws if invalid."
   [topic-id]
