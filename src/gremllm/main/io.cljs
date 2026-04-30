@@ -1,8 +1,7 @@
 (ns gremllm.main.io
   (:require ["path" :as path]
             ["fs" :as fs]
-            ["node:url" :as node-url]
-            [cljs.reader :as edn]))
+            ["node:url" :as node-url]))
 
 (def ^:private user-subdir "User")
 (def ^:private topics-subdir "topics")
@@ -75,21 +74,6 @@
   "Return a seq of entries in dir."
   [dir]
   (array-seq (.readdirSync fs dir)))
-
-(defn secrets-file-path [user-data-dir]
-  (user-dir-path user-data-dir "secrets.edn"))
-
-(defn read-secrets-file [filepath]
-  (if (file-exists? filepath)
-    (try
-      (edn/read-string (read-file filepath))
-      (catch :default _
-        {}))
-    {}))
-
-(defn write-secrets-file [filepath secrets-map]
-  (ensure-dir (path-dirname filepath))
-  (write-file filepath (pr-str secrets-map)))
 
 (defn topics-dir-path [workspace-dir]
   (path-join workspace-dir topics-subdir))

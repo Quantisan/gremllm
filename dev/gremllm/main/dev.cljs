@@ -1,6 +1,5 @@
 (ns gremllm.main.dev
-  (:require [gremllm.main.core :as core]
-            [gremllm.main.electron-runtime-test :as electron-runtime-test]))
+  (:require [gremllm.main.core :as core]))
 
 ;; NOTE: Dataspex/action-log not used here. dataspex.core uses js/location at
 ;; load time, which doesn't exist in Node.js (main process). Works in renderer
@@ -15,8 +14,6 @@
 
   ;; Load .env file
   (.config (js/require "@dotenvx/dotenvx") #js {:override true})
-
-  (electron-runtime-test/test-safe-storage)
 
   ;; Delegate to the main entry point
   (core/main))
