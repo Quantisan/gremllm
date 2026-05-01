@@ -16,9 +16,6 @@
 (defalias chat-panel [attrs & body]
   (into [:section.chat-panel (merge {:data-theme "dark"} attrs)] body))
 
-(defalias top-bar [attrs & body]
-  (into [:header.top-bar (merge {} attrs)] body))
-
 (defalias chat-area [attrs & body]
   (into [:div.chat-area (merge {:id "chat-messages-container"} attrs)] body))
 

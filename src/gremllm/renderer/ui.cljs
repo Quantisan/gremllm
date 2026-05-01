@@ -61,8 +61,6 @@
 
      ;; Zone 3: Chat panel
      [e/chat-panel
-      [e/top-bar]
-
       (let [messages (topic-state/get-messages state)
             awaiting-response? (and (loading-state/loading? state active-topic-id)
                                     (not= :assistant (:type (peek messages))))]
