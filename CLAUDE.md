@@ -158,7 +158,7 @@ Following FCIS principles, all state changes flow through Nexus:
 **Conventions:**
 - Domain namespacing: `document.actions/create`, `topic.actions/set-active`, `workspace.actions/open-folder`
 - Always dispatch as vectors: `[[:action-name args]]`
-- Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:dom/element-by-id`, and `:dom.element/property`
+- Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:event/text-selection`, `:dom/element-by-id`, and `:dom.element/property`
 
 ## IPC & Data
 
