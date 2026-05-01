@@ -60,7 +60,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	createDocument: () => ipcRenderer.invoke("document/create"),
 	pickWorkspaceFolder: () => ipcRenderer.invoke("workspace/pick-folder"),
 	reloadWorkspace: () => ipcRenderer.invoke("workspace/reload"),
-	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
+	onMenuCommand: (callback) => ipcRenderer.on("menu:command", callback),
 	onWorkspaceOpened: (callback) => ipcRenderer.on("workspace:opened", callback),
 	onAcpSessionUpdate: (callback) => ipcRenderer.on("acp:session-update", callback),
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
