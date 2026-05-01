@@ -12,11 +12,11 @@ that tie chat activity back to `document.md`.
 - `actions.cljs`: action and effect registration, DOM placeholders, promise
   handling, store-level effects
 - `actions/`: domain actions for UI, workspace, topics, messages, ACP,
-  excerpts, settings, and document state
+  excerpts, and document state
 - `state/`: focused selectors and paths for document, workspace, topic, form,
-  excerpt, loading, sensitive, system, and UI state
+  excerpt, loading, and UI state
 - `ui.cljs`: app-level composition
-- `ui/`: chat, topics, settings, welcome, markdown, and document views
+- `ui/`: chat, topics, welcome, markdown, and document views
 - `ui/document/`: source-aware helpers for diff composition, source locator
   metadata, and excerpt highlighting
 
@@ -26,7 +26,8 @@ that tie chat activity back to `document.md`.
 
 Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
 `acp:session-update`, and `menu:command`, installs the render watcher, and
-dispatches initial system and workspace actions.
+performs the first render explicitly so the welcome view appears before any
+state change.
 
 ### Workspace Hydration
 
@@ -57,10 +58,10 @@ re-synced after markdown re-render.
 
 ### Menu Commands
 
-`onMenuCommand` listener in `renderer/core.cljs` routes `:save-topic` and
-`:show-settings` keywords from the main-process menu into Nexus dispatches.
-This lives in `core.cljs` (not `actions/`) because it is a preload-event
-subscription wired at bootstrap, not a domain action.
+`onMenuCommand` listener in `renderer/core.cljs` routes `:save-topic` keywords
+from the main-process menu into Nexus dispatches. This lives in `core.cljs`
+(not `actions/`) because it is a preload-event subscription wired at bootstrap,
+not a domain action.
 
 ## Entry Points
 

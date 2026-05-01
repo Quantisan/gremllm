@@ -11,7 +11,7 @@ process, or JS boundaries needs validation or translation.
 - `src/gremllm/schema.cljs`: canonical data models for messages, attachments,
   excerpts, topics, sessions, and workspace-level structures
 - `src/gremllm/schema/codec.cljs`: boundary adapters for disk, IPC, DOM
-  selection capture, ACP session updates, and system info
+  selection capture, and ACP session updates
 - `src/gremllm/schema/codec/acp_permission.cljs`: pure permission policy used
   by `main.effects.acp`
 

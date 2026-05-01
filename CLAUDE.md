@@ -41,7 +41,7 @@ Why PE due diligence:
 - `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 
 **Operational Map:**
-- Main process owns Electron lifecycle, native integration, workspace and topic persistence, secrets, and ACP connection bootstrap
+- Main process owns Electron lifecycle, native integration, workspace and topic persistence, and ACP connection bootstrap
 - Renderer owns application state, user workflows, document rendering, excerpt capture, and pending diff presentation
 - Schema/codecs own shared contracts and boundary transforms
 - The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle, callbacks, and permission resolution
@@ -122,8 +122,8 @@ We practice a form of domain-driven design where the structure of our code—our
 This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
 
 **How this manifests:**
-- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `settings` (e.g., `renderer.actions.document`, `main.actions.secrets`).
-- **State Actions:** Keywords like `:topic.actions/set-active`, `:document.actions/create`, and `:settings.actions/save-key` are namespaced by the part of the system they affect.
+- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
+- **State Actions:** Keywords like `:topic.actions/set-active`, `:document.actions/create`, and `:workspace.actions/open-folder` are namespaced by the part of the system they affect.
 - **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/create`, or `topic/save`.
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
@@ -156,9 +156,9 @@ Following FCIS principles, all state changes flow through Nexus:
 ```
 
 **Conventions:**
-- Domain namespacing: `document.actions/create`, `topic.actions/set-active`, `settings.actions/save-key`
+- Domain namespacing: `document.actions/create`, `topic.actions/set-active`, `workspace.actions/open-folder`
 - Always dispatch as vectors: `[[:action-name args]]`
-- Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:dom/element-by-id`, and `:dom.element/property`
+- Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:event/text-selection`, `:dom/element-by-id`, and `:dom.element/property`
 
 ## IPC & Data
 
@@ -204,7 +204,6 @@ Framework and library documentation is available in the `context/` directory:
 - `context/electron_browser_window.md` - BrowserWindow behavior and lifecycle
 - `context/electron_ipc.md` - Inter-process communication
 - `context/electron_dialog.md` - Native dialogs and file pickers
-- `context/electron_safestorage.md` - Secure credential storage
 - `context/electron_menu.md` - Application menu system
 - `context/pico_modal.md` - Modal/dialog styling details for PicoCSS
 

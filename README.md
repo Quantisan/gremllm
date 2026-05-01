@@ -38,7 +38,7 @@ Requires Node.js 22+, Java 21+, and Clojure.
 npm install
 npm run dev      # hot reload; Dataspex state inspector at localhost:7117
 npm test         # unit tests
-npm run test:integration   # requires API keys
+npm run test:integration   # ACP integration tests
 ```
 
 ## Tech

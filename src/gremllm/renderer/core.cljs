@@ -26,18 +26,17 @@
 ;;  :content string?}  ; The actual message text
 
 (defn create-store []
-  (atom nil))
+  (atom {}))
 
 (defn ^:export main
   ([] (main (create-store)))
   ([store]
    (let [el (js/document.getElementById "app")]
     ;; Handle menu commands - these originate from main process menus
-    (.onMenuCommand js/window.electronAPI "menu:command"
+    (.onMenuCommand js/window.electronAPI
                     (fn [_ command-str]
                       (case (keyword command-str)
-                        :save-topic    (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
-                        :show-settings (nxr/dispatch store {} [[:ui.actions/show-settings]])
+                        :save-topic (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
                         nil)))
 
     ;; Handle workspace sync from main process
@@ -64,7 +63,7 @@
       (fn [dispatch-data actions]
         (nxr/dispatch store dispatch-data actions)))
 
-    ;; Trigger the first render
-    (nxr/dispatch store {}
-                  [[:system.actions/request-info]
-                   [:workspace.actions/bootstrap]]))))
+    ;; add-watch only fires on change, so render once explicitly to seed the DOM
+    (->> @store
+         (ui/render-app)
+         (r/render el)))))

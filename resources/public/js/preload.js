@@ -60,13 +60,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	createDocument: () => ipcRenderer.invoke("document/create"),
 	pickWorkspaceFolder: () => ipcRenderer.invoke("workspace/pick-folder"),
 	reloadWorkspace: () => ipcRenderer.invoke("workspace/reload"),
-	onMenuCommand: (command, callback) => ipcRenderer.on(command, callback),
+	onMenuCommand: (callback) => ipcRenderer.on("menu:command", callback),
 	onWorkspaceOpened: (callback) => ipcRenderer.on("workspace:opened", callback),
 	onAcpSessionUpdate: (callback) => ipcRenderer.on("acp:session-update", callback),
-	getSystemInfo: () => ipcRenderer.invoke("system/get-info"),
-	// Secrets API
-	saveSecret: (key, value) => ipcRenderer.invoke("secrets/save", key, value),
-	deleteSecret: (key) => ipcRenderer.invoke("secrets/delete", key),
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
 	getFilePath: (file) => webUtils.getPathForFile(file),
 	// ACP API

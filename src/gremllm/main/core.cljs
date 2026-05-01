@@ -1,6 +1,5 @@
 (ns gremllm.main.core
   (:require [gremllm.main.actions]
-            [gremllm.main.actions.secrets :as secrets]
             [gremllm.main.actions.document :as document-actions]
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.acp :as acp-effects]
@@ -12,10 +11,6 @@
             [nexus.registry :as nxr]
             ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
-(defn system-info [secrets encryption-available?]
-  {:encryption-available? encryption-available?
-   :secrets               (secrets/redact-all-string-values secrets)})
-
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations.
 
@@ -26,7 +21,7 @@
    SYNC HANDLERS (must return values to IPC caller):
    - Use direct effect pipeline (boundary adapters, not business logic)
    - Flow: Extract context → Pure transform → Execute effect → Return result
-   - Examples: topic/save, topic/delete, secrets/*, system/get-info
+   - Examples: topic/save, topic/delete
    - Why: Electron's IPC requires synchronous return values
 
    ASYNC HANDLERS (fire-and-forget, return #js {}):
@@ -38,9 +33,8 @@
    Both patterns maintain FCIS: sync handlers pipeline through pure functions;
    async handlers route through registered actions that return effect descriptions.
 
-   Domains: Topics (save/load), Workspace (bulk ops), Secrets (config),
-            System (capabilities), ACP (agent sessions)"
-  [store secrets-filepath]
+   Domains: Topics (save/load), Workspace (bulk ops), ACP (agent sessions)"
+  [store]
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
@@ -82,24 +76,6 @@
              ;; Return empty - workspace data flows via workspace:opened
              #js {}))
 
-  ;; Secrets - sync pattern: call functions directly at boundary, return results
-  (.handle ipcMain "secrets/save"
-           (fn [_event key value]
-             (secrets/save secrets-filepath (keyword key) value)))
-
-  (.handle ipcMain "secrets/delete"
-           (fn [_event key]
-             (secrets/del secrets-filepath (keyword key))))
-
-  ;; System - sync pattern: gather info, transform to IPC format, return
-  (.handle ipcMain "system/get-info"
-           (fn [_event]
-             (-> (system-info
-                   (secrets/load-all secrets-filepath)
-                   (secrets/check-availability))
-                 (codec/system-info-to-ipc)
-                 (clj->js))))
-
   ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
   (.on ipcMain "acp/new-session"
        (fn [event ipc-correlation-id]
@@ -124,18 +100,16 @@
                        [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-workspace-dir @store)]]))))
 
 (defn- setup-system-resources [store]
-  (let [user-data-dir   (.getPath app "userData")
-        secrets-filepath (io/secrets-file-path user-data-dir)]
-    (register-domain-handlers store secrets-filepath)
-    (menu/create-menu store)
-    ;; Initialize ACP in-process agent eagerly at launch.
-    ;; Session update callback receives raw JS params from SDK, coerces
-    ;; via codec, and dispatches as a Nexus action.
-    ;;
-    ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
-    ;; from runtime capabilities - other ACP effects handle user operations.
-    (acp-effects/initialize
-      {:on-session-update (acp-effects/make-session-update-callback store nil)})))
+  (register-domain-handlers store)
+  (menu/create-menu store)
+  ;; Initialize ACP in-process agent eagerly at launch.
+  ;; Session update callback receives raw JS params from SDK, coerces
+  ;; via codec, and dispatches as a Nexus action.
+  ;;
+  ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
+  ;; from runtime capabilities - other ACP effects handle user operations.
+  (acp-effects/initialize
+    {:on-session-update (acp-effects/make-session-update-callback store nil)}))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

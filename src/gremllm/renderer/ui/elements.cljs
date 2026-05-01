@@ -16,22 +16,6 @@
 (defalias chat-panel [attrs & body]
   (into [:section.chat-panel (merge {:data-theme "dark"} attrs)] body))
 
-(defalias modal [attrs body]
-  (let [{:keys [open? on-close]} attrs
-        attrs (dissoc attrs :open? :on-close)]
-    [:dialog (assoc attrs :id "settings-dialog" :open open?)
-     [:article
-      [:header
-       [:button {:aria-label "Close" :rel "prev" :class "close" :on {:click on-close}}]
-       [:h3 "⚙️ Settings"]]
-      body]]))
-
-(defalias top-bar [attrs & body]
-  (into [:header.top-bar (merge {} attrs)] body))
-
-(defalias alert [attrs & body]
-  (into [:article (merge {:role "alert"} attrs)] body))
-
 (defalias chat-area [attrs & body]
   (into [:div.chat-area (merge {:id "chat-messages-container"} attrs)] body))
 

@@ -1,7 +1,5 @@
 (ns gremllm.schema
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
-            [malli.core :as m]
+  (:require [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]))
 
@@ -26,70 +24,6 @@
   "Generates numeric message IDs for chat messages."
   []
   (js/Date.now))
-
-;; ========================================
-;; Providers
-;; ========================================
-
-(def provider-storage-key-map
-  "Canonical mapping of provider keywords to their storage key names.
-   Single source of truth for provider-to-storage-key relationships."
-  {:anthropic :anthropic-api-key
-   :openai    :openai-api-key
-   :google    :gemini-api-key})
-
-(def supported-providers
-  "Canonical list of supported LLM providers.
-   Derived from provider-storage-key-map for single source of truth."
-  (vec (keys provider-storage-key-map)))
-
-(defn model->provider
-  "Infers provider from model string. Pure function for easy testing."
-  [model]
-  (cond
-    (str/starts-with? model "claude-") :anthropic
-    (str/starts-with? model "gpt-")    :openai
-    (str/starts-with? model "gemini-") :google
-    :else (throw (js/Error. (str "Unknown provider for model: " model)))))
-
-(defn provider-display-name
-  "Returns human-readable display name for provider keyword."
-  [provider]
-  (case provider
-    :anthropic "Anthropic"
-    :openai    "OpenAI"
-    :google    "Google"))
-
-(defn provider->api-key-keyword
-  "Maps provider to safeStorage lookup key. Pure function for easy testing."
-  [provider]
-  (get provider-storage-key-map provider))
-
-(defn keyword-to-provider
-  "Inverse of provider->api-key-keyword. Maps storage keyword to provider.
-   :anthropic-api-key → :anthropic
-   :openai-api-key → :openai
-   :gemini-api-key → :google"
-  [storage-keyword]
-  (or (get (set/map-invert provider-storage-key-map) storage-keyword)
-      (throw (js/Error. (str "Unknown API key keyword: " storage-keyword)))))
-
-;; ========================================
-;; Secrets
-;; ========================================
-
-(def APIKeysMap
-  "Nested map of provider keywords to redacted API key strings.
-   Used in renderer state at [:system :secrets :api-keys]"
-  [:map-of
-   (into [:enum] supported-providers)
-   [:maybe :string]])
-
-(def NestedSecrets
-  "Secrets structure used in renderer state after transformation.
-   Contains nested :api-keys map plus any other secret entries."
-  [:map
-   [:api-keys {:optional true} APIKeysMap]])
 
 ;; ========================================
 ;; Excerpt (Selection Capture)
