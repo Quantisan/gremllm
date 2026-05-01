@@ -155,7 +155,6 @@
     [[:effects/save (loading-state/loading-path topic-id) loading?]]))
 
 ;; Workspace
-(nxr/register-action! :workspace.actions/bootstrap workspace/bootstrap)
 (nxr/register-action! :workspace.actions/opened workspace/opened)
 (nxr/register-action! :workspace.actions/restore-with-topics workspace/restore-with-topics)
 (nxr/register-action! :workspace.actions/initialize-empty workspace/initialize-empty)

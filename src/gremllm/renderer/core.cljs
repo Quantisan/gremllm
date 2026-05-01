@@ -26,7 +26,7 @@
 ;;  :content string?}  ; The actual message text
 
 (defn create-store []
-  (atom nil))
+  (atom {}))
 
 (defn ^:export main
   ([] (main (create-store)))
@@ -63,6 +63,7 @@
       (fn [dispatch-data actions]
         (nxr/dispatch store dispatch-data actions)))
 
-    ;; Trigger the first render
-    (nxr/dispatch store {}
-                  [[:workspace.actions/bootstrap]]))))
+    ;; add-watch only fires on change, so render once explicitly to seed the DOM
+    (->> @store
+         (ui/render-app)
+         (r/render el)))))

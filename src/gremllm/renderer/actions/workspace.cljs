@@ -3,13 +3,6 @@
             [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
-;; TODO: we should load previous session meta data. e.g. auto-load last opened workspace
-(defn bootstrap [state]
-  (if (nil? state)
-    ;; Initializes empty renderer state so startup dispatch triggers render watchers
-    [[:effects/save [] {}]]
-    []))
-
 (defn mark-loaded
   "Mark the workspace as successfully loaded and ready for use."
   [_state]
