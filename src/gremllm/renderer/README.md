@@ -26,7 +26,8 @@ that tie chat activity back to `document.md`.
 
 Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
 `acp:session-update`, and `menu:command`, installs the render watcher, and
-dispatches the initial workspace bootstrap action.
+performs the first render explicitly so the welcome view appears before any
+state change.
 
 ### Workspace Hydration
 

@@ -122,7 +122,7 @@ We practice a form of domain-driven design where the structure of our code—our
 This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
 
 **How this manifests:**
-- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `settings` (e.g., `renderer.actions.document`, `main.actions.topic`).
+- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
 - **State Actions:** Keywords like `:topic.actions/set-active`, `:document.actions/create`, and `:workspace.actions/open-folder` are namespaced by the part of the system they affect.
 - **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/create`, or `topic/save`.
 
