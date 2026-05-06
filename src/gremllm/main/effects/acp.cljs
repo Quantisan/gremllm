@@ -151,7 +151,7 @@
                                       (js/console.error "ACP on-permission tap failed (non-fatal; resolved outcome is unaffected)" e))))
                              (codec/acp-permission-outcome-to-js outcome))
                            (catch :default e
-                             (js/console.error "ACP permission resolve failed" e raw-params)
+                             (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
                              #js {:outcome #js {:outcome "cancelled"}})))
           ^js result   (create-connection
                          #js {:onSessionUpdate   session-cb
@@ -200,7 +200,7 @@
         (when on-update (on-update coerced))
         (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
       (catch :default e
-        (js/console.error "ACP session update coercion failed" e params)))))
+        (js/console.error "ACP session update coercion failed" e "raw params:" params)))))
 
 (defn shutdown
   "Tear down in-process ACP agent. Returns a promise that resolves after dispose

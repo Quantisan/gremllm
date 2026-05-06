@@ -267,6 +267,66 @@
       (is (= "mcp__acp__Edit" (get-in result [:tool-call :tool-name])))
       (is (= "edit" (get-in result [:tool-call :kind]))))))
 
+(deftest test-acp-session-update-usage-update
+  (testing "coerces usage_update with used and size"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "usage_update"
+                                    :used 1234
+                                    :size 200000}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= :usage-update (get-in result [:update :session-update])))
+      (is (= 1234 (get-in result [:update :used])))
+      (is (= 200000 (get-in result [:update :size])))))
+
+  (testing "coerces usage_update with null cost"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "usage_update"
+                                    :used 1234
+                                    :size 200000
+                                    :cost nil}}
+          result (codec/acp-session-update-from-js js-data)]
+      (is (= :usage-update (get-in result [:update :session-update])))))
+
+  (testing "coerces tool_call with fetch kind and no locations, status, or content"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_websearch_01"
+                                    :title "WebSearch"}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call (:session-update update)))
+      (is (= "toolu_websearch_01" (:tool-call-id update)))
+      (is (= "WebSearch" (:title update)))
+      (is (nil? (:kind update)))
+      (is (nil? (:locations update)))
+      (is (nil? (:status update)))
+      (is (nil? (:content update)))))
+
+  (testing "coerces tool_call with explicit fetch kind"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call"
+                                    :toolCallId "toolu_websearch_02"
+                                    :title "WebSearch"
+                                    :kind "fetch"
+                                    :rawInput #js {:query "gremllm"}}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= "fetch" (:kind update)))
+      (is (= "gremllm" (get-in update [:raw-input :query])))))
+
+  (testing "coerces tool_call_update with null locations and null content"
+    (let [js-data #js {:sessionId test-acp-session-id
+                       :update #js {:sessionUpdate "tool_call_update"
+                                    :toolCallId "toolu_websearch_03"
+                                    :status "completed"
+                                    :locations nil
+                                    :content nil}}
+          result (codec/acp-session-update-from-js js-data)
+          update (:update result)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (nil? (:locations update)))
+      (is (nil? (:content update))))))
+
 (deftest test-acp-update-text
   ;; Text chunks produce streaming text.
   (doseq [chunk-type (keys test-content-chunks)]

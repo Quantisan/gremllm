@@ -255,6 +255,10 @@
   "Schema for ACP tool call content."
   [:vector AcpToolCallContentItem])
 
+(def AcpToolKind
+  "ACP tool operation kinds."
+  [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
+
 (def AcpUpdate
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
@@ -282,26 +286,40 @@
      [:content AcpTextContent]]]
 
    [:tool-call
+    ;; SDK ToolCall only requires toolCallId and title — all other fields are optional.
+    ;; kind is [:maybe AcpToolKind] to accept both absent and null (SDK uses anyOf+null).
     [:map
      [:session-update                    [:= :tool-call]]
      [:tool-call-id                      :string]
      [:title                             :string]
-     [:kind                              [:enum "read" "edit"]]
-     [:status                            :string]
-     [:raw-input                         AcpToolRawInput]
+     [:kind {:optional true}             [:maybe AcpToolKind]]
+     [:status {:optional true}           [:maybe :string]]
+     [:raw-input {:optional true}        AcpToolRawInput]
      [:meta {:optional true}             AcpToolMeta]
-     [:content                           AcpToolCallContent]
-     [:locations {:optional true}        [:vector AcpToolLocation]]]]
+     [:content {:optional true}          [:maybe AcpToolCallContent]]
+     [:locations {:optional true}        [:maybe [:vector AcpToolLocation]]]]]
 
    [:tool-call-update
+    ;; SDK ToolCallUpdate only requires toolCallId. content/locations typed as ["array","null"].
     [:map
      [:session-update              [:= :tool-call-update]]
      [:tool-call-id                :string]
-     [:status {:optional true}     :string]
+     [:title {:optional true}      [:maybe :string]]
+     [:kind {:optional true}       [:maybe AcpToolKind]]
+     [:status {:optional true}     [:maybe :string]]
      [:raw-output {:optional true} [:or :string [:vector AcpRawOutputItem]]]
-     [:content {:optional true}    [:vector AcpToolCallContentItem]]
-     [:locations {:optional true}  [:vector AcpToolLocation]]
-     [:meta {:optional true}       AcpToolMeta]]]])
+     [:content {:optional true}    [:maybe [:vector AcpToolCallContentItem]]]
+     [:locations {:optional true}  [:maybe [:vector AcpToolLocation]]]
+     [:meta {:optional true}       AcpToolMeta]]]
+
+   [:usage-update
+    ;; SDK UsageUpdate (unstable): required used + size, optional cost + _meta.
+    [:map
+     [:session-update              [:= :usage-update]]
+     [:used                        :int]
+     [:size                        :int]
+     [:cost {:optional true}       :any]
+     [:_meta {:optional true}      [:maybe [:map-of :keyword :any]]]]]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
@@ -359,19 +377,18 @@
    [:name      :string]
    [:kind      AcpPermissionOptionKind]])
 
-(def AcpToolKind
-  "ACP tool operation kinds."
-  [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
-
 (def AcpPermissionToolCall
-  "Tool call context within an ACP permission request."
+  "Tool call context within an ACP permission request.
+   Per ACP SDK, RequestPermissionRequest.toolCall is a ToolCallUpdate shape — only toolCallId required."
   [:map
-   [:tool-call-id              :string]
-   [:tool-name {:optional true} :string]
-   [:kind         [:maybe AcpToolKind]]
-   [:title        :string]
-   [:raw-input    [:map-of :keyword :any]]
-   [:locations    [:vector AcpToolLocation]]])
+   [:tool-call-id               :string]
+   [:tool-name {:optional true}  :string]
+   [:title {:optional true}      [:maybe :string]]
+   [:kind {:optional true}       [:maybe AcpToolKind]]
+   [:status {:optional true}     [:maybe :string]]
+   [:raw-input {:optional true}  [:map-of :keyword :any]]
+   [:raw-output {:optional true} :any]
+   [:locations {:optional true}  [:maybe [:vector AcpToolLocation]]]])
 
 (def AcpPermissionRequest
   "ACP requestPermission params shape."

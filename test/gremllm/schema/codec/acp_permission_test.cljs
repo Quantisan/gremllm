@@ -123,6 +123,54 @@
                        cwd)
                      [:outcome :outcome])))))
 
+(deftest test-permission-request-fetch-kind-no-locations
+  (testing "coerces requestPermission with fetch kind and absent locations"
+    (let [result (coerce-permission-req
+                   #js {:sessionId "session-fetch"
+                        :toolCall  #js {:toolCallId "toolu_ws_01"
+                                        :kind       "fetch"
+                                        :title      "WebSearch"
+                                        :rawInput   #js {:query "latest news"}}
+                        :options   #js [#js {:optionId "reject-once" :kind "reject_once" :name "reject_once"}]})]
+      (is (= "toolu_ws_01" (get-in result [:tool-call :tool-call-id])))
+      (is (= "fetch" (get-in result [:tool-call :kind])))
+      (is (nil? (get-in result [:tool-call :locations])))))
+
+  (testing "coerces requestPermission with null locations"
+    (let [result (coerce-permission-req
+                   #js {:sessionId "session-fetch"
+                        :toolCall  #js {:toolCallId "toolu_ws_02"
+                                        :kind       "fetch"
+                                        :title      "WebSearch"
+                                        :rawInput   #js {:query "latest news"}
+                                        :locations  nil}
+                        :options   #js []})]
+      (is (= "toolu_ws_02" (get-in result [:tool-call :tool-call-id])))
+      (is (nil? (get-in result [:tool-call :locations])))))
+
+  (testing "coerces requestPermission with only toolCallId (minimal ToolCallUpdate)"
+    (let [result (coerce-permission-req
+                   #js {:sessionId "session-fetch"
+                        :toolCall  #js {:toolCallId "toolu_ws_03"}
+                        :options   #js []})]
+      (is (= "toolu_ws_03" (get-in result [:tool-call :tool-call-id])))
+      (is (nil? (get-in result [:tool-call :kind])))
+      (is (nil? (get-in result [:tool-call :title])))))
+
+  (testing "resolver rejects fetch-kind tool by default"
+    (let [path-mod    (js/require "path")
+          cwd         (.resolve path-mod (.cwd js/process) "resources")
+          options     (full-options-js)
+          option-id   (fn [res] (get-in res [:outcome :option-id]))
+          perm-req    (coerce-permission-req
+                        #js {:sessionId "session-fetch"
+                             :toolCall  #js {:toolCallId "toolu_ws_04"
+                                             :kind       "fetch"
+                                             :title      "WebSearch"
+                                             :rawInput   #js {:query "latest news"}}
+                             :options   options})]
+      (is (= "reject-once" (option-id (acp-permission/resolve-permission perm-req cwd)))))))
+
 (deftest test-permission-outcome-to-js-wire-shape
   (testing "selected outcome uses SDK camelCase optionId"
     (let [js-out (codec/acp-permission-outcome-to-js
