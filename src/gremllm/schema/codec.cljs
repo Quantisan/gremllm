@@ -288,6 +288,7 @@
    [:tool-call
     ;; SDK ToolCall only requires toolCallId and title — all other fields are optional.
     ;; kind is [:maybe AcpToolKind] to accept both absent and null (SDK uses anyOf+null).
+    ;; TODO: review optional keys — several may be required in practice at this trust boundary.
     [:map
      [:session-update                    [:= :tool-call]]
      [:tool-call-id                      :string]
@@ -301,6 +302,7 @@
 
    [:tool-call-update
     ;; SDK ToolCallUpdate only requires toolCallId. content/locations typed as ["array","null"].
+    ;; TODO: review optional keys — SDK partial-update design vs. what's reliable at this boundary.
     [:map
      [:session-update              [:= :tool-call-update]]
      [:tool-call-id                :string]
@@ -314,6 +316,7 @@
 
    [:usage-update
     ;; SDK UsageUpdate (unstable): required used + size, optional cost + _meta.
+    ;; TODO: review :cost :any — consider modelling Cost schema once stable.
     [:map
      [:session-update              [:= :usage-update]]
      [:used                        :int]
@@ -379,7 +382,8 @@
 
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request.
-   Per ACP SDK, RequestPermissionRequest.toolCall is a ToolCallUpdate shape — only toolCallId required."
+   Per ACP SDK, RequestPermissionRequest.toolCall is a ToolCallUpdate shape — only toolCallId required.
+   TODO: review optional keys — consider which are reliably present at this trust boundary."
   [:map
    [:tool-call-id               :string]
    [:tool-name {:optional true}  :string]
