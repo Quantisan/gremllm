@@ -259,6 +259,13 @@
   "ACP tool operation kinds."
   [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
 
+;; Upstream references: use the package version from package.json/lockfile.
+;; - agentclientprotocol/typescript-sdk: schema/schema.json,
+;;   src/schema/types.gen.ts, src/schema/zod.gen.ts
+;; - agentclientprotocol/claude-agent-acp: src/acp-agent.ts, src/tools.ts
+;; Search for: SessionUpdate, ToolCall, ToolCallUpdate,
+;; RequestPermissionRequest, UsageUpdate, ToolKind, toolInfoFromToolUse,
+;; toolUpdateFromDiffToolResponse, toAcpNotifications.
 (def AcpUpdate
   "Discriminated union of ACP session update types.
    Dispatches on :session-update field."
@@ -286,8 +293,10 @@
      [:content AcpTextContent]]]
 
    [:tool-call
-    ;; SDK ToolCall only requires toolCallId and title — all other fields are optional.
-    ;; kind is [:maybe AcpToolKind] to accept both absent and null (SDK uses anyOf+null).
+    ;; SDK ToolCall: required toolCallId/title; optional
+    ;; content/kind/locations/rawInput/rawOutput/status/_meta.
+    ;; Adapter emits tool_call from toAcpNotifications; toolInfoFromToolUse
+    ;; supplies title/kind/content/locations by Claude tool name.
     ;; TODO: review optional keys — several may be required in practice at this trust boundary.
     [:map
      [:session-update                    [:= :tool-call]]
@@ -301,7 +310,10 @@
      [:locations {:optional true}        [:maybe [:vector AcpToolLocation]]]]]
 
    [:tool-call-update
-    ;; SDK ToolCallUpdate only requires toolCallId. content/locations typed as ["array","null"].
+    ;; SDK ToolCallUpdate: required toolCallId; nullish
+    ;; content/kind/locations/status/title; optional rawInput/rawOutput/_meta.
+    ;; Adapter emits tool_call_update from toAcpNotifications and
+    ;; PostToolUse hooks; toolUpdateFromDiffToolResponse can supply diff content/locations.
     ;; TODO: review optional keys — SDK partial-update design vs. what's reliable at this boundary.
     [:map
      [:session-update              [:= :tool-call-update]]
@@ -382,7 +394,9 @@
 
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request.
-   Per ACP SDK, RequestPermissionRequest.toolCall is a ToolCallUpdate shape — only toolCallId required.
+   Per ACP SDK, RequestPermissionRequest.toolCall is ToolCallUpdate.
+   Adapter requestPermission calls construct toolCall with toolCallId,
+   rawInput, and fields returned from toolInfoFromToolUse.
    TODO: review optional keys — consider which are reliably present at this trust boundary."
   [:map
    [:tool-call-id               :string]
