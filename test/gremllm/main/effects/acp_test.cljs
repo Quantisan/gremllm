@@ -24,7 +24,7 @@
                     (fn [payload]
                       (swap! calls update :new-session conj payload)
                       (js/Promise.resolve #js {:sessionId session-id}))
-                    :unstable_resumeSession
+                    :resumeSession
                     (fn [payload]
                       (swap! calls update :resume-session conj payload)
                       (js/Promise.resolve #js {}))
@@ -306,4 +306,3 @@
                                           "dispose should have settled before shutdown promise resolves")))
                              (.finally (fn [] (done)))))))
               (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
-

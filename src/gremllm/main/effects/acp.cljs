@@ -178,7 +178,7 @@
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
-  (-> (.unstable_resumeSession (conn!)
+  (-> (.resumeSession (conn!)
         #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta session-meta})
       (.then (fn [_] acp-session-id))))
 
