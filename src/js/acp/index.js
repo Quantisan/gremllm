@@ -67,8 +67,8 @@ function createConnection(options = {}) {
     return result;
   };
 
-  const originalResumeSession = connection.unstable_resumeSession.bind(connection);
-  connection.unstable_resumeSession = async (params) => {
+  const originalResumeSession = connection.resumeSession.bind(connection);
+  connection.resumeSession = async (params) => {
     const result = await originalResumeSession(params);
     sessionCwdMap.set(params.sessionId, params.cwd);
     return result;
