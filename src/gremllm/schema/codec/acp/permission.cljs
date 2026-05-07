@@ -97,7 +97,6 @@
           (let [opt (select-option options ["reject_once" "reject_always"] last)]
             {:outcome {:outcome "selected" :option-id (:option-id opt)}}))
 
-        ;; Default: reject.
+        ;; Default: no policy defined for this kind yet — reject until classified.
         (let [opt (select-option options ["reject_once" "reject_always"] last)]
           {:outcome {:outcome "selected" :option-id (:option-id opt)}})))))
-
