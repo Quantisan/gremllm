@@ -1,5 +1,5 @@
 (ns gremllm.schema.codec-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema.codec :as codec]
             [gremllm.schema-test :as schema-test]))
 
@@ -26,8 +26,214 @@
           result (codec/user-message-from-ipc js-data)]
       (is (= expected-message result)))))
 
-(deftest test-acp-read-display-label
-  (testing "returns 'Read — filename (N lines)' when tool-response meta present"
+;; ============================================================================
+;; ACP Trust Boundary — Test Design Language
+;; ============================================================================
+;;
+;; Two test species, two sections.
+;;
+;; SECTION 1 — Boundary coercion (this section): one deftest per SDK message
+;; type (agent-message-chunk, tool-call, tool-call-update, permission-request,
+;; etc.). Each contains one canonical happy-path clause plus named clauses for
+;; the invariants this boundary actively enforces.
+;;
+;; SECTION 2 — Consumer helpers: one deftest per pure helper that operates on
+;; already-coerced data (acp-update-text, tool-response-diffs, ...).
+;;
+;; Rules
+;;   - A testing-clause name states the invariant being protected
+;;     ("throws without :kind"), not the input shape ("with diffs").
+;;   - Build JS payloads via (session-update-js ...) / (permission-request-js
+;;     ...). Test bodies show only the fields that matter for the case.
+;;   - Trivial keyword-lookup predicates aren't tested — they fail loudly if
+;;     shapes drift.
+;;   - Don't add a clause unless it proves a distinct invariant. No
+;;     fixture-variant tests.
+;;
+;; If you can't name your testing clause after an invariant, you're probably
+;; testing the fixture, not the boundary.
+;; ============================================================================
+
+(def ^:private test-acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b")
+
+(defn- session-update-js
+  "Build a JS-shaped session update payload as the ACP bridge would deliver it.
+   `update-fields` is a CLJS map with the SDK's camelCase keyword keys
+   (e.g. :sessionUpdate, :toolCallId); clj->js preserves keyword names
+   verbatim, so the resulting object matches the SDK wire shape."
+  [update-fields]
+  (clj->js {:sessionId test-acp-session-id :update update-fields}))
+
+(defn- permission-request-js
+  "Build a JS-shaped requestPermission payload.
+   Default `options` provide a single reject_once entry; tests override only
+   when the option shape itself is under test."
+  [tool-call-fields & [option-fields]]
+  (clj->js {:sessionId test-acp-session-id
+            :toolCall  tool-call-fields
+            :options   (or option-fields
+                           [{:optionId "reject" :name "Reject" :kind "reject_once"}])}))
+
+;; ========================================
+;; Section 1: Boundary Coercion
+;; ========================================
+
+(deftest acp-coerces-agent-message-chunk
+  (testing "happy path: chunk text accessible at :content :text"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "agent_message_chunk"
+                                       :content {:text "Hello" :type "text"}}))]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= :agent-message-chunk (get-in result [:update :session-update])))
+      (is (= "Hello" (get-in result [:update :content :text])))))
+
+  (testing "tolerates content without :type field"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "agent_message_chunk"
+                                       :content {:text "Hello"}}))]
+      (is (= "Hello" (get-in result [:update :content :text]))))))
+
+(deftest acp-coerces-agent-thought-chunk
+  (testing "happy path: chunk text accessible at :content :text"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "agent_thought_chunk"
+                                       :content {:text "The user wants" :type "text"}}))]
+      (is (= :agent-thought-chunk (get-in result [:update :session-update])))
+      (is (= "The user wants" (get-in result [:update :content :text]))))))
+
+(deftest acp-coerces-tool-call
+  (testing "happy path: camelCase keys and nested meta converted"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "tool_call"
+                                       :toolCallId "toolu_01"
+                                       :meta {:claudeCode {:toolName "Read"}}}))
+          update (:update result)]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= :tool-call (:session-update update)))
+      (is (= "toolu_01" (:tool-call-id update)))
+      (is (= "Read" (get-in update [:meta :claude-code :tool-name])))))
+
+  (testing "tolerates absent optional fields (non-file tools like WebSearch)"
+    ;; Regression guard: 1a4af57 — tool_call without :kind/:status/:content/:locations
+    ;; was silently aborted instead of reaching resolve-permission.
+    (let [update (-> (codec/acp-session-update-from-js
+                       (session-update-js {:sessionUpdate "tool_call"
+                                           :toolCallId "toolu_websearch"}))
+                     :update)]
+      (is (= :tool-call (:session-update update)))
+      (is (nil? (:kind update))))))
+
+(deftest acp-coerces-tool-call-update
+  (testing "happy path: session-update keyword and tool-call-id preserved"
+    (let [update (-> (codec/acp-session-update-from-js
+                       (session-update-js {:sessionUpdate "tool_call_update"
+                                           :toolCallId "toolu_01"}))
+                     :update)]
+      (is (= :tool-call-update (:session-update update)))
+      (is (= "toolu_01" (:tool-call-id update)))))
+
+  (testing "nil :content coerces to nil (nil-safe for diffs consumer)"
+    (let [update (-> (codec/acp-session-update-from-js
+                       (session-update-js {:sessionUpdate "tool_call_update"
+                                           :toolCallId "toolu_02"
+                                           :content nil}))
+                     :update)]
+      (is (nil? (:content update)))))
+
+  (testing "unknown content :type passes through as opaque map"
+    (let [update (-> (codec/acp-session-update-from-js
+                       (session-update-js {:sessionUpdate "tool_call_update"
+                                           :toolCallId "toolu_unknown"
+                                           :content [{:type "unknown_future_type"
+                                                      :data "something"}]}))
+                     :update)]
+      (is (= [{:type "unknown_future_type" :data "something"}]
+             (:content update))))))
+
+(deftest acp-coerces-usage-update
+  (testing "happy path: dispatch-only (prevents schema-rejection log spam per #244)"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "usage_update"
+                                       :used 1234
+                                       :size 200000}))]
+      (is (= :usage-update (get-in result [:update :session-update]))))))
+
+(deftest acp-coerces-available-commands-update
+  (testing "happy path: dispatch-only (SDK variant recognised without throwing)"
+    (let [result (codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "available_commands_update"}))]
+      (is (= :available-commands-update (get-in result [:update :session-update]))))))
+
+(deftest acp-coerces-permission-request
+  (testing "happy path: :kind and :tool-call-id coerce from camelCase"
+    (let [result (codec/acp-permission-request-from-js
+                   (permission-request-js {:toolCallId "toolu_perm_01"
+                                           :kind "edit"}))]
+      (is (= test-acp-session-id (:acp-session-id result)))
+      (is (= "toolu_perm_01" (get-in result [:tool-call :tool-call-id])))
+      (is (= "edit" (get-in result [:tool-call :kind])))))
+
+  (testing "throws without :kind (required for permission resolver)"
+    (is (try
+          (codec/acp-permission-request-from-js
+            (permission-request-js {:toolCallId "toolu_no_kind"}))
+          false
+          (catch :default _ true)))))
+
+;; ========================================
+;; Section 2: Consumer Helpers
+;; ========================================
+
+(def ^:private acp-text-chunks
+  {:agent-message-chunk {:text "Hello" :type "text"}
+   :agent-thought-chunk {:text "The user wants" :type "text"}})
+
+(deftest acp-update-text-extracts-chunk-text
+  (doseq [chunk-type (keys acp-text-chunks)]
+    (testing (str "extracts text from " (name chunk-type) " update")
+      (let [content (get acp-text-chunks chunk-type)]
+        (is (= (:text content)
+               (codec/acp-update-text {:session-update chunk-type
+                                       :content content}))))))
+
+  (testing "returns nil for updates without text content"
+    (is (nil? (codec/acp-update-text
+                {:session-update :available-commands-update
+                 :available-commands []})))))
+
+(deftest tool-response-diffs-from-completion
+  (testing "extracts diff items from completed tool-call-update"
+    (let [update {:session-update :tool-call-update
+                  :content [{:type "diff" :path "/a.md"
+                             :old-text "old" :new-text "new"}
+                            {:type "text" :text "some output"}
+                            {:type "diff" :path "/b.md"
+                             :old-text "before" :new-text "after"}]}]
+      (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
+              {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
+             (codec/tool-response-diffs update)))))
+
+  (testing "returns nil for streaming refinement events (:kind present)"
+    (is (nil? (codec/tool-response-diffs
+                {:session-update :tool-call-update
+                 :kind "edit"
+                 :content [{:type "diff" :path "/a.md"
+                            :old-text "old" :new-text "new"}]}))))
+
+  (testing "returns nil for :tool-call request events (not updates)"
+    (is (nil? (codec/tool-response-diffs
+                {:session-update :tool-call
+                 :content [{:type "diff" :path "/a.md"
+                            :old-text "old" :new-text "new"}]}))))
+
+  (testing "returns nil when no diff items present"
+    (are [update] (nil? (codec/tool-response-diffs update))
+      {:session-update :tool-call-update :content [{:type "text" :text "hi"}]}
+      {:session-update :tool-call-update :content nil}
+      {:session-update :tool-call-update :content []})))
+
+(deftest acp-read-display-label-from-meta
+  (testing "formats filename and line count from tool-response meta"
     (is (= "Read — document.md (37 lines)"
            (codec/acp-read-display-label
              {:session-update :tool-call-update
@@ -39,322 +245,11 @@
                                                           :startLine 1}
                                                    :type "text"}}}}))))
 
-  (testing "returns nil when tool-response meta is absent"
+  (testing "returns nil when tool-response meta absent"
     (is (nil? (codec/acp-read-display-label
                 {:session-update :tool-call-update
                  :tool-call-id "toolu_01Ext"
-                 :status "completed"
                  :meta {:claude-code {:tool-name "Read"}}})))))
-
-;; ACP test fixtures
-(def test-acp-session-id "e0eb7ced-4b3f-45af-b911-6b9de025788b")
-(def test-content-chunks
-  {:agent-message-chunk {:text "Hello" :type "text"}
-   :agent-thought-chunk {:text "The user wants" :type "text"}})
-
-(deftest test-acp-session-update-from-js
-  (testing "coerces tool_call with kebab-case keys"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:toolCallId "toolu_abc123"
-                                    :title "Read File"
-                                    :kind "read"
-                                    :status "pending"
-                                    :rawInput #js {:filePath "src/gremllm/schema.cljs"}
-                                    :meta #js {:claudeCode #js {:toolName "Read"}}
-                                    :content #js []
-                                    :locations #js [#js {:path "src/gremllm/schema.cljs"
-                                                         :line 0}]
-                                    :sessionUpdate "tool_call"}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= test-acp-session-id (:acp-session-id result)))
-      (is (= :tool-call (get-in result [:update :session-update])))
-      (is (= "toolu_abc123" (get-in result [:update :tool-call-id])))
-      (is (= "Read" (get-in result [:update :meta :claude-code :tool-name]))))))
-
-(deftest test-acp-session-update-tool-call-update-with-diffs
-  (testing "coerces tool_call_update with diff content, locations, and raw output"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_01Lcc"
-                                    :status "completed"
-                                    :_meta #js {:claudeCode #js {:toolName "mcp__acp__Edit"}}
-                                    :content #js [#js {:type "diff"
-                                                       :path "/tmp/test.md"
-                                                       :oldText "old content"
-                                                       :newText "new content"}]
-                                    :locations #js [#js {:path "/tmp/test.md" :line 1}]
-                                    :rawOutput #js [#js {:type "text"
-                                                         :text "--- a\n+++ b\n"}]}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= "toolu_01Lcc" (:tool-call-id update)))
-      (is (= "completed" (:status update)))
-      (is (= [{:type "diff" :path "/tmp/test.md"
-               :old-text "old content" :new-text "new content"}]
-             (:content update)))
-      (is (= [{:path "/tmp/test.md" :line 1}] (:locations update)))
-      (is (= [{:type "text" :text "--- a\n+++ b\n"}] (:raw-output update)))
-      (is (= "mcp__acp__Edit" (get-in update [:meta :claude-code :tool-name])))))
-
-  (testing "coerces tool_call_update without diffs (status-only)"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_02"
-                                    :status "completed"}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= "completed" (:status update)))
-      (is (nil? (:content update)))
-      (is (nil? (:locations update))))))
-
-(deftest test-acp-session-update-tool-call-edit-kind
-  (testing "coerces pending tool_call without locations"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call"
-                                    :toolCallId "toolu_04"
-                                    :title "Edit File"
-                                    :kind "edit"
-                                    :status "pending"
-                                    :rawInput #js {:filePath "/tmp/test.md"
-                                                   :oldString "foo"
-                                                   :newString "bar"}
-                                    :content #js []}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call (:session-update update)))
-      (is (= "edit" (:kind update)))
-      (is (nil? (:locations update)))))
-
-  (testing "coerces tool_call_update with string rawOutput"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_05"
-                                    :status "failed"
-                                    :rawOutput "Error: file not found"}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= "failed" (:status update)))
-      (is (= "Error: file not found" (:raw-output update))))))
-
-(deftest test-acp-session-update-tool-call-wrapped-content
-  (testing "coerces tool_call with wrapped text content item"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call"
-                                    :toolCallId "toolu_06"
-                                    :title "Read File"
-                                    :kind "read"
-                                    :status "completed"
-                                    :rawInput #js {:filePath "src/foo.cljs"}
-                                    :content #js [#js {:type "content"
-                                                       :content #js {:type "text"
-                                                                     :text "file contents"}}]}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call (:session-update update)))
-      (is (= [{:type "content" :content {:type "text" :text "file contents"}}]
-             (:content update)))))
-
-  (testing "coerces tool_call_update with mixed wrapped and diff content items"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_07"
-                                    :status "completed"
-                                    :content #js [#js {:type "content"
-                                                       :content #js {:type "text"
-                                                                     :text "result text"}}
-                                                  #js {:type "diff"
-                                                       :path "/tmp/foo.md"
-                                                       :oldText "old"
-                                                       :newText "new"}]}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= [{:type "content" :content {:type "text" :text "result text"}}
-              {:type "diff" :path "/tmp/foo.md" :old-text "old" :new-text "new"}]
-             (:content update)))))
-
-  (testing "coerces diff item without oldText (new file creation)"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_08"
-                                    :status "completed"
-                                    :content #js [#js {:type "diff"
-                                                       :path "/tmp/new-file.md"
-                                                       :newText "brand new content"}]}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= [{:type "diff" :path "/tmp/new-file.md" :new-text "brand new content"}]
-             (:content update))))))
-
-(deftest test-tool-response-diffs
-  (testing "extracts diff items from PostToolUse tool-call-update"
-    (let [update {:session-update :tool-call-update
-                  :content [{:type "diff" :path "/a.md"
-                             :old-text "old" :new-text "new"}
-                            {:type "text" :text "some output"}
-                            {:type "diff" :path "/b.md"
-                             :old-text "before" :new-text "after"}]}]
-      (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
-              {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
-             (codec/tool-response-diffs update)))))
-
-  (testing "returns nil for streaming refinement events (have :kind set)"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
-                                          :kind "edit"
-                                          :content [{:type "diff" :path "/a.md"
-                                                     :old-text "old" :new-text "new"}]}))))
-
-  (testing "returns nil for :tool-call request events"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call
-                                          :content [{:type "diff" :path "/a.md"
-                                                     :old-text "old" :new-text "new"}]}))))
-
-  (testing "returns nil when no diff items"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
-                                          :content [{:type "text" :text "hi"}]}))))
-
-  (testing "returns nil when content is nil"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
-                                          :content nil}))))
-
-  (testing "returns nil when content is empty"
-    (is (nil? (codec/tool-response-diffs {:session-update :tool-call-update
-                                          :content []})))))
-
-(deftest test-acp-permission-request-from-js
-  (testing "coerces tool_name on permission tool call"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :toolCall #js {:toolCallId "toolu_perm_01"
-                                      :toolName "mcp__acp__Edit"
-                                      :kind "edit"
-                                      :title "Edit `/tmp/test.md`"
-                                      :rawInput #js {:file_path "/tmp/test.md"
-                                                     :oldString "before"
-                                                     :newString "after"}
-                                      :locations #js [#js {:path "/tmp/test.md"}]}
-                       :options #js [#js {:optionId "allow"
-                                          :name "Allow"
-                                          :kind "allow_once"}]}
-          result (codec/acp-permission-request-from-js js-data)]
-      (is (= test-acp-session-id (:acp-session-id result)))
-      (is (= "toolu_perm_01" (get-in result [:tool-call :tool-call-id])))
-      (is (= "mcp__acp__Edit" (get-in result [:tool-call :tool-name])))
-      (is (= "edit" (get-in result [:tool-call :kind]))))))
-
-(deftest test-acp-session-update-usage-update
-  (testing "coerces usage_update with used and size"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "usage_update"
-                                    :used 1234
-                                    :size 200000}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= :usage-update (get-in result [:update :session-update])))
-      (is (= 1234 (get-in result [:update :used])))
-      (is (= 200000 (get-in result [:update :size])))))
-
-  (testing "coerces usage_update with null cost"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "usage_update"
-                                    :used 1234
-                                    :size 200000
-                                    :cost nil}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= :usage-update (get-in result [:update :session-update])))))
-
-  (testing "coerces tool_call with fetch kind and no locations, status, or content"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call"
-                                    :toolCallId "toolu_websearch_01"
-                                    :title "WebSearch"}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call (:session-update update)))
-      (is (= "toolu_websearch_01" (:tool-call-id update)))
-      (is (= "WebSearch" (:title update)))
-      (is (nil? (:kind update)))
-      (is (nil? (:locations update)))
-      (is (nil? (:status update)))
-      (is (nil? (:content update)))))
-
-  (testing "coerces tool_call with explicit fetch kind"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call"
-                                    :toolCallId "toolu_websearch_02"
-                                    :title "WebSearch"
-                                    :kind "fetch"
-                                    :rawInput #js {:query "gremllm"}}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= "fetch" (:kind update)))
-      (is (= "gremllm" (get-in update [:raw-input :query])))))
-
-  (testing "coerces tool_call_update with null locations and null content"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_websearch_03"
-                                    :status "completed"
-                                    :locations nil
-                                    :content nil}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (nil? (:locations update)))
-      (is (nil? (:content update))))))
-
-(deftest test-acp-update-text
-  ;; Text chunks produce streaming text.
-  (doseq [chunk-type (keys test-content-chunks)]
-    (testing (str "extracts text from " (name chunk-type) " update")
-      (let [content (get test-content-chunks chunk-type)
-            update {:session-update chunk-type
-                    :content content}]
-        (is (= (:text content) (codec/acp-update-text update))))))
-
-  (testing "returns nil for updates without content"
-    (let [update {:session-update :available-commands-update
-                  :available-commands []}]
-      (is (nil? (codec/acp-update-text update))))))
-
-;; ========================================
-;; ACP Trust Boundary — contract tests
-;; ========================================
-
-(deftest test-acp-permission-request-throws-without-kind
-  (testing "throws when permission tool-call has no :kind"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :toolCall #js {:toolCallId "toolu_no_kind"}
-                       :options #js [#js {:optionId "reject" :name "Reject" :kind "reject_once"}]}]
-      (is (try
-            (codec/acp-permission-request-from-js js-data)
-            false
-            (catch :default _ true))))))
-
-
-(deftest test-acp-agent-chunk-coerces-without-content-type
-  (testing "agent-message-chunk coerces when content has no :type field"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "agent_message_chunk"
-                                    :content #js {:text "Hello"}}}
-          result (codec/acp-session-update-from-js js-data)]
-      (is (= :agent-message-chunk (get-in result [:update :session-update])))
-      (is (= "Hello" (get-in result [:update :content :text]))))))
-
-(deftest test-acp-tool-call-update-passes-unknown-content-type
-  (testing "tool-call-update content with an unrecognised :type passes through as an opaque map"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :update #js {:sessionUpdate "tool_call_update"
-                                    :toolCallId "toolu_unknown_content"
-                                    :content #js [#js {:type "unknown_future_type"
-                                                       :data "something"}]}}
-          result (codec/acp-session-update-from-js js-data)
-          update (:update result)]
-      (is (= :tool-call-update (:session-update update)))
-      (is (= [{:type "unknown_future_type" :data "something"}]
-             (:content update))))))
 
 ;; ========================================
 ;; Excerpt (Selection Capture)
