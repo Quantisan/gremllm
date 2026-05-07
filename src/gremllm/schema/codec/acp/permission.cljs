@@ -1,6 +1,6 @@
-(ns gremllm.schema.codec.acp-permission
+(ns gremllm.schema.codec.acp.permission
   "Pure permission policy for ACP. Operates on coerced CLJS maps.
-   Use gremllm.schema.codec/acp-permission-request-from-js and
+   Use gremllm.schema.codec.acp/acp-permission-request-from-js and
    acp-session-update-from-js to produce inputs for these fns."
   (:require ["path" :as path-module]))
 
