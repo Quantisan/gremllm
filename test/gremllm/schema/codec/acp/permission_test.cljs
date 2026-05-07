@@ -158,7 +158,7 @@
       (is (= "toolu_ws_02" (get-in result [:tool-call :tool-call-id])))
       (is (nil? (get-in result [:tool-call :locations])))))
 
-  (testing "resolver rejects fetch-kind tool by default"
+  (testing "resolver rejects fetch-kind tool when tool-name absent (enrichment not available)"
     (let [path-mod    (js/require "path")
           cwd         (.resolve path-mod (.cwd js/process) "resources")
           options     (full-options-js)
