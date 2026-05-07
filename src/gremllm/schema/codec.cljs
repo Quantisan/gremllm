@@ -176,31 +176,10 @@
     status))
 
 ;; ACP Update sub-schemas
-(def AcpCommandInput
-  "Optional input schema for ACP commands."
-  [:map
-   [:hint {:optional true} :string]])
-
-(def AcpCommand
-  "Schema for an ACP command definition."
-  [:map
-   [:name :string]
-   [:description :string]
-   [:input {:optional true} [:maybe AcpCommandInput]]])
-
 (def AcpTextContent
-  "Schema for text content in ACP chunks."
+  "Schema for text content in ACP chunks. Consumer reads :text only."
   [:map
-   [:type [:= "text"]]
-   [:text :string]
-   [:annotations {:optional true} [:maybe :any]]
-   [:_meta {:optional true} [:maybe [:map-of :keyword :any]]]])
-
-(def AcpToolLocation
-  "Schema for ACP tool call file locations."
-  [:map
-   [:path :string]
-   [:line {:optional true} :int]])
+   [:text :string]])
 
 (def AcpToolMetaClaudeCode
   "Schema for ACP metadata emitted by Claude Code tools."
@@ -212,23 +191,6 @@
   [:map
    [:claude-code {:optional true} AcpToolMetaClaudeCode]])
 
-(def AcpToolRawInput
-  "Schema for ACP tool call raw input. Open map — different tools send different
-   keys (e.g. read sends file-path; edit sends old-string, new-string, file-path)."
-  [:map])
-
-(def AcpWrappedContent
-  "Wrapped text content block as sent by ACP in tool call content arrays."
-  [:map
-   [:type [:= "content"]]
-   [:content AcpTextContent]])
-
-(def AcpTerminalContent
-  "Terminal output content in ACP tool call content arrays."
-  [:map
-   [:type [:= "terminal"]]
-   [:terminal-id :string]])
-
 (def AcpDiffItem
   "Structured diff content from a tool-call-update write operation.
    old-text is optional — absent when ACP creates a new file."
@@ -239,21 +201,11 @@
    [:new-text :string]])
 
 (def AcpToolCallContentItem
-  "Discriminated union of ACP tool call content blocks.
-   Dispatches on :type: content (wrapped text), diff (file diffs), terminal (output).
-   Both tool-call and tool-call-update share this content type."
+  "Tool call content blocks. Only :diff items have a load-bearing shape today;
+   other :type values pass as opaque maps until a consumer needs them."
   [:multi {:dispatch (fn [m] (some-> (:type m) name keyword))}
-   [:content  AcpWrappedContent]
-   [:diff     AcpDiffItem]
-   [:terminal AcpTerminalContent]])
-
-(def AcpRawOutputItem
-  "Raw output items in tool-call-update (unified diff text blocks)."
-  AcpTextContent)
-
-(def AcpToolCallContent
-  "Schema for ACP tool call content."
-  [:vector AcpToolCallContentItem])
+   [:diff       AcpDiffItem]
+   [::m/default :map]])
 
 (def AcpToolKind
   "ACP tool operation kinds."
@@ -266,9 +218,50 @@
 ;; Search for: SessionUpdate, ToolCall, ToolCallUpdate,
 ;; RequestPermissionRequest, UsageUpdate, ToolKind, toolInfoFromToolUse,
 ;; toolUpdateFromDiffToolResponse, toAcpNotifications.
+
+(def AcpAvailableCommandsUpdate
+  "Dispatch-only — no field consumed by our renderer."
+  [:map [:session-update [:= :available-commands-update]]])
+
+(def AcpAgentThoughtChunk
+  "Reasoning chunk; consumer reads :content.:text via acp-update-text."
+  [:map
+   [:session-update [:= :agent-thought-chunk]]
+   [:content AcpTextContent]])
+
+(def AcpAgentMessageChunk
+  "Assistant chunk; consumer reads :content.:text via acp-update-text."
+  [:map
+   [:session-update [:= :agent-message-chunk]]
+   [:content AcpTextContent]])
+
+(def AcpToolCall
+  "Pre-execution tool call notification.
+   Side-channel: remember-tool-name reads :tool-call-id + :meta.:claude-code.:tool-name."
+  [:map
+   [:session-update [:= :tool-call]]
+   [:tool-call-id :string]
+   [:meta {:optional true} AcpToolMeta]])
+
+(def AcpToolCallUpdate
+  "Post-execution / streaming refinement update.
+   Consumers: handle-tool-event, tool-response-diffs, acp-read-display-label,
+   tool-response-read-event?, tool-response-read-with-file-metadata?.
+   :kind absence (vs. presence) gates streaming-refinement filtering."
+  [:map
+   [:session-update [:= :tool-call-update]]
+   [:tool-call-id :string]
+   [:kind    {:optional true} [:maybe AcpToolKind]]
+   [:meta    {:optional true} AcpToolMeta]
+   [:content {:optional true} [:maybe [:vector AcpToolCallContentItem]]]])
+
+(def AcpUsageUpdate
+  "Dispatch-only — declared so SDK-emitted usage_update does not trigger
+   schema-rejection log spam (see #244)."
+  [:map [:session-update [:= :usage-update]]])
+
 (def AcpUpdate
-  "Discriminated union of ACP session update types.
-   Dispatches on :session-update field."
+  "Discriminated union of ACP session update types. Dispatches on :session-update."
   [:multi {:dispatch (fn [m]
                        ;; Accept both normalized and raw bridge keys.
                        ;; Most paths normalize keys before coercion, but tests and
@@ -277,64 +270,12 @@
                                    (:sessionUpdate m))
                                csk/->kebab-case
                                keyword))}
-   [:available-commands-update
-    [:map
-     [:session-update [:= :available-commands-update]]
-     [:available-commands [:vector AcpCommand]]]]
-
-   [:agent-thought-chunk
-    [:map
-     [:session-update [:= :agent-thought-chunk]]
-     [:content AcpTextContent]]]
-
-   [:agent-message-chunk
-    [:map
-     [:session-update [:= :agent-message-chunk]]
-     [:content AcpTextContent]]]
-
-   [:tool-call
-    ;; SDK ToolCall: required toolCallId/title; optional
-    ;; content/kind/locations/rawInput/rawOutput/status/_meta.
-    ;; Adapter emits tool_call from toAcpNotifications; toolInfoFromToolUse
-    ;; supplies title/kind/content/locations by Claude tool name.
-    ;; TODO: review optional keys — several may be required in practice at this trust boundary.
-    [:map
-     [:session-update                    [:= :tool-call]]
-     [:tool-call-id                      :string]
-     [:title                             :string]
-     [:kind {:optional true}             [:maybe AcpToolKind]]
-     [:status {:optional true}           [:maybe :string]]
-     [:raw-input {:optional true}        AcpToolRawInput]
-     [:meta {:optional true}             AcpToolMeta]
-     [:content {:optional true}          [:maybe AcpToolCallContent]]
-     [:locations {:optional true}        [:maybe [:vector AcpToolLocation]]]]]
-
-   [:tool-call-update
-    ;; SDK ToolCallUpdate: required toolCallId; nullish
-    ;; content/kind/locations/status/title; optional rawInput/rawOutput/_meta.
-    ;; Adapter emits tool_call_update from toAcpNotifications and
-    ;; PostToolUse hooks; toolUpdateFromDiffToolResponse can supply diff content/locations.
-    ;; TODO: review optional keys — SDK partial-update design vs. what's reliable at this boundary.
-    [:map
-     [:session-update              [:= :tool-call-update]]
-     [:tool-call-id                :string]
-     [:title {:optional true}      [:maybe :string]]
-     [:kind {:optional true}       [:maybe AcpToolKind]]
-     [:status {:optional true}     [:maybe :string]]
-     [:raw-output {:optional true} [:or :string [:vector AcpRawOutputItem]]]
-     [:content {:optional true}    [:maybe [:vector AcpToolCallContentItem]]]
-     [:locations {:optional true}  [:maybe [:vector AcpToolLocation]]]
-     [:meta {:optional true}       AcpToolMeta]]]
-
-   [:usage-update
-    ;; SDK UsageUpdate (unstable): required used + size, optional cost + _meta.
-    ;; TODO: review :cost :any — consider modelling Cost schema once stable.
-    [:map
-     [:session-update              [:= :usage-update]]
-     [:used                        :int]
-     [:size                        :int]
-     [:cost {:optional true}       :any]
-     [:_meta {:optional true}      [:maybe [:map-of :keyword :any]]]]]])
+   [:available-commands-update AcpAvailableCommandsUpdate]
+   [:agent-thought-chunk        AcpAgentThoughtChunk]
+   [:agent-message-chunk        AcpAgentMessageChunk]
+   [:tool-call                  AcpToolCall]
+   [:tool-call-update           AcpToolCallUpdate]
+   [:usage-update               AcpUsageUpdate]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
@@ -392,21 +333,23 @@
    [:name      :string]
    [:kind      AcpPermissionOptionKind]])
 
+(def AcpPermissionRawInput
+  "Tool invocation arguments at a permission request.
+   Open map: different tool kinds carry different keys.
+   Edit/Write tools include :path or :file-path."
+  [:map
+   [:path      {:optional true} :string]
+   [:file-path {:optional true} :string]])
+
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request.
    Per ACP SDK, RequestPermissionRequest.toolCall is ToolCallUpdate.
-   Adapter requestPermission calls construct toolCall with toolCallId,
-   rawInput, and fields returned from toolInfoFromToolUse.
-   TODO: review optional keys — consider which are reliably present at this trust boundary."
+   Consumer: acp-permission/resolve-permission reads :kind and (on \"edit\")
+   :raw-input.:path / :raw-input.:file-path."
   [:map
-   [:tool-call-id               :string]
-   [:tool-name {:optional true}  :string]
-   [:title {:optional true}      [:maybe :string]]
-   [:kind {:optional true}       [:maybe AcpToolKind]]
-   [:status {:optional true}     [:maybe :string]]
-   [:raw-input {:optional true}  [:map-of :keyword :any]]
-   [:raw-output {:optional true} :any]
-   [:locations {:optional true}  [:maybe [:vector AcpToolLocation]]]])
+   [:tool-call-id              :string]
+   [:kind                      AcpToolKind]
+   [:raw-input {:optional true} AcpPermissionRawInput]])
 
 (def AcpPermissionRequest
   "ACP requestPermission params shape."
