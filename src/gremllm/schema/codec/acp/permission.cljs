@@ -57,6 +57,8 @@
   [permission-request session-cwd]
   (let [{:keys [options tool-call]} permission-request
         {:keys [kind]} tool-call]
+    ;; Policy (not transport validation): an empty options list means the agent
+    ;; offered nothing actionable, so cancel rather than fabricate a selection.
     (if (empty? options)
       {:outcome {:outcome "cancelled"}}
       (case kind
