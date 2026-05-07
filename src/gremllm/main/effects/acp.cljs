@@ -2,8 +2,8 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
-            [gremllm.schema.codec :as codec]
-            [gremllm.schema.codec.acp-permission :as acp-permission]
+            [gremllm.schema.codec.acp :as acp-codec]
+            [gremllm.schema.codec.acp.permission :as acp-permission]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
             ["fs/promises" :as fsp]))
@@ -136,20 +136,20 @@
           session-cb   (fn [raw-params]
                          (try
                            (swap! tool-names acp-permission/remember-tool-name
-                                  (codec/acp-session-update-from-js raw-params))
+                                  (acp-codec/acp-session-update-from-js raw-params))
                            (catch :default _))
                          (when on-session-update (on-session-update raw-params)))
           resolve-cb   (fn [^js raw-params session-cwd]
                          (try
                            (let [enriched (->> raw-params
-                                               codec/acp-permission-request-from-js
+                                               acp-codec/acp-permission-request-from-js
                                                (acp-permission/enrich-permission-params @tool-names))
                                  outcome  (acp-permission/resolve-permission enriched session-cwd)]
                              (when on-permission
                                (try (on-permission enriched)
                                     (catch :default e
                                       (js/console.error "ACP on-permission tap failed (non-fatal; resolved outcome is unaffected)" e))))
-                             (codec/acp-permission-outcome-to-js outcome))
+                             (acp-codec/acp-permission-outcome-to-js outcome))
                            (catch :default e
                              (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
                              #js {:outcome #js {:outcome "cancelled"}})))
@@ -196,7 +196,7 @@
   [store on-update]
   (fn [params]
     (try
-      (let [coerced (codec/acp-session-update-from-js params)]
+      (let [coerced (acp-codec/acp-session-update-from-js params)]
         (when on-update (on-update coerced))
         (nxr/dispatch store {} [[:acp.events/session-update coerced]]))
       (catch :default e
