@@ -209,7 +209,6 @@ Framework and library documentation is available in the `context/` directory:
 - `context/pico_modal.md` - Modal/dialog styling details for PicoCSS
 
 **Agent Protocols:**
-- `context/acp_client.md` - Agent Client Protocol client library documentation
 - ACP docs website agent navigation:
   - `https://agentclientprotocol.com/llms.txt` - Agent-readable documentation index
   - `https://agentclientprotocol.com/llms-full.txt` - Combined agent-readable documentation
