@@ -109,6 +109,16 @@
              (option-id (acp-permission/resolve-permission
                           (make-req "edit" "mcp__acp__Edit" #js {:path file-in-cwd})
                           nil)))))
+    (testing "WebSearch fetch tool call is allowed"
+      (is (= "allow-always"
+             (option-id (acp-permission/resolve-permission
+                          (make-req "fetch" "WebSearch" #js {:query "latest news"})
+                          cwd)))))
+    (testing "WebFetch fetch tool call is rejected (round-2 contract)"
+      (is (= "reject-once"
+             (option-id (acp-permission/resolve-permission
+                          (make-req "fetch" "WebFetch" #js {:url "https://example.com"})
+                          cwd)))))
     (testing "empty options yields cancelled"
       (is (= "cancelled"
              (get-in (acp-permission/resolve-permission

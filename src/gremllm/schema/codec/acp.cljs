@@ -251,11 +251,15 @@
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request.
    Per ACP SDK, RequestPermissionRequest.toolCall is ToolCallUpdate.
-   Consumer: acp-permission/resolve-permission reads :kind and (on \"edit\")
-   :raw-input.:path / :raw-input.:file-path."
+   Consumer: acp-permission/resolve-permission reads :kind, :tool-name (on
+   \"fetch\"), and (on \"edit\") :raw-input.:path / :raw-input.:file-path.
+   :tool-name is enrichment-populated by acp-permission/enrich-permission-params
+   from prior tool_call session updates (_meta.claudeCode.toolName); the SDK
+   does not send it on the requestPermission wire."
   [:map
    [:tool-call-id              :string]
    [:kind                      AcpToolKind]
+   [:tool-name {:optional true} :string]
    [:raw-input {:optional true} AcpPermissionRawInput]])
 
 (def AcpPermissionRequest
