@@ -210,3 +210,7 @@ Framework and library documentation is available in the `context/` directory:
 
 **Agent Protocols:**
 - `context/acp_client.md` - Agent Client Protocol client library documentation
+- ACP docs website agent navigation:
+  - `https://agentclientprotocol.com/llms.txt` - Agent-readable documentation index
+  - `https://agentclientprotocol.com/llms-full.txt` - Combined agent-readable documentation
+  - Individual docs pages have Markdown equivalents by appending `.md` to the route, e.g. `https://agentclientprotocol.com/protocol/tool-calls.md` for `https://agentclientprotocol.com/protocol/tool-calls`
