@@ -63,7 +63,8 @@ Why PE due diligence:
 - `src/gremllm/renderer/ui/document/diffs.cljs`
 - `src/gremllm/schema.cljs`
 - `src/gremllm/schema/codec.cljs`
-- `src/gremllm/schema/codec/acp_permission.cljs`
+- `src/gremllm/schema/codec/acp.cljs`
+- `src/gremllm/schema/codec/acp/permission.cljs`
 - `src/js/acp/index.js`
 - `resources/public/js/preload.js`
 

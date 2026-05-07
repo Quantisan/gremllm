@@ -10,16 +10,19 @@ process, or JS boundaries needs validation or translation.
 
 - `src/gremllm/schema.cljs`: canonical data models for messages, attachments,
   excerpts, topics, sessions, and workspace-level structures
-- `src/gremllm/schema/codec.cljs`: boundary adapters for disk, IPC, DOM
-  selection capture, and ACP session updates
-- `src/gremllm/schema/codec/acp_permission.cljs`: pure permission policy used
+- `src/gremllm/schema/codec.cljs`: boundary adapters for disk, IPC, and DOM
+  selection capture
+- `src/gremllm/schema/codec/acp.cljs`: ACP wire-to-CLJS coercion — session
+  updates and permission request codecs
+- `src/gremllm/schema/codec/acp/permission.cljs`: pure permission policy used
   by `main.effects.acp`
 
 ## Operational Rules
 
 - add or change the canonical shape in `schema.cljs`
-- add boundary-specific coercion or transport transforms in `codec.cljs`
-- keep path and permission decision logic in `codec/acp_permission.cljs` when
+- add boundary-specific coercion or transport transforms in `codec.cljs` (disk,
+  IPC, excerpt) or `codec/acp.cljs` (ACP wire)
+- keep path and permission decision logic in `codec/acp/permission.cljs` when
   it must stay pure and reusable
 
 ## Important Shapes
@@ -41,7 +44,12 @@ Shapes are labeled by role; file location follows from that.
   hydration; defined and coerced at the IPC boundary, not in the canonical
   schema
 
-**Policy** (`schema/codec/acp_permission.cljs`):
+**ACP wire** (`schema/codec/acp.cljs`):
+- `AcpUpdate` / `AcpSessionUpdate`: discriminated union of ACP session update
+  types and their container
+- `AcpPermissionRequest`: permission request shape from the ACP SDK
+
+**Policy** (`schema/codec/acp/permission.cljs`):
 - Permission decision inputs used by `main.effects.acp` to resolve ACP
   permission requests without involving the JS transport bridge
 
@@ -49,8 +57,12 @@ Shapes are labeled by role; file location follows from that.
 
 - `src/gremllm/schema.cljs`
 - `src/gremllm/schema/codec.cljs`
-- `src/gremllm/schema/codec/acp_permission.cljs`
+- `src/gremllm/schema/codec/acp.cljs`
+- `src/gremllm/schema/codec/acp/permission.cljs`
 
 ## Tests
 
 - `test/gremllm/schema_test.cljs` — schema validation tests
+- `test/gremllm/schema/codec_test.cljs` — disk, IPC, and excerpt codec tests
+- `test/gremllm/schema/codec/acp_test.cljs` — ACP boundary coercion tests
+- `test/gremllm/schema/codec/acp/permission_test.cljs` — ACP permission policy tests
