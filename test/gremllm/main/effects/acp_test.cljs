@@ -1,7 +1,7 @@
 (ns gremllm.main.effects.acp-test
   (:require [cljs.test :refer [deftest is testing async]]
             [gremllm.main.effects.acp :as acp]
-            [gremllm.schema.codec :as codec]))
+            [gremllm.schema.codec.acp :as acp-codec]))
 
 (defn- make-fake-env
   "Creates a fake ACP connection environment with call-tracking atoms.
@@ -98,9 +98,9 @@
                                                                                    :newText "new"}]}}]
                          (@captured-cb js-data)
                          (is (identical? js-data @received))
-                         (let [coerced (codec/acp-session-update-from-js @received)]
+                         (let [coerced (acp-codec/acp-session-update-from-js @received)]
                            (is (= "s-test" (:acp-session-id coerced)))
-                           (is (codec/tool-response-has-diffs? (:update coerced)))))))
+                           (is (acp-codec/tool-response-has-diffs? (:update coerced)))))))
               (.finally (fn []
                           (.then (acp/shutdown) (fn [_] (done)))))))))))
 

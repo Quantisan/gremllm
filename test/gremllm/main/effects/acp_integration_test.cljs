@@ -8,7 +8,7 @@
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
             [gremllm.main.effects.acp-trace :as acp-trace]
-            [gremllm.schema.codec :as codec]))
+            [gremllm.schema.codec.acp :as acp-codec]))
 
 (defn- print-updates [updates]
   (println "\n--- Session Updates ---")
@@ -56,7 +56,7 @@
                      (print-updates @captured)
                      (let [response (->> (updates captured)
                                          (filter #(= :agent-message-chunk (:session-update %)))
-                                         (map codec/acp-update-text)
+                                         (map acp-codec/acp-update-text)
                                          (apply str))]
                        (is (re-find #"(?i)\bhi\b" response)
                            "Expected response to contain 'hi'"))))
@@ -191,18 +191,18 @@
   (let [by-id (->> updates
                    (filter #(= :tool-call-update (:session-update %)))
                    (group-by :tool-call-id))]
-    (map (fn [id] (some codec/tool-call-update-status (get by-id id))) ids)))
+    (map (fn [id] (some acp-codec/tool-call-update-status (get by-id id))) ids)))
 
 (defn- assert-diffs-target [updates doc-path]
   (let [diffs (->> updates
-                   (filter codec/tool-response-has-diffs?)
-                   (mapcat codec/tool-response-diffs))]
+                   (filter acp-codec/tool-response-has-diffs?)
+                   (mapcat acp-codec/tool-response-diffs))]
     (is (every? #(= doc-path (:path %)) diffs)
         "All diffs should target the linked document")))
 
 (defn- assert-tools-completed [updates]
-  (let [read-ids (tool-ids codec/tool-response-read-event? updates)
-        diff-ids (tool-ids codec/tool-response-has-diffs? updates)]
+  (let [read-ids (tool-ids acp-codec/tool-response-read-event? updates)
+        diff-ids (tool-ids acp-codec/tool-response-has-diffs? updates)]
     (is (pos? (count read-ids))
         "Expected at least one Read tool-call-update event")
     (is (every? #(= "completed" %) (tool-statuses read-ids updates))

@@ -1,15 +1,15 @@
-(ns gremllm.schema.codec.acp-permission-test
+(ns gremllm.schema.codec.acp.permission-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.schema.codec :as codec]
-            [gremllm.schema.codec.acp-permission :as acp-permission]))
+            [gremllm.schema.codec.acp :as acp-codec]
+            [gremllm.schema.codec.acp.permission :as acp-permission]))
 
 ;; Helpers for constructing coerced fixtures.
 
 (defn- coerce-session-update [js-data]
-  (codec/acp-session-update-from-js js-data))
+  (acp-codec/acp-session-update-from-js js-data))
 
 (defn- coerce-permission-req [js-data]
-  (codec/acp-permission-request-from-js js-data))
+  (acp-codec/acp-permission-request-from-js js-data))
 
 (defn- full-options-js []
   #js [#js {:optionId "allow-always"  :kind "allow_always"  :name "allow_always"}
@@ -121,7 +121,7 @@
                                               :locations  #js []}
                               :options   #js []})
                        cwd)
-                     [:outcome :outcome])))))
+                     [:outcome :outcome]))))))
 
 (deftest test-permission-request-fetch-kind-no-locations
   (testing "coerces requestPermission with fetch kind and absent locations"
@@ -173,11 +173,11 @@
 
 (deftest test-permission-outcome-to-js-wire-shape
   (testing "selected outcome uses SDK camelCase optionId"
-    (let [js-out (codec/acp-permission-outcome-to-js
+    (let [js-out (acp-codec/acp-permission-outcome-to-js
                    {:outcome {:outcome "selected" :option-id "allow-once"}})]
       (is (= "selected"   (.. js-out -outcome -outcome)))
       (is (= "allow-once" (.. ^js js-out -outcome -optionId)))
       (is (nil? (aget (.-outcome js-out) "option-id")))))
   (testing "cancelled outcome carries no optionId"
-    (let [js-out (codec/acp-permission-outcome-to-js {:outcome {:outcome "cancelled"}})]
-      (is (= "cancelled" (.. js-out -outcome -outcome)))))))
+    (let [js-out (acp-codec/acp-permission-outcome-to-js {:outcome {:outcome "cancelled"}})]
+      (is (= "cancelled" (.. js-out -outcome -outcome))))))
