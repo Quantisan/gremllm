@@ -6,6 +6,15 @@
             [malli.core :as m]
             [malli.transform :as mt]))
 
+;; Design rules for this boundary:
+;;   - Schemas track the consumer contract, not the SDK wire. A field exists
+;;     only if a consumer reads it.
+;;   - Open at the leaves ([::m/default :map] for unknown :type), strict
+;;     where the resolver dispatches (e.g. permission :kind is required).
+;;   - SDK variants we don't consume still need a dispatch-only entry
+;;     (e.g. AcpUsageUpdate) so the coercion catch doesn't flood logs.
+;;   - Upstream SDK pointers stay in this file (see block before AcpToolCall).
+
 ;; ========================================
 ;; ACP Session Updates
 ;; ========================================
