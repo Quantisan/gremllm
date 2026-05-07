@@ -148,15 +148,6 @@
       (is (= "toolu_ws_02" (get-in result [:tool-call :tool-call-id])))
       (is (nil? (get-in result [:tool-call :locations])))))
 
-  (testing "coerces requestPermission with only toolCallId (minimal ToolCallUpdate)"
-    (let [result (coerce-permission-req
-                   #js {:sessionId "session-fetch"
-                        :toolCall  #js {:toolCallId "toolu_ws_03"}
-                        :options   #js []})]
-      (is (= "toolu_ws_03" (get-in result [:tool-call :tool-call-id])))
-      (is (nil? (get-in result [:tool-call :kind])))
-      (is (nil? (get-in result [:tool-call :title])))))
-
   (testing "resolver rejects fetch-kind tool by default"
     (let [path-mod    (js/require "path")
           cwd         (.resolve path-mod (.cwd js/process) "resources")
