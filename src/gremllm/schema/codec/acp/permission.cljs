@@ -1,6 +1,6 @@
-(ns gremllm.schema.codec.acp-permission
+(ns gremllm.schema.codec.acp.permission
   "Pure permission policy for ACP. Operates on coerced CLJS maps.
-   Use gremllm.schema.codec/acp-permission-request-from-js and
+   Use gremllm.schema.codec.acp/acp-permission-request-from-js and
    acp-session-update-from-js to produce inputs for these fns."
   (:require ["path" :as path-module]))
 
@@ -57,6 +57,8 @@
   [permission-request session-cwd]
   (let [{:keys [options tool-call]} permission-request
         {:keys [kind]} tool-call]
+    ;; Policy (not transport validation): an empty options list means the agent
+    ;; offered nothing actionable, so cancel rather than fabricate a selection.
     (if (empty? options)
       {:outcome {:outcome "cancelled"}}
       (case kind

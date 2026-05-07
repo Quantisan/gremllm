@@ -2,6 +2,7 @@
   (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
+            [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.schema-test :as schema-test]))
 
@@ -85,7 +86,7 @@
   (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}
                :active-topic-id "t1"}]
     (with-redefs [schema/generate-message-id (constantly 1)
-                  codec/acp-update-text      (constantly "text")
+                  acp-codec/acp-update-text  (constantly "text")
                   acp/streaming-chunk-effects (fn [_ msg-type _ _] [[:streamed msg-type]])
                   acp/handle-tool-event       (fn [_ update _]     [[:tooled (:session-update update)]])]
 

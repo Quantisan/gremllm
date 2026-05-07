@@ -2,7 +2,7 @@
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [malli.core :as m]
             [gremllm.schema :as schema]
-            [gremllm.schema.codec :as codec]
+            [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- continuing? [state message-type]
@@ -43,28 +43,28 @@
    or diff effects for tool-call-updates with diffs."
   [state update message-id]
   (cond
-    (and (codec/tool-response-read-event? update)
-         (codec/tool-response-read-with-file-metadata? update))
+    (and (acp-codec/tool-response-read-event? update)
+         (acp-codec/tool-response-read-with-file-metadata? update))
     (start-response (topic-state/get-active-topic-id state)
                     :tool-use
-                    (codec/acp-read-display-label update)
+                    (acp-codec/acp-read-display-label update)
                     message-id)
 
-    (codec/tool-response-has-diffs? update)
-    [[:topic.actions/append-pending-diffs (codec/tool-response-diffs update)]]))
+    (acp-codec/tool-response-has-diffs? update)
+    [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]]))
 
 (defn session-update
   "Handles incoming ACP session updates (streaming chunks, errors, etc).
 
-  update: codec/AcpUpdate"
+  update: acp-codec/AcpUpdate"
   [state {:keys [update]}]
   (let [update-type (:session-update update)]
     (cond
       ;; Streaming text chunks (assistant, reasoning)
       (#{:agent-message-chunk :agent-thought-chunk} update-type)
       (streaming-chunk-effects state
-                               (get codec/acp-chunk->message-type update-type)
-                               (codec/acp-update-text update)
+                               (get acp-codec/acp-chunk->message-type update-type)
+                               (acp-codec/acp-update-text update)
                                (schema/generate-message-id))
 
       ;; Tool updates (call + status)
