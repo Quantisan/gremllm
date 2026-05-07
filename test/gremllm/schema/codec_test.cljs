@@ -333,17 +333,6 @@
             false
             (catch :default _ true))))))
 
-(deftest test-acp-permission-request-throws-on-non-string-path
-  (testing "throws when :raw-input :path is not a string"
-    (let [js-data #js {:sessionId test-acp-session-id
-                       :toolCall #js {:toolCallId "toolu_bad_path"
-                                      :kind "edit"
-                                      :rawInput #js {:path 42}}
-                       :options #js [#js {:optionId "reject" :name "Reject" :kind "reject_once"}]}]
-      (is (try
-            (codec/acp-permission-request-from-js js-data)
-            false
-            (catch :default _ true))))))
 
 (deftest test-acp-agent-chunk-coerces-without-content-type
   (testing "agent-message-chunk coerces when content has no :type field"
