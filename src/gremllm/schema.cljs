@@ -9,7 +9,7 @@
 
 (def MessageType
   "Valid message type identifiers."
-  [:enum :user :assistant :reasoning :tool-use])
+  [:enum :user :assistant :reasoning :tool-use :tool-search])
 
 (def AttachmentRef
   "Reference to a stored attachment file.
@@ -104,6 +104,9 @@
    [:id :int]
    [:type MessageType]
    [:text :string]
+   [:tool-call-id {:optional true} :string]
+   [:status        {:optional true} :string]
+   [:query         {:optional true} [:maybe :string]]
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context {:optional true}
     [:map
