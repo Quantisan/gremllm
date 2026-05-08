@@ -4,6 +4,7 @@
             [gremllm.schema.codec :as codec]
             [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
+            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
@@ -147,3 +148,14 @@
         (if (nil? old-window)
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
+
+(deftest test-find-message-index-by-tool-call-id
+  (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
+                                          {:type :tool-search :tool-call-id "toolu_1"
+                                           :text "" :status "pending"}
+                                          {:type :assistant :text "a"}]}}
+               :active-topic-id "t1"}]
+    (testing "finds index of message with matching tool-call-id"
+      (is (= 1 (topic-state/find-message-index-by-tool-call-id state "toolu_1"))))
+    (testing "returns nil when no message has matching tool-call-id"
+      (is (nil? (topic-state/find-message-index-by-tool-call-id state "toolu_missing"))))))
