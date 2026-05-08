@@ -9,6 +9,8 @@
 
 (def MessageType
   "Valid message type identifiers."
+  ;; TODO: generalize :tool-search → :tool-call with :tool-name dispatch when a second tool
+  ;; needs an in-progress indicator. Don't add a third :tool-X type — refactor first.
   [:enum :user :assistant :reasoning :tool-use :tool-search])
 
 (def AttachmentRef
@@ -106,7 +108,7 @@
    [:text :string]
    [:tool-call-id {:optional true} :string]
    [:status        {:optional true} :string]
-   [:query         {:optional true} [:maybe :string]]
+   [:query         {:optional true} [:maybe :string]] ; WebSearch-specific — move under :tool-input when the generic :tool-call refactor lands
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context {:optional true}
     [:map
