@@ -82,7 +82,59 @@
                     {:session-update :agent-message-chunk
                      :content {:type "text" :text "hello"}}
                     123)]
-      (is (nil? effects)))))
+      (is (nil? effects))))
+
+  (testing "appends :tool-search message for WebSearch :tool-call"
+    (let [state   {:topics {"t1" {:messages []}} :active-topic-id "t1"}
+          effects (acp/handle-tool-event
+                    state
+                    {:session-update :tool-call
+                     :tool-call-id   "toolu_ws"
+                     :status         "pending"
+                     :title          "Web search"
+                     :raw-input      {}
+                     :meta           {:claude-code {:tool-name "WebSearch"}}}
+                    999)]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
+               {:id 999 :type :tool-search :tool-call-id "toolu_ws"
+                :status "pending" :query nil :text ""}]]
+             effects))))
+
+  (testing "dispatches upsert-tool-search for WebSearch :tool-call-update with query"
+    (let [state   {:topics {"t1" {:messages [{:type         :tool-search
+                                               :tool-call-id "toolu_ws"
+                                               :status       "pending"
+                                               :query        nil
+                                               :text         ""}]}}
+                   :active-topic-id "t1"}
+          effects (acp/handle-tool-event
+                    state
+                    {:session-update :tool-call-update
+                     :tool-call-id   "toolu_ws"
+                     :raw-input      {:query "CRDT vs OT"}
+                     :title          "\"CRDT vs OT\""
+                     :meta           {:claude-code {:tool-name "WebSearch"}}}
+                    999)]
+      (is (= [[:topic.actions/upsert-tool-search "toolu_ws"
+               {:query "CRDT vs OT" :text "CRDT vs OT"}]]
+             effects))))
+
+  (testing "dispatches upsert-tool-search with status on WebSearch completion"
+    (let [state   {:topics {"t1" {:messages [{:type         :tool-search
+                                               :tool-call-id "toolu_ws"
+                                               :status       "pending"
+                                               :query        "CRDT vs OT"
+                                               :text         "CRDT vs OT"}]}}
+                   :active-topic-id "t1"}
+          effects (acp/handle-tool-event
+                    state
+                    {:session-update :tool-call-update
+                     :tool-call-id   "toolu_ws"
+                     :status         "completed"
+                     :meta           {:claude-code {:tool-name "WebSearch"}}}
+                    999)]
+      (is (= [[:topic.actions/upsert-tool-search "toolu_ws" {:status "completed"}]]
+             effects)))))
 
 (deftest test-session-update-routing
   (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}

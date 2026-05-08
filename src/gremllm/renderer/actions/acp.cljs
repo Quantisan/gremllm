@@ -37,12 +37,36 @@
       [(append-to-response state chunk-text)]
       (start-response topic-id message-type chunk-text message-id))))
 
+(defn- websearch? [update]
+  (= "WebSearch" (get-in update [:meta :claude-code :tool-name])))
+
 (defn handle-tool-event
   "Handles ACP tool-related session updates.
    Returns chat effects for displayable tool calls and reads,
    or diff effects for tool-call-updates with diffs."
   [state update message-id]
   (cond
+    (and (websearch? update) (= :tool-call (:session-update update)))
+    (let [topic-id (topic-state/get-active-topic-id state)
+          msg      {:id           message-id
+                    :type         :tool-search
+                    :tool-call-id (:tool-call-id update)
+                    :status       (or (:status update) "pending")
+                    :query        nil
+                    :text         ""}]
+      (when-not (m/validate schema/Message msg)
+        (throw (js/Error. (str "Invalid :tool-search Message: "
+                               (pr-str (m/explain schema/Message msg))))))
+      [[:messages.actions/add-to-chat-no-save topic-id msg]])
+
+    (and (websearch? update) (= :tool-call-update (:session-update update)))
+    (let [new-query (get-in update [:raw-input :query])
+          patch     (cond-> {}
+                      (:status update) (assoc :status (:status update))
+                      new-query        (assoc :query new-query :text new-query))]
+      (when (seq patch)
+        [[:topic.actions/upsert-tool-search (:tool-call-id update) patch]]))
+
     (and (acp-codec/tool-response-read-event? update)
          (acp-codec/tool-response-read-with-file-metadata? update))
     (start-response (topic-state/get-active-topic-id state)
