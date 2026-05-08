@@ -148,6 +148,9 @@
   [:map
    [:session-update [:= :tool-call]]
    [:tool-call-id :string]
+   [:title     {:optional true} :string]
+   [:status    {:optional true} :string]
+   [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:meta {:optional true} AcpToolMeta]])
 
 (def AcpToolCallUpdate
@@ -158,6 +161,9 @@
   [:map
    [:session-update [:= :tool-call-update]]
    [:tool-call-id :string]
+   [:title     {:optional true} :string]
+   [:status    {:optional true} :string]
+   [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:kind    {:optional true} [:maybe AcpToolKind]]
    [:meta    {:optional true} AcpToolMeta]
    [:content {:optional true} [:maybe [:vector AcpToolCallContentItem]]]])

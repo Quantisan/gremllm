@@ -69,6 +69,29 @@
                                        :content {:text "Hello"}}))]
       (is (= "Hello" (get-in result [:update :content :text]))))))
 
+(deftest acp-coerces-websearch-tool-call
+  (testing "title, status, and raw-input survive coercion on :tool-call"
+    (let [result (acp-codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "tool_call"
+                                       :toolCallId    "toolu_abc"
+                                       :title         "Web search"
+                                       :status        "pending"
+                                       :rawInput      {}
+                                       :meta          {:claudeCode {:toolName "WebSearch"}}}))]
+      (is (= "pending" (get-in result [:update :status])))
+      (is (= "Web search" (get-in result [:update :title])))
+      (is (= {} (get-in result [:update :raw-input])))))
+
+  (testing "raw-input.query survives coercion on :tool-call-update"
+    (let [result (acp-codec/acp-session-update-from-js
+                   (session-update-js {:sessionUpdate "tool_call_update"
+                                       :toolCallId    "toolu_abc"
+                                       :title         "\"CRDT vs OT\""
+                                       :rawInput      {:query "CRDT vs OT"}
+                                       :meta          {:claudeCode {:toolName "WebSearch"}}}))]
+      (is (= "CRDT vs OT" (get-in result [:update :raw-input :query])))
+      (is (= "\"CRDT vs OT\"" (get-in result [:update :title]))))))
+
 (deftest acp-coerces-agent-thought-chunk
   (testing "happy path: chunk text accessible at :content :text"
     (let [result (acp-codec/acp-session-update-from-js
