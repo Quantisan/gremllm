@@ -108,6 +108,9 @@
             padding: var(--pico-spacing);
         }
 
+        /* TODO: bubble backgrounds use rgba() literals, violating the
+           "no hex/rgb literals" rule in CLAUDE.md. Revisit when next
+           touching the bubble palette. */
         .user-bubble {
             background: rgba(232, 220, 196, 0.15);
             border-left: 3px solid rgba(232, 220, 196, 0.3);

@@ -44,6 +44,10 @@
   "Handles ACP tool-related session updates.
    Returns chat effects for displayable tool calls and reads,
    or diff effects for tool-call-updates with diffs."
+  ;; TODO: this cond mixes per-tool predicates (websearch?) with generic
+  ;; tool-response branches. When a second displayable tool lands, replace
+  ;; the per-tool branches with a dispatch keyed on tool-name — leave that
+  ;; decision until the second instance exists.
   [state update message-id]
   (cond
     (and (websearch? update) (= :tool-call (:session-update update)))
