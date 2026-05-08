@@ -22,6 +22,17 @@
         (and (not (.startsWith relative ".."))
              (not (.isAbsolute path-module relative))))))
 
+;; Registry pattern for ACP permission requests:
+;;   ACP types RequestPermissionRequest.toolCall as ToolCallUpdate (a delta);
+;;   only :tool-call-id is required and there is no tool_name field anywhere
+;;   in ACP. We seed a {tool-call-id → tool-name} map from
+;;   _meta.claudeCode.toolName on prior tool_call session updates, then
+;;   resolve at permission time. Zed implements the same pattern:
+;;     zed-industries/zed crates/agent_servers/src/acp.rs (handle_request_permission)
+;;     zed-industries/zed crates/acp_thread/src/acp_thread.rs (index_for_tool_call + update_fields)
+;;     zed-industries/agent-client-protocol src/v1/client.rs (RequestPermissionRequest)
+;;   Zed uses its own _meta key for the same workaround.
+
 (defn remember-tool-name
   "Return an updated tool-names map with tool name from session-update recorded.
    Only records when both tool-call-id and tool-name are present in the update."

@@ -250,12 +250,13 @@
 
 (def AcpPermissionToolCall
   "Tool call context within an ACP permission request.
-   Per ACP SDK, RequestPermissionRequest.toolCall is ToolCallUpdate.
+   RequestPermissionRequest.toolCall is a ToolCallUpdate (delta) per spec:
+   only :tool-call-id is required on the wire. :tool-name is not an ACP field
+   — it is enrichment-populated from prior tool_call session updates by
+   acp.permission/enrich-permission-params (see that ns for the registry
+   pattern and Zed references).
    Consumer: acp-permission/resolve-permission reads :kind, :tool-name (on
-   \"fetch\"), and (on \"edit\") :raw-input.:path / :raw-input.:file-path.
-   :tool-name is enrichment-populated by acp-permission/enrich-permission-params
-   from prior tool_call session updates (_meta.claudeCode.toolName); the SDK
-   does not send it on the requestPermission wire."
+   \"fetch\"), and (on \"edit\") :raw-input.:path / :raw-input.:file-path."
   [:map
    [:tool-call-id              :string]
    [:kind                      AcpToolKind]
