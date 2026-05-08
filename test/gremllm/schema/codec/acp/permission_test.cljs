@@ -109,6 +109,16 @@
              (option-id (acp-permission/resolve-permission
                           (make-req "edit" "mcp__acp__Edit" #js {:path file-in-cwd})
                           nil)))))
+    (testing "WebSearch fetch tool call is allowed"
+      (is (= "allow-always"
+             (option-id (acp-permission/resolve-permission
+                          (make-req "fetch" "WebSearch" #js {:query "latest news"})
+                          cwd)))))
+    (testing "WebFetch fetch tool call is rejected (round-2 contract)"
+      (is (= "reject-once"
+             (option-id (acp-permission/resolve-permission
+                          (make-req "fetch" "WebFetch" #js {:url "https://example.com"})
+                          cwd)))))
     (testing "empty options yields cancelled"
       (is (= "cancelled"
              (get-in (acp-permission/resolve-permission
@@ -148,7 +158,7 @@
       (is (= "toolu_ws_02" (get-in result [:tool-call :tool-call-id])))
       (is (nil? (get-in result [:tool-call :locations])))))
 
-  (testing "resolver rejects fetch-kind tool by default"
+  (testing "resolver rejects fetch-kind tool when tool-name absent (enrichment not available)"
     (let [path-mod    (js/require "path")
           cwd         (.resolve path-mod (.cwd js/process) "resources")
           options     (full-options-js)

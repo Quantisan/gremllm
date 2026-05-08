@@ -86,6 +86,17 @@
             (let [opt (select-option options ["reject_once" "reject_always"] last)]
               {:outcome {:outcome "selected" :option-id (:option-id opt)}})))
 
-        ;; Default: reject.
+        "fetch"
+        ;; WebSearch is read-only and idempotent; mirror the "read" policy
+        ;; (prefer allow_always, fall back to allow_once). Any other fetch
+        ;; tool (notably WebFetch) falls through to reject — round 2 will
+        ;; route those to a renderer-side permission dialog.
+        (if (= "WebSearch" (requested-tool-name tool-call))
+          (let [opt (select-option options ["allow_always" "allow_once"] first)]
+            {:outcome {:outcome "selected" :option-id (:option-id opt)}})
+          (let [opt (select-option options ["reject_once" "reject_always"] last)]
+            {:outcome {:outcome "selected" :option-id (:option-id opt)}}))
+
+        ;; Default: no policy defined for this kind yet — reject until classified.
         (let [opt (select-option options ["reject_once" "reject_always"] last)]
           {:outcome {:outcome "selected" :option-id (:option-id opt)}})))))
