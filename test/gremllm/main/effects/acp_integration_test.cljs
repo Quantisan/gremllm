@@ -242,7 +242,7 @@
 (defn- assert-write-text-file-called [writes permissions doc-path]
   (is (seq writes)
       (str "writeTextFile not called. Mutating permissions: "
-           (pr-str (map #(select-keys (:tool-call %) [:kind :title :raw-input])
+           (pr-str (map #(select-keys (:tool-call %) [:kind :raw-input])
                         (remove #(= "read" (get-in % [:tool-call :kind])) permissions)))))
   (when (seq writes)
     (is (every? #(= doc-path (:path %)) writes)
