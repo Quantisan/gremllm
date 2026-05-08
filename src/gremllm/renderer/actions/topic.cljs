@@ -65,6 +65,22 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
+(defn upsert-tool-search
+  "Merges patch fields into the :tool-search message identified by tool-call-id.
+   Uses path-based [:effects/save ...] for each field. Returns nil if no match."
+  [state tool-call-id patch]
+  (if-let [idx (topic-state/find-message-index-by-tool-call-id state tool-call-id)]
+    (let [topic-id   (topic-state/get-active-topic-id state)
+          msg-path   (conj (topic-state/topic-field-path topic-id :messages) idx)]
+      (reduce-kv
+        (fn [effects field val]
+          (conj effects [:effects/save (conj msg-path field) val]))
+        []
+        patch))
+    (do
+      (js/console.warn "[ACP] upsert-tool-search: no message for tool-call-id" tool-call-id)
+      nil)))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]

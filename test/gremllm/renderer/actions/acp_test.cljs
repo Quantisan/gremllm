@@ -4,6 +4,7 @@
             [gremllm.schema.codec :as codec]
             [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
+            [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema-test :as schema-test]))
 
@@ -159,3 +160,24 @@
       (is (= 1 (topic-state/find-message-index-by-tool-call-id state "toolu_1"))))
     (testing "returns nil when no message has matching tool-call-id"
       (is (nil? (topic-state/find-message-index-by-tool-call-id state "toolu_missing"))))))
+
+(deftest test-upsert-tool-search
+  (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
+                                          {:type :tool-search
+                                           :tool-call-id "toolu_1"
+                                           :status "pending"
+                                           :query nil
+                                           :text ""}]}}
+               :active-topic-id "t1"}]
+
+    (testing "emits path-based saves for each field in patch"
+      (let [effects (topic/upsert-tool-search state "toolu_1" {:status "completed"
+                                                                :query  "CRDT vs OT"
+                                                                :text   "CRDT vs OT"})]
+        (is (= #{[:effects/save [:topics "t1" :messages 1 :status] "completed"]
+                 [:effects/save [:topics "t1" :messages 1 :query]  "CRDT vs OT"]
+                 [:effects/save [:topics "t1" :messages 1 :text]   "CRDT vs OT"]}
+               (set effects)))))
+
+    (testing "returns nil when tool-call-id has no matching message"
+      (is (nil? (topic/upsert-tool-search state "toolu_missing" {:status "completed"}))))))
