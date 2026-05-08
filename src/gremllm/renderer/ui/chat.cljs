@@ -38,6 +38,12 @@
     (str (subs s 0 n) "…")
     s))
 
+(defn- render-tool-search-message [{:keys [status query]}]
+  (let [completed? (= "completed" status)
+        label      (if completed? "Searched the web" "Searching the web")
+        summary    (if query (str label " — " (truncate query 60)) label)]
+    [e/tool-search-message {:completed? completed? :summary summary :query query}]))
+
 (defn- render-excerpt-pill [excerpt]
   [:span.excerpt-pill
    [:span.excerpt-pill__label (excerpt-block-label excerpt)]
@@ -61,10 +67,11 @@
 
 (defn- render-message [message]
   (case (:type message)
-    :user      (render-user-message message)
-    :assistant (render-assistant-message message)
-    :reasoning (render-reasoning-message message)
-    :tool-use  (render-tool-use-message message)
+    :user        (render-user-message message)
+    :assistant   (render-assistant-message message)
+    :reasoning   (render-reasoning-message message)
+    :tool-use    (render-tool-use-message message)
+    :tool-search (render-tool-search-message message)
     ;; Default fallback
     [:div "Unknown message type:" (:type message)]))
 
