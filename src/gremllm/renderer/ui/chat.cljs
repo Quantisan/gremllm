@@ -20,6 +20,8 @@
     (if (= start end) start (str start " -> " end))))
 
 (def ^:private excerpt-snippet-cap 40)
+(def ^:private tool-search-query-cap 60)
+(def ^:private composer-excerpt-cap 30)
 
 (defn- render-assistant-message [message]
   [e/assistant-message
@@ -41,7 +43,7 @@
 (defn- render-tool-search-message [{:keys [status query]}]
   (let [completed? (= "completed" status)
         label      (if completed? "Searched the web" "Searching the web")
-        summary    (if query (str label " — " (truncate query 60)) label)]
+        summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
     [e/tool-search-message {:completed? completed? :summary summary :query query}]))
 
 (defn- render-excerpt-pill [excerpt]
@@ -99,7 +101,7 @@
     [:div.excerpt-list
      (for [{:keys [id text]} excerpts]
        [:span.excerpt-chip {:key id}
-        "excerpt: " (truncate text 30)
+        "excerpt: " (truncate text composer-excerpt-cap)
         [:button.dismiss
          {:type "button"
           :on {:click [[:excerpt.actions/remove id]]}}
