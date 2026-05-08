@@ -63,7 +63,7 @@
     (let [new-query (get-in update [:raw-input :query])
           patch     (cond-> {}
                       (:status update) (assoc :status (:status update))
-                      new-query        (assoc :query new-query :text new-query))]
+                      new-query        (assoc :query new-query))]
       (when (seq patch)
         [[:topic.actions/upsert-tool-search (:tool-call-id update) patch]]))
 

@@ -116,7 +116,7 @@
                      :meta           {:claude-code {:tool-name "WebSearch"}}}
                     999)]
       (is (= [[:topic.actions/upsert-tool-search "toolu_ws"
-               {:query "CRDT vs OT" :text "CRDT vs OT"}]]
+               {:query "CRDT vs OT"}]]
              effects))))
 
   (testing "dispatches upsert-tool-search with status on WebSearch completion"
