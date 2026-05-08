@@ -65,7 +65,7 @@
                       (:status update) (assoc :status (:status update))
                       new-query        (assoc :query new-query))]
       (when (seq patch)
-        [[:topic.actions/upsert-tool-search (:tool-call-id update) patch]]))
+        [[:topic.actions/patch-message-by-tool-call-id (:tool-call-id update) patch]]))
 
     (and (acp-codec/tool-response-read-event? update)
          (acp-codec/tool-response-read-with-file-metadata? update))

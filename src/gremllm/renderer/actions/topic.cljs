@@ -65,8 +65,8 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
-(defn upsert-tool-search
-  "Merges patch fields into the :tool-search message identified by tool-call-id.
+(defn patch-message-by-tool-call-id
+  "Merges patch fields into the message identified by tool-call-id.
    Uses path-based [:effects/save ...] for each field. Returns nil if no match."
   [state tool-call-id patch]
   (if-let [idx (topic-state/find-message-index-by-tool-call-id state tool-call-id)]
@@ -78,7 +78,7 @@
         []
         patch))
     (do
-      (js/console.warn "[ACP] upsert-tool-search: no message for tool-call-id" tool-call-id)
+      (js/console.warn "[ACP] patch-message-by-tool-call-id: no message for tool-call-id" tool-call-id)
       nil)))
 
 (defn set-active
