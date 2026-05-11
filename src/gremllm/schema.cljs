@@ -1,7 +1,8 @@
 (ns gremllm.schema
   (:require [malli.core :as m]
             [malli.transform :as mt]
-            [malli.util :as mu]))
+            [malli.util :as mu]
+            [gremllm.schema.codec.acp :as acp-codec]))
 
 ;; ========================================
 ;; Messages
@@ -106,9 +107,9 @@
    [:id :int]
    [:type MessageType]
    [:text :string]
-   [:tool-call-id {:optional true} :string]
-   [:status        {:optional true} :string]
-   [:query         {:optional true} [:maybe :string]] ; WebSearch-specific — move under :tool-input when the generic :tool-call refactor lands
+   [:tool-call-id    {:optional true} :string]
+   [:tool-call-status {:optional true} acp-codec/AcpToolCallStatus] ; tool-call-specific — move under :tool-call when the generic refactor lands (schema.cljs:13 TODO)
+   [:query           {:optional true} [:maybe :string]] ; WebSearch-specific — move under :tool-input when the generic :tool-call refactor lands
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context {:optional true}
     [:map

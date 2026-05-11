@@ -40,8 +40,8 @@
     (str (subs s 0 n) "…")
     s))
 
-(defn- render-tool-search-message [{:keys [status query]}]
-  (let [completed? (= "completed" status)
+(defn- render-tool-search-message [{:keys [tool-call-status query]}]
+  (let [completed? (= "completed" tool-call-status)
         label      (if completed? "Searched the web" "Searching the web")
         summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
     [e/tool-search-message {:completed? completed? :summary summary :query query}]))

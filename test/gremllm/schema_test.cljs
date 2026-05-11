@@ -13,11 +13,11 @@
 (deftest tool-search-message-validates
   (testing "accepts all optional fields"
     (let [msg {:id 1 :type :tool-search :text ""
-               :tool-call-id "toolu_abc" :status "pending" :query nil}]
+               :tool-call-id "toolu_abc" :tool-call-status "pending" :query nil}]
       (is (m/validate schema/Message msg))))
   (testing "accepts completed state"
     (let [msg {:id 2 :type :tool-search :text "CRDT vs OT"
-               :tool-call-id "toolu_abc" :status "completed" :query "CRDT vs OT"}]
+               :tool-call-id "toolu_abc" :tool-call-status "completed" :query "CRDT vs OT"}]
       (is (m/validate schema/Message msg))))
   (testing "rejects unknown message types"
     (is (not (m/validate schema/Message {:id 3 :type :unknown-type :text ""})))))

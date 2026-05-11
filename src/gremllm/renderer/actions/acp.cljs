@@ -49,8 +49,8 @@
   ;; the per-tool branches with a dispatch keyed on tool-name — leave that
   ;; decision until the second instance exists.
   ;;
-  ;; WebSearch: :tool-call mints the placeholder (:status "pending", no query); :tool-call-update
-  ;; fills :query/:status (see AcpToolCall smell flag in codec/acp.cljs).
+  ;; WebSearch: :tool-call mints the placeholder (wire :status defaults to "pending", no query);
+  ;; :tool-call-update patches :query and :tool-call-status on the Message.
   [state update message-id]
   (cond
     (and (websearch? update) (= :tool-call (:session-update update)))
@@ -58,7 +58,7 @@
           msg      {:id           message-id
                     :type         :tool-search
                     :tool-call-id (:tool-call-id update)
-                    :status       (or (:status update) "pending")
+                    :tool-call-status (or (:status update) "pending")
                     :query        nil
                     :text         ""}]
       (when-not (m/validate schema/Message msg)
@@ -69,7 +69,7 @@
     (and (websearch? update) (= :tool-call-update (:session-update update)))
     (let [new-query (get-in update [:raw-input :query])
           patch     (cond-> {}
-                      (:status update) (assoc :status (:status update))
+                      (:status update) (assoc :tool-call-status (:status update))
                       new-query        (assoc :query new-query))]
       (when (seq patch)
         [[:topic.actions/patch-message-by-tool-call-id (:tool-call-id update) patch]]))
