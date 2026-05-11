@@ -10,8 +10,9 @@
 
 (def MessageType
   "Valid message type identifiers."
-  ;; TODO: generalize :tool-search → :tool-call with :tool-name dispatch when a second tool
-  ;; needs an in-progress indicator. Don't add a third :tool-X type — refactor first.
+  ;; NOTE: `:tool-search` is a per-tool variant of what is conceptually a
+  ;; tool-call message. Don't add a third `:tool-X` type — see the Message
+  ;; TODO.
   [:enum :user :assistant :reasoning :tool-use :tool-search])
 
 (def AttachmentRef
@@ -102,14 +103,21 @@
      [:start-block BlockRef]
      [:end-block BlockRef]]]])
 
+;; TODO: Message conflates multiple domain kinds (user input, agent output,
+;; tool calls) into one schema. Optional fields like :tool-call-id,
+;; :tool-call-status, :query, :attachments, and :context apply only for
+;; specific :type values, but the schema doesn't express or enforce that —
+;; any :type can carry any optional field. SRP / Modelarity smell. Solution
+;; deferred. Related: per-field type-affinity tags inline below, and the
+;; `:tool-search`/`:tool-X` note at line 13.
 (def Message
   [:map
    [:id :int]
    [:type MessageType]
    [:text :string]
    [:tool-call-id    {:optional true} :string]
-   [:tool-call-status {:optional true} acp-codec/AcpToolCallStatus] ; tool-call-specific — move under :tool-call when the generic refactor lands (schema.cljs:13 TODO)
-   [:query           {:optional true} [:maybe :string]] ; WebSearch-specific — move under :tool-input when the generic :tool-call refactor lands
+   [:tool-call-status {:optional true} acp-codec/AcpToolCallStatus] ; tool-call-specific (see above TODO)
+   [:query           {:optional true} [:maybe :string]] ; WebSearch-specific (see above TODO)
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context {:optional true}
     [:map
