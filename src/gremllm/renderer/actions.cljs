@@ -173,6 +173,7 @@
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
+(nxr/register-action! :topic.actions/patch-message-by-tool-call-id topic/patch-message-by-tool-call-id)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)

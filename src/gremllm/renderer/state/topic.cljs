@@ -47,3 +47,12 @@
   ;; TODO: add reverse lookup from acp-session-id to topic-id for correct
   ;; inbound routing of session updates to the originating topic
   (-> topics-path (conj topic-id :session :id)))
+
+(defn find-message-index-by-tool-call-id
+  "Returns the index of the first message in the active topic with a matching
+   :tool-call-id, or nil if no match."
+  [state tool-call-id]
+  (some (fn [[idx msg]]
+          (when (= tool-call-id (:tool-call-id msg))
+            idx))
+        (map-indexed vector (get-messages state))))

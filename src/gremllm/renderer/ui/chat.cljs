@@ -20,6 +20,8 @@
     (if (= start end) start (str start " -> " end))))
 
 (def ^:private excerpt-snippet-cap 40)
+(def ^:private tool-search-query-cap 60)
+(def ^:private composer-excerpt-cap 30)
 
 (defn- render-assistant-message [message]
   [e/assistant-message
@@ -37,6 +39,12 @@
   (if (> (count s) n)
     (str (subs s 0 n) "…")
     s))
+
+(defn- render-tool-search-message [{:keys [tool-call-status query]}]
+  (let [completed? (= "completed" tool-call-status)
+        label      (if completed? "Searched the web" "Searching the web")
+        summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
+    [e/tool-search-message {:completed? completed? :summary summary :query query}]))
 
 (defn- render-excerpt-pill [excerpt]
   [:span.excerpt-pill
@@ -61,10 +69,11 @@
 
 (defn- render-message [message]
   (case (:type message)
-    :user      (render-user-message message)
-    :assistant (render-assistant-message message)
-    :reasoning (render-reasoning-message message)
-    :tool-use  (render-tool-use-message message)
+    :user        (render-user-message message)
+    :assistant   (render-assistant-message message)
+    :reasoning   (render-reasoning-message message)
+    :tool-use    (render-tool-use-message message)
+    :tool-search (render-tool-search-message message)
     ;; Default fallback
     [:div "Unknown message type:" (:type message)]))
 
@@ -92,7 +101,7 @@
     [:div.excerpt-list
      (for [{:keys [id text]} excerpts]
        [:span.excerpt-chip {:key id}
-        "excerpt: " (truncate text 30)
+        "excerpt: " (truncate text composer-excerpt-cap)
         [:button.dismiss
          {:type "button"
           :on {:click [[:excerpt.actions/remove id]]}}

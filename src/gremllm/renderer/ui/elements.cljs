@@ -34,5 +34,11 @@
 (defalias tool-use-message [attrs & body]
   (into [:div.tool-use-indicator attrs] body))
 
+(defalias tool-search-message [{:keys [completed? summary query]} & _body]
+  [:article.tool-search-bubble
+   [:details {:open (not completed?)}
+    [:summary.tool-search-summary summary]
+    (when query [:div.tool-search-body query])]])
+
 (defalias topic-item [attrs & body]
   (into [:div.topic-item (merge {} attrs)] body))

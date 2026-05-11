@@ -63,7 +63,7 @@
      [e/chat-panel
       (let [messages (topic-state/get-messages state)
             awaiting-response? (and (loading-state/loading? state active-topic-id)
-                                    (not= :assistant (:type (peek messages))))]
+                                    (= :user (:type (peek messages))))]
         (chat-ui/render-chat-area messages awaiting-response?))
 
       (chat-ui/render-input-form

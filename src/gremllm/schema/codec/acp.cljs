@@ -114,6 +114,12 @@
    [:diff       AcpDiffItem]
    [::m/default :map]])
 
+(def AcpToolCallStatus
+  "ACP tool call lifecycle states.
+   Optional on the wire: ToolCall omission defaults to \"pending\"; ToolCallUpdate
+   omission is a delta meaning \"unchanged\". See agentclientprotocol.com/protocol/tool-calls."
+  [:enum "pending" "in_progress" "completed" "failed"])
+
 (def AcpToolKind
   "ACP tool operation kinds."
   [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
@@ -142,14 +148,20 @@
 ;; RequestPermissionRequest, UsageUpdate, ToolKind, toolInfoFromToolUse,
 ;; toolUpdateFromDiffToolResponse, toAcpNotifications.
 
+;; TODO: Design smell: :tool-call (pre-execution begin) vs :tool-call-update (streaming refinement/completion) share a name-head
+;; and read as "a tool call" / "an update to it" — but the two events play distinct roles in per-tool flows (see handle-tool-event).
+;; Wire names mirror the upstream SDK, so we keep them; rename would be :tool-call-begin / :tool-call-progress if ever decoupled.
 (def AcpToolCall
   "Pre-execution tool call notification.
    Side-channel: remember-tool-name reads :tool-call-id + :meta.:claude-code.:tool-name."
   [:map
    [:session-update [:= :tool-call]]
    [:tool-call-id :string]
+   [:status    {:optional true} AcpToolCallStatus]
+   [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:meta {:optional true} AcpToolMeta]])
 
+;; TODO: DRY with AcpToolCall
 (def AcpToolCallUpdate
   "Post-execution / streaming refinement update.
    Consumers: handle-tool-event, tool-response-diffs, acp-read-display-label,
@@ -158,6 +170,8 @@
   [:map
    [:session-update [:= :tool-call-update]]
    [:tool-call-id :string]
+   [:status    {:optional true} AcpToolCallStatus]
+   [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:kind    {:optional true} [:maybe AcpToolKind]]
    [:meta    {:optional true} AcpToolMeta]
    [:content {:optional true} [:maybe [:vector AcpToolCallContentItem]]]])
