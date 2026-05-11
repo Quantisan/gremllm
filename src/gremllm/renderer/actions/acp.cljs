@@ -49,6 +49,11 @@
   ;; the per-tool branches with a dispatch keyed on tool-name — leave that
   ;; decision until the second instance exists.
   ;;
+  ;; The WebSearch branches build and patch Messages from raw update
+  ;; fields inline, while the read/diff branches go through acp-codec
+  ;; helpers. The WebSearch half is hard to follow without knowing the
+  ;; wire shape.
+  ;;
   ;; WebSearch: :tool-call mints the placeholder (wire :status defaults to "pending", no query);
   ;; :tool-call-update patches :query and :tool-call-status on the Message.
   [state update message-id]
