@@ -65,6 +65,19 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
+;; TODO: patch-message-by-tool-call-id reads like plumbing.
+;; - Name describes the mechanism ("patch by lookup key") rather than
+;;   the domain operation (reflecting an ACP :tool-call-update onto
+;;   its Message). The only caller is the WebSearch
+;;   :tool-call-update branch in handle-tool-event.
+;; - Body fans the patch map into per-field [:effects/save path val]
+;;   via reduce-kv; every other action in this namespace emits a
+;;   single save per concern.
+;; - Active topic is assumed implicitly via get-active-topic-id even
+;;   though the trigger is an inbound ACP session update — same
+;;   coupling already flagged inside append-pending-diffs.
+;; - Two concerns in one function: locating the target Message and
+;;   emitting state-write effects.
 (defn patch-message-by-tool-call-id
   "Merges patch fields into the message identified by tool-call-id.
    Uses path-based [:effects/save ...] for each field. Returns nil if no match."
