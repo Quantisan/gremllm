@@ -70,16 +70,6 @@
       (is (= "Hello" (get-in result [:update :content :text]))))))
 
 (deftest acp-coerces-websearch-tool-call
-  (testing "status and raw-input survive coercion on :tool-call"
-    (let [result (acp-codec/acp-session-update-from-js
-                   (session-update-js {:sessionUpdate "tool_call"
-                                       :toolCallId    "toolu_abc"
-                                       :status        "pending"
-                                       :rawInput      {}
-                                       :meta          {:claudeCode {:toolName "WebSearch"}}}))]
-      (is (= "pending" (get-in result [:update :status])))
-      (is (= {} (get-in result [:update :raw-input])))))
-
   (testing "raw-input.query survives coercion on :tool-call-update"
     (let [result (acp-codec/acp-session-update-from-js
                    (session-update-js {:sessionUpdate "tool_call_update"

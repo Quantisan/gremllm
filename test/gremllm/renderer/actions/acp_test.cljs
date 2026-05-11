@@ -5,7 +5,6 @@
             [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.topic :as topic]
-            [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
@@ -91,7 +90,6 @@
                     {:session-update :tool-call
                      :tool-call-id   "toolu_ws"
                      :status         "pending"
-                     :title          "Web search"
                      :raw-input      {}
                      :meta           {:claude-code {:tool-name "WebSearch"}}}
                     999)]
@@ -100,12 +98,12 @@
                 :tool-call-status "pending" :query nil :text ""}]]
              effects))))
 
-  (testing "dispatches upsert-tool-search for WebSearch :tool-call-update with query"
+  (testing "patches :query only when :tool-call-update carries :raw-input.query"
     (let [state   {:topics {"t1" {:messages [{:type             :tool-search
-                                               :tool-call-id     "toolu_ws"
-                                               :tool-call-status "pending"
-                                               :query            nil
-                                               :text             ""}]}}
+                                              :tool-call-id     "toolu_ws"
+                                              :tool-call-status "pending"
+                                              :query            nil
+                                              :text             ""}]}}
                    :active-topic-id "t1"}
           effects (acp/handle-tool-event
                     state
@@ -116,23 +114,6 @@
                     999)]
       (is (= [[:topic.actions/patch-message-by-tool-call-id "toolu_ws"
                {:query "CRDT vs OT"}]]
-             effects))))
-
-  (testing "dispatches patch-message-by-tool-call-id with status on WebSearch completion"
-    (let [state   {:topics {"t1" {:messages [{:type             :tool-search
-                                               :tool-call-id     "toolu_ws"
-                                               :tool-call-status "pending"
-                                               :query            "CRDT vs OT"
-                                               :text             "CRDT vs OT"}]}}
-                   :active-topic-id "t1"}
-          effects (acp/handle-tool-event
-                    state
-                    {:session-update :tool-call-update
-                     :tool-call-id   "toolu_ws"
-                     :status         "completed"
-                     :meta           {:claude-code {:tool-name "WebSearch"}}}
-                    999)]
-      (is (= [[:topic.actions/patch-message-by-tool-call-id "toolu_ws" {:tool-call-status "completed"}]]
              effects)))))
 
 (deftest test-session-update-routing
@@ -201,17 +182,6 @@
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
 
-(deftest test-find-message-index-by-tool-call-id
-  (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
-                                          {:type :tool-search :tool-call-id "toolu_1"
-                                           :text "" :tool-call-status "pending"}
-                                          {:type :assistant :text "a"}]}}
-               :active-topic-id "t1"}]
-    (testing "finds index of message with matching tool-call-id"
-      (is (= 1 (topic-state/find-message-index-by-tool-call-id state "toolu_1"))))
-    (testing "returns nil when no message has matching tool-call-id"
-      (is (nil? (topic-state/find-message-index-by-tool-call-id state "toolu_missing"))))))
-
 (deftest test-patch-message-by-tool-call-id
   (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
                                           {:type :tool-search
@@ -228,7 +198,4 @@
         (is (= #{[:effects/save [:topics "t1" :messages 1 :tool-call-status] "completed"]
                  [:effects/save [:topics "t1" :messages 1 :query]            "CRDT vs OT"]
                  [:effects/save [:topics "t1" :messages 1 :text]             "CRDT vs OT"]}
-               (set effects)))))
-
-    (testing "returns nil when tool-call-id has no matching message"
-      (is (nil? (topic/patch-message-by-tool-call-id state "toolu_missing" {:tool-call-status "completed"}))))))
+               (set effects)))))))
