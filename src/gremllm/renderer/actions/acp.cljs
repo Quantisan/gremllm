@@ -48,6 +48,9 @@
   ;; tool-response branches. When a second displayable tool lands, replace
   ;; the per-tool branches with a dispatch keyed on tool-name — leave that
   ;; decision until the second instance exists.
+  ;;
+  ;; WebSearch: :tool-call mints the placeholder (:status "pending", no query); :tool-call-update
+  ;; fills :query/:status (see AcpToolCall smell flag in codec/acp.cljs).
   [state update message-id]
   (cond
     (and (websearch? update) (= :tool-call (:session-update update)))
