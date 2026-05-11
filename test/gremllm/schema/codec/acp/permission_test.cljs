@@ -23,7 +23,7 @@
                        :toolCallId    tool-call-id
                        :title         "Edit"
                        :kind          "edit"
-                       :status        "running"
+                       :status        "in_progress"
                        :rawInput      #js {}
                        :content       #js []
                        :_meta         #js {:claudeCode #js {:toolName tool-name}}}})

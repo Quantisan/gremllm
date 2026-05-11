@@ -114,6 +114,12 @@
    [:diff       AcpDiffItem]
    [::m/default :map]])
 
+(def AcpToolCallStatus
+  "ACP tool call lifecycle states.
+   Optional on the wire: ToolCall omission defaults to \"pending\"; ToolCallUpdate
+   omission is a delta meaning \"unchanged\". See agentclientprotocol.com/protocol/tool-calls."
+  [:enum "pending" "in_progress" "completed" "failed"])
+
 (def AcpToolKind
   "ACP tool operation kinds."
   [:enum "read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"])
@@ -151,7 +157,7 @@
   [:map
    [:session-update [:= :tool-call]]
    [:tool-call-id :string]
-   [:status    {:optional true} :string]
+   [:status    {:optional true} AcpToolCallStatus]
    [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:meta {:optional true} AcpToolMeta]])
 
@@ -164,7 +170,7 @@
   [:map
    [:session-update [:= :tool-call-update]]
    [:tool-call-id :string]
-   [:status    {:optional true} :string]
+   [:status    {:optional true} AcpToolCallStatus]
    [:raw-input {:optional true} [:map [:query {:optional true} :string]]]
    [:kind    {:optional true} [:maybe AcpToolKind]]
    [:meta    {:optional true} AcpToolMeta]
