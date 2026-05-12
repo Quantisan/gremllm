@@ -31,20 +31,26 @@
   [e/reasoning-message {}
    (md/markdown->hiccup (:text message))])
 
-(defn- render-tool-use-message [message]
-  [e/tool-use-message
-   [:span (:text message)]])
-
 (defn- truncate [s n]
   (if (> (count s) n)
     (str (subs s 0 n) "…")
     s))
 
-(defn- render-tool-search-message [{:keys [tool-call-status query]}]
+(defn- render-tool-read [message]
+  [e/tool-use-message
+   [:span (:text message)]])
+
+(defn- render-tool-search [{:keys [tool-call-status query]}]
   (let [completed? (= "completed" tool-call-status)
         label      (if completed? "Searched the web" "Searching the web")
         summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
     [e/tool-search-message {:completed? completed? :summary summary :query query}]))
+
+(defn- render-tool-call-message [{:keys [tool] :as message}]
+  (case tool
+    :web-search (render-tool-search message)
+    :read       (render-tool-read message)
+    [:div "Unknown tool:" tool]))
 
 (defn- render-excerpt-pill [excerpt]
   [:span.excerpt-pill
@@ -69,12 +75,10 @@
 
 (defn- render-message [message]
   (case (:type message)
-    :user        (render-user-message message)
-    :assistant   (render-assistant-message message)
-    :reasoning   (render-reasoning-message message)
-    :tool-use    (render-tool-use-message message)
-    :tool-search (render-tool-search-message message)
-    ;; Default fallback
+    :user      (render-user-message message)
+    :assistant (render-assistant-message message)
+    :reasoning (render-reasoning-message message)
+    :tool-call (render-tool-call-message message)
     [:div "Unknown message type:" (:type message)]))
 
 (defn- render-loading-indicator []

@@ -60,3 +60,41 @@
                    :context {:excerpts [same-block-excerpt]}})]
                 false)]
     (is (contains-text? hiccup "reword these"))))
+
+(deftest tool-call-web-search-renders-test
+  (testing "completed :web-search renders 'Searched the web' + query"
+    (let [hiccup (chat-ui/render-chat-area
+                   [{:id 1
+                     :type :tool-call
+                     :tool-call-id "toolu_ws"
+                     :tool :web-search
+                     :tool-call-status "completed"
+                     :query "CRDT vs OT"
+                     :text ""}]
+                   false)]
+      (is (contains-text? hiccup "Searched the web"))
+      (is (contains-text? hiccup "CRDT vs OT"))))
+
+  (testing "pending :web-search renders 'Searching the web'"
+    (let [hiccup (chat-ui/render-chat-area
+                   [{:id 2
+                     :type :tool-call
+                     :tool-call-id "toolu_ws2"
+                     :tool :web-search
+                     :tool-call-status "pending"
+                     :query nil
+                     :text ""}]
+                   false)]
+      (is (contains-text? hiccup "Searching the web")))))
+
+(deftest tool-call-read-renders-test
+  (testing ":read renders the display label from :text"
+    (let [hiccup (chat-ui/render-chat-area
+                   [{:id 3
+                     :type :tool-call
+                     :tool-call-id "toolu_r"
+                     :tool :read
+                     :tool-call-status "completed"
+                     :text "Read — foo.md (12 lines)"}]
+                   false)]
+      (is (contains-text? hiccup "Read — foo.md (12 lines)")))))
