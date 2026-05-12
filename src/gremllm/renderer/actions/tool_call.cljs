@@ -2,9 +2,7 @@
   (:require [gremllm.renderer.state.topic :as topic-state]))
 
 (defn start-tool-call
-  "Mint a new tool-call message on the active topic. Caller is responsible
-   for producing a valid schema/Message — minting helpers live with the
-   ACP boundary in renderer.actions.acp."
+  "Mint a new tool-call message on the active topic."
   [state message]
   (let [topic-id (topic-state/get-active-topic-id state)]
     [[:messages.actions/add-to-chat-no-save topic-id message]]))
