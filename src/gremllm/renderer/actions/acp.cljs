@@ -40,37 +40,34 @@
 (defn- websearch? [update]
   (= "WebSearch" (get-in update [:meta :claude-code :tool-name])))
 
+(defn- mint-websearch-tool-call [update message-id]
+  {:id               message-id
+   :type             :tool-call
+   :tool-call-id     (:tool-call-id update)
+   :tool             :web-search
+   :tool-call-status (or (:status update) "pending")
+   :query            nil
+   :text             ""})
+
+(defn- mint-read-tool-call [update message-id]
+  {:id               message-id
+   :type             :tool-call
+   :tool-call-id     (:tool-call-id update)
+   :tool             :read
+   :tool-call-status "completed"
+   :text             (acp-codec/acp-read-display-label update)})
+
 (defn handle-tool-event
-  "Handles ACP tool-related session updates.
-   Returns chat effects for displayable tool calls and reads,
-   or diff effects for tool-call-updates with diffs."
-  ;; TODO: this cond mixes per-tool predicates (websearch?) with generic
-  ;; tool-response branches. When a second displayable tool lands, replace
-  ;; the per-tool branches with a dispatch keyed on tool-name — leave that
-  ;; decision until the second instance exists.
-  ;;
-  ;; The WebSearch branches build and patch Messages from raw update
-  ;; fields inline, while the read/diff branches go through acp-codec
-  ;; helpers. The WebSearch half is hard to follow without knowing the
-  ;; wire shape.
-  ;;
-  ;; WebSearch: :tool-call mints the placeholder (wire :status defaults to "pending", no query);
-  ;; :tool-call-update patches :query and :tool-call-status on the Message.
-  [state update message-id]
+  "Routes ACP tool session updates to tool-call.actions/start, /update, or
+   :topic.actions/append-pending-diffs.
+
+   WebSearch: :tool-call mints the placeholder; :tool-call-update patches
+   :tool-call-status and :query. Read: emits a one-shot :tool-call message
+   minted from the :tool-call-update with file metadata."
+  [_state update message-id]
   (cond
     (and (websearch? update) (= :tool-call (:session-update update)))
-    (let [topic-id (topic-state/get-active-topic-id state)
-          msg      {:id               message-id
-                    :type             :tool-call
-                    :tool             :web-search
-                    :tool-call-id     (:tool-call-id update)
-                    :tool-call-status (or (:status update) "pending")
-                    :query            nil
-                    :text             ""}]
-      (when-not (m/validate schema/Message msg)
-        (throw (js/Error. (str "Invalid :tool-call Message: "
-                               (pr-str (m/explain schema/Message msg))))))
-      [[:messages.actions/add-to-chat-no-save topic-id msg]])
+    [[:tool-call.actions/start (mint-websearch-tool-call update message-id)]]
 
     (and (websearch? update) (= :tool-call-update (:session-update update)))
     (let [new-query (get-in update [:raw-input :query])
@@ -78,21 +75,11 @@
                       (:status update) (assoc :tool-call-status (:status update))
                       new-query        (assoc :query new-query))]
       (when (seq patch)
-        [[:topic.actions/patch-message-by-tool-call-id (:tool-call-id update) patch]]))
+        [[:tool-call.actions/update (:tool-call-id update) patch]]))
 
     (and (acp-codec/tool-response-read-event? update)
          (acp-codec/tool-response-read-with-file-metadata? update))
-    (let [topic-id (topic-state/get-active-topic-id state)
-          msg      {:id               message-id
-                    :type             :tool-call
-                    :tool             :read
-                    :tool-call-id     (:tool-call-id update)
-                    :tool-call-status "completed"
-                    :text             (acp-codec/acp-read-display-label update)}]
-      (when-not (m/validate schema/Message msg)
-        (throw (js/Error. (str "Invalid :tool-call Message: "
-                               (pr-str (m/explain schema/Message msg))))))
-      [[:messages.actions/add-to-chat-no-save topic-id msg]])
+    [[:tool-call.actions/start (mint-read-tool-call update message-id)]]
 
     (acp-codec/tool-response-has-diffs? update)
     [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]]))

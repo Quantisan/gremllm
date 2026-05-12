@@ -34,7 +34,7 @@
              effects)))))
 
 (deftest test-handle-tool-event
-  (testing "returns tool-call for Read tool-call-update with file payload"
+  (testing "returns :tool-call for Read tool-call-update with file payload"
     (let [effects (acp/handle-tool-event
                     {:active-topic-id "t1"}
                     {:session-update :tool-call-update
@@ -44,11 +44,11 @@
                                                                  :totalLines 16}
                                                           :type "text"}}}}
                     456)]
-      (is (= [[:messages.actions/add-to-chat-no-save "t1"
+      (is (= [[:tool-call.actions/start
                {:id 456
                 :type :tool-call
-                :tool :read
                 :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
+                :tool :read
                 :tool-call-status "completed"
                 :text "Read — gremllm-launch-log.md (16 lines)"}]]
              effects))))
@@ -85,7 +85,7 @@
                     123)]
       (is (nil? effects))))
 
-  (testing "appends :tool-call message for WebSearch :tool-call"
+  (testing "appends :tool-call/:web-search message for WebSearch :tool-call"
     (let [state   {:topics {"t1" {:messages []}} :active-topic-id "t1"}
           effects (acp/handle-tool-event
                     state
@@ -95,17 +95,23 @@
                      :raw-input      {}
                      :meta           {:claude-code {:tool-name "WebSearch"}}}
                     999)]
-      (is (= [[:messages.actions/add-to-chat-no-save "t1"
-               {:id 999 :type :tool-call :tool :web-search :tool-call-id "toolu_ws"
-                :tool-call-status "pending" :query nil :text ""}]]
+      (is (= [[:tool-call.actions/start
+               {:id 999
+                :type :tool-call
+                :tool-call-id "toolu_ws"
+                :tool :web-search
+                :tool-call-status "pending"
+                :query nil
+                :text ""}]]
              effects))))
 
-  (testing "patches :query only when :tool-call-update carries :raw-input.query"
-    (let [state   {:topics {"t1" {:messages [{:type             :tool-search
-                                              :tool-call-id     "toolu_ws"
+  (testing "dispatches :tool-call.actions/update with query/status patch for WebSearch update"
+    (let [state   {:topics {"t1" {:messages [{:type :tool-call
+                                              :tool-call-id "toolu_ws"
+                                              :tool :web-search
                                               :tool-call-status "pending"
-                                              :query            nil
-                                              :text             ""}]}}
+                                              :query nil
+                                              :text ""}]}}
                    :active-topic-id "t1"}
           effects (acp/handle-tool-event
                     state
@@ -114,8 +120,7 @@
                      :raw-input      {:query "CRDT vs OT"}
                      :meta           {:claude-code {:tool-name "WebSearch"}}}
                     999)]
-      (is (= [[:topic.actions/patch-message-by-tool-call-id "toolu_ws"
-               {:query "CRDT vs OT"}]]
+      (is (= [[:tool-call.actions/update "toolu_ws" {:query "CRDT vs OT"}]]
              effects)))))
 
 (deftest test-session-update-routing
