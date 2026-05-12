@@ -37,6 +37,10 @@
 (defn- websearch? [update]
   (= "WebSearch" (get-in update [:meta :claude-code :tool-name])))
 
+;; TODO: when a second displayable tool lands, replace the per-tool
+;; predicates in handle-tool-event (websearch?, tool-response-read-event?)
+;; with a dispatch keyed on tool-name. Hold off until the second instance
+;; exists so the dispatch shape is informed by two concrete cases, not one.
 (defn- mint-websearch-tool-call [update message-id]
   {:id               message-id
    :type             :tool-call
