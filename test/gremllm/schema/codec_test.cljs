@@ -77,3 +77,38 @@
       (is (= {:panel-rect {:top 100 :left 50 :width 800 :height 600}
               :panel-scroll-top 20}
              (codec/anchor-context-from-dom panel))))))
+
+(deftest topic-from-disk-migrates-legacy-tool-search-test
+  (testing "legacy :tool-search message decodes into :tool-call/:web-search"
+    (let [legacy-topic {:id "t1"
+                        :name "Search"
+                        :session {:id "s1" :pending-diffs []}
+                        :messages [{:id 1 :type :tool-search
+                                    :tool-call-id "toolu_ws"
+                                    :tool-call-status "completed"
+                                    :query "CRDT vs OT"
+                                    :text ""}]
+                        :excerpts []}
+          decoded (codec/topic-from-disk legacy-topic)
+          msg     (-> decoded :messages first)]
+      (is (= :tool-call (:type msg)))
+      (is (= :web-search (:tool msg)))
+      (is (= "toolu_ws" (:tool-call-id msg)))
+      (is (= "completed" (:tool-call-status msg)))
+      (is (= "CRDT vs OT" (:query msg))))))
+
+(deftest topic-from-disk-migrates-legacy-tool-use-test
+  (testing "legacy :tool-use message decodes into :tool-call/:read with synthetic id"
+    (let [legacy-topic {:id "t1"
+                        :name "Read"
+                        :session {:id "s1" :pending-diffs []}
+                        :messages [{:id 99 :type :tool-use
+                                    :text "Read — foo.md (12 lines)"}]
+                        :excerpts []}
+          decoded (codec/topic-from-disk legacy-topic)
+          msg     (-> decoded :messages first)]
+      (is (= :tool-call (:type msg)))
+      (is (= :read (:tool msg)))
+      (is (= "completed" (:tool-call-status msg)))
+      (is (= "Read — foo.md (12 lines)" (:text msg)))
+      (is (string? (:tool-call-id msg)) "synthetic tool-call-id is set"))))

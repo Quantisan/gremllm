@@ -7,10 +7,47 @@
 ;; Disk Codecs
 ;; ========================================
 
+(defn- migrate-legacy-message
+  "Rewrites a single legacy message map to the unified :tool-call shape.
+   - :tool-search → :tool-call with :tool :web-search
+   - :tool-use    → :tool-call with :tool :read, synthetic :tool-call-id,
+                    and :tool-call-status \"completed\""
+  [m]
+  (case (:type m)
+    :tool-search
+    (-> m
+        (assoc :type :tool-call
+               :tool :web-search)
+        (update :tool-call-status #(or % "completed")))
+
+    :tool-use
+    (-> m
+        (assoc :type :tool-call
+               :tool :read
+               :tool-call-status "completed")
+        (update :tool-call-id #(or % (str "legacy-" (:id m)))))
+
+    m))
+
+(def ^:private legacy-message-transformer
+  "Migrates retired :tool-search/:tool-use message variants on topic load.
+   Runs at the Topic-level :map decoder (enter phase) so the rewrite happens
+   before [:multi] dispatch sees the messages. Remove once persisted topics
+   from versions < <next-release> have aged out."
+  (mt/transformer
+    {:decoders
+     {:map (fn [m]
+             (cond-> m
+               (seq (:messages m)) (update :messages #(mapv migrate-legacy-message %))))}}))
+
 (def topic-from-disk
-  "Loads and validates a topic from persisted EDN format. Applies defaults for fields added after
-  initial save. Throws if the topic data is invalid."
-  (m/coercer schema/Topic (mt/transformer mt/default-value-transformer mt/json-transformer)))
+  "Loads and validates a topic from persisted EDN format. Applies defaults for
+   fields added after initial save. Normalizes legacy message shapes. Throws
+   if the topic data is invalid."
+  (m/coercer schema/Topic
+             (mt/transformer mt/default-value-transformer
+                             legacy-message-transformer
+                             mt/json-transformer)))
 
 (def topic-for-disk
   "Prepares topic for disk persistence, stripping transient fields.
