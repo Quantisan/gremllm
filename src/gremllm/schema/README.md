@@ -25,6 +25,13 @@ process, or JS boundaries needs validation or translation.
 - keep path and permission decision logic in `codec/acp/permission.cljs` when
   it must stay pure and reusable
 
+## Scope Assumptions
+
+- **No code for legacy persisted data.** Disk codecs validate against the
+  current schema only. A persisted topic that doesn't match fails to load —
+  by design. Translation code for shapes that don't yet exist on disk is
+  YAGNI; if and when real legacy data appears, write the translator then.
+
 ## Important Shapes
 
 Shapes are labeled by role; file location follows from that.
