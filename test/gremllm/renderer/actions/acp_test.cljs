@@ -35,7 +35,7 @@
              effects)))))
 
 (deftest test-handle-tool-event
-  (testing "returns tool-use for Read tool-call-update with file payload"
+  (testing "returns tool-call for Read tool-call-update with file payload"
     (let [effects (acp/handle-tool-event
                     {:active-topic-id "t1"}
                     {:session-update :tool-call-update
@@ -47,7 +47,10 @@
                     456)]
       (is (= [[:messages.actions/add-to-chat-no-save "t1"
                {:id 456
-                :type :tool-use
+                :type :tool-call
+                :tool :read
+                :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
+                :tool-call-status "completed"
                 :text "Read — gremllm-launch-log.md (16 lines)"}]]
              effects))))
 
@@ -83,7 +86,7 @@
                     123)]
       (is (nil? effects))))
 
-  (testing "appends :tool-search message for WebSearch :tool-call"
+  (testing "appends :tool-call message for WebSearch :tool-call"
     (let [state   {:topics {"t1" {:messages []}} :active-topic-id "t1"}
           effects (acp/handle-tool-event
                     state
@@ -94,7 +97,7 @@
                      :meta           {:claude-code {:tool-name "WebSearch"}}}
                     999)]
       (is (= [[:messages.actions/add-to-chat-no-save "t1"
-               {:id 999 :type :tool-search :tool-call-id "toolu_ws"
+               {:id 999 :type :tool-call :tool :web-search :tool-call-id "toolu_ws"
                 :tool-call-status "pending" :query nil :text ""}]]
              effects))))
 

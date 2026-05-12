@@ -60,14 +60,15 @@
   (cond
     (and (websearch? update) (= :tool-call (:session-update update)))
     (let [topic-id (topic-state/get-active-topic-id state)
-          msg      {:id           message-id
-                    :type         :tool-search
-                    :tool-call-id (:tool-call-id update)
+          msg      {:id               message-id
+                    :type             :tool-call
+                    :tool             :web-search
+                    :tool-call-id     (:tool-call-id update)
                     :tool-call-status (or (:status update) "pending")
-                    :query        nil
-                    :text         ""}]
+                    :query            nil
+                    :text             ""}]
       (when-not (m/validate schema/Message msg)
-        (throw (js/Error. (str "Invalid :tool-search Message: "
+        (throw (js/Error. (str "Invalid :tool-call Message: "
                                (pr-str (m/explain schema/Message msg))))))
       [[:messages.actions/add-to-chat-no-save topic-id msg]])
 
@@ -81,10 +82,17 @@
 
     (and (acp-codec/tool-response-read-event? update)
          (acp-codec/tool-response-read-with-file-metadata? update))
-    (start-response (topic-state/get-active-topic-id state)
-                    :tool-use
-                    (acp-codec/acp-read-display-label update)
-                    message-id)
+    (let [topic-id (topic-state/get-active-topic-id state)
+          msg      {:id               message-id
+                    :type             :tool-call
+                    :tool             :read
+                    :tool-call-id     (:tool-call-id update)
+                    :tool-call-status "completed"
+                    :text             (acp-codec/acp-read-display-label update)}]
+      (when-not (m/validate schema/Message msg)
+        (throw (js/Error. (str "Invalid :tool-call Message: "
+                               (pr-str (m/explain schema/Message msg))))))
+      [[:messages.actions/add-to-chat-no-save topic-id msg]])
 
     (acp-codec/tool-response-has-diffs? update)
     [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]]))
