@@ -4,8 +4,7 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
-            [gremllm.schema.codec :as codec]
-            [malli.core :as m]))
+            [gremllm.schema.codec :as codec]))
 
 (defn start-new-topic [_state]
   (let [new-topic (schema/create-topic)
@@ -65,32 +64,6 @@
   (let [topic-id (topic-state/get-active-topic-id state)
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
-
-(defn start-tool-call
-  "Mint a new tool-call message on the active topic.
-   Validates the message against schema/Message before dispatching."
-  [state message]
-  (when-not (m/validate schema/Message message)
-    (throw (js/Error. (str "Invalid tool-call Message: "
-                           (pr-str (m/explain schema/Message message))))))
-  (let [topic-id (topic-state/get-active-topic-id state)]
-    [[:messages.actions/add-to-chat-no-save topic-id message]]))
-
-(defn update-tool-call
-  "Refine an existing tool-call message by tool-call-id with a patch map.
-   Emits one [:effects/save ...] per patch field. Returns nil if no match."
-  [state tool-call-id patch]
-  (if-let [idx (topic-state/find-message-index-by-tool-call-id state tool-call-id)]
-    (let [topic-id (topic-state/get-active-topic-id state)
-          msg-path (conj (topic-state/topic-field-path topic-id :messages) idx)]
-      (reduce-kv
-        (fn [effects field val]
-          (conj effects [:effects/save (conj msg-path field) val]))
-        []
-        patch))
-    (do
-      (js/console.warn "[ACP] update-tool-call: no message for tool-call-id" tool-call-id)
-      nil)))
 
 (defn set-active
   "Set the active topic and initialize its ACP session."
