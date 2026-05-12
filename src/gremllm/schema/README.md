@@ -53,8 +53,10 @@ check to a test or delete it.
 Shapes are labeled by role; file location follows from that.
 
 **In-memory canonical** (`schema.cljs`):
-- `Message`: structured user or assistant chat item, including optional excerpt
-  context and attachments
+- `Message`: tagged union of chat message kinds dispatching on `:type` —
+  `:user` (text plus optional excerpts and attachments), `:assistant`,
+  `:reasoning`, and `:tool-call` (carries `:tool`, `:tool-call-id`,
+  `:tool-call-status`, and per-tool extras)
 - `DocumentExcerpt`: durable excerpt reference stored on a topic
 - `AcpSession`: session id plus pending diffs
 - `Topic`: in-memory representation of a topic and its session state
