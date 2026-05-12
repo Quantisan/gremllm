@@ -18,90 +18,80 @@
         msg-path (conj (topic-state/topic-field-path topic-id :messages) last-idx :text)]
     [:effects/save msg-path new-text]))
 
-(defn- start-response
-  "Creates a new assistant message (first chunk of a new turn)."
-  [topic-id message-type chunk-text message-id]
-  (let [message {:id message-id :type message-type :text chunk-text}]
-    [[:messages.actions/add-to-chat-no-save topic-id message]]))
-
-(defn streaming-chunk-effects
-  "Builds effects for an incoming assistant message chunk.
-   Appends to existing response or starts a new one."
-  [state message-type chunk-text message-id]
-  (let [continuing? (continuing? state message-type)
-        topic-id    (topic-state/get-active-topic-id state)]
-    (if continuing?
+(defn append-streaming-text
+  "Continues or starts a streaming assistant/reasoning message from a text chunk."
+  [state update]
+  (let [message-type (get acp-codec/acp-chunk->message-type (:session-update update))
+        chunk-text   (acp-codec/acp-update-text update)]
+    (if (continuing? state message-type)
       [(append-to-response state chunk-text)]
-      (start-response topic-id message-type chunk-text message-id))))
+      (let [topic-id (topic-state/get-active-topic-id state)
+            message  {:id   (schema/generate-message-id)
+                      :type message-type
+                      :text chunk-text}]
+        [[:messages.actions/add-to-chat-no-save topic-id message]]))))
 
-(defn- websearch? [update]
-  (= "WebSearch" (get-in update [:meta :claude-code :tool-name])))
+(defn start-web-search-message
+  "Mints a pending :web-search :tool-call message from a WebSearch :tool-call event."
+  [_state update]
+  [[:tool-call.actions/start
+    {:id               (schema/generate-message-id)
+     :type             :tool-call
+     :tool-call-id     (:tool-call-id update)
+     :tool             :web-search
+     :tool-call-status (or (:status update) "pending")
+     :query            nil
+     :text             ""}]])
 
-;; TODO: when a second displayable tool lands, replace the per-tool
-;; predicates in handle-tool-event (websearch?, tool-response-read-event?)
-;; with a dispatch keyed on tool-name. Hold off until the second instance
-;; exists so the dispatch shape is informed by two concrete cases, not one.
-(defn- mint-websearch-tool-call [update message-id]
-  {:id               message-id
-   :type             :tool-call
-   :tool-call-id     (:tool-call-id update)
-   :tool             :web-search
-   :tool-call-status (or (:status update) "pending")
-   :query            nil
-   :text             ""})
+(defn update-web-search-message
+  "Patches an existing :web-search :tool-call message with status/query refinements
+   from a WebSearch :tool-call-update event. Returns nil when the update carries
+   no patchable fields."
+  [_state update]
+  (let [new-query (get-in update [:raw-input :query])
+        patch     (cond-> {}
+                    (:status update) (assoc :tool-call-status (:status update))
+                    new-query        (assoc :query new-query))]
+    (when (seq patch)
+      [[:tool-call.actions/update (:tool-call-id update) patch]])))
 
-(defn- mint-read-tool-call [update message-id]
-  {:id               message-id
-   :type             :tool-call
-   :tool-call-id     (:tool-call-id update)
-   :tool             :read
-   :tool-call-status "completed"
-   :text             (acp-codec/acp-read-display-label update)})
+(defn record-tool-read-message
+  "Mints a one-shot completed :read :tool-call message from a Read tool-call-update
+   carrying file metadata. Read collapses start/complete into a single event."
+  [_state update]
+  [[:tool-call.actions/start
+    {:id               (schema/generate-message-id)
+     :type             :tool-call
+     :tool-call-id     (:tool-call-id update)
+     :tool             :read
+     :tool-call-status "completed"
+     :text             (acp-codec/acp-read-display-label update)}]])
 
-(defn handle-tool-event
-  "Routes ACP tool session updates to tool-call.actions/start, /update, or
-   :topic.actions/append-pending-diffs.
-
-   WebSearch: :tool-call mints the placeholder; :tool-call-update patches
-   :tool-call-status and :query. Read: emits a one-shot :tool-call message
-   minted from the :tool-call-update with file metadata."
-  [_state update message-id]
-  (cond
-    (and (websearch? update) (= :tool-call (:session-update update)))
-    [[:tool-call.actions/start (mint-websearch-tool-call update message-id)]]
-
-    (and (websearch? update) (= :tool-call-update (:session-update update)))
-    (let [new-query (get-in update [:raw-input :query])
-          patch     (cond-> {}
-                      (:status update) (assoc :tool-call-status (:status update))
-                      new-query        (assoc :query new-query))]
-      (when (seq patch)
-        [[:tool-call.actions/update (:tool-call-id update) patch]]))
-
-    (and (acp-codec/tool-response-read-event? update)
-         (acp-codec/tool-response-read-with-file-metadata? update))
-    [[:tool-call.actions/start (mint-read-tool-call update message-id)]]
-
-    (acp-codec/tool-response-has-diffs? update)
-    [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]]))
+(defn append-tool-diffs
+  "Appends pending diffs extracted from a tool-call-update's content."
+  [_state update]
+  [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]])
 
 (defn session-update
-  "Handles incoming ACP session updates (streaming chunks, errors, etc).
+  "Routes incoming ACP session updates to the matching chat-state operation.
 
   update: acp-codec/AcpUpdate"
   [state {:keys [update]}]
-  (let [update-type (:session-update update)]
-    (cond
-      ;; Streaming text chunks (assistant, reasoning)
-      (#{:agent-message-chunk :agent-thought-chunk} update-type)
-      (streaming-chunk-effects state
-                               (get acp-codec/acp-chunk->message-type update-type)
-                               (acp-codec/acp-update-text update)
-                               (schema/generate-message-id))
+  (cond
+    (acp-codec/streaming-text-chunk? update)
+    (append-streaming-text state update)
 
-      ;; Tool updates (call + status)
-      (#{:tool-call :tool-call-update} update-type)
-      (handle-tool-event state update (schema/generate-message-id)))))
+    (acp-codec/web-search-started? update)
+    (start-web-search-message state update)
+
+    (acp-codec/web-search-updated? update)
+    (update-web-search-message state update)
+
+    (acp-codec/tool-read-completed? update)
+    (record-tool-read-message state update)
+
+    (acp-codec/tool-diffs? update)
+    (append-tool-diffs state update)))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."

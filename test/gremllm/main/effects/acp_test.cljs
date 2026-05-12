@@ -78,7 +78,7 @@
                           (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-callback-fires-and-coerces-diffs
-  (testing "onSessionUpdate callback receives raw JS, coerces to CLJS, tool-response-has-diffs? true"
+  (testing "onSessionUpdate callback receives raw JS, coerces to CLJS, tool-diffs? true"
     (async done
       (let [received    (atom nil)
             captured-cb (atom nil)
@@ -100,7 +100,7 @@
                          (is (identical? js-data @received))
                          (let [coerced (acp-codec/acp-session-update-from-js @received)]
                            (is (= "s-test" (:acp-session-id coerced)))
-                           (is (acp-codec/tool-response-has-diffs? (:update coerced)))))))
+                           (is (acp-codec/tool-diffs? (:update coerced)))))))
               (.finally (fn []
                           (.then (acp/shutdown) (fn [_] (done)))))))))))
 

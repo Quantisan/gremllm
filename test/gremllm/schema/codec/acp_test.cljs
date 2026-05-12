@@ -217,6 +217,27 @@
       {:session-update :tool-call-update :content nil}
       {:session-update :tool-call-update :content []})))
 
+(deftest tool-read-completed-guards
+  (testing "true for Read tool-call-update with file metadata"
+    (is (acp-codec/tool-read-completed?
+          {:session-update :tool-call-update
+           :tool-call-id "toolu_01"
+           :meta {:claude-code {:tool-name "Read"
+                                :tool-response {:file {:filePath "/a.md" :totalLines 1}}}}})))
+
+  (testing "false for Read tool-call-update without file metadata (pre-completion event)"
+    (is (not (acp-codec/tool-read-completed?
+               {:session-update :tool-call-update
+                :tool-call-id "toolu_01"
+                :meta {:claude-code {:tool-name "Read"}}}))))
+
+  (testing "false for non-Read tool-call-update that happens to carry file metadata"
+    (is (not (acp-codec/tool-read-completed?
+               {:session-update :tool-call-update
+                :tool-call-id "toolu_01"
+                :meta {:claude-code {:tool-name "Edit"
+                                     :tool-response {:file {:filePath "/a.md" :totalLines 1}}}}})))))
+
 (deftest acp-read-display-label-from-meta
   (testing "formats filename and line count from tool-response meta"
     (is (= "Read — document.md (37 lines)"

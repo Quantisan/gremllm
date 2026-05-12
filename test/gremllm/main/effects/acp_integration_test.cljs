@@ -195,14 +195,14 @@
 
 (defn- assert-diffs-target [updates doc-path]
   (let [diffs (->> updates
-                   (filter acp-codec/tool-response-has-diffs?)
+                   (filter acp-codec/tool-diffs?)
                    (mapcat acp-codec/tool-response-diffs))]
     (is (every? #(= doc-path (:path %)) diffs)
         "All diffs should target the linked document")))
 
 (defn- assert-tools-completed [updates]
   (let [read-ids (tool-ids acp-codec/tool-response-read-event? updates)
-        diff-ids (tool-ids acp-codec/tool-response-has-diffs? updates)]
+        diff-ids (tool-ids acp-codec/tool-diffs? updates)]
     (is (pos? (count read-ids))
         "Expected at least one Read tool-call-update event")
     (is (every? #(= "completed" %) (tool-statuses read-ids updates))

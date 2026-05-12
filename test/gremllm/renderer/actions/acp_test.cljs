@@ -2,7 +2,6 @@
   (:require [cljs.test :refer [are deftest is testing]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
-            [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.schema-test :as schema-test]))
 
@@ -15,86 +14,53 @@
       (is (= [:effects/save [:topics "t1" :messages 1 :text] "Hi there!"]
              effect)))))
 
-(deftest test-streaming-chunk-effects
-  (testing "appends chunk to existing assistant message"
+(deftest test-append-streaming-text
+  (testing "continues by appending text to the last message of matching type"
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}
                                            {:type :assistant :text "Hi "}]}}
                  :active-topic-id "t1"}
-          effects (acp/streaming-chunk-effects state :assistant "there!" 123)]
+          effects (with-redefs [schema/generate-message-id (constantly 123)]
+                    (acp/append-streaming-text
+                      state
+                      {:session-update :agent-message-chunk
+                       :content {:text "there!" :type "text"}}))]
       (is (= [[:effects/save [:topics "t1" :messages 1 :text] "Hi there!"]]
              effects))))
 
-  (testing "starts new assistant message when last is user"
+  (testing "starts a new assistant message when the last message is a different type"
     (let [state {:topics {"t1" {:messages [{:type :user :text "Hello"}]}}
                  :active-topic-id "t1"}
-          effects (acp/streaming-chunk-effects state :assistant "Hi!" 456)]
-      (is (= [[:messages.actions/add-to-chat-no-save "t1" {:id 456
-                                                           :type :assistant
-                                                           :text "Hi!"}]]
+          effects (with-redefs [schema/generate-message-id (constantly 456)]
+                    (acp/append-streaming-text
+                      state
+                      {:session-update :agent-message-chunk
+                       :content {:text "Hi!" :type "text"}}))]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
+               {:id 456 :type :assistant :text "Hi!"}]]
+             effects))))
+
+  (testing "starts a new reasoning message from an :agent-thought-chunk"
+    (let [state {:topics {"t1" {:messages []}}
+                 :active-topic-id "t1"}
+          effects (with-redefs [schema/generate-message-id (constantly 789)]
+                    (acp/append-streaming-text
+                      state
+                      {:session-update :agent-thought-chunk
+                       :content {:text "thinking..." :type "text"}}))]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
+               {:id 789 :type :reasoning :text "thinking..."}]]
              effects)))))
 
-(deftest test-handle-tool-event
-  (testing "returns :tool-call for Read tool-call-update with file payload"
-    (let [effects (acp/handle-tool-event
-                    {:active-topic-id "t1"}
-                    {:session-update :tool-call-update
-                     :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
-                     :meta {:claude-code {:tool-name "Read"
-                                          :tool-response {:file {:filePath "/Users/paul/Projects/gremllm/resources/gremllm-launch-log.md"
-                                                                 :totalLines 16}
-                                                          :type "text"}}}}
-                    456)]
-      (is (= [[:tool-call.actions/start
-               {:id 456
-                :type :tool-call
-                :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
-                :tool :read
-                :tool-call-status "completed"
-                :text "Read — gremllm-launch-log.md (16 lines)"}]]
-             effects))))
-
-  (testing "dispatches pending diffs from tool-call-update with diff content"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :tool-call-update
-                     :tool-call-id "toolu_1"
-                     :status "completed"
-                     :content [{:type "diff" :path "/tmp/test.md"
-                                :old-text "old" :new-text "new"}]}
-                    123)]
-      (is (= [[:topic.actions/append-pending-diffs
-               [{:type "diff" :path "/tmp/test.md"
-                 :old-text "old" :new-text "new"}]]]
-             effects))))
-
-  (testing "returns nil for tool-call-update without diffs and no Read meta"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :tool-call-update
-                     :tool-call-id "toolu_1"
-                     :status "completed"
-                     :meta {:claude-code {:tool-name "Edit"}}}
-                    123)]
-      (is (nil? effects))))
-
-  (testing "ignores non-tool update types"
-    (let [effects (acp/handle-tool-event
-                    {}
-                    {:session-update :agent-message-chunk
-                     :content {:type "text" :text "hello"}}
-                    123)]
-      (is (nil? effects))))
-
-  (testing "appends :tool-call/:web-search message for WebSearch :tool-call"
-    (let [state   {:topics {"t1" {:messages []}} :active-topic-id "t1"}
-          effects (acp/handle-tool-event
-                    state
-                    {:session-update :tool-call
-                     :tool-call-id   "toolu_ws"
-                     :status         "pending"
-                     :raw-input      {}
-                     :meta           {:claude-code {:tool-name "WebSearch"}}}
-                    999)]
+(deftest test-start-web-search-message
+  (testing "mints a pending :web-search :tool-call message"
+    (let [effects (with-redefs [schema/generate-message-id (constantly 999)]
+                    (acp/start-web-search-message
+                      {}
+                      {:session-update :tool-call
+                       :tool-call-id   "toolu_ws"
+                       :status         "pending"
+                       :raw-input      {}
+                       :meta           {:claude-code {:tool-name "WebSearch"}}}))]
       (is (= [[:tool-call.actions/start
                {:id 999
                 :type :tool-call
@@ -105,43 +71,119 @@
                 :text ""}]]
              effects))))
 
-  (testing "dispatches :tool-call.actions/update with query/status patch for WebSearch update"
-    (let [state   {:topics {"t1" {:messages [{:type :tool-call
-                                              :tool-call-id "toolu_ws"
-                                              :tool :web-search
-                                              :tool-call-status "pending"
-                                              :query nil
-                                              :text ""}]}}
-                   :active-topic-id "t1"}
-          effects (acp/handle-tool-event
-                    state
+  (testing "defaults :tool-call-status to \"pending\" when wire :status is absent"
+    (let [effects (with-redefs [schema/generate-message-id (constantly 1)]
+                    (acp/start-web-search-message
+                      {}
+                      {:session-update :tool-call
+                       :tool-call-id   "toolu_ws2"
+                       :meta           {:claude-code {:tool-name "WebSearch"}}}))]
+      (is (= "pending" (-> effects first second :tool-call-status))))))
+
+(deftest test-update-web-search-message
+  (testing "emits a :query patch when :raw-input.:query is present"
+    (let [effects (acp/update-web-search-message
+                    {}
                     {:session-update :tool-call-update
                      :tool-call-id   "toolu_ws"
                      :raw-input      {:query "CRDT vs OT"}
-                     :meta           {:claude-code {:tool-name "WebSearch"}}}
-                    999)]
+                     :meta           {:claude-code {:tool-name "WebSearch"}}})]
       (is (= [[:tool-call.actions/update "toolu_ws" {:query "CRDT vs OT"}]]
+             effects))))
+
+  (testing "emits a :tool-call-status patch when wire :status is present"
+    (let [effects (acp/update-web-search-message
+                    {}
+                    {:session-update :tool-call-update
+                     :tool-call-id   "toolu_ws"
+                     :status         "completed"
+                     :meta           {:claude-code {:tool-name "WebSearch"}}})]
+      (is (= [[:tool-call.actions/update "toolu_ws" {:tool-call-status "completed"}]]
+             effects))))
+
+  (testing "returns nil when no patchable fields are present"
+    (is (nil? (acp/update-web-search-message
+                {}
+                {:session-update :tool-call-update
+                 :tool-call-id   "toolu_ws"
+                 :meta           {:claude-code {:tool-name "WebSearch"}}})))))
+
+(deftest test-record-tool-read-message
+  (testing "mints a one-shot completed :read :tool-call message from file metadata"
+    (let [effects (with-redefs [schema/generate-message-id (constantly 456)]
+                    (acp/record-tool-read-message
+                      {}
+                      {:session-update :tool-call-update
+                       :tool-call-id   "toolu_01U3ze1LsKXNhkBj46DM6SPN"
+                       :meta {:claude-code {:tool-name "Read"
+                                            :tool-response {:file {:filePath "/Users/paul/Projects/gremllm/resources/gremllm-launch-log.md"
+                                                                   :totalLines 16}
+                                                            :type "text"}}}}))]
+      (is (= [[:tool-call.actions/start
+               {:id 456
+                :type :tool-call
+                :tool-call-id "toolu_01U3ze1LsKXNhkBj46DM6SPN"
+                :tool :read
+                :tool-call-status "completed"
+                :text "Read — gremllm-launch-log.md (16 lines)"}]]
+             effects)))))
+
+(deftest test-append-tool-diffs
+  (testing "dispatches :topic.actions/append-pending-diffs with extracted diffs"
+    (let [effects (acp/append-tool-diffs
+                    {}
+                    {:session-update :tool-call-update
+                     :tool-call-id   "toolu_1"
+                     :status         "completed"
+                     :content        [{:type "diff" :path "/tmp/test.md"
+                                       :old-text "old" :new-text "new"}]})]
+      (is (= [[:topic.actions/append-pending-diffs
+               [{:type "diff" :path "/tmp/test.md"
+                 :old-text "old" :new-text "new"}]]]
              effects)))))
 
 (deftest test-session-update-routing
-  (let [state {:topics {"t1" {:messages [{:type :assistant :text "Hi "}]}}
-               :active-topic-id "t1"}]
-    (with-redefs [schema/generate-message-id (constantly 1)
-                  acp-codec/acp-update-text  (constantly "text")
-                  acp/streaming-chunk-effects (fn [_ msg-type _ _] [[:streamed msg-type]])
-                  acp/handle-tool-event       (fn [_ update _]     [[:tooled (:session-update update)]])]
+  (with-redefs [acp/append-streaming-text     (fn [_ update] [[:streamed (:session-update update)]])
+                acp/start-web-search-message  (fn [_ _]      [[:web-search-started]])
+                acp/update-web-search-message (fn [_ _]      [[:web-search-updated]])
+                acp/record-tool-read-message  (fn [_ _]      [[:tool-read-completed]])
+                acp/append-tool-diffs         (fn [_ _]      [[:tool-diffs]])]
 
-      (testing "routes each update type to the correct handler"
-        (are [update-type expected]
-          (= expected (acp/session-update state {:update {:session-update update-type
-                                                          :content {:type "text" :text "x"}}}))
-          :agent-message-chunk [[:streamed :assistant]]
-          :agent-thought-chunk [[:streamed :reasoning]]
-          :tool-call           [[:tooled :tool-call]]
-          :tool-call-update    [[:tooled :tool-call-update]]))
+    (testing "routes streaming text chunks to append-streaming-text"
+      (are [update-type] (= [[:streamed update-type]]
+                            (acp/session-update {} {:update {:session-update update-type
+                                                             :content {:type "text" :text "x"}}}))
+        :agent-message-chunk
+        :agent-thought-chunk))
 
-      (testing "ignores unsupported update types"
-        (is (nil? (acp/session-update state {:update {:session-update :available-commands-update}})))))))
+    (testing "routes WebSearch :tool-call to start-web-search-message"
+      (is (= [[:web-search-started]]
+             (acp/session-update {} {:update {:session-update :tool-call
+                                              :tool-call-id "toolu_ws"
+                                              :meta {:claude-code {:tool-name "WebSearch"}}}}))))
+
+    (testing "routes WebSearch :tool-call-update to update-web-search-message"
+      (is (= [[:web-search-updated]]
+             (acp/session-update {} {:update {:session-update :tool-call-update
+                                              :tool-call-id "toolu_ws"
+                                              :meta {:claude-code {:tool-name "WebSearch"}}}}))))
+
+    (testing "routes Read :tool-call-update with file metadata to record-tool-read-message"
+      (is (= [[:tool-read-completed]]
+             (acp/session-update {} {:update {:session-update :tool-call-update
+                                              :tool-call-id "toolu_r"
+                                              :meta {:claude-code {:tool-name "Read"
+                                                                   :tool-response {:file {:filePath "/a.md"
+                                                                                          :totalLines 1}}}}}}))))
+
+    (testing "routes diff-bearing :tool-call-update to append-tool-diffs"
+      (is (= [[:tool-diffs]]
+             (acp/session-update {} {:update {:session-update :tool-call-update
+                                              :tool-call-id "toolu_d"
+                                              :content [{:type "diff" :path "/a.md" :new-text "x"}]}}))))
+
+    (testing "ignores unsupported update types"
+      (is (nil? (acp/session-update {} {:update {:session-update :available-commands-update}}))))))
 
 (deftest send-prompt-forwards-structured-user-message-with-excerpts-to-acp-prompt-test
   (let [old-window (.-window js/globalThis)
