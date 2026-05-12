@@ -20,9 +20,7 @@
 ;; ========================================
 
 (def acp-chunk->message-type
-  "Maps streaming ACP text chunk session-update types to internal :type values.
-   Tool-call messages mint through tool-call.actions/start with explicit :tool,
-   not this map."
+  "Maps streaming ACP text chunk session-update types to internal :type values."
   {:agent-message-chunk :assistant
    :agent-thought-chunk :reasoning})
 
