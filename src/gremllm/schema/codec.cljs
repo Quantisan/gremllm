@@ -31,10 +31,15 @@
     m))
 
 (def ^:private legacy-message-transformer
-  "Migrates retired :tool-search/:tool-use message variants on topic load.
-   Runs at the Topic-level :map decoder (enter phase) so the rewrite happens
-   before [:multi] dispatch sees the messages. Remove once persisted topics
-   from versions < <next-release> have aged out."
+  "Migrates retired :tool-search/:tool-use message variants to the unified
+   :tool-call shape on topic load. Runs at the Topic-level :map decoder
+   (enter phase) so the rewrite happens before [:multi] dispatch sees the
+   messages.
+
+   This translator is permanent. Workspaces are portable folders, so legacy
+   topic files can appear at any time. In practice, touched topics rewrite
+   themselves on the next auto-save, but never-touched archives stay legacy
+   on disk indefinitely — the translator is what makes them loadable."
   (mt/transformer
     {:decoders
      {:map (fn [m]
