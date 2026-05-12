@@ -20,7 +20,7 @@
     (if (= start end) start (str start " -> " end))))
 
 (def ^:private excerpt-snippet-cap 40)
-(def ^:private tool-search-query-cap 60)
+(def ^:private web-search-query-cap 60)
 (def ^:private composer-excerpt-cap 30)
 
 (defn- render-assistant-message [message]
@@ -37,18 +37,18 @@
     s))
 
 (defn- render-tool-read [message]
-  [e/tool-use-message
+  [e/tool-status-message
    [:span (:text message)]])
 
-(defn- render-tool-search [{:keys [tool-call-status query]}]
+(defn- render-web-search [{:keys [tool-call-status query]}]
   (let [completed? (= "completed" tool-call-status)
         label      (if completed? "Searched the web" "Searching the web")
-        summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
-    [e/tool-search-message {:completed? completed? :summary summary :query query}]))
+        summary    (if query (str label " — " (truncate query web-search-query-cap)) label)]
+    [e/tool-detail-message {:completed? completed? :summary summary :query query}]))
 
 (defn- render-tool-call-message [{:keys [tool] :as message}]
   (case tool
-    :web-search (render-tool-search message)
+    :web-search (render-web-search message)
     :read       (render-tool-read message)
     [:div "Unknown tool:" tool]))
 
