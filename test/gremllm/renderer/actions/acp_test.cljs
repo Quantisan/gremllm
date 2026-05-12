@@ -4,7 +4,6 @@
             [gremllm.schema.codec :as codec]
             [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.actions.acp :as acp]
-            [gremllm.renderer.actions.topic :as topic]
             [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
@@ -185,20 +184,3 @@
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
 
-(deftest test-patch-message-by-tool-call-id
-  (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
-                                          {:type :tool-search
-                                           :tool-call-id "toolu_1"
-                                           :tool-call-status "pending"
-                                           :query nil
-                                           :text ""}]}}
-               :active-topic-id "t1"}]
-
-    (testing "emits path-based saves for each field in patch"
-      (let [effects (topic/patch-message-by-tool-call-id state "toolu_1" {:tool-call-status "completed"
-                                                                           :query            "CRDT vs OT"
-                                                                           :text             "CRDT vs OT"})]
-        (is (= #{[:effects/save [:topics "t1" :messages 1 :tool-call-status] "completed"]
-                 [:effects/save [:topics "t1" :messages 1 :query]            "CRDT vs OT"]
-                 [:effects/save [:topics "t1" :messages 1 :text]             "CRDT vs OT"]}
-               (set effects)))))))

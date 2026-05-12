@@ -4,7 +4,8 @@
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
             [gremllm.schema :as schema]
-            [gremllm.schema.codec :as codec]))
+            [gremllm.schema.codec :as codec]
+            [malli.core :as m]))
 
 (defn start-new-topic [_state]
   (let [new-topic (schema/create-topic)
@@ -65,33 +66,30 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
-;; TODO: patch-message-by-tool-call-id reads like plumbing.
-;; - Name describes the mechanism ("patch by lookup key") rather than
-;;   the domain operation (reflecting an ACP :tool-call-update onto
-;;   its Message). The only caller is the WebSearch
-;;   :tool-call-update branch in handle-tool-event.
-;; - Body fans the patch map into per-field [:effects/save path val]
-;;   via reduce-kv; every other action in this namespace emits a
-;;   single save per concern.
-;; - Active topic is assumed implicitly via get-active-topic-id even
-;;   though the trigger is an inbound ACP session update — same
-;;   coupling already flagged inside append-pending-diffs.
-;; - Two concerns in one function: locating the target Message and
-;;   emitting state-write effects.
-(defn patch-message-by-tool-call-id
-  "Merges patch fields into the message identified by tool-call-id.
-   Uses path-based [:effects/save ...] for each field. Returns nil if no match."
+(defn start-tool-call
+  "Mint a new tool-call message on the active topic.
+   Validates the message against schema/Message before dispatching."
+  [state message]
+  (when-not (m/validate schema/Message message)
+    (throw (js/Error. (str "Invalid tool-call Message: "
+                           (pr-str (m/explain schema/Message message))))))
+  (let [topic-id (topic-state/get-active-topic-id state)]
+    [[:messages.actions/add-to-chat-no-save topic-id message]]))
+
+(defn update-tool-call
+  "Refine an existing tool-call message by tool-call-id with a patch map.
+   Emits one [:effects/save ...] per patch field. Returns nil if no match."
   [state tool-call-id patch]
   (if-let [idx (topic-state/find-message-index-by-tool-call-id state tool-call-id)]
-    (let [topic-id   (topic-state/get-active-topic-id state)
-          msg-path   (conj (topic-state/topic-field-path topic-id :messages) idx)]
+    (let [topic-id (topic-state/get-active-topic-id state)
+          msg-path (conj (topic-state/topic-field-path topic-id :messages) idx)]
       (reduce-kv
         (fn [effects field val]
           (conj effects [:effects/save (conj msg-path field) val]))
         []
         patch))
     (do
-      (js/console.warn "[ACP] patch-message-by-tool-call-id: no message for tool-call-id" tool-call-id)
+      (js/console.warn "[ACP] update-tool-call: no message for tool-call-id" tool-call-id)
       nil)))
 
 (defn set-active

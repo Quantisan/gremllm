@@ -116,3 +116,55 @@
             [:topic.actions/mark-unsaved topic-id]
             [:topic.effects/auto-save topic-id]]
            (topic/finalize-turn {} topic-id)))))
+
+(deftest start-tool-call-test
+  (testing "emits add-to-chat-no-save with a valid :tool-call message"
+    (let [effects (topic/start-tool-call
+                    {:active-topic-id "t1"}
+                    {:id 123
+                     :type :tool-call
+                     :tool-call-id "toolu_x"
+                     :tool :web-search
+                     :tool-call-status "pending"
+                     :text ""
+                     :query nil})]
+      (is (= [[:messages.actions/add-to-chat-no-save "t1"
+               {:id 123
+                :type :tool-call
+                :tool-call-id "toolu_x"
+                :tool :web-search
+                :tool-call-status "pending"
+                :text ""
+                :query nil}]]
+             effects))))
+
+  (testing "throws if message fails Message schema validation"
+    (is (try
+          (topic/start-tool-call
+            {:active-topic-id "t1"}
+            ;; missing required :tool-call-id
+            {:id 1 :type :tool-call :tool :web-search
+             :tool-call-status "pending" :text ""})
+          false
+          (catch :default _ true)))))
+
+(deftest update-tool-call-test
+  (let [state {:topics {"t1" {:messages [{:type :user :text "q"}
+                                         {:type :tool-call
+                                          :tool-call-id "toolu_1"
+                                          :tool :web-search
+                                          :tool-call-status "pending"
+                                          :query nil
+                                          :text ""}]}}
+               :active-topic-id "t1"}]
+    (testing "emits path-based saves for each field in patch"
+      (let [effects (topic/update-tool-call state "toolu_1"
+                                            {:tool-call-status "completed"
+                                             :query            "CRDT vs OT"})]
+        (is (= #{[:effects/save [:topics "t1" :messages 1 :tool-call-status] "completed"]
+                 [:effects/save [:topics "t1" :messages 1 :query]            "CRDT vs OT"]}
+               (set effects)))))
+
+    (testing "returns nil when no message matches the tool-call-id"
+      (is (nil? (topic/update-tool-call state "toolu_missing"
+                                        {:tool-call-status "completed"}))))))
