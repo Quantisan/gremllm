@@ -108,29 +108,26 @@
             padding: var(--pico-spacing);
         }
 
-        /* TODO: bubble backgrounds use rgba() literals, violating the
-           "no hex/rgb literals" rule in CLAUDE.md. Revisit when next
-           touching the bubble palette. */
         .user-bubble {
-            background: rgba(232, 220, 196, 0.15);
-            border-left: 3px solid rgba(232, 220, 196, 0.3);
+            background: color-mix(in srgb, var(--tva-parchment) 15%, transparent);
+            border-left: 3px solid color-mix(in srgb, var(--tva-parchment) 30%, transparent);
             margin-left: auto;
             max-width: 70%;
         }
 
         .assistant-bubble {
-            background: rgba(232, 220, 196, 0.08);
+            background: var(--pico-card-background-color);
             border-left: 3px solid var(--tva-teal);
         }
 
         .reasoning-bubble {
-            background: rgba(232, 220, 196, 0.05);
+            background: color-mix(in srgb, var(--tva-parchment) 5%, transparent);
             opacity: 0.85;
             border-left: 3px solid var(--pico-muted-border-color);
         }
 
         .tool-search-bubble {
-            background: rgba(232, 220, 196, 0.05);
+            background: color-mix(in srgb, var(--tva-parchment) 5%, transparent);
             border-left: 3px solid var(--tva-teal);
             opacity: 0.85;
             padding: 0.5rem 0.75rem;
