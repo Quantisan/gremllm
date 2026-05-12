@@ -32,6 +32,22 @@ process, or JS boundaries needs validation or translation.
   by design. Translation code for shapes that don't yet exist on disk is
   YAGNI; if and when real legacy data appears, write the translator then.
 
+## Validation Locality
+
+Validate at trust boundaries; don't re-validate downstream of them.
+
+- **Validate here:** ACP wire coercion (`codec/acp.cljs`), disk codec
+  (`codec.cljs`), IPC codec (`codec.cljs`). These are the points where
+  external data becomes internal data.
+- **Don't validate here:** action handlers, UI components, internal
+  builders. Code that constructs canonical shapes from already-coerced
+  inputs is asserting its own correctness, not guarding a boundary —
+  that's what tests are for.
+
+If you find yourself calling `m/validate` on a value your own code just
+built, you're testing the builder, not protecting a boundary. Move the
+check to a test or delete it.
+
 ## Important Shapes
 
 Shapes are labeled by role; file location follows from that.
