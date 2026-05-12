@@ -126,11 +126,10 @@
   [:enum :web-search :read])
 
 (def ToolCallMessage
-  "Unified tool-call kind. Replaces the previous :tool-use (one-shot display)
-   and :tool-search (lifecycle-bearing placeholder). :tool-call-status carries
-   the lifecycle; one-shot mints use \"completed\". Per-tool extras
-   (e.g. :query for :web-search) are flat optional fields for now; promote to
-   a sub-:multi on :tool once a second tool needs extras."
+  "Tool-call message kind. :tool-call-status carries the lifecycle; one-shot
+   mints use \"completed\". Per-tool extras (e.g. :query for :web-search) are
+   flat optional fields for now; promote to a sub-:multi on :tool once a
+   second tool needs extras."
   [:map {:closed true}
    [:id               :int]
    [:type             [:enum :tool-call]]
