@@ -18,6 +18,7 @@
     (-> m
         (assoc :type :tool-call
                :tool :web-search)
+        (update :tool-call-id #(or % (str "legacy-" (:id m))))
         (update :tool-call-status #(or % "completed")))
 
     :tool-use

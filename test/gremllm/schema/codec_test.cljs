@@ -97,6 +97,23 @@
       (is (= "completed" (:tool-call-status msg)))
       (is (= "CRDT vs OT" (:query msg))))))
 
+(deftest topic-from-disk-migrates-legacy-tool-search-no-id-test
+  (testing ":tool-search without :tool-call-id gets a synthetic id"
+    (let [legacy-topic {:id "t1"
+                        :name "Search"
+                        :session {:id "s1" :pending-diffs []}
+                        :messages [{:id 42 :type :tool-search
+                                    :tool-call-status "completed"
+                                    :query "something"
+                                    :text ""}]
+                        :excerpts []}
+          decoded (codec/topic-from-disk legacy-topic)
+          msg     (-> decoded :messages first)]
+      (is (= :tool-call (:type msg)))
+      (is (= :web-search (:tool msg)))
+      (is (string? (:tool-call-id msg)) "synthetic tool-call-id is set")
+      (is (= "completed" (:tool-call-status msg))))))
+
 (deftest topic-from-disk-migrates-legacy-tool-use-test
   (testing "legacy :tool-use message decodes into :tool-call/:read with synthetic id"
     (let [legacy-topic {:id "t1"
