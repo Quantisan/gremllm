@@ -20,11 +20,11 @@
 ;; ========================================
 
 (def acp-chunk->message-type
-  "Maps ACP content chunk session-update types to internal MessageType.
-   Only includes session updates that produce chat messages."
+  "Maps streaming ACP text chunk session-update types to internal :type values.
+   Tool-call messages mint through tool-call.actions/start with explicit :tool,
+   not this map."
   {:agent-message-chunk :assistant
-   :agent-thought-chunk :reasoning
-   :tool-call           :tool-use})
+   :agent-thought-chunk :reasoning})
 
 (defn acp-update-text
   "Extracts text content from an ACP update chunk.
