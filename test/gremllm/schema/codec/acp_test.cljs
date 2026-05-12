@@ -14,7 +14,7 @@
 ;; the invariants this boundary actively enforces.
 ;;
 ;; SECTION 2 — Consumer helpers: one deftest per pure helper that operates on
-;; already-coerced data (acp-update-text, tool-response-diffs, ...).
+;; already-coerced data (acp-update-text, edit-diffs, ...).
 ;;
 ;; Rules
 ;;   - A testing-clause name states the invariant being protected
@@ -186,7 +186,7 @@
                 {:session-update :available-commands-update
                  :available-commands []})))))
 
-(deftest tool-response-diffs-from-completion
+(deftest edit-diffs-from-completion
   (testing "extracts diff items from completed tool-call-update"
     (let [update {:session-update :tool-call-update
                   :content [{:type "diff" :path "/a.md"
@@ -196,26 +196,47 @@
                              :old-text "before" :new-text "after"}]}]
       (is (= [{:type "diff" :path "/a.md" :old-text "old" :new-text "new"}
               {:type "diff" :path "/b.md" :old-text "before" :new-text "after"}]
-             (acp-codec/tool-response-diffs update)))))
+             (acp-codec/edit-diffs update)))))
 
   (testing "returns nil for streaming refinement events (:kind present)"
-    (is (nil? (acp-codec/tool-response-diffs
+    (is (nil? (acp-codec/edit-diffs
                 {:session-update :tool-call-update
                  :kind "edit"
                  :content [{:type "diff" :path "/a.md"
                             :old-text "old" :new-text "new"}]}))))
 
   (testing "returns nil for :tool-call request events (not updates)"
-    (is (nil? (acp-codec/tool-response-diffs
+    (is (nil? (acp-codec/edit-diffs
                 {:session-update :tool-call
                  :content [{:type "diff" :path "/a.md"
                             :old-text "old" :new-text "new"}]}))))
 
   (testing "returns nil when no diff items present"
-    (are [update] (nil? (acp-codec/tool-response-diffs update))
+    (are [update] (nil? (acp-codec/edit-diffs update))
       {:session-update :tool-call-update :content [{:type "text" :text "hi"}]}
       {:session-update :tool-call-update :content nil}
       {:session-update :tool-call-update :content []})))
+
+(deftest read-completed-guards
+  (testing "true for Read tool-call-update with file metadata"
+    (is (acp-codec/read-completed?
+          {:session-update :tool-call-update
+           :tool-call-id "toolu_01"
+           :meta {:claude-code {:tool-name "Read"
+                                :tool-response {:file {:filePath "/a.md" :totalLines 1}}}}})))
+
+  (testing "false for Read tool-call-update without file metadata (pre-completion event)"
+    (is (not (acp-codec/read-completed?
+               {:session-update :tool-call-update
+                :tool-call-id "toolu_01"
+                :meta {:claude-code {:tool-name "Read"}}}))))
+
+  (testing "false for non-Read tool-call-update that happens to carry file metadata"
+    (is (not (acp-codec/read-completed?
+               {:session-update :tool-call-update
+                :tool-call-id "toolu_01"
+                :meta {:claude-code {:tool-name "Edit"
+                                     :tool-response {:file {:filePath "/a.md" :totalLines 1}}}}})))))
 
 (deftest acp-read-display-label-from-meta
   (testing "formats filename and line count from tool-response meta"

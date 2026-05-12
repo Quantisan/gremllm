@@ -20,7 +20,7 @@
     (if (= start end) start (str start " -> " end))))
 
 (def ^:private excerpt-snippet-cap 40)
-(def ^:private tool-search-query-cap 60)
+(def ^:private web-search-query-cap 60)
 (def ^:private composer-excerpt-cap 30)
 
 (defn- render-assistant-message [message]
@@ -31,20 +31,26 @@
   [e/reasoning-message {}
    (md/markdown->hiccup (:text message))])
 
-(defn- render-tool-use-message [message]
-  [e/tool-use-message
-   [:span (:text message)]])
-
 (defn- truncate [s n]
   (if (> (count s) n)
     (str (subs s 0 n) "…")
     s))
 
-(defn- render-tool-search-message [{:keys [tool-call-status query]}]
+(defn- render-tool-read [message]
+  [e/tool-status-message
+   [:span (:text message)]])
+
+(defn- render-web-search [{:keys [tool-call-status query]}]
   (let [completed? (= "completed" tool-call-status)
         label      (if completed? "Searched the web" "Searching the web")
-        summary    (if query (str label " — " (truncate query tool-search-query-cap)) label)]
-    [e/tool-search-message {:completed? completed? :summary summary :query query}]))
+        summary    (if query (str label " — " (truncate query web-search-query-cap)) label)]
+    [e/tool-detail-message {:completed? completed? :summary summary :query query}]))
+
+(defn- render-tool-call-message [{:keys [tool] :as message}]
+  (case tool
+    :web-search (render-web-search message)
+    :read       (render-tool-read message)
+    [:div "Unknown tool:" tool]))
 
 (defn- render-excerpt-pill [excerpt]
   [:span.excerpt-pill
@@ -69,12 +75,10 @@
 
 (defn- render-message [message]
   (case (:type message)
-    :user        (render-user-message message)
-    :assistant   (render-assistant-message message)
-    :reasoning   (render-reasoning-message message)
-    :tool-use    (render-tool-use-message message)
-    :tool-search (render-tool-search-message message)
-    ;; Default fallback
+    :user      (render-user-message message)
+    :assistant (render-assistant-message message)
+    :reasoning (render-reasoning-message message)
+    :tool-call (render-tool-call-message message)
     [:div "Unknown message type:" (:type message)]))
 
 (defn- render-loading-indicator []

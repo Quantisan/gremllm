@@ -5,10 +5,10 @@
             [malli.transform :as mt]))
 
 (defn create-message
-  "Build a schema/Message fixture from Malli defaults and explicit overrides."
+  "Build a schema/Message fixture from explicit overrides.
+   Caller must provide at least :id, :type, and :text."
   [overrides]
-  (merge (m/decode schema/Message {} mt/default-value-transformer)
-         overrides))
+  (merge {:id 0 :type :user :text ""} overrides))
 
 ;; ========================================
 ;; Excerpt (Selection Capture)
@@ -165,3 +165,46 @@
                      :session {:pending-diffs []}
                      :messages []
                      :excerpts [excerpt]}))))
+
+(deftest message-tagged-union-test
+  (testing ":user variant validates with optional context"
+    (is (m/validate schema/Message
+                    {:id 1 :type :user :text "hi"})))
+
+  (testing ":assistant variant validates with just id/type/text"
+    (is (m/validate schema/Message
+                    {:id 2 :type :assistant :text "hello"})))
+
+  (testing ":reasoning variant validates with just id/type/text"
+    (is (m/validate schema/Message
+                    {:id 3 :type :reasoning :text "thinking..."})))
+
+  (testing ":tool-call :web-search variant validates with status + query"
+    (is (m/validate schema/Message
+                    {:id 4
+                     :type :tool-call
+                     :tool-call-id "toolu_ws"
+                     :tool :web-search
+                     :tool-call-status "pending"
+                     :text ""
+                     :query nil})))
+
+  (testing ":tool-call :read variant validates without :query"
+    (is (m/validate schema/Message
+                    {:id 5
+                     :type :tool-call
+                     :tool-call-id "toolu_read"
+                     :tool :read
+                     :tool-call-status "completed"
+                     :text "Read — foo.md (12 lines)"})))
+
+  (testing ":query on :user fails (was permitted by old loose schema)"
+    (is (not (m/validate schema/Message
+                         {:id 6 :type :user :text "hi" :query "leaked"}))))
+
+  (testing ":tool-call without :tool-call-id fails"
+    (is (not (m/validate schema/Message
+                         {:id 7 :type :tool-call
+                          :tool :web-search
+                          :tool-call-status "pending"
+                          :text ""})))))

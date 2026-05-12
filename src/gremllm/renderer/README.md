@@ -12,7 +12,7 @@ that tie chat activity back to `document.md`.
 - `actions.cljs`: action and effect registration, DOM placeholders, promise
   handling, store-level effects
 - `actions/`: domain actions for UI, workspace, topics, messages, ACP,
-  excerpts, and document state
+  tool calls, excerpts, and document state
 - `state/`: focused selectors and paths for document, workspace, topic, form,
   excerpt, loading, and UI state
 - `ui.cljs`: app-level composition
@@ -46,8 +46,10 @@ structured user message, dispatches chat updates, and calls
 
 Start in `renderer.actions.acp/session-update`, which routes assistant chunks,
 reasoning chunks, tool events, and pending diff accumulation into topic state.
-The `AcpUpdate` coercion happens at the IPC boundary in
-`src/gremllm/schema/codec.cljs` before the update reaches this action.
+Tool events are forwarded to `renderer.actions.tool-call/start` and `/update`,
+which own per-message tool-call state. The `AcpUpdate` coercion happens at the
+IPC boundary in `src/gremllm/schema/codec.cljs` before the update reaches this
+action.
 
 ### Excerpt Capture And Document Review
 
@@ -69,6 +71,7 @@ not a domain action.
 - `src/gremllm/renderer/actions.cljs`
 - `src/gremllm/renderer/actions/ui.cljs`
 - `src/gremllm/renderer/actions/acp.cljs`
+- `src/gremllm/renderer/actions/tool_call.cljs`
 - `src/gremllm/renderer/actions/excerpt.cljs`
 - `src/gremllm/renderer/ui/document.cljs`
 - `src/gremllm/renderer/ui/document/diffs.cljs`

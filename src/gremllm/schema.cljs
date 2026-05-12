@@ -8,13 +8,6 @@
 ;; Messages
 ;; ========================================
 
-(def MessageType
-  "Valid message type identifiers."
-  ;; NOTE: `:tool-search` is a per-tool variant of what is conceptually a
-  ;; tool-call message. Don't add a third `:tool-X` type — see the Message
-  ;; TODO.
-  [:enum :user :assistant :reasoning :tool-use :tool-search])
-
 (def AttachmentRef
   "Reference to a stored attachment file.
    Persisted in topic EDN, not the actual file content."
@@ -103,25 +96,56 @@
      [:start-block BlockRef]
      [:end-block BlockRef]]]])
 
-;; TODO: Message conflates multiple domain kinds (user input, agent output,
-;; tool calls) into one schema. Optional fields like :tool-call-id,
-;; :tool-call-status, :query, :attachments, and :context apply only for
-;; specific :type values, but the schema doesn't express or enforce that —
-;; any :type can carry any optional field. SRP / Modelarity smell. Solution
-;; deferred. Related: per-field type-affinity tags inline below, and the
-;; `:tool-search`/`:tool-X` note at line 13.
-(def Message
-  [:map
-   [:id :int]
-   [:type MessageType]
+;; Per-variant Message schemas. Each variant fixes its field/type affinity at
+;; the schema level so validators catch mismatches that the old loose Message
+;; accepted silently.
+
+(def UserMessage
+  [:map {:closed true}
+   [:id   :int]
+   [:type [:enum :user]]
    [:text :string]
-   [:tool-call-id    {:optional true} :string]
-   [:tool-call-status {:optional true} acp-codec/AcpToolCallStatus] ; tool-call-specific (see above TODO)
-   [:query           {:optional true} [:maybe :string]] ; WebSearch-specific (see above TODO)
    [:attachments {:optional true} [:vector AttachmentRef]]
-   [:context {:optional true}
-    [:map
-     [:excerpts [:vector DocumentExcerpt]]]]])
+   [:context     {:optional true}
+    [:map [:excerpts [:vector DocumentExcerpt]]]]])
+
+(def AssistantMessage
+  [:map {:closed true}
+   [:id   :int]
+   [:type [:enum :assistant]]
+   [:text :string]])
+
+(def ReasoningMessage
+  [:map {:closed true}
+   [:id   :int]
+   [:type [:enum :reasoning]]
+   [:text :string]])
+
+(def ToolName
+  "Tools displayed in chat. Add a value when a new tool earns a renderer."
+  [:enum :web-search :read])
+
+(def ToolCallMessage
+  "Tool-call message kind. :tool-call-status carries the lifecycle; one-shot
+   mints use \"completed\". Per-tool extras (e.g. :query for :web-search) are
+   flat optional fields for now; promote to a sub-:multi on :tool once a
+   second tool needs extras."
+  [:map {:closed true}
+   [:id               :int]
+   [:type             [:enum :tool-call]]
+   [:tool-call-id     :string]
+   [:tool             ToolName]
+   [:tool-call-status acp-codec/AcpToolCallStatus]
+   [:text             :string]
+   [:query            {:optional true} [:maybe :string]]]) ; :web-search
+
+(def Message
+  "Tagged union of chat message kinds. Dispatch on :type."
+  [:multi {:dispatch (fn [v] (-> v :type keyword))}
+   [:user      UserMessage]
+   [:assistant AssistantMessage]
+   [:reasoning ReasoningMessage]
+   [:tool-call ToolCallMessage]])
 
 (def Messages
   [:vector Message])

@@ -25,13 +25,38 @@ process, or JS boundaries needs validation or translation.
 - keep path and permission decision logic in `codec/acp/permission.cljs` when
   it must stay pure and reusable
 
+## Scope Assumptions
+
+- **No code for legacy persisted data.** Disk codecs validate against the
+  current schema only. A persisted topic that doesn't match fails to load —
+  by design. Translation code for shapes that don't yet exist on disk is
+  YAGNI; if and when real legacy data appears, write the translator then.
+
+## Validation Locality
+
+Validate at trust boundaries; don't re-validate downstream of them.
+
+- **Validate here:** ACP wire coercion (`codec/acp.cljs`), disk codec
+  (`codec.cljs`), IPC codec (`codec.cljs`). These are the points where
+  external data becomes internal data.
+- **Don't validate here:** action handlers, UI components, internal
+  builders. Code that constructs canonical shapes from already-coerced
+  inputs is asserting its own correctness, not guarding a boundary —
+  that's what tests are for.
+
+If you find yourself calling `m/validate` on a value your own code just
+built, you're testing the builder, not protecting a boundary. Move the
+check to a test or delete it.
+
 ## Important Shapes
 
 Shapes are labeled by role; file location follows from that.
 
 **In-memory canonical** (`schema.cljs`):
-- `Message`: structured user or assistant chat item, including optional excerpt
-  context and attachments
+- `Message`: tagged union of chat message kinds dispatching on `:type` —
+  `:user` (text plus optional excerpts and attachments), `:assistant`,
+  `:reasoning`, and `:tool-call` (carries `:tool`, `:tool-call-id`,
+  `:tool-call-status`, and per-tool extras)
 - `DocumentExcerpt`: durable excerpt reference stored on a topic
 - `AcpSession`: session id plus pending diffs
 - `Topic`: in-memory representation of a topic and its session state

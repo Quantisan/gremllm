@@ -20,11 +20,29 @@
 ;; ========================================
 
 (def acp-chunk->message-type
-  "Maps ACP content chunk session-update types to internal MessageType.
-   Only includes session updates that produce chat messages."
+  "Maps streaming ACP text chunk session-update types to internal :type values."
   {:agent-message-chunk :assistant
-   :agent-thought-chunk :reasoning
-   :tool-call           :tool-use})
+   :agent-thought-chunk :reasoning})
+
+(defn streaming-text-chunk?
+  "True when the update is a streaming text chunk (assistant or reasoning)."
+  [{:keys [session-update]}]
+  (contains? acp-chunk->message-type session-update))
+
+(defn- web-search? [update]
+  (= "WebSearch" (get-in update [:meta :claude-code :tool-name])))
+
+(defn web-search-started?
+  "True when the update is the begin event for a WebSearch tool call."
+  [{:keys [session-update] :as update}]
+  (and (= :tool-call session-update)
+       (web-search? update)))
+
+(defn web-search-updated?
+  "True when the update is a streaming refinement event for a WebSearch tool call."
+  [{:keys [session-update] :as update}]
+  (and (= :tool-call-update session-update)
+       (web-search? update)))
 
 (defn acp-update-text
   "Extracts text content from an ACP update chunk.
@@ -45,8 +63,8 @@
           lines   (:totalLines file)]
       (str "Read — " filename " (" lines " lines)"))))
 
-(defn tool-response-diffs
-  "Extracts diff items from a PostToolUse tool-call-update's content.
+(defn edit-diffs
+  "Extracts diff items from an Edit/Write PostToolUse tool-call-update's content.
    Returns a vector of diff maps or nil if none present.
    Excludes streaming refinement events which carry :kind."
   [{:keys [session-update content kind]}]
@@ -56,21 +74,27 @@
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
 
-(defn tool-response-read-event?
-  "True when a tool-call-update is a Read response event."
+(defn read-event?
+  "True when a tool-call-update is a Read response event (any payload)."
   [{:keys [session-update] :as update}]
   (and (= :tool-call-update session-update)
        (= "Read" (get-in update [:meta :claude-code :tool-name]))))
 
-(defn tool-response-read-with-file-metadata?
-  "True when a Read tool-call-update carries tool-response file metadata."
-  [{:keys [session-update] :as update}]
-  (and (= :tool-call-update session-update)
+(defn read-completed?
+  "True when a Read tool-call-update carries the file metadata that lets the
+   chat render a completed Read message."
+  [update]
+  (and (read-event? update)
        (some? (get-in update [:meta :claude-code :tool-response :file]))))
 
-(defn tool-response-has-diffs?
+(defn edit-completed?
   "True when a tool-call-update is a PostToolUse event containing diff content.
-   Excludes streaming refinement events which carry :kind."
+   Excludes streaming refinement events which carry :kind.
+
+   Gating note: matched by diff-content signature, not by tool-name. Empirically
+   only the Edit/Write tools emit diff content in ACP, so the structural check
+   stands in for a tool-name guard. This is intentionally asymmetric with
+   read-completed?, which gates on tool-name = \"Read\"."
   [{:keys [session-update content kind]}]
   (and (= :tool-call-update session-update)
        (nil? kind)
@@ -149,7 +173,7 @@
 ;; toolUpdateFromDiffToolResponse, toAcpNotifications.
 
 ;; TODO: Design smell: :tool-call (pre-execution begin) vs :tool-call-update (streaming refinement/completion) share a name-head
-;; and read as "a tool call" / "an update to it" — but the two events play distinct roles in per-tool flows (see handle-tool-event).
+;; and read as "a tool call" / "an update to it" — but the two events play distinct roles in per-tool flows (see web-search-started?, web-search-updated?, read-completed?).
 ;; Wire names mirror the upstream SDK, so we keep them; rename would be :tool-call-begin / :tool-call-progress if ever decoupled.
 (def AcpToolCall
   "Pre-execution tool call notification.
@@ -164,8 +188,8 @@
 ;; TODO: DRY with AcpToolCall
 (def AcpToolCallUpdate
   "Post-execution / streaming refinement update.
-   Consumers: handle-tool-event, tool-response-diffs, acp-read-display-label,
-   tool-response-read-event?, tool-response-read-with-file-metadata?.
+   Consumers: web-search-updated?, read-completed?, edit-completed?,
+   edit-diffs, acp-read-display-label, read-event?.
    :kind absence (vs. presence) gates streaming-refinement filtering."
   [:map
    [:session-update [:= :tool-call-update]]

@@ -77,3 +77,4 @@
       (is (= {:panel-rect {:top 100 :left 50 :width 800 :height 600}
               :panel-scroll-top 20}
              (codec/anchor-context-from-dom panel))))))
+

@@ -6,6 +6,7 @@
             [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.document :as document]
             [gremllm.renderer.actions.acp :as acp]
+            [gremllm.renderer.actions.tool-call :as tool-call]
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.ui.document.locator :as locator]
@@ -173,7 +174,8 @@
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
-(nxr/register-action! :topic.actions/patch-message-by-tool-call-id topic/patch-message-by-tool-call-id)
+(nxr/register-action! :tool-call.actions/start  tool-call/start-tool-call)
+(nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
