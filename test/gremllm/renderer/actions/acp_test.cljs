@@ -108,10 +108,10 @@
                  :tool-call-id   "toolu_ws"
                  :meta           {:claude-code {:tool-name "WebSearch"}}})))))
 
-(deftest test-record-tool-read-message
+(deftest test-record-read-message
   (testing "mints a one-shot completed :read :tool-call message from file metadata"
     (let [effects (with-redefs [schema/generate-message-id (constantly 456)]
-                    (acp/record-tool-read-message
+                    (acp/record-read-message
                       {}
                       {:session-update :tool-call-update
                        :tool-call-id   "toolu_01U3ze1LsKXNhkBj46DM6SPN"
@@ -128,9 +128,9 @@
                 :text "Read — gremllm-launch-log.md (16 lines)"}]]
              effects)))))
 
-(deftest test-append-tool-diffs
+(deftest test-append-edit-diffs
   (testing "dispatches :topic.actions/append-pending-diffs with extracted diffs"
-    (let [effects (acp/append-tool-diffs
+    (let [effects (acp/append-edit-diffs
                     {}
                     {:session-update :tool-call-update
                      :tool-call-id   "toolu_1"
@@ -146,8 +146,8 @@
   (with-redefs [acp/append-streaming-text     (fn [_ update] [[:streamed (:session-update update)]])
                 acp/start-web-search-message  (fn [_ _]      [[:web-search-started]])
                 acp/update-web-search-message (fn [_ _]      [[:web-search-updated]])
-                acp/record-tool-read-message  (fn [_ _]      [[:tool-read-completed]])
-                acp/append-tool-diffs         (fn [_ _]      [[:tool-diffs]])]
+                acp/record-read-message       (fn [_ _]      [[:read-completed]])
+                acp/append-edit-diffs         (fn [_ _]      [[:edit-completed]])]
 
     (testing "routes streaming text chunks to append-streaming-text"
       (are [update-type] (= [[:streamed update-type]]
@@ -168,16 +168,16 @@
                                               :tool-call-id "toolu_ws"
                                               :meta {:claude-code {:tool-name "WebSearch"}}}}))))
 
-    (testing "routes Read :tool-call-update with file metadata to record-tool-read-message"
-      (is (= [[:tool-read-completed]]
+    (testing "routes Read :tool-call-update with file metadata to record-read-message"
+      (is (= [[:read-completed]]
              (acp/session-update {} {:update {:session-update :tool-call-update
                                               :tool-call-id "toolu_r"
                                               :meta {:claude-code {:tool-name "Read"
                                                                    :tool-response {:file {:filePath "/a.md"
                                                                                           :totalLines 1}}}}}}))))
 
-    (testing "routes diff-bearing :tool-call-update to append-tool-diffs"
-      (is (= [[:tool-diffs]]
+    (testing "routes diff-bearing :tool-call-update to append-edit-diffs"
+      (is (= [[:edit-completed]]
              (acp/session-update {} {:update {:session-update :tool-call-update
                                               :tool-call-id "toolu_d"
                                               :content [{:type "diff" :path "/a.md" :new-text "x"}]}}))))

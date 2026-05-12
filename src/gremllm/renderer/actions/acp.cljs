@@ -55,7 +55,7 @@
     (when (seq patch)
       [[:tool-call.actions/update (:tool-call-id update) patch]])))
 
-(defn record-tool-read-message
+(defn record-read-message
   "Mints a one-shot completed :read :tool-call message from a Read tool-call-update
    carrying file metadata. Read collapses start/complete into a single event."
   [_state update]
@@ -67,10 +67,10 @@
      :tool-call-status "completed"
      :text             (acp-codec/acp-read-display-label update)}]])
 
-(defn append-tool-diffs
-  "Appends pending diffs extracted from a tool-call-update's content."
+(defn append-edit-diffs
+  "Appends pending diffs extracted from an Edit/Write tool-call-update's content."
   [_state update]
-  [[:topic.actions/append-pending-diffs (acp-codec/tool-response-diffs update)]])
+  [[:topic.actions/append-pending-diffs (acp-codec/edit-diffs update)]])
 
 (defn session-update
   "Routes incoming ACP session updates to the matching chat-state operation.
@@ -87,11 +87,11 @@
     (acp-codec/web-search-updated? update)
     (update-web-search-message state update)
 
-    (acp-codec/tool-read-completed? update)
-    (record-tool-read-message state update)
+    (acp-codec/read-completed? update)
+    (record-read-message state update)
 
-    (acp-codec/tool-diffs? update)
-    (append-tool-diffs state update)))
+    (acp-codec/edit-completed? update)
+    (append-edit-diffs state update)))
 
 (defn session-ready
   "Session created successfully. Save acp-session-id to topic."
