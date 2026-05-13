@@ -49,7 +49,7 @@
             (.then (fn [session-id]
                      (is (string? session-id))
                      (acp/prompt session-id [{:type "text"
-                                              :text "Think briefly about what to say, then reply with exactly: hi"}])))
+                                              :text "Create a mathematical model describing gremlins behaviour."}])))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
                      (is (pos? (count @captured)))
@@ -61,12 +61,12 @@
                            thoughts (->> (updates captured)
                                          (filter #(= :agent-thought-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text))]
-                       (is (re-find #"(?i)\bhi\b" response)
-                           "Expected response to contain 'hi'")
+                       (is (> (count response) 200)
+                           "Expected a substantive response (>200 chars) to a reasoning-heavy prompt")
                        (is (pos? (count thoughts))
-                           "Expected at least one :agent-thought-chunk (thinking enabled in user settings)")
-                       (is (re-find #"\S" (apply str thoughts))
-                           "Expected joined :agent-thought-chunk text to be non-empty — empty text is the reported regression"))))
+                           "Expected at least one :agent-thought-chunk (thinking enabled in session-meta)")
+                       (is (> (count (apply str thoughts)) 100)
+                           "Expected :agent-thought-chunk text to be non-empty."))))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
