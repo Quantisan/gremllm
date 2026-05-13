@@ -23,11 +23,15 @@
 ;;   FuseV1Options.RunAsNode remaining enabled; see https://packages.electronjs.org/fuses
 ;; - settingSources: [] to suppress Claude Code SDK user/project/local settings loading for
 ;;   Gremllm sessions. The adapter's own SettingsManager lifecycle remains separate.
+;; - thinking: {type: "enabled", budgetTokens: 4096} to engage extended thinking regardless
+;;   of the user's home-folder settings (which we suppress above). See
+;;   @anthropic-ai/claude-agent-sdk sdk.d.ts:5371 for ThinkingEnabled shape.
 (def ^:private session-meta
   #js {:claudeCode
        #js {:options
             #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
-                 :settingSources #js []}}})
+                 :settingSources #js []
+                 :thinking       #js {:type "enabled" :budgetTokens 4096}}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:
