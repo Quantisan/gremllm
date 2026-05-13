@@ -31,7 +31,7 @@
        #js {:options
             #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
                  :settingSources #js []
-                 :thinking       #js {:type "enabled" :budgetTokens 4096}}}})
+                 :thinking       #js {:type "enabled" :budgetTokens 4096 :display "summarized"}}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:
