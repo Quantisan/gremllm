@@ -23,15 +23,21 @@
 ;;   FuseV1Options.RunAsNode remaining enabled; see https://packages.electronjs.org/fuses
 ;; - settingSources: [] to suppress Claude Code SDK user/project/local settings loading for
 ;;   Gremllm sessions. The adapter's own SettingsManager lifecycle remains separate.
-;; - thinking: {type: "enabled", budgetTokens: 4096} to engage extended thinking regardless
-;;   of the user's home-folder settings (which we suppress above). See
+;; - thinking: engage extended thinking regardless of the user's home-folder settings (which
+;;   we suppress above) and to ensure thought blocks carry visible text. See
 ;;   @anthropic-ai/claude-agent-sdk sdk.d.ts:5371 for ThinkingEnabled shape.
+;; - effort: "high" to push reasoning depth on supported models. See sdk.d.ts:1398 for the
+;;   EffortLevel field. Note: docs describe effort as pairing with adaptive thinking; with
+;;   type "enabled" + explicit budgetTokens the budget is pinned and effort may be a no-op.
+;; - model: "sonnet" alias so we ride the latest Sonnet class without pinning a version.
+;;   SDK supports "sonnet" / "opus" / "haiku" aliases; see sdk.d.ts:56.
 (def ^:private session-meta
   #js {:claudeCode
        #js {:options
             #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
                  :settingSources #js []
-                 :thinking       #js {:type "enabled" :budgetTokens 4096 :display "summarized"}}}})
+                 :model          "sonnet"
+                 :thinking       #js {:type "enabled" :budgetTokens 20480 :display "summarized"}}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:
