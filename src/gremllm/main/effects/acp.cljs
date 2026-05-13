@@ -8,26 +8,20 @@
             ["/js/acp/index" :as acp-factory]
             ["fs/promises" :as fsp]))
 
-;; Claude-adapter overrides for ACP session setup.
-;;
-;; These knobs are keyed to the pinned claude-agent-acp session setup path
-;; (local package node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
-;; Adapter reads params._meta.claudeCode.options, merges env, and defaults settingSources
-;; in that path. It then hardcodes executable: process.execPath for the non-static-binary
-;; branch, so _meta.claudeCode.options.executable is not a working override in this repo's
-;; pinned adapter version.
-;;
-;; Gremllm therefore injects:
-;; - ELECTRON_RUN_AS_NODE=1 so the packaged Electron binary (process.execPath) acts as a
-;;   Node interpreter instead of relaunching the app window. This depends on
-;;   FuseV1Options.RunAsNode remaining enabled; see https://packages.electronjs.org/fuses
-;; - settingSources: [] to suppress Claude Code SDK user/project/local settings loading for
-;;   Gremllm sessions. The adapter's own SettingsManager lifecycle remains separate.
+;; _meta.claudeCode.options overrides for the pinned claude-agent-acp session-setup path
+;; (node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
+;; That path merges env/settingSources/model/thinking but hardcodes executable: process.execPath,
+;; so :executable cannot be overridden here.
+;; ELECTRON_RUN_AS_NODE=1 makes process.execPath act as Node instead of relaunching the window;
+;; depends on FuseV1Options.RunAsNode (https://packages.electronjs.org/fuses).
+;; SDK refs: sdk.d.ts:56 (model aliases), sdk.d.ts:5371 (ThinkingEnabled).
 (def ^:private session-meta
   #js {:claudeCode
        #js {:options
             #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
-                 :settingSources #js []}}})
+                 :settingSources #js []
+                 :model          "sonnet"
+                 :thinking       #js {:type "enabled" :budgetTokens 20480 :display "summarized"}}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:

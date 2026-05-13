@@ -16,12 +16,6 @@
     (pprint/pprint update))
   (println "--- End Updates ---"))
 
-(defn- print-permissions [permissions]
-  (println "\n--- Permission Requests ---")
-  (doseq [p permissions]
-    (pprint/pprint p))
-  (println (str "--- End Permission Requests (" (count permissions) " total) ---")))
-
 (defn- updates [captured]
   (map :update @captured))
 
@@ -49,7 +43,7 @@
             (.then (fn [session-id]
                      (is (string? session-id))
                      (acp/prompt session-id [{:type "text"
-                                              :text "Reply with exactly: hi"}])))
+                                              :text "Create a mathematical model describing gremlins behaviour."}])))
             (.then (fn [^js result]
                      (is (= "end_turn" (.-stopReason result)))
                      (is (pos? (count @captured)))
@@ -57,9 +51,16 @@
                      (let [response (->> (updates captured)
                                          (filter #(= :agent-message-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text)
-                                         (apply str))]
-                       (is (re-find #"(?i)\bhi\b" response)
-                           "Expected response to contain 'hi'"))))
+                                         (apply str))
+                           thoughts (->> (updates captured)
+                                         (filter #(= :agent-thought-chunk (:session-update %)))
+                                         (map acp-codec/acp-update-text))]
+                       (is (> (count response) 200)
+                           "Expected a substantive response (>200 chars) to a reasoning-heavy prompt")
+                       (is (pos? (count thoughts))
+                           "Expected at least one :agent-thought-chunk (thinking enabled in session-meta)")
+                       (is (> (count (apply str thoughts)) 100)
+                           "Expected :agent-thought-chunk text to be non-empty."))))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
@@ -148,7 +149,7 @@
             (.then (fn [session-id]
                      (acp/prompt session-id
                        [{:type "text"
-                         :text (str "Create a new file called notes.md in the current directory with the single line: hello")}])))
+                         :text "Create a new file called notes.md in the current directory with the single line: hello"}])))
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
@@ -183,70 +184,6 @@
                                         (when @tmp-dir
                                           (.rm fsp @tmp-dir #js {:recursive true :force true}))
                                         (done)))))))))))
-
-(defn- tool-ids [pred updates]
-  (->> updates (filter pred) (map :tool-call-id) set))
-
-(defn- tool-statuses [ids updates]
-  (let [by-id (->> updates
-                   (filter #(= :tool-call-update (:session-update %)))
-                   (group-by :tool-call-id))]
-    (map (fn [id] (some acp-codec/tool-call-update-status (get by-id id))) ids)))
-
-(defn- assert-diffs-target [updates doc-path]
-  (let [diffs (->> updates
-                   (filter acp-codec/edit-completed?)
-                   (mapcat acp-codec/edit-diffs))]
-    (is (every? #(= doc-path (:path %)) diffs)
-        "All diffs should target the linked document")))
-
-(defn- assert-tools-completed [updates]
-  (let [read-ids (tool-ids acp-codec/read-event? updates)
-        diff-ids (tool-ids acp-codec/edit-completed? updates)]
-    (is (pos? (count read-ids))
-        "Expected at least one Read tool-call-update event")
-    (is (every? #(= "completed" %) (tool-statuses read-ids updates))
-        "All Read tool calls should succeed")
-    (is (pos? (count diff-ids))
-        "Expected at least one diff from tool-call-update")
-    (is (every? #(= "completed" %) (tool-statuses diff-ids updates))
-        "All diff-producing tool calls should succeed")))
-
-(def ^:private valid-option-kinds
-  #{"allow_always" "allow_once" "reject_once" "reject_always"})
-
-(def ^:private valid-tool-kinds
-  #{"read" "edit" "delete" "move" "search" "execute" "think" "fetch" "switch_mode" "other"})
-
-(defn- assert-permission-contract [permissions]
-  (is (pos? (count permissions)) "Expected at least one permission request")
-  (doseq [p permissions]
-    (is (string? (:acp-session-id p)) "permission acp-session-id must be a string")
-    (let [tc (:tool-call p)]
-      (is (string? (:tool-call-id tc)) "tool-call-id must be a string")
-      (when-let [kind (:kind tc)]
-        (is (contains? valid-tool-kinds kind) (str "tool kind must be valid enum, got: " kind))))
-    (is (pos? (count (:options p))) "options must be non-empty")
-    (doseq [opt (:options p)]
-      (is (string? (:option-id opt)) "option-id must be a string")
-      (is (string? (:name opt)) "option name must be a string")
-      (is (contains? valid-option-kinds (:kind opt))
-          (str "option kind must be valid enum, got: " (:kind opt))))))
-
-(defn- assert-permission-kinds [permissions]
-  ;; The SDK only calls requestPermission for writes/edits.
-  ;; Read operations are pre-approved and never reach this callback.
-  (let [kinds (set (keep #(get-in % [:tool-call :kind]) permissions))]
-    (is (contains? kinds "edit") "Expected at least one 'edit' permission request")))
-
-(defn- assert-write-text-file-called [writes permissions doc-path]
-  (is (seq writes)
-      (str "writeTextFile not called. Mutating permissions: "
-           (pr-str (map #(select-keys (:tool-call %) [:kind :raw-input])
-                        (remove #(= "read" (get-in % [:tool-call :kind])) permissions)))))
-  (when (seq writes)
-    (is (every? #(= doc-path (:path %)) writes)
-        "All writeTextFile calls should target the linked document")))
 
 (deftest test-live-document-first-edit
   (testing "document-first edit: trace all coerced events, observe (not assert) writeTextFile"
