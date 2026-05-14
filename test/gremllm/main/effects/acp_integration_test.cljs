@@ -185,6 +185,15 @@
                                           (.rm fsp @tmp-dir #js {:recursive true :force true}))
                                         (done)))))))))))
 
+(defn- some-diff-event?
+  "True when the recorder captured at least one session update carrying diff content
+   (i.e. an :edit-completed? event consumable by the diff-staging pipeline)."
+  [events]
+  (some (fn [{:keys [kind payload]}]
+          (and (= :session-update kind)
+               (acp-codec/edit-completed? (:update payload))))
+        events))
+
 (deftest test-live-document-first-edit
   (testing "document-first edit: trace all coerced events, observe (not assert) writeTextFile"
     (async done
@@ -218,12 +227,20 @@
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(:events recorder))) "Expected at least one event")
+                     (is (some-diff-event? @(:events recorder))
+                         "Expected at least one session update with diff content (edit-completed?). The agent must propose file mutations via a diff-emitting channel; until the follow-up to commit 322fc41 lands this assertion is the red guide-rail.")
                      (println "\n=== document-first-edit event kinds ===")
                      (doseq [evt @(:events recorder)]
                        (println (str "  +" (:ts evt) "ms " (name (:kind evt)))))
                      (println (str "  write events: " (count (filter #(= :write (:kind %)) @(:events recorder)))))
-                     (println "=== end ===")))
+                     (println "=== end ===")
+                     ;; disallowedTools blocks Edit/Write/MultiEdit/NotebookEdit but not Bash;
+                     ;; comparing on-disk content to the source copy also catches Bash-based circumvention.
+                     (js/Promise.all #js [(.readFile fsp src-path "utf8")
+                                          (.readFile fsp @doc-path "utf8")])))
+            (.then (fn [^js contents]
+                     (is (= (aget contents 0) (aget contents 1))
+                         "Expected document.md on disk to be unchanged from the source copy.")))
             (.catch (fn [err]
                       (is false (str "document-first-edit test failed: " err))))
             (.finally (fn []
