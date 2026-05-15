@@ -2,22 +2,12 @@
   (:require ["fs/promises" :as fsp]
             ["os" :as os]
             ["path" :as path]
-            [cljs.pprint :as pprint]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
             [gremllm.main.effects.acp-trace :as acp-trace]
             [gremllm.schema.codec.acp :as acp-codec]))
-
-(defn- print-updates [updates]
-  (println "\n--- Session Updates ---")
-  (doseq [{:keys [update]} updates]
-    (pprint/pprint update))
-  (println "--- End Updates ---"))
-
-(defn- updates [captured]
-  (map :update @captured))
 
 (defn- result-summary [result]
   (when-let [^js res result]
@@ -99,27 +89,32 @@
               (.catch (fn [e] (js/console.error "Temp cleanup failed" e)))
               (.finally done))))))
 
+(defn- session-updates [ctx]
+  (->> @(-> ctx :recorder :events)
+       (filter #(= :session-update (:kind %)))
+       (map (comp :update :payload))))
+
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
-      (let [store    (atom {})
-            captured (atom [])
-            cwd      (.cwd js/process)]
-        (-> (acp/initialize {:on-session-update (acp/make-session-update-callback store #(swap! captured conj %))})
-            (.then (fn [_] (acp/new-session cwd)))
+      (let [ctx    (live-acp-context nil)
+            result (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (is (string? session-id))
-                     (acp/prompt session-id [{:type "text"
-                                              :text "Create a mathematical model describing gremlins behaviour."}])))
-            (.then (fn [^js result]
-                     (is (= "end_turn" (.-stopReason result)))
-                     (is (pos? (count @captured)))
-                     (print-updates @captured)
-                     (let [response (->> (updates captured)
+                     (acp/prompt session-id
+                       [{:type "text"
+                         :text "Create a mathematical model describing gremlins behaviour."}])))
+            (.then (fn [^js r]
+                     (reset! result r)
+                     (is (= "end_turn" (.-stopReason r)))
+                     (let [updates  (session-updates ctx)
+                           response (->> updates
                                          (filter #(= :agent-message-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text)
                                          (apply str))
-                           thoughts (->> (updates captured)
+                           thoughts (->> updates
                                          (filter #(= :agent-thought-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text))]
                        (is (> (count response) 200)
@@ -127,12 +122,15 @@
                        (is (pos? (count thoughts))
                            "Expected at least one :agent-thought-chunk (thinking enabled in session-meta)")
                        (is (> (count (apply str thoughts)) 100)
-                           "Expected :agent-thought-chunk text to be non-empty."))))
+                           "Expected :agent-thought-chunk text to be non-empty."))
+                     (print-event-summary! "happy-path" (:recorder ctx) [:session-update])
+                     (println "=== end ===")))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
-                        (acp/shutdown)
-                        (done))))))))
+                        (finish-live-acp! ctx result {:scenario "happy-path"
+                                                      :prompt   "Create a mathematical model describing gremlins behaviour."
+                                                      :done     done}))))))))
 
 (deftest test-live-read-only
   (testing "read-only prompt: agent reads doc, produces session-update and read events"
