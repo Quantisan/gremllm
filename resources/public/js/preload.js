@@ -54,6 +54,17 @@ const acpResumeSession = createIPCBoundary("acp/resume-session");
  */
 const acpPrompt = createIPCBoundary("acp/prompt");
 
+/**
+ * Notifies the main process of the user's accept/reject choice for an ACP
+ * permission request previously surfaced via onAcpPermissionPending. Fire-and-forget.
+ *
+ * @param {{toolCallId: string, optionId: string}} params
+ */
+const acpResolvePermission = ({ toolCallId, optionId }) => {
+	const ipcCorrelationId = crypto.randomUUID();
+	ipcRenderer.send("acp/resolve-permission", ipcCorrelationId, toolCallId, optionId);
+};
+
 contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	deleteTopic: (topicId) => ipcRenderer.invoke("topic/delete", topicId),
@@ -63,10 +74,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onMenuCommand: (callback) => ipcRenderer.on("menu:command", callback),
 	onWorkspaceOpened: (callback) => ipcRenderer.on("workspace:opened", callback),
 	onAcpSessionUpdate: (callback) => ipcRenderer.on("acp:session-update", callback),
+	onAcpPermissionPending: (callback) => ipcRenderer.on("acp:permission-pending", callback),
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
 	getFilePath: (file) => webUtils.getPathForFile(file),
 	// ACP API
 	acpNewSession,
 	acpResumeSession,
 	acpPrompt,
+	acpResolvePermission,
 });
