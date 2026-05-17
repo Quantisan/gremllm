@@ -202,10 +202,16 @@ Framework and library documentation is available in the `context/` directory:
 - Note: Dataspex only works in browser context (Renderer), not in Node (Main process)
 
 **Electron Integration:**
-- `context/electron_browser_window.md` - BrowserWindow behavior and lifecycle
-- `context/electron_ipc.md` - Inter-process communication
-- `context/electron_dialog.md` - Native dialogs and file pickers
-- `context/electron_menu.md` - Application menu system
+- Canonical source: https://github.com/electron/electron/tree/main/docs — any page is `https://github.com/electron/electron/blob/main/docs/<path>`; for raw Markdown use `https://raw.githubusercontent.com/electron/electron/main/docs/<path>`
+- Curated pages relevant to this codebase:
+  - `tutorial/process-model.md` - Main vs. renderer split (maps to our FCIS shell boundary)
+  - `tutorial/ipc.md` - IPC patterns (request/response, one-way, renderer→main)
+  - `api/browser-window.md` - Window lifecycle and options
+  - `api/ipc-main.md` - Main-side IPC handlers
+  - `api/ipc-renderer.md` - Renderer-side IPC senders
+  - `api/context-bridge.md` - Preload-to-renderer bridge (used in `resources/public/js/preload.js`)
+  - `api/dialog.md` - Native file/open/save dialogs
+  - `api/menu.md` - Application menu
 - `context/pico_modal.md` - Modal/dialog styling details for PicoCSS
 
 **Agent Protocols:**
