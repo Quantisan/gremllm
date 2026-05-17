@@ -65,6 +65,49 @@
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
+(defn append-pending-permission
+  "Add the diffs from an enriched ACP permission request to the active topic's
+   pending-diffs, tagging each with :tool-call-id so accept/reject can resolve
+   the right pending Promise. Returns nil when the permission carries no diffs."
+  [state enriched]
+  (let [{:keys [tool-call-id content]} (:tool-call enriched)
+        diffs (when content (filterv #(= "diff" (:type %)) content))]
+    (when (seq diffs)
+      (let [topic-id (topic-state/get-active-topic-id state)
+            existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])
+            tagged   (mapv #(assoc % :tool-call-id tool-call-id) diffs)]
+        [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing tagged)]]))))
+
+(defn- without-tool-call [pending-diffs tool-call-id]
+  (filterv #(not= tool-call-id (:tool-call-id %)) pending-diffs))
+
+(defn- resolve-diff-actions [state tool-call-id option-id]
+  (let [topic-id (topic-state/get-active-topic-id state)
+        existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])
+        resolved (topic-state/get-resolved-tool-calls state topic-id)]
+    [[:acp.effects/resolve-permission tool-call-id option-id]
+     [:effects/save
+      (topic-state/pending-diffs-path topic-id)
+      (without-tool-call existing tool-call-id)]
+     [:effects/save
+      (topic-state/resolved-tool-calls-path topic-id)
+      (conj resolved tool-call-id)]]))
+
+(defn accept-diff
+  "User accepted a proposed diff. Resolves the SDK's pending permission as
+   allow_once, drops matching entries from :pending-diffs, and records
+   tool-call-id in :resolved-tool-calls so any duplicate PostToolUse update
+   is suppressed by append-edit-diffs."
+  [state tool-call-id]
+  (resolve-diff-actions state tool-call-id "allow_once"))
+
+(defn reject-diff
+  "User rejected a proposed diff. Resolves the SDK's pending permission as
+   reject_once, drops matching entries from :pending-diffs, and records
+   tool-call-id in :resolved-tool-calls."
+  [state tool-call-id]
+  (resolve-diff-actions state tool-call-id "reject_once"))
+
 (defn set-active
   "Set the active topic and initialize its ACP session."
   [_state topic-id]

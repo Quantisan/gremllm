@@ -117,3 +117,59 @@
             [:topic.effects/auto-save topic-id]]
            (topic/finalize-turn {} topic-id)))))
 
+(deftest append-pending-permission-test
+  (testing "appends diffs tagged with tool-call-id to the active topic's pending-diffs"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs []}}}}
+          enriched {:tool-call {:tool-call-id "tc-1"
+                                :content [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]}}
+          actions  (topic/append-pending-permission state enriched)]
+      (is (= [[:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}]]]
+             actions))))
+  (testing "is a no-op when permission carries no diff content"
+    (let [state    {:active-topic-id "t1"
+                    :topics {"t1" {:id "t1" :session {:pending-diffs []}}}}
+          enriched {:tool-call {:tool-call-id "tc-1" :content []}}]
+      (is (nil? (topic/append-pending-permission state enriched))))))
+
+(deftest accept-diff-test
+  (testing "emits IPC resolve, removes matching diffs, and records tool-call-id as resolved"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs
+                                                 [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}
+                                                  {:type "diff" :path "/q" :old-text "x" :new-text "y" :tool-call-id "tc-2"}]
+                                                 :resolved-tool-calls #{}}}}}
+          actions  (topic/accept-diff state "tc-1")]
+      (is (= [[:acp.effects/resolve-permission "tc-1" "allow_once"]
+              [:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               [{:type "diff" :path "/q" :old-text "x" :new-text "y" :tool-call-id "tc-2"}]]
+              [:effects/save
+               (topic-state/resolved-tool-calls-path topic-id)
+               #{"tc-1"}]]
+             actions)))))
+
+(deftest reject-diff-test
+  (testing "emits IPC reject, removes matching diffs, and records tool-call-id as resolved"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs
+                                                 [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}]
+                                                 :resolved-tool-calls #{"tc-prev"}}}}}
+          actions  (topic/reject-diff state "tc-1")]
+      (is (= [[:acp.effects/resolve-permission "tc-1" "reject_once"]
+              [:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               []]
+              [:effects/save
+               (topic-state/resolved-tool-calls-path topic-id)
+               #{"tc-prev" "tc-1"}]]
+             actions)))))
+
