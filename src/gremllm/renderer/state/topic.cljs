@@ -34,6 +34,14 @@
 (defn pending-diffs-path [topic-id]
   (-> topics-path (conj topic-id :session :pending-diffs)))
 
+(defn resolved-tool-calls-path [topic-id]
+  (-> topics-path (conj topic-id :session :resolved-tool-calls)))
+
+(defn get-resolved-tool-calls
+  "Return the set of resolved tool-call-ids for topic-id, or empty set."
+  [state topic-id]
+  (or (get-in state (resolved-tool-calls-path topic-id)) #{}))
+
 (defn excerpts-path [topic-id]
   (conj (topic-path topic-id) :excerpts))
 
