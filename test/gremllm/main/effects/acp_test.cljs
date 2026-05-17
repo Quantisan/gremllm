@@ -306,3 +306,23 @@
                                           "dispose should have settled before shutdown promise resolves")))
                              (.finally (fn [] (done)))))))
               (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
+
+(deftest test-pending-permission-registry
+  (testing "stash/resolve registers a resolver keyed by tool-call-id and fires it once"
+    (let [fired (atom nil)]
+      (acp/stash-pending-permission! "tc-A" #(reset! fired %))
+      (is (some? (acp/pending-permission-snapshot)))
+      (acp/resolve-pending-permission! "tc-A" "allow_once")
+      (is (= "allow_once" @fired))
+      (is (nil? (get (acp/pending-permission-snapshot) "tc-A"))
+          "resolver should be removed after firing")))
+  (testing "resolve with unknown id is a no-op (logged elsewhere)"
+    (is (nil? (acp/resolve-pending-permission! "tc-unknown" "allow_once"))))
+  (testing "stash replaces an existing resolver with the same id and logs"
+    (let [a (atom :a-unfired)
+          b (atom :b-unfired)]
+      (acp/stash-pending-permission! "tc-dup" #(reset! a %))
+      (acp/stash-pending-permission! "tc-dup" #(reset! b %))
+      (acp/resolve-pending-permission! "tc-dup" "reject_once")
+      (is (= :a-unfired @a) "first resolver should not fire")
+      (is (= "reject_once" @b) "second resolver should fire"))))

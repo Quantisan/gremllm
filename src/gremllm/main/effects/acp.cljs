@@ -34,6 +34,35 @@
 ;;    :ready         <init-promise>}
 (defonce ^:private state (atom nil))
 
+;; Resolvers for ACP requestPermission calls awaiting user input.
+;; Keyed by ACP tool-call-id. Each entry is a 1-arg fn that takes a
+;; permission outcome (e.g. "allow_once", "reject_once") and resolves the
+;; pending JS Promise returned to the SDK from resolve-cb.
+(defonce ^:private pending-permissions (atom {}))
+
+(defn stash-pending-permission!
+  "Register a resolver for a pending ACP permission request. If an entry
+   already exists for tool-call-id the prior resolver is discarded (and
+   the awaiting SDK Promise will hang); this is unexpected and logged."
+  [tool-call-id resolver]
+  (when (contains? @pending-permissions tool-call-id)
+    (js/console.warn "[ACP] replacing pending permission resolver for" tool-call-id))
+  (swap! pending-permissions assoc tool-call-id resolver))
+
+(defn resolve-pending-permission!
+  "Fire the registered resolver for tool-call-id with the given option-id
+   (e.g. \"allow_once\", \"reject_once\"). No-op if no resolver is registered."
+  [tool-call-id option-id]
+  (when-let [resolver (get @pending-permissions tool-call-id)]
+    (swap! pending-permissions dissoc tool-call-id)
+    (resolver option-id)
+    nil))
+
+(defn pending-permission-snapshot
+  "Snapshot of the current pending-permissions map. For tests/inspection."
+  []
+  @pending-permissions)
+
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
    Returns full content when both line and limit are nil."
