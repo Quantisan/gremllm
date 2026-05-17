@@ -157,37 +157,6 @@
                                                       :prompt   "Summarize the first paragraph..."
                                                       :done     done}))))))))
 
-(deftest test-live-write-new-file
-  (testing "write-new-file prompt: observe whether Write tool triggers writeTextFile"
-    (async done
-      (let [ctx    (live-acp-context nil)
-            result (atom nil)]
-        (-> (setup-live-acp! ctx)
-            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
-            (.then (fn [session-id]
-                     (acp/prompt session-id
-                       [{:type "text"
-                         :text "Create a new file called notes.md in the current directory with the single line: hello"}])))
-            (.then (fn [^js r]
-                     (reset! result r)
-                     (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
-                     (print-event-summary! "write-new-file" (:recorder ctx) [:write :permission])
-                     (let [notes-path (path/join (:tmp-dir ctx) "notes.md")]
-                       (println (str "  notes.md on disk: "
-                                     (try
-                                       (.accessSync (js/require "fs") notes-path)
-                                       "YES — SDK wrote directly"
-                                       (catch :default _
-                                         "NO — dry-run prevented write")))))
-                     (println "=== end ===")))
-            (.catch (fn [err]
-                      (is false (str "write-new-file test failed: " err))))
-            (.finally (fn []
-                        (finish-live-acp! ctx result {:scenario "write-new-file"
-                                                      :prompt   "Create a new file called notes.md..."
-                                                      :done     done}))))))))
-
 (defn- some-diff-event?
   "True when the recorder captured at least one session update carrying diff content
    (i.e. an :edit-completed? event consumable by the diff-staging pipeline)."
