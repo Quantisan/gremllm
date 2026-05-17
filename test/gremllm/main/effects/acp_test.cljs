@@ -307,6 +307,52 @@
                              (.finally (fn [] (done)))))))
               (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
 
+(deftest test-resolve-cb-returns-promise-for-deferred
+  (testing "in-workspace edit: resolve-cb returns a Promise that resolves when registry fires"
+    (async done
+      (let [pending-events  (atom [])
+            captured-cb     (atom nil)
+            {:keys [result]} (make-fake-env)
+            path-mod        (js/require "path")
+            cwd             (.resolve path-mod (.cwd js/process) "resources")
+            file            (.resolve path-mod cwd "gremllm-launch-log.md")
+            raw-params      #js {:sessionId "s-1"
+                                 :toolCall  #js {:toolCallId "tc-defer"
+                                                 :kind       "edit"
+                                                 :title      "Edit"
+                                                 :rawInput   #js {:file_path file}
+                                                 :content    #js [#js {:type "diff"
+                                                                       :path file
+                                                                       :oldText "a"
+                                                                       :newText "b"}]
+                                                 :locations  #js []}
+                                 :options   #js [#js {:optionId "allow-once"
+                                                      :kind     "allow_once"
+                                                      :name     "Allow"}
+                                                 #js {:optionId "reject-once"
+                                                      :kind     "reject_once"
+                                                      :name     "Reject"}]}]
+        (with-redefs [acp/create-connection
+                      (fn [^js opts]
+                        (reset! captured-cb (.-resolvePermission opts))
+                        result)]
+          (-> (acp/initialize
+                {:on-session-update     (fn [_] nil)
+                 :on-pending-permission (fn [enriched]
+                                          (swap! pending-events conj enriched))})
+              (.then
+                (fn [_]
+                  (let [result-promise (@captured-cb raw-params cwd)]
+                    (is (instance? js/Promise result-promise))
+                    (is (= 1 (count @pending-events)) "tap should fire once with enriched request")
+                    (is (= "tc-defer" (-> @pending-events first :tool-call :tool-call-id)))
+                    (acp/resolve-pending-permission! "tc-defer" "allow-once")
+                    (-> result-promise
+                        (.then (fn [^js js-out]
+                                 (is (= "selected"   (.. js-out -outcome -outcome)))
+                                 (is (= "allow-once" (.. ^js js-out -outcome -optionId)))))
+                        (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))))))
+
 (deftest test-pending-permission-registry
   (testing "stash/resolve registers a resolver keyed by tool-call-id and fires it once"
     (let [fired (atom nil)]
