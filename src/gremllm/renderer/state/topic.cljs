@@ -42,6 +42,15 @@
   [state topic-id]
   (or (get-in state (resolved-tool-calls-path topic-id)) #{}))
 
+(defn pending-permission-options-path [topic-id]
+  (-> topics-path (conj topic-id :session :pending-permission-options)))
+
+(defn get-pending-permission-options
+  "Return the options vector the agent sent with the pending permission
+   for tool-call-id, or nil if no entry is stashed."
+  [state topic-id tool-call-id]
+  (get-in state (conj (pending-permission-options-path topic-id) tool-call-id)))
+
 (defn excerpts-path [topic-id]
   (conj (topic-path topic-id) :excerpts))
 

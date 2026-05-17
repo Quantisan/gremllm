@@ -66,45 +66,67 @@
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
 
 (defn append-pending-permission
-  "Add the diffs from an enriched ACP permission request to the active topic's
-   pending-diffs, tagging each with :tool-call-id so accept/reject can resolve
-   the right pending Promise. Returns nil when the permission carries no diffs."
+  "Records an ACP permission request against the active topic: tags each diff
+   in :content with :tool-call-id (so accept/reject can resolve the right
+   pending Promise) and stashes the request's :options under
+   :pending-permission-options keyed by :tool-call-id (so accept/reject can
+   map ACP :kind to the agent-defined :option-id). No-op when no diffs."
   [state enriched]
   (let [{:keys [tool-call-id content]} (:tool-call enriched)
         diffs (when content (filterv #(= "diff" (:type %)) content))]
     (when (seq diffs)
       (let [topic-id (topic-state/get-active-topic-id state)
             existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])
-            tagged   (mapv #(assoc % :tool-call-id tool-call-id) diffs)]
-        [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing tagged)]]))))
+            tagged   (mapv #(assoc % :tool-call-id tool-call-id) diffs)
+            options-map (or (get-in state (topic-state/pending-permission-options-path topic-id)) {})]
+        [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing tagged)]
+         [:effects/save (topic-state/pending-permission-options-path topic-id)
+          (assoc options-map tool-call-id (:options enriched))]]))))
 
 (defn- without-tool-call [pending-diffs tool-call-id]
   (filterv #(not= tool-call-id (:tool-call-id %)) pending-diffs))
 
-(defn- resolve-diff-actions [state tool-call-id option-id]
-  (let [topic-id (topic-state/get-active-topic-id state)
-        existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])
-        resolved (topic-state/get-resolved-tool-calls state topic-id)]
-    [[:acp.effects/resolve-permission tool-call-id option-id]
-     [:effects/save
-      (topic-state/pending-diffs-path topic-id)
-      (without-tool-call existing tool-call-id)]
-     [:effects/save
-      (topic-state/resolved-tool-calls-path topic-id)
-      (conj resolved tool-call-id)]]))
+(defn- option-id-for-kind
+  "Find the :option-id of the entry in options whose :kind matches kind. nil if none."
+  [options kind]
+  (some #(when (= kind (:kind %)) (:option-id %)) options))
+
+(defn- resolve-diff-actions [state tool-call-id kind]
+  (let [topic-id    (topic-state/get-active-topic-id state)
+        existing    (or (get-in state (topic-state/pending-diffs-path topic-id)) [])
+        options-map (or (get-in state (topic-state/pending-permission-options-path topic-id)) {})
+        options     (get options-map tool-call-id)
+        option-id   (option-id-for-kind options kind)
+        cleanup     [[:effects/save
+                      (topic-state/pending-diffs-path topic-id)
+                      (without-tool-call existing tool-call-id)]
+                     [:effects/save
+                      (topic-state/pending-permission-options-path topic-id)
+                      (dissoc options-map tool-call-id)]
+                     [:effects/save
+                      (topic-state/resolved-tool-calls-path topic-id)
+                      (conj (topic-state/get-resolved-tool-calls state topic-id) tool-call-id)]]]
+    (if option-id
+      (into [[:acp.effects/resolve-permission tool-call-id option-id]] cleanup)
+      (do
+        (js/console.error "No option-id found for kind" kind "on tool-call" tool-call-id
+                          "— available options:" (pr-str options))
+        cleanup))))
 
 (defn accept-diff
-  "User accepted a proposed diff. Resolves the SDK's pending permission as
-   allow_once, drops matching entries from :pending-diffs, and records
-   tool-call-id in :resolved-tool-calls so any duplicate PostToolUse update
-   is suppressed by append-edit-diffs."
+  "User accepted a proposed diff. Looks up the option-id for ACP kind
+   \"allow_once\" from the stashed options, resolves the SDK's pending
+   permission with that option-id, clears the pending-diffs/options entries,
+   and records tool-call-id in :resolved-tool-calls so any duplicate
+   PostToolUse update is suppressed by append-edit-diffs."
   [state tool-call-id]
   (resolve-diff-actions state tool-call-id "allow_once"))
 
 (defn reject-diff
-  "User rejected a proposed diff. Resolves the SDK's pending permission as
-   reject_once, drops matching entries from :pending-diffs, and records
-   tool-call-id in :resolved-tool-calls."
+  "User rejected a proposed diff. Looks up the option-id for ACP kind
+   \"reject_once\" from the stashed options, resolves the SDK's pending
+   permission with that option-id, clears the pending-diffs/options entries,
+   and records tool-call-id in :resolved-tool-calls."
   [state tool-call-id]
   (resolve-diff-actions state tool-call-id "reject_once"))
 
