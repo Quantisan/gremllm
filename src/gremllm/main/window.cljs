@@ -23,6 +23,38 @@
     {:width (calculate-dimension (.-width work-area) width-scale min-width max-width)
      :height (calculate-dimension (.-height work-area) height-scale 0 max-height)}))
 
+(defn- external-url?
+  "Pure: true when url parses as http:// or https://. Anything else
+   (mailto, file, javascript, malformed) → false."
+  [url]
+  (try
+    (let [protocol (.-protocol (js/URL. url))]
+      (or (= "https:" protocol) (= "http:" protocol)))
+    (catch :default _ false)))
+
+(defn- open-externally! [url]
+  (-> (electron-main) .-shell (.openExternal url)))
+
+(defn- handle-new-window [^js details]
+  (let [url (.-url details)]
+    (when (external-url? url)
+      (open-externally! url))
+    #js {:action "deny"}))
+
+(defn- handle-will-navigate [^js event url]
+  (.preventDefault event)
+  (when (external-url? url)
+    (open-externally! url)))
+
+(defn- setup-navigation-guards
+  "Prevent the BrowserWindow from becoming a web browser; route approved
+   external links to the user's default browser instead."
+  [^js main-window]
+  (let [^js wc (.-webContents main-window)]
+    (.setWindowOpenHandler wc handle-new-window)
+    (.on wc "will-navigate" handle-will-navigate))
+  main-window)
+
 (defn- handle-app-quit
   "Intercept app quit to close window first (for future unsaved changes check)."
   [^js main-window event]
@@ -60,5 +92,5 @@
         main-window   (BrowserWindow. (clj->js window-config))
         html-path     "resources/public/index.html"]
     (.loadFile main-window html-path)
-    main-window))
+    (setup-navigation-guards main-window)))
 
