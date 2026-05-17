@@ -35,21 +35,24 @@
 (defn- open-externally! [url]
   (-> (electron-main) .-shell (.openExternal url)))
 
-;; TODO: naming overpromises... It only opens externals and silently drops anything else.
-(defn- route-url!
-  "If url is external, open it in the user's default browser.
-   In-window navigation is the caller's concern."
+(defn- open-external-url!
+  "If url is external (http/https), open it in the user's default browser.
+   Anything else is silently dropped; in-window navigation is the caller's concern."
   [url]
   (when (external-allowed-url? url)
     (open-externally! url)))
 
 (defn- handle-new-window [^js details]
-  (route-url! (.-url details))
+  (open-external-url! (.-url details))
   #js {:action "deny"})
 
-(defn- handle-will-navigate [^js event url]
+(defn- handle-will-navigate
+  "Block all in-app navigation; if the target is external, hand it to the
+   default browser. preventDefault is unconditional so unsupported URLs result
+   in no navigation at all rather than an in-window load."
+  [^js event url]
   (.preventDefault event)
-  (route-url! url))
+  (open-external-url! url))
 
 (defn- setup-navigation-guards
   "Prevent the BrowserWindow from becoming a web browser; route approved
