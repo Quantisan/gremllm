@@ -134,6 +134,13 @@
   (fn [_ _]
     (.reloadWorkspace js/window.electronAPI)))
 
+;; ACP: forward user's accept/reject for a pending permission to the main process.
+(nxr/register-effect! :acp.effects/resolve-permission
+  (fn [_ _ tool-call-id option-id]
+    (.acpResolvePermission js/window.electronAPI
+                           #js {:toolCallId tool-call-id
+                                :optionId   option-id})))
+
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
 (nxr/register-action! :form.actions/clear-input ui/clear-input)
@@ -174,6 +181,9 @@
 
 ;; Register all topic actions
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
+(nxr/register-action! :topic.actions/append-pending-permission topic/append-pending-permission)
+(nxr/register-action! :topic.actions/accept-diff topic/accept-diff)
+(nxr/register-action! :topic.actions/reject-diff topic/reject-diff)
 (nxr/register-action! :tool-call.actions/start  tool-call/start-tool-call)
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)

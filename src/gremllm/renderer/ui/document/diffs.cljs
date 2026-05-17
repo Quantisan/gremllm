@@ -155,7 +155,13 @@
         (if (< pos (count content))
           (conj segments {:type :text :content (subs content pos)})
           segments)
-        (let [{:keys [char-index length old-text new-text anchor-status]} (first diffs)]
+        (let [group (first diffs)
+              {:keys [char-index length old-text new-text anchor-status]} group
+              ;; tool-call-id lives on the original diff entries (group's :diffs).
+              ;; Merged overlapping diffs come from the same tool-call by
+              ;; construction (Edit emits one diff per call), so picking the
+              ;; first is correct.
+              tool-call-id (-> group :diffs first :tool-call-id)]
           (recur (max pos (+ char-index length))
                  (rest diffs)
                  (cond-> segments
@@ -163,7 +169,11 @@
                    (conj {:type :text :content (subs content pos char-index)})
 
                    true
-                   (conj {:type :diff-block :old-text old-text :new-text new-text :anchor-status anchor-status}))))))))
+                   (conj {:type         :diff-block
+                          :old-text     old-text
+                          :new-text     new-text
+                          :tool-call-id tool-call-id
+                          :anchor-status anchor-status}))))))))
 
 (defn compose
   "Unified diff composition pipeline. Produces separate :diff-block segments for
