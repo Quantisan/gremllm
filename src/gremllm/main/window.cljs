@@ -23,24 +23,24 @@
     {:width (calculate-dimension (.-width work-area) width-scale min-width max-width)
      :height (calculate-dimension (.-height work-area) height-scale 0 max-height)}))
 
-(def ^:private external-protocols #{"http:" "https:"})
+(def ^:private external-allowed-protocols #{"http:" "https:"})
 
-(defn- external-url?
-  "Pure: true when url parses to an http(s) protocol. Anything else
-   (mailto, file, javascript, malformed) → false."
+(defn- external-allowed-url?
+  "True when url parses to an http(s) protocol. Anything else (mailto, file, javascript, malformed) → false."
   [url]
   (try
-    (contains? external-protocols (.-protocol (js/URL. url)))
+    (contains? external-allowed-protocols (.-protocol (js/URL. url)))
     (catch :default _ false)))
 
 (defn- open-externally! [url]
   (-> (electron-main) .-shell (.openExternal url)))
 
+;; TODO: naming overpromises... It only opens externals and silently drops anything else.
 (defn- route-url!
   "If url is external, open it in the user's default browser.
    In-window navigation is the caller's concern."
   [url]
-  (when (external-url? url)
+  (when (external-allowed-url? url)
     (open-externally! url)))
 
 (defn- handle-new-window [^js details]
@@ -61,41 +61,42 @@
   main-window)
 
 (defn- handle-app-quit
-  "Intercept app quit to close window first (for future unsaved changes check)."
-  [^js main-window event]
+  "Intercept app quit so the window closes first (future hook for unsaved-changes
+   checks). The `isDestroyed` guard protects against re-entry after the window
+   is already gone."
+  [^js main-window quitting? event]
   (when-not (.isDestroyed main-window)
-    (js/console.log "App quit intercepted - closing window first")
     (.preventDefault event)
-    (set! (.-isQuitting main-window) true)
+    (reset! quitting? true)
     (.close main-window)))
 
 (defn- handle-window-close
-  "Handle window close, checking if app should quit after."
-  [^js main-window _event]
-  (let [quitting? (.-isQuitting main-window)]
-    (js/console.log (str "Window closing" (when quitting? " (app quitting)")))
-    ;; TODO: Check for unsaved changes here
+  "If the close was triggered by an app quit, follow up with .quit once the
+   window is fully closed. A plain window-close leaves the app running."
+  [^js main-window quitting? _event]
+  (when @quitting?
+    (.once main-window "closed"
+           (fn [] (.quit (.-app (electron-main)))))))
 
-    (when quitting?
-      (.once main-window "closed"
-             (fn []
-               (js/console.log "Window closed - now quitting app")
-               (.quit (.-app (electron-main))))))))
-
-(defn setup-close-handlers
-  "Handle window close and app quit with unsaved changes protection."
+(defn- setup-close-handlers
+  "Bridge window-close and app-quit so a quit-initiated close also stops the
+   app. `quitting?` is closed over by both handlers: the quit path flips it,
+   and the close handler reads it to decide whether to follow up with .quit."
   [^js main-window]
-  (.on (.-app (electron-main)) "before-quit" (partial handle-app-quit main-window))
-  (.on main-window "close" (partial handle-window-close main-window))
-  main-window)
+  (let [quitting? (atom false)
+        app       (.-app (electron-main))]
+    (.on app         "before-quit" (partial handle-app-quit    main-window quitting?))
+    (.on main-window "close"       (partial handle-window-close main-window quitting?))
+    main-window))
 
 (defn create-window []
   (let [BrowserWindow (.-BrowserWindow (electron-main))
         dimensions    (calculate-window-dimensions window-dimension-specs)
         preload-path  (io/path-join js/__dirname "../resources/public/js/preload.js")
         window-config (merge dimensions {:webPreferences {:preload preload-path}})
-        main-window   (BrowserWindow. (clj->js window-config))
-        html-path     "resources/public/index.html"]
-    (.loadFile main-window html-path)
-    (setup-navigation-guards main-window)))
+        main-window   (BrowserWindow. (clj->js window-config))]
+    (.loadFile main-window "resources/public/index.html")
+    (setup-navigation-guards main-window)
+    (setup-close-handlers    main-window)
+    main-window))
 

@@ -44,9 +44,7 @@
   (fn [_state] [[:window.effects/create]]))
 
 (nxr/register-effect! :window.effects/create
-  (fn [_ _ _]
-    (-> (window/create-window)
-        (window/setup-close-handlers))))
+  (fn [_ _ _] (window/create-window)))
 
 ;; IPC Effects Registration
 ;; ========================
