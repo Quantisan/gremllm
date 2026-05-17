@@ -23,36 +23,41 @@
     {:width (calculate-dimension (.-width work-area) width-scale min-width max-width)
      :height (calculate-dimension (.-height work-area) height-scale 0 max-height)}))
 
+(def ^:private external-protocols #{"http:" "https:"})
+
 (defn- external-url?
-  "Pure: true when url parses as http:// or https://. Anything else
+  "Pure: true when url parses to an http(s) protocol. Anything else
    (mailto, file, javascript, malformed) → false."
   [url]
   (try
-    (let [protocol (.-protocol (js/URL. url))]
-      (or (= "https:" protocol) (= "http:" protocol)))
+    (contains? external-protocols (.-protocol (js/URL. url)))
     (catch :default _ false)))
 
 (defn- open-externally! [url]
   (-> (electron-main) .-shell (.openExternal url)))
 
+(defn- route-url!
+  "If url is external, open it in the user's default browser.
+   In-window navigation is the caller's concern."
+  [url]
+  (when (external-url? url)
+    (open-externally! url)))
+
 (defn- handle-new-window [^js details]
-  (let [url (.-url details)]
-    (when (external-url? url)
-      (open-externally! url))
-    #js {:action "deny"}))
+  (route-url! (.-url details))
+  #js {:action "deny"})
 
 (defn- handle-will-navigate [^js event url]
   (.preventDefault event)
-  (when (external-url? url)
-    (open-externally! url)))
+  (route-url! url))
 
 (defn- setup-navigation-guards
   "Prevent the BrowserWindow from becoming a web browser; route approved
    external links to the user's default browser instead."
   [^js main-window]
-  (let [^js wc (.-webContents main-window)]
-    (.setWindowOpenHandler wc handle-new-window)
-    (.on wc "will-navigate" handle-will-navigate))
+  (doto (.-webContents main-window)
+    (.setWindowOpenHandler handle-new-window)
+    (.on "will-navigate" handle-will-navigate))
   main-window)
 
 (defn- handle-app-quit
