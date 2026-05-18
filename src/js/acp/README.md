@@ -15,7 +15,7 @@ SDK client and the in-process agent over ndjson streams.
 ## Division Of Responsibility
 
 - `src/js/acp/index.js`: stream bridge, `ClientSideConnection`,
-  `AgentSideConnection`, session cwd tracking, dry-run `writeTextFile`
+  `AgentSideConnection`, session cwd tracking
 - `src/gremllm/main/effects/acp.cljs`: initialization, handshake, permission
   resolution, file-read callback wiring, session update dispatch, prompt and
   session APIs
@@ -23,12 +23,13 @@ SDK client and the in-process agent over ndjson streams.
   invoked by `main.effects.acp`; keeps workspace-path checks and approval
   logic out of the JS transport bridge
 
-## Dry-Run Write Behavior
+## File Writes
 
-`writeTextFile` intentionally acknowledges writes without mutating disk. That
-keeps the agent on the proposal path so it can return a reviewable diff, while
-Gremllm remains in control of whether changes are later accepted or rejected
-through its own workflow.
+Gremllm does not implement the ACP `writeTextFile` client method and advertises
+`fs.writeTextFile: false` in its capabilities. The agent's MCP `Edit`/`Write`
+tools write directly through Claude Code's internal filesystem path after
+permission is granted; gating happens at the permission layer (deferred
+approval via `requestPermission`), not the write layer.
 
 ## Entry Points
 

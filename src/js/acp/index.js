@@ -44,17 +44,6 @@ function createConnection(options = {}) {
     },
     async readTextFile(params) {
       return callbacks.onReadTextFile(params);
-    },
-    // Intentional dry-run: acknowledge ACP writes so the agent can complete the
-    // tool call successfully and surface a reviewable diff/proposal, but never
-    // mutate disk here. Gremllm applies file changes later through its own
-    // explicit accept/reject flow. If permission is rejected instead, Claude
-    // interprets the step as a user denial and reports the tool call as failed.
-    async writeTextFile(params) {
-      if (callbacks.onWriteTextFile) {
-        callbacks.onWriteTextFile(params);
-      }
-      return {};
     }
   };
 

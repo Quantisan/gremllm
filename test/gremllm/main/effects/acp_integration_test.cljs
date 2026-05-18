@@ -41,7 +41,6 @@
     (acp/initialize
       {:on-session-update     (acp/make-session-update-callback store (:on-session-update recorder))
        :on-permission         (:on-permission recorder)
-       :on-write              (:on-write recorder)
        :on-pending-permission on-pending-permission})))
 
 (defn- setup-live-acp!
@@ -151,7 +150,7 @@
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
                      (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
-                     (print-event-summary! "read-only" (:recorder ctx) [:read :write :permission])
+                     (print-event-summary! "read-only" (:recorder ctx) [:read :permission])
                      (println "=== end ===")))
             (.catch (fn [err]
                       (is false (str "read-only test failed: " err))))
@@ -216,7 +215,7 @@
                            "Expected allow_once option in the permission request")
                        (is (contains? opt-kinds "reject_once")
                            "Expected reject_once option in the permission request"))
-                     (print-event-summary! "edit-accept" (:recorder ctx) [:permission :write])
+                     (print-event-summary! "edit-accept" (:recorder ctx) [:permission])
                      (println "=== end ===")
                      (js/Promise.all #js [(.readFile fsp (:src-path ctx) "utf8")
                                           (.readFile fsp (:doc-path ctx) "utf8")])))
@@ -248,7 +247,7 @@
                      (reset! result r)
                      (is (some #(= "edit" (get-in % [:tool-call :kind])) @captured)
                          "Expected at least one pending-permission for an edit tool call (subsumes the dropped guide-rail).")
-                     (print-event-summary! "edit-reject" (:recorder ctx) [:permission :write])
+                     (print-event-summary! "edit-reject" (:recorder ctx) [:permission])
                      (println "=== end ===")
                      ;; disallowedTools blocks MultiEdit/NotebookEdit; this comparison
                      ;; also catches Bash-based circumvention.

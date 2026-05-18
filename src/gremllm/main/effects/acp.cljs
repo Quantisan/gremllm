@@ -114,7 +114,7 @@
   #js {:name "gremllm" :title "Gremllm" :version "0.1.0"})
 
 (def ^:private client-capabilities
-  #js {:fs       #js {:readTextFile true :writeTextFile true}
+  #js {:fs       #js {:readTextFile true :writeTextFile false}
        :terminal false})
 
 (defn- start-connection!
@@ -137,19 +137,6 @@
                                (throw err))))
                   (throw err))))))
 
-(defn- make-write-callback
-  "Build a fire-and-forget write tap. Coerces raw JS params and
-   calls on-write with a map of :path, :session-id, :content-length."
-  [on-write]
-  (fn [params]
-    (try
-      (on-write {:path           (.-path params)
-                 :session-id     (.-sessionId params)
-                 :content-length (when (string? (.-content params))
-                                   (.-length (.-content params)))})
-      (catch :default e
-        (js/console.error "ACP write request coercion failed" e params)))))
-
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
@@ -159,9 +146,8 @@
                             when the resolver defers to user input (in-workspace edit).
                             Fires *after* the resolver is registered, so a synchronous call
                             to resolve-pending-permission! from inside this callback (e.g.
-                            from tests) resolves the SDK Promise correctly.
-     :on-write              optional tap receiving coerced writeTextFile params."
-  [{:keys [on-session-update on-permission on-pending-permission on-write]}]
+                            from tests) resolves the SDK Promise correctly."
+  [{:keys [on-session-update on-permission on-pending-permission]}]
   (if-let [ready (:ready @state)]
     ready
     (let [;; Per-connection tool-name tracker. Seeded from session updates so
@@ -212,7 +198,6 @@
           ^js result   (create-connection
                          #js {:onSessionUpdate   session-cb
                               :onReadTextFile    read-text-file
-                              :onWriteTextFile   (when on-write (make-write-callback on-write))
                               :resolvePermission resolve-cb})
           dispose-agent (.-disposeAgent result)
           ready-promise (start-connection! (.-connection result)
