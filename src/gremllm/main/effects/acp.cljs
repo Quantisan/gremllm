@@ -15,13 +15,17 @@
 ;; ELECTRON_RUN_AS_NODE=1 makes process.execPath act as Node instead of relaunching the window;
 ;; depends on FuseV1Options.RunAsNode (https://packages.electronjs.org/fuses).
 ;; SDK refs: sdk.d.ts:56 (model aliases), sdk.d.ts:5371 (ThinkingEnabled).
+;; :disallowedTools blocks the Claude Code subprocess's built-in Edit/Write/MultiEdit/NotebookEdit
+;; before they bypass the bridge's writeTextFile dry-run by writing disk via Node fs.
+;; Merged at acp-agent.js:1379; allowedTools does not work for built-ins (sdk-typescript#115).
 (def ^:private session-meta
   #js {:claudeCode
        #js {:options
-            #js {:env            #js {:ELECTRON_RUN_AS_NODE "1"}
-                 :settingSources #js []
-                 :model          "sonnet"
-                 :thinking       #js {:type "enabled" :budgetTokens 20480 :display "summarized"}}}})
+            #js {:env             #js {:ELECTRON_RUN_AS_NODE "1"}
+                 :settingSources  #js []
+                 :model           "sonnet"
+                 :thinking        #js {:type "enabled" :budgetTokens 20480 :display "summarized"}
+                 :disallowedTools #js ["Edit" "Write" "MultiEdit" "NotebookEdit"]}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:

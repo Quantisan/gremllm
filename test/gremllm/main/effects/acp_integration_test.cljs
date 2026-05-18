@@ -2,22 +2,12 @@
   (:require ["fs/promises" :as fsp]
             ["os" :as os]
             ["path" :as path]
-            [cljs.pprint :as pprint]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
             [gremllm.main.effects.acp-trace :as acp-trace]
             [gremllm.schema.codec.acp :as acp-codec]))
-
-(defn- print-updates [updates]
-  (println "\n--- Session Updates ---")
-  (doseq [{:keys [update]} updates]
-    (pprint/pprint update))
-  (println "--- End Updates ---"))
-
-(defn- updates [captured]
-  (map :update @captured))
 
 (defn- result-summary [result]
   (when-let [^js res result]
@@ -32,27 +22,99 @@
                 :limit (.-limit params)})
       (delegate params))))
 
+(defn- live-acp-context
+  [{:keys [copy-doc?]}]
+  (let [tmp-dir  (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))
+        src-path (path/resolve "resources/gremllm-launch-log.md")]
+    {:store    (atom {})
+     :recorder (acp-trace/make-recorder)
+     :tmp-dir  tmp-dir
+     :src-path src-path
+     :doc-path (when copy-doc?
+                 (path/join tmp-dir "gremllm-launch-log.md"))}))
+
+(defn- initialize-recorded-acp!
+  [{:keys [store recorder]}]
+  (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
+    (acp/initialize
+      {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
+       :on-permission     (:on-permission recorder)
+       :on-write          (:on-write recorder)})))
+
+(defn- setup-live-acp!
+  [{:keys [tmp-dir src-path doc-path] :as ctx}]
+  (-> (.mkdir fsp tmp-dir #js {:recursive true})
+      (.then (fn [_]
+               (when doc-path
+                 (.copyFile fsp src-path doc-path))))
+      (.then (fn [_] (initialize-recorded-acp! ctx)))
+      (.then (fn [_] ctx))))
+
+(defn- print-event-summary!
+  [scenario recorder kinds]
+  (println (str "\n=== " scenario " event kinds ==="))
+  (doseq [evt @(:events recorder)]
+    (println (str "  +" (:ts evt) "ms " (name (:kind evt)))))
+  (doseq [kind kinds]
+    (println (str "  " (name kind) " events: "
+                  (count (filter #(= kind (:kind %)) @(:events recorder)))))))
+
+(defn- trace-metadata
+  [ctx result trace-prompt]
+  (cond-> {:versions (acp-trace/versions)
+           :prompt   trace-prompt
+           :result   (result-summary @result)}
+    (:doc-path ctx) (assoc :doc-path (:doc-path ctx))))
+
+(defn- remove-temp-dir!
+  [tmp-dir]
+  (if tmp-dir
+    (.rm fsp tmp-dir #js {:recursive true :force true})
+    (js/Promise.resolve nil)))
+
+(defn- finish-live-acp!
+  [{:keys [tmp-dir recorder] :as ctx} result {:keys [scenario prompt done]}]
+  (-> (acp-trace/write-trace!
+        "target/acp-traces"
+        scenario
+        (trace-metadata ctx result prompt)
+        (:events recorder))
+      (.then (fn [p] (println "Trace written:" p)))
+      (.catch (fn [e] (js/console.error "Trace write failed" e)))
+      (.finally
+        (fn []
+          (-> (acp/shutdown)
+              (.catch (fn [e] (js/console.error "ACP shutdown failed" e)))
+              (.then (fn [_] (remove-temp-dir! tmp-dir)))
+              (.catch (fn [e] (js/console.error "Temp cleanup failed" e)))
+              (.finally done))))))
+
+(defn- session-updates [ctx]
+  (->> @(-> ctx :recorder :events)
+       (filter #(= :session-update (:kind %)))
+       (map (comp :update :payload))))
+
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
-      (let [store    (atom {})
-            captured (atom [])
-            cwd      (.cwd js/process)]
-        (-> (acp/initialize {:on-session-update (acp/make-session-update-callback store #(swap! captured conj %))})
-            (.then (fn [_] (acp/new-session cwd)))
+      (let [ctx    (live-acp-context nil)
+            result (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (is (string? session-id))
-                     (acp/prompt session-id [{:type "text"
-                                              :text "Create a mathematical model describing gremlins behaviour."}])))
-            (.then (fn [^js result]
-                     (is (= "end_turn" (.-stopReason result)))
-                     (is (pos? (count @captured)))
-                     (print-updates @captured)
-                     (let [response (->> (updates captured)
+                     (acp/prompt session-id
+                       [{:type "text"
+                         :text "Create a mathematical model describing gremlins behaviour."}])))
+            (.then (fn [^js r]
+                     (reset! result r)
+                     (is (= "end_turn" (.-stopReason r)))
+                     (let [updates  (session-updates ctx)
+                           response (->> updates
                                          (filter #(= :agent-message-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text)
                                          (apply str))
-                           thoughts (->> (updates captured)
+                           thoughts (->> updates
                                          (filter #(= :agent-thought-chunk (:session-update %)))
                                          (map acp-codec/acp-update-text))]
                        (is (> (count response) 200)
@@ -60,92 +122,48 @@
                        (is (pos? (count thoughts))
                            "Expected at least one :agent-thought-chunk (thinking enabled in session-meta)")
                        (is (> (count (apply str thoughts)) 100)
-                           "Expected :agent-thought-chunk text to be non-empty."))))
+                           "Expected :agent-thought-chunk text to be non-empty."))
+                     (print-event-summary! "happy-path" (:recorder ctx) [:session-update])
+                     (println "=== end ===")))
             (.catch (fn [err]
                       (is false (str "Live ACP smoke failed: " err))))
             (.finally (fn []
-                        (acp/shutdown)
-                        (done))))))))
+                        (finish-live-acp! ctx result {:scenario "happy-path"
+                                                      :prompt   "Create a mathematical model describing gremlins behaviour."
+                                                      :done     done}))))))))
 
 (deftest test-live-read-only
   (testing "read-only prompt: agent reads doc, produces session-update and read events"
     (async done
-      (let [store    (atom {})
-            recorder (acp-trace/make-recorder)
-            tmp-dir  (atom nil)
-            doc-path (atom nil)
-            result   (atom nil)
-            src-path (path/resolve "resources/gremllm-launch-log.md")]
-        (-> (js/Promise.resolve nil)
-            (.then (fn [_]
-                     (let [dir (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))]
-                       (reset! tmp-dir dir)
-                       (.mkdir fsp dir #js {:recursive true}))))
-            (.then (fn [_]
-                     (let [dest (path/join @tmp-dir "gremllm-launch-log.md")]
-                       (reset! doc-path dest)
-                       (.copyFile fsp src-path dest))))
-            (.then (fn [_]
-                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
-                       (acp/initialize
-                         {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :on-permission     (:on-permission recorder)
-                          :on-write          (:on-write recorder)}))))
-            (.then (fn [_] (acp/new-session @tmp-dir)))
+      (let [ctx    (live-acp-context {:copy-doc? true})
+            result (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
                          {:text "Summarize the first paragraph of the linked document. Do not make any changes to any files."}
-                         @doc-path))))
+                         (:doc-path ctx)))))
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(:events recorder))) "Expected at least one event")
-                     (println "\n=== read-only event kinds ===")
-                     (doseq [evt @(:events recorder)]
-                       (println (str "  +" (:ts evt) "ms " (name (:kind evt)))))
-                     (println (str "  read events:       " (count (filter #(= :read (:kind %)) @(:events recorder)))))
-                     (println (str "  write events:      " (count (filter #(= :write (:kind %)) @(:events recorder)))))
-                     (println (str "  permission events: " (count (filter #(= :permission (:kind %)) @(:events recorder)))))
+                     (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
+                     (print-event-summary! "read-only" (:recorder ctx) [:read :write :permission])
                      (println "=== end ===")))
             (.catch (fn [err]
                       (is false (str "read-only test failed: " err))))
             (.finally (fn []
-                        (-> (acp-trace/write-trace!
-                              "target/acp-traces"
-                              "read-only"
-                              {:versions (acp-trace/versions)
-                               :prompt   "Summarize the first paragraph..."
-                               :doc-path @doc-path
-                               :result   (result-summary @result)}
-                              (:events recorder))
-                            (.then (fn [p] (println "Trace written:" p)))
-                            (.catch (fn [e] (js/console.error "Trace write failed" e)))
-                            (.finally (fn []
-                                        (acp/shutdown)
-                                        (when @tmp-dir
-                                          (.rm fsp @tmp-dir #js {:recursive true :force true}))
-                                        (done)))))))))))
+                        (finish-live-acp! ctx result {:scenario "read-only"
+                                                      :prompt   "Summarize the first paragraph..."
+                                                      :done     done}))))))))
 
 (deftest test-live-write-new-file
   (testing "write-new-file prompt: observe whether Write tool triggers writeTextFile"
     (async done
-      (let [store    (atom {})
-            recorder (acp-trace/make-recorder)
-            tmp-dir  (atom nil)
-            result   (atom nil)]
-        (-> (js/Promise.resolve nil)
-            (.then (fn [_]
-                     (let [dir (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))]
-                       (reset! tmp-dir dir)
-                       (.mkdir fsp dir #js {:recursive true}))))
-            (.then (fn [_]
-                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
-                       (acp/initialize
-                         {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :on-permission     (:on-permission recorder)
-                          :on-write          (:on-write recorder)}))))
-            (.then (fn [_] (acp/new-session @tmp-dir)))
+      (let [ctx    (live-acp-context nil)
+            result (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (acp/prompt session-id
                        [{:type "text"
@@ -153,13 +171,9 @@
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(:events recorder))) "Expected at least one event")
-                     (println "\n=== write-new-file event kinds ===")
-                     (doseq [evt @(:events recorder)]
-                       (println (str "  +" (:ts evt) "ms " (name (:kind evt)))))
-                     (println (str "  write events:      " (count (filter #(= :write (:kind %)) @(:events recorder)))))
-                     (println (str "  permission events: " (count (filter #(= :permission (:kind %)) @(:events recorder)))))
-                     (let [notes-path (path/join @tmp-dir "notes.md")]
+                     (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
+                     (print-event-summary! "write-new-file" (:recorder ctx) [:write :permission])
+                     (let [notes-path (path/join (:tmp-dir ctx) "notes.md")]
                        (println (str "  notes.md on disk: "
                                      (try
                                        (.accessSync (js/require "fs") notes-path)
@@ -170,75 +184,48 @@
             (.catch (fn [err]
                       (is false (str "write-new-file test failed: " err))))
             (.finally (fn []
-                        (-> (acp-trace/write-trace!
-                              "target/acp-traces"
-                              "write-new-file"
-                              {:versions (acp-trace/versions)
-                               :prompt   "Create a new file called notes.md..."
-                               :result   (result-summary @result)}
-                              (:events recorder))
-                            (.then (fn [p] (println "Trace written:" p)))
-                            (.catch (fn [e] (js/console.error "Trace write failed" e)))
-                            (.finally (fn []
-                                        (acp/shutdown)
-                                        (when @tmp-dir
-                                          (.rm fsp @tmp-dir #js {:recursive true :force true}))
-                                        (done)))))))))))
+                        (finish-live-acp! ctx result {:scenario "write-new-file"
+                                                      :prompt   "Create a new file called notes.md..."
+                                                      :done     done}))))))))
+
+(defn- some-diff-event?
+  "True when the recorder captured at least one session update carrying diff content
+   (i.e. an :edit-completed? event consumable by the diff-staging pipeline)."
+  [events]
+  (some (fn [{:keys [kind payload]}]
+          (and (= :session-update kind)
+               (acp-codec/edit-completed? (:update payload))))
+        events))
 
 (deftest test-live-document-first-edit
   (testing "document-first edit: trace all coerced events, observe (not assert) writeTextFile"
     (async done
-      (let [store    (atom {})
-            recorder (acp-trace/make-recorder)
-            tmp-dir  (atom nil)
-            doc-path (atom nil)
-            result   (atom nil)
-            src-path       (path/resolve "resources/gremllm-launch-log.md")]
-        (-> (js/Promise.resolve nil)
-            (.then (fn [_]
-                     (let [dir (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))]
-                       (reset! tmp-dir dir)
-                       (.mkdir fsp dir #js {:recursive true}))))
-            (.then (fn [_]
-                     (let [dest (path/join @tmp-dir "gremllm-launch-log.md")]
-                       (reset! doc-path dest)
-                       (.copyFile fsp src-path dest))))
-            (.then (fn [_]
-                     (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
-                       (acp/initialize
-                         {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-                          :on-permission     (:on-permission recorder)
-                          :on-write          (:on-write recorder)}))))
-            (.then (fn [_] (acp/new-session @tmp-dir)))
+      (let [ctx    (live-acp-context {:copy-doc? true})
+            result (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
                          {:text "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else."}
-                         @doc-path))))
+                         (:doc-path ctx)))))
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(:events recorder))) "Expected at least one event")
-                     (println "\n=== document-first-edit event kinds ===")
-                     (doseq [evt @(:events recorder)]
-                       (println (str "  +" (:ts evt) "ms " (name (:kind evt)))))
-                     (println (str "  write events: " (count (filter #(= :write (:kind %)) @(:events recorder)))))
-                     (println "=== end ===")))
+                     (is (some-diff-event? @(-> ctx :recorder :events))
+                         "Expected at least one session update with diff content (edit-completed?). The agent must propose file mutations via a diff-emitting channel; until the follow-up to commit 322fc41 lands this assertion is the red guide-rail.")
+                     (print-event-summary! "document-first-edit" (:recorder ctx) [:write])
+                     (println "=== end ===")
+                     ;; disallowedTools blocks Edit/Write/MultiEdit/NotebookEdit but not Bash;
+                     ;; comparing on-disk content to the source copy also catches Bash-based circumvention.
+                     (js/Promise.all #js [(.readFile fsp (:src-path ctx) "utf8")
+                                          (.readFile fsp (:doc-path ctx) "utf8")])))
+            (.then (fn [^js contents]
+                     (is (= (aget contents 0) (aget contents 1))
+                         "Expected document.md on disk to be unchanged from the source copy.")))
             (.catch (fn [err]
                       (is false (str "document-first-edit test failed: " err))))
             (.finally (fn []
-                        (-> (acp-trace/write-trace!
-                              "target/acp-traces"
-                              "document-first-edit"
-                              {:versions (acp-trace/versions)
-                               :prompt   "...change the title to anything..."
-                               :doc-path @doc-path
-                               :result   (result-summary @result)}
-                              (:events recorder))
-                            (.then (fn [p] (println "Trace written:" p)))
-                            (.catch (fn [e] (js/console.error "Trace write failed" e)))
-                            (.finally (fn []
-                                        (acp/shutdown)
-                                        (when @tmp-dir
-                                          (.rm fsp @tmp-dir #js {:recursive true :force true}))
-                                        (done)))))))))))
+                        (finish-live-acp! ctx result {:scenario "document-first-edit"
+                                                      :prompt   "...change the title to anything..."
+                                                      :done     done}))))))))
