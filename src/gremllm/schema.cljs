@@ -170,6 +170,15 @@
 
 (def AcpSession
   "Session state produced by an ACP agent for a topic."
+  ;; TODO: runtime [:session] also carries two transient keys not declared here:
+  ;;   :resolved-tool-calls         #{tool-call-id ...}
+  ;;   :pending-permission-options  {tool-call-id [AcpPermissionOption ...]}
+  ;; Written by renderer.actions.topic/append-pending-permission and
+  ;; resolve-diff-actions. Omitted because mt/strip-extra-keys-transformer in
+  ;; codec/topic-for-disk doubles as the disk allowlist — declaring them here
+  ;; would start persisting them. Fix is a split: PersistedAcpSession (current
+  ;; shape, disk) + in-memory AcpSession that mu/merges the transients,
+  ;; mirroring PersistedTopic/Topic.
   [:map
    ;; TODO: id should be required
    [:id {:optional true}         :string]
