@@ -247,6 +247,7 @@
   "Tear down in-process ACP agent. Returns a promise that resolves after dispose
    settles so callers (e.g. a before-quit hook) can await cleanup."
   []
+  (reset! pending-permissions {})
   (if-let [{:keys [dispose-agent]} @state]
     (do (reset! state nil)
         (dispose-agent))

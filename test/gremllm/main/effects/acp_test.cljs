@@ -148,8 +148,11 @@
               (.then (fn [_] (initialize-dev (fn [_] nil))))
               (.then (fn [_]
                        (is (= 1 @create-count))
+                       (acp/stash-pending-permission! "tc-lifecycle" (fn [_] nil))
                        (acp/shutdown)
                        (is (= 1 (:dispose-count @calls)))
+                       (is (= {} (acp/pending-permission-snapshot))
+                           "shutdown should clear stashed permission resolvers")
                        (is (thrown-with-msg? js/Error #"ACP not initialized"
                              (acp/new-session "/tmp/ws")))))
               (.finally (fn []
