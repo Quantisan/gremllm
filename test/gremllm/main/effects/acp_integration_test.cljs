@@ -169,20 +169,16 @@
 
 (defn- make-decider
   "Build an :on-pending-permission callback that captures each enriched request
-   into the given atom, then resolves it with the option-id matching decision-kind.
-
-   The resolve must be deferred: acp/initialize fires on-pending-permission
-   *before* stash-pending-permission! registers the resolver (same synchronous
-   block), so synchronous resolution would no-op and hang the SDK forever."
+   into the given atom, then synchronously resolves it with the option-id matching
+   decision-kind. acp/initialize stashes the resolver before firing this callback,
+   so synchronous resolution is safe."
   [decision-kind captured]
   (fn [enriched]
     (swap! captured conj enriched)
     (let [tool-call-id (get-in enriched [:tool-call :tool-call-id])
           option-id    (pick-option-id enriched decision-kind)]
       (when option-id
-        (js/setTimeout
-          #(acp/resolve-pending-permission! tool-call-id option-id)
-          0)))))
+        (acp/resolve-pending-permission! tool-call-id option-id)))))
 
 (def ^:private edit-prompt
   "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else.")

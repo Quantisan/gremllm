@@ -157,8 +157,9 @@
      :on-permission         optional tap receiving coerced+enriched permission request params.
      :on-pending-permission optional callback receiving enriched permission request params
                             when the resolver defers to user input (in-workspace edit).
-                            Fires *before* the resolver Promise is returned so the renderer
-                            can surface the pending diff alongside the registered resolver.
+                            Fires *after* the resolver is registered, so a synchronous call
+                            to resolve-pending-permission! from inside this callback (e.g.
+                            from tests) resolves the SDK Promise correctly.
      :on-write              optional tap receiving coerced writeTextFile params."
   [{:keys [on-session-update on-permission on-pending-permission on-write]}]
   (if-let [ready (:ready @state)]
@@ -190,20 +191,21 @@
                                  {:outcome (:outcome result)})
 
                                :deferred
-                               (let [tool-call-id (:tool-call-id result)]
+                               (let [tool-call-id  (:tool-call-id result)
+                                     pending-promise (js/Promise.
+                                                       (fn [resolve _reject]
+                                                         (stash-pending-permission!
+                                                           tool-call-id
+                                                           (fn [option-id]
+                                                             (resolve
+                                                               (acp-codec/acp-permission-outcome-to-js
+                                                                 {:outcome {:outcome   "selected"
+                                                                            :option-id option-id}}))))))]
                                  (when on-pending-permission
                                    (try (on-pending-permission enriched)
                                         (catch :default e
                                           (js/console.error "ACP on-pending-permission tap failed" e))))
-                                 (js/Promise.
-                                   (fn [resolve _reject]
-                                     (stash-pending-permission!
-                                       tool-call-id
-                                       (fn [option-id]
-                                         (resolve
-                                           (acp-codec/acp-permission-outcome-to-js
-                                             {:outcome {:outcome   "selected"
-                                                        :option-id option-id}})))))))))
+                                 pending-promise)))
                            (catch :default e
                              (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
                              #js {:outcome #js {:outcome "cancelled"}})))
