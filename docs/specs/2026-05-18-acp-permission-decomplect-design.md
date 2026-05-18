@@ -35,9 +35,10 @@ same tick. This rules out reshaping the resolver as a Nexus action.
 
 ## Decision
 
-Extract a new sub-namespace `gremllm.main.effects.acp.permission` that owns the registry,
-the tool-name tracker, the Promise builder, and a `make-resolve-cb` factory.
-`effects/acp.cljs` shrinks back to connection lifecycle, session callbacks, and file I/O.
+Extract a new sub-namespace `gremllm.main.effects.acp.permission` that owns the
+registry, the tool-name index, the Promise builder, and a `make-resolve-permission`
+factory. `effects/acp.cljs` shrinks back to connection lifecycle, session callbacks,
+and file I/O.
 
 Rejected alternatives:
 - Promoting permissions to a top-level domain (`main/effects/permission.cljs`) — no second
@@ -48,41 +49,76 @@ Rejected alternatives:
 - Exposing a smaller `await-user-decision` helper while keeping the closure — the caller
   still owns codec + decision + tap-vs-not branching, so the closure stays bloated.
 
+## Naming
+
+Names follow a hybrid rule: **SDK vocabulary at the boundary, domain vocabulary
+inside**.
+
+- The callback factory and the tap that fires for every SDK request mirror ACP
+  words: `make-resolve-permission` matches the SDK's `resolvePermission`;
+  `:on-permission-request` covers all incoming ACP requests.
+- Internal state, the IPC-facing op, and the tap that fires only when we defer
+  to the user lean domain: the atom holds `awaiting-user-decision`, the
+  renderer's accept/reject lands in `record-decision!`, the deferral tap is
+  `:on-awaiting-user-decision`.
+
+This avoids two failure modes: pure ACP framing forces every reader to
+translate "pending permission" into "user decision" at each callsite; pure
+domain framing hides that this file IS the SDK callback (a name like
+`make-permission-handler` won't lead a reader back to `resolvePermission`).
+
+| Concept                       | Name                                       | Layer  |
+|-------------------------------|--------------------------------------------|--------|
+| SDK callback factory          | `make-resolve-permission`                  | SDK    |
+| Tap on every SDK request      | `:on-permission-request`                   | SDK    |
+| Tap on deferred-to-user       | `:on-awaiting-user-decision`               | Domain |
+| Resolvers awaiting the user   | `awaiting-user-decision` (atom)            | Domain |
+| Tool-name index               | `tool-name-by-id` (atom)                   | Domain |
+| Seed tool-name index          | `track-tool-name!`                         | Domain |
+| Submit user choice (IPC)      | `record-decision!`                         | Domain |
+| Reset on shutdown             | `clear!`                                   | —      |
+| Snapshot for tests            | `awaiting-snapshot`                        | Domain |
+| Register resolver (private)   | `register-resolver!`                       | —      |
+| Build deferred Promise (priv) | `await-user-decision`                      | Domain |
+| Invoke observer safely (priv) | `fire-tap!`                                | —      |
+
 ## Target architecture
 
 ```
-                              ┌─────────────────────────────────────────┐
-                              │ schema/codec/acp/permission.cljs        │  pure
-                              │   resolve-permission (→ tagged decision)│  (unchanged)
-                              │   enrich-permission-params              │
-                              │   remember-tool-name                    │
-                              └────────────────▲────────────────────────┘
+                              ┌─────────────────────────────────────────────────┐
+                              │ schema/codec/acp/permission.cljs                │  pure
+                              │   resolve-permission (→ tagged decision)        │  (unchanged)
+                              │   enrich-permission-params                      │
+                              │   remember-tool-name                            │
+                              └────────────────▲────────────────────────────────┘
                                                │
-                              ┌────────────────┴────────────────────────┐
-                              │ effects/acp/permission.cljs   (NEW)     │
-                              │                                         │
-                              │  Public:                                │
-                              │    make-resolve-cb     ◄── ACP init     │
-                              │    track-tool-name!    ◄── ACP session  │
-                              │    resolve!            ◄── IPC handler  │
-                              │    snapshot            ◄── tests        │
-                              │    clear!              ◄── ACP shutdown │
-                              │                                         │
-                              │  Private:                               │
-                              │    pending atom (resolvers by tc-id)    │
-                              │    tool-names atom                      │
-                              │    stash!                               │
-                              │    await-user-decision                  │
-                              │    fire-tap!                            │
-                              └────────────────▲────────────────────────┘
+                              ┌────────────────┴────────────────────────────────┐
+                              │ effects/acp/permission.cljs   (NEW)             │
+                              │                                                 │
+                              │  Public:                                        │
+                              │    make-resolve-permission   ◄── ACP init       │
+                              │    track-tool-name!          ◄── ACP session    │
+                              │    record-decision!          ◄── IPC handler    │
+                              │    awaiting-snapshot         ◄── tests          │
+                              │    clear!                    ◄── ACP shutdown   │
+                              │                                                 │
+                              │  Private state:                                 │
+                              │    awaiting-user-decision atom (resolvers/id)   │
+                              │    tool-name-by-id atom                         │
+                              │                                                 │
+                              │  Private helpers:                               │
+                              │    register-resolver!                           │
+                              │    await-user-decision                          │
+                              │    fire-tap!                                    │
+                              └────────────────▲────────────────────────────────┘
                                                │
-                              ┌────────────────┴────────────────────────┐
-                              │ effects/acp.cljs   (slimmed)            │
-                              │   connection lifecycle                  │
-                              │   session-cb wiring                     │
-                              │   read-text-file                        │
-                              │   initialize/shutdown                   │
-                              └─────────────────────────────────────────┘
+                              ┌────────────────┴────────────────────────────────┐
+                              │ effects/acp.cljs   (slimmed)                    │
+                              │   connection lifecycle                          │
+                              │   session-cb wiring                             │
+                              │   read-text-file                                │
+                              │   initialize/shutdown                           │
+                              └─────────────────────────────────────────────────┘
 ```
 
 ## Files to change
@@ -91,60 +127,61 @@ Rejected alternatives:
 
 ```clojure
 (ns gremllm.main.effects.acp.permission
-  "Owns the SDK's resolvePermission seam: tool-name tracking, the pending-resolver
-   registry, and the callback the SDK invokes for each permission request."
+  "Owns the SDK's resolvePermission seam: tool-name tracking, the registry of
+   resolvers awaiting user input, and the callback the SDK invokes for each
+   permission request."
   (:require [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.schema.codec.acp.permission :as acp-permission]))
 
-;; Tool-name registry seeded from session updates. ACP's RequestPermission
+;; Tool-name index seeded from session updates. ACP's RequestPermission
 ;; payload omits tool_name; see schema.codec.acp.permission for the workaround.
-(defonce ^:private tool-names (atom {}))
+(defonce ^:private tool-name-by-id (atom {}))
 
-;; Resolvers awaiting user accept/reject, keyed by ACP tool-call-id.
-(defonce ^:private pending (atom {}))
+;; Resolvers awaiting the user's accept/reject, keyed by ACP tool-call-id.
+(defonce ^:private awaiting-user-decision (atom {}))
 
 (defn track-tool-name!
-  "Seed the tool-name registry from a coerced session update.
+  "Seed the tool-name index from a coerced session update.
    Called by the ACP shell's onSessionUpdate handler."
   [coerced-session-update]
-  (swap! tool-names acp-permission/remember-tool-name coerced-session-update))
+  (swap! tool-name-by-id acp-permission/remember-tool-name coerced-session-update))
 
-(defn resolve!
-  "Fire the registered resolver for tool-call-id with option-id.
+(defn record-decision!
+  "Fire the registered resolver for tool-call-id with the user's option-id.
    No-op when no resolver is registered. Called from the IPC handler when
    the renderer reports the user's accept/reject."
   [tool-call-id option-id]
-  (when-let [resolver (get @pending tool-call-id)]
-    (swap! pending dissoc tool-call-id)
+  (when-let [resolver (get @awaiting-user-decision tool-call-id)]
+    (swap! awaiting-user-decision dissoc tool-call-id)
     (resolver option-id)
     nil))
 
-(defn snapshot
-  "Snapshot of pending resolvers. For tests/inspection."
+(defn awaiting-snapshot
+  "Snapshot of resolvers currently awaiting the user. For tests/inspection."
   []
-  @pending)
+  @awaiting-user-decision)
 
 (defn clear!
   "Reset all permission state. Called from ACP shutdown."
   []
-  (reset! tool-names {})
-  (reset! pending {}))
+  (reset! tool-name-by-id {})
+  (reset! awaiting-user-decision {}))
 
-(defn- stash! [tool-call-id resolver]
-  (when (contains? @pending tool-call-id)
+(defn- register-resolver! [tool-call-id resolver]
+  (when (contains? @awaiting-user-decision tool-call-id)
     (js/console.warn "[ACP] replacing pending permission resolver for" tool-call-id))
-  (swap! pending assoc tool-call-id resolver))
+  (swap! awaiting-user-decision assoc tool-call-id resolver))
 
 (defn- await-user-decision
-  "Stash a resolver under tool-call-id and return a Promise that resolves to a
-   JS permission outcome once resolve! is called for that id."
+  "Register a resolver under tool-call-id and return a Promise that resolves
+   to a JS permission outcome once record-decision! is called for that id."
   [tool-call-id]
   (js/Promise.
     (fn [resolve _reject]
-      (stash! tool-call-id
-              (fn [option-id]
-                (resolve (acp-codec/acp-permission-outcome-to-js
-                           {:outcome {:outcome "selected" :option-id option-id}})))))))
+      (register-resolver! tool-call-id
+                          (fn [option-id]
+                            (resolve (acp-codec/acp-permission-outcome-to-js
+                                       {:outcome {:outcome "selected" :option-id option-id}})))))))
 
 (defn- fire-tap! [f arg label]
   (when f
@@ -152,25 +189,25 @@ Rejected alternatives:
          (catch :default e
            (js/console.error "ACP" label "tap failed" e)))))
 
-(defn make-resolve-cb
+(defn make-resolve-permission
   "Build the SDK-shaped resolvePermission callback. Taps are optional observers:
-     :on-permission         fired for every request (immediate or deferred)
-     :on-pending-permission fired only when the resolver defers to the user"
-  [{:keys [on-permission on-pending-permission]}]
+     :on-permission-request      fired for every request (immediate or deferred)
+     :on-awaiting-user-decision  fired only when the resolver defers to the user"
+  [{:keys [on-permission-request on-awaiting-user-decision]}]
   (fn [^js raw-params session-cwd]
     (try
       (let [enriched (->> raw-params
                           acp-codec/acp-permission-request-from-js
-                          (acp-permission/enrich-permission-params @tool-names))
+                          (acp-permission/enrich-permission-params @tool-name-by-id))
             decision (acp-permission/resolve-permission enriched session-cwd)]
-        (fire-tap! on-permission enriched "on-permission")
+        (fire-tap! on-permission-request enriched "on-permission-request")
         (case (:resolution decision)
           :immediate
           (acp-codec/acp-permission-outcome-to-js {:outcome (:outcome decision)})
 
           :deferred
           (let [p (await-user-decision (:tool-call-id decision))]
-            (fire-tap! on-pending-permission enriched "on-pending-permission")
+            (fire-tap! on-awaiting-user-decision enriched "on-awaiting-user-decision")
             p)))
       (catch :default e
         (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
@@ -190,15 +227,17 @@ Remove (now in the new ns):
 Replace `initialize`'s let-bindings (`:151-207`) with:
 
 ```clojure
+;; Note: initialize's signature destructures the renamed kwargs:
+;;   [{:keys [on-session-update on-permission-request on-awaiting-user-decision]}]
 (let [session-cb   (fn [raw-params]
                      (try
                        (permission/track-tool-name!
                          (acp-codec/acp-session-update-from-js raw-params))
                        (catch :default _))
                      (when on-session-update (on-session-update raw-params)))
-      resolve-cb   (permission/make-resolve-cb
-                     {:on-permission         on-permission
-                      :on-pending-permission on-pending-permission})
+      resolve-cb   (permission/make-resolve-permission
+                     {:on-permission-request     on-permission-request
+                      :on-awaiting-user-decision on-awaiting-user-decision})
       ^js result   (create-connection
                      #js {:onSessionUpdate   session-cb
                           :onReadTextFile    read-text-file
@@ -222,25 +261,45 @@ Add require: `[gremllm.main.effects.acp.permission :as permission]`.
 ```clojure
 (nxr/register-effect! :acp.effects/resolve-permission
   (fn [_ _ tool-call-id option-id]
-    (acp-permission/resolve! tool-call-id option-id)))   ; was acp-effects/resolve-pending-permission!
+    (acp-permission/record-decision! tool-call-id option-id)))   ; was acp-effects/resolve-pending-permission!
 ```
 
 Add require: `[gremllm.main.effects.acp.permission :as acp-permission]`.
+
+The Nexus effect key `:acp.effects/resolve-permission` is unchanged — it is the
+renderer-facing contract and out of scope for this rename.
+
+### Modified: `src/gremllm/main/core.cljs:118`
+
+The kwarg rename ripples to the single call site that wires the tap. One line:
+
+```clojure
+(acp-effects/initialize
+  {:on-session-update            (acp-effects/make-session-update-callback store nil)
+   :on-awaiting-user-decision    ; was :on-pending-permission
+   (fn [enriched]
+     (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))})
+```
+
+The Nexus action `:acp.events/permission-pending` keeps its name — also a
+renderer-facing IPC contract, out of scope for this rename.
 
 ### Modified: tests
 
 Move closure-level and registry-level tests out of `test/gremllm/main/effects/acp_test.cljs`
 into a new `test/gremllm/main/effects/acp/permission_test.cljs`:
 
-- `test-resolve-cb-returns-promise-for-deferred` — retarget to `permission/make-resolve-cb`
-  directly instead of going through `acp/initialize`. Removes the `with-redefs` over
-  `create-connection`; just construct the callback and call it.
-- `test-pending-permission-registry` — retarget to `permission/stash!`-via-callback and
-  `permission/resolve!` / `permission/snapshot`. (Direct `stash!` is now private; test
-  through the public seam by invoking the callback for a deferred case, or expose a
-  test-only path. Prefer the former — tests the actual contract.)
-- `test-permission-tap-failure-does-not-replace-outcome` — retarget to `make-resolve-cb`
-  with a throwing `:on-permission` tap.
+- `test-resolve-cb-returns-promise-for-deferred` — retarget to
+  `permission/make-resolve-permission` directly instead of going through
+  `acp/initialize`. Removes the `with-redefs` over `create-connection`; just
+  construct the callback and call it.
+- `test-pending-permission-registry` — retarget to register-via-callback and
+  `permission/record-decision!` / `permission/awaiting-snapshot`. (Direct
+  `register-resolver!` is now private; test through the public seam by invoking
+  the callback for a deferred case, or expose a test-only path. Prefer the
+  former — tests the actual contract.)
+- `test-permission-tap-failure-does-not-replace-outcome` — retarget to
+  `make-resolve-permission` with a throwing `:on-permission-request` tap.
 
 Remaining tests in `effects/acp_test.cljs` cover only lifecycle, session forwarding, and
 file I/O — matches the slim-down.
@@ -250,9 +309,9 @@ file I/O — matches the slim-down.
 - **Modelarity:** "ACP permission" is now a namespace. Reading
   `effects/acp/permission.cljs` top to bottom is the answer to "what is the ACP permission
   system?" The phrase has a home.
-- **Concern separation:** Inside `make-resolve-cb`, the three concerns from the issue map
-  to three lines: codec/enrichment is a `->>` thread, decision is one fn call, branching
-  is a `case`. The Promise builder and tap helper are named private fns.
+- **Concern separation:** Inside `make-resolve-permission`, the three concerns from the
+  issue map to three lines: codec/enrichment is a `->>` thread, decision is one fn call,
+  branching is a `case`. The Promise builder and tap helper are named private fns.
 - **Files as boundaries:** `effects/acp.cljs` drops back to a single public contract —
   ACP connection lifecycle. The new file has its own single contract — produce the SDK's
   resolvePermission callback and let callers fire stashed resolvers.
@@ -282,16 +341,20 @@ file I/O — matches the slim-down.
 - Inbound-routing reverse lookup — events still dispatch to active topic instead of source
   topic (`src/gremllm/renderer/state/topic.cljs:63-78` TODO).
 - Future deferral kinds (fetch on non-WebSearch, etc.) — this refactor enables them by
-  giving `make-resolve-cb` a clean home, but adding new kinds is its own change to
+  giving `make-resolve-permission` a clean home, but adding new kinds is its own change to
   `schema/codec/acp/permission/resolve-permission`.
+- Renaming the renderer/IPC seam — `:acp.events/permission-pending` (action),
+  `acp:permission-pending` (IPC channel), and `:acp.effects/resolve-permission`
+  (Nexus effect) all keep current names. They are renderer-facing contracts and
+  the naming pass deliberately stops at the main-process boundary.
 
 ## Critical files
 
 - `src/gremllm/main/effects/acp.cljs` (modify; ~60 LoC removed)
 - `src/gremllm/main/effects/acp/permission.cljs` (new; ~90 LoC)
 - `src/gremllm/main/actions.cljs` (1-line change + require)
+- `src/gremllm/main/core.cljs` (1-line change — `:on-pending-permission` kwarg → `:on-awaiting-user-decision`)
 - `test/gremllm/main/effects/acp_test.cljs` (remove 3 tests)
 - `test/gremllm/main/effects/acp/permission_test.cljs` (new; migrated tests)
 - `src/gremllm/schema/codec/acp/permission.cljs` (unchanged — referenced)
-- `src/gremllm/main/core.cljs` (unchanged — referenced)
 - `src/gremllm/renderer/actions/topic.cljs` (unchanged — referenced)
