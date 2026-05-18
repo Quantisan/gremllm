@@ -74,6 +74,17 @@
     (let [diffs (filterv #(= "diff" (:type %)) content)]
       (when (seq diffs) diffs))))
 
+(defn permission-edit-diffs
+  "Extracts diff items from an Edit/Write permission request's :tool-call :content.
+   Returns a vector of diff maps or nil when none present.
+   Distinct from edit-diffs (PostToolUse path): permission requests arrive
+   pre-write so the renderer can render a proposal before approval."
+  [permission-request]
+  (let [content (get-in permission-request [:tool-call :content])]
+    (when (seq content)
+      (let [diffs (filterv #(= "diff" (:type %)) content)]
+        (when (seq diffs) diffs)))))
+
 (defn read-event?
   "True when a tool-call-update is a Read response event (any payload)."
   [{:keys [session-update] :as update}]
@@ -294,12 +305,15 @@
    acp.permission/enrich-permission-params (see that ns for the registry
    pattern and Zed references).
    Consumer: acp-permission/resolve-permission reads :kind, :tool-name (on
-   \"fetch\"), and (on \"edit\") :raw-input.:path / :raw-input.:file-path."
+   \"fetch\"), and (on \"edit\") :raw-input.:path / :raw-input.:file-path.
+   :content carries diff items on edit permission requests (Claude Agent SDK
+   includes them so the client can render a proposal before approval)."
   [:map
    [:tool-call-id              :string]
    [:kind                      AcpToolKind]
    [:tool-name {:optional true} :string]
-   [:raw-input {:optional true} AcpPermissionRawInput]])
+   [:raw-input {:optional true} AcpPermissionRawInput]
+   [:content   {:optional true} [:maybe [:vector AcpToolCallContentItem]]]])
 
 (def AcpPermissionRequest
   "ACP requestPermission params shape."

@@ -34,6 +34,23 @@
 (defn pending-diffs-path [topic-id]
   (-> topics-path (conj topic-id :session :pending-diffs)))
 
+(defn resolved-tool-calls-path [topic-id]
+  (-> topics-path (conj topic-id :session :resolved-tool-calls)))
+
+(defn get-resolved-tool-calls
+  "Return the set of resolved tool-call-ids for topic-id, or empty set."
+  [state topic-id]
+  (or (get-in state (resolved-tool-calls-path topic-id)) #{}))
+
+(defn pending-permission-options-path [topic-id]
+  (-> topics-path (conj topic-id :session :pending-permission-options)))
+
+(defn get-pending-permission-options
+  "Return the options vector the agent sent with the pending permission
+   for tool-call-id, or nil if no entry is stashed."
+  [state topic-id tool-call-id]
+  (get-in state (conj (pending-permission-options-path topic-id) tool-call-id)))
+
 (defn excerpts-path [topic-id]
   (conj (topic-path topic-id) :excerpts))
 
@@ -44,8 +61,21 @@
   (get-in (get-topic state topic-id) [:session :id]))
 
 (defn acp-session-id-path [topic-id]
-  ;; TODO: add reverse lookup from acp-session-id to topic-id for correct
-  ;; inbound routing of session updates to the originating topic
+  ;; TODO (inbound-routing): renderer ACP inbound handlers dispatch to the
+  ;; active topic, not to the topic whose agent emitted the event. Cross-turn
+  ;; topic switches land session updates, pending diffs, and pending
+  ;; permissions on the wrong topic.
+  ;;
+  ;; Fix: reverse lookup from acp-session-id to topic-id, resolved at the IPC
+  ;; boundary in renderer/core.cljs before per-domain actions dispatch.
+  ;;
+  ;; Affected: actions/topic.cljs append-pending-diffs and
+  ;; append-pending-permission; core.cljs onAcpSessionUpdate.
+  ;;
+  ;; Click-time accept/reject is defended by construction: Accept/Reject
+  ;; buttons render only on the topic owning :pending-diffs, so click-time
+  ;; and append-time active-topic always match. The gap is purely at IPC
+  ;; arrival.
   (-> topics-path (conj topic-id :session :id)))
 
 (defn find-message-index-by-tool-call-id

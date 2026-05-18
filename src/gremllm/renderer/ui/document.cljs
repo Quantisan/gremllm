@@ -6,19 +6,17 @@
 
 (defn- render-diff-segments [segments]
   (into [:div]
-        (mapv (fn [{:keys [type content old-text new-text]}]
+        (mapv (fn [{:keys [type content old-text new-text tool-call-id]}]
                 (case type
                   :text       [:span content]
                   :diff-block [:div.diff-block
                                [:del old-text]
                                [:ins new-text]
                                [:div.diff-controls
-                                [:button {:on {:click [[:topic.actions/accept-diff
-                                                        {:old-text old-text :new-text new-text}]]}}
+                                [:button {:on {:click [[:topic.actions/accept-diff tool-call-id]]}}
                                  "Accept"]
                                 [:button {:class "secondary outline"
-                                          :on {:click [[:topic.actions/reject-diff
-                                                        {:old-text old-text :new-text new-text}]]}}
+                                          :on {:click [[:topic.actions/reject-diff tool-call-id]]}}
                                  "Reject"]]]))
               segments)))
 

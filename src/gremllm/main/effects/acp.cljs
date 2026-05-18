@@ -14,10 +14,14 @@
 ;; so :executable cannot be overridden here.
 ;; ELECTRON_RUN_AS_NODE=1 makes process.execPath act as Node instead of relaunching the window;
 ;; depends on FuseV1Options.RunAsNode (https://packages.electronjs.org/fuses).
+;;
+;; :disallowedTools still blocks MultiEdit/NotebookEdit because the SDK does not
+;; populate diff content in their session/request_permission payload (verified in
+;; node_modules/@agentclientprotocol/claude-agent-acp/dist/tools.js — neither case
+;; exists, so they fall through to the default branch which emits no :diff blocks).
+;; Edit/Write are intentionally allowed: they ARE handled by toolInfoFromToolUse,
+;; so the deferred-permission flow can route their proposed diff to the user.
 ;; SDK refs: sdk.d.ts:56 (model aliases), sdk.d.ts:5371 (ThinkingEnabled).
-;; :disallowedTools blocks the Claude Code subprocess's built-in Edit/Write/MultiEdit/NotebookEdit
-;; before they bypass the bridge's writeTextFile dry-run by writing disk via Node fs.
-;; Merged at acp-agent.js:1379; allowedTools does not work for built-ins (sdk-typescript#115).
 (def ^:private session-meta
   #js {:claudeCode
        #js {:options
@@ -25,7 +29,7 @@
                  :settingSources  #js []
                  :model           "sonnet"
                  :thinking        #js {:type "enabled" :budgetTokens 20480 :display "summarized"}
-                 :disallowedTools #js ["Edit" "Write" "MultiEdit" "NotebookEdit"]}}})
+                 :disallowedTools #js ["MultiEdit" "NotebookEdit"]}}})
 
 ;; TODO: consider adopting https://github.com/stuartsierra/component
 ;; @state is nil, or:
@@ -33,6 +37,35 @@
 ;;    :dispose-agent <fn>
 ;;    :ready         <init-promise>}
 (defonce ^:private state (atom nil))
+
+;; Resolvers for ACP requestPermission calls awaiting user input.
+;; Keyed by ACP tool-call-id. Each entry is a 1-arg fn that takes a
+;; permission outcome (e.g. "allow_once", "reject_once") and resolves the
+;; pending JS Promise returned to the SDK from resolve-cb.
+(defonce ^:private pending-permissions (atom {}))
+
+(defn stash-pending-permission!
+  "Register a resolver for a pending ACP permission request. If an entry
+   already exists for tool-call-id the prior resolver is discarded (and
+   the awaiting SDK Promise will hang); this is unexpected and logged."
+  [tool-call-id resolver]
+  (when (contains? @pending-permissions tool-call-id)
+    (js/console.warn "[ACP] replacing pending permission resolver for" tool-call-id))
+  (swap! pending-permissions assoc tool-call-id resolver))
+
+(defn resolve-pending-permission!
+  "Fire the registered resolver for tool-call-id with the given option-id
+   (e.g. \"allow_once\", \"reject_once\"). No-op if no resolver is registered."
+  [tool-call-id option-id]
+  (when-let [resolver (get @pending-permissions tool-call-id)]
+    (swap! pending-permissions dissoc tool-call-id)
+    (resolver option-id)
+    nil))
+
+(defn pending-permission-snapshot
+  "Snapshot of the current pending-permissions map. For tests/inspection."
+  []
+  @pending-permissions)
 
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
@@ -81,7 +114,7 @@
   #js {:name "gremllm" :title "Gremllm" :version "0.1.0"})
 
 (def ^:private client-capabilities
-  #js {:fs       #js {:readTextFile true :writeTextFile true}
+  #js {:fs       #js {:readTextFile true :writeTextFile false}
        :terminal false})
 
 (defn- start-connection!
@@ -104,26 +137,17 @@
                                (throw err))))
                   (throw err))))))
 
-(defn- make-write-callback
-  "Build a fire-and-forget write tap. Coerces raw JS params and
-   calls on-write with a map of :path, :session-id, :content-length."
-  [on-write]
-  (fn [params]
-    (try
-      (on-write {:path           (.-path params)
-                 :session-id     (.-sessionId params)
-                 :content-length (when (string? (.-content params))
-                                   (.-length (.-content params)))})
-      (catch :default e
-        (js/console.error "ACP write request coercion failed" e params)))))
-
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
-     :on-session-update  callback receiving raw JS session update params from SDK.
-     :on-permission      optional tap receiving coerced+enriched permission request params.
-     :on-write           optional tap receiving coerced writeTextFile params."
-  [{:keys [on-session-update on-permission on-write]}]
+     :on-session-update     callback receiving raw JS session update params from SDK.
+     :on-permission         optional tap receiving coerced+enriched permission request params.
+     :on-pending-permission optional callback receiving enriched permission request params
+                            when the resolver defers to user input (in-workspace edit).
+                            Fires *after* the resolver is registered, so a synchronous call
+                            to resolve-pending-permission! from inside this callback (e.g.
+                            from tests) resolves the SDK Promise correctly."
+  [{:keys [on-session-update on-permission on-pending-permission]}]
   (if-let [ready (:ready @state)]
     ready
     (let [;; Per-connection tool-name tracker. Seeded from session updates so
@@ -142,19 +166,38 @@
                            (let [enriched (->> raw-params
                                                acp-codec/acp-permission-request-from-js
                                                (acp-permission/enrich-permission-params @tool-names))
-                                 outcome  (acp-permission/resolve-permission enriched session-cwd)]
+                                 result   (acp-permission/resolve-permission enriched session-cwd)]
                              (when on-permission
                                (try (on-permission enriched)
                                     (catch :default e
                                       (js/console.error "ACP on-permission tap failed (non-fatal; resolved outcome is unaffected)" e))))
-                             (acp-codec/acp-permission-outcome-to-js outcome))
+                             (case (:resolution result)
+                               :immediate
+                               (acp-codec/acp-permission-outcome-to-js
+                                 {:outcome (:outcome result)})
+
+                               :deferred
+                               (let [tool-call-id  (:tool-call-id result)
+                                     pending-promise (js/Promise.
+                                                       (fn [resolve _reject]
+                                                         (stash-pending-permission!
+                                                           tool-call-id
+                                                           (fn [option-id]
+                                                             (resolve
+                                                               (acp-codec/acp-permission-outcome-to-js
+                                                                 {:outcome {:outcome   "selected"
+                                                                            :option-id option-id}}))))))]
+                                 (when on-pending-permission
+                                   (try (on-pending-permission enriched)
+                                        (catch :default e
+                                          (js/console.error "ACP on-pending-permission tap failed" e))))
+                                 pending-promise)))
                            (catch :default e
                              (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
                              #js {:outcome #js {:outcome "cancelled"}})))
           ^js result   (create-connection
                          #js {:onSessionUpdate   session-cb
                               :onReadTextFile    read-text-file
-                              :onWriteTextFile   (when on-write (make-write-callback on-write))
                               :resolvePermission resolve-cb})
           dispose-agent (.-disposeAgent result)
           ready-promise (start-connection! (.-connection result)
@@ -204,6 +247,7 @@
   "Tear down in-process ACP agent. Returns a promise that resolves after dispose
    settles so callers (e.g. a before-quit hook) can await cleanup."
   []
+  (reset! pending-permissions {})
   (if-let [{:keys [dispose-agent]} @state]
     (do (reset! state nil)
         (dispose-agent))

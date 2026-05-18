@@ -17,12 +17,11 @@
 
 (defn make-recorder
   "Create a new event recorder.
-   Returns {:events atom :on-session-update fn :on-permission fn :on-write fn :on-read fn}.
+   Returns {:events atom :on-session-update fn :on-permission fn :on-read fn}.
 
    Wire the taps into acp/initialize:
      (acp/make-session-update-callback store (:on-session-update r))  -> on-session-update arg
      (:on-permission r)                                                -> on-permission arg
-     (:on-write r)                                                     -> on-write arg
      (:on-read r)                                                      -> on-read arg"
   []
   (let [start  (js/performance.now)
@@ -34,9 +33,6 @@
      :on-permission
      (fn [coerced]
        (swap! events conj {:ts (- (js/performance.now) start) :kind :permission :payload coerced}))
-     :on-write
-     (fn [params]
-       (swap! events conj {:ts (- (js/performance.now) start) :kind :write :payload params}))
      :on-read
      (fn [params]
        (swap! events conj {:ts (- (js/performance.now) start) :kind :read :payload params}))}))

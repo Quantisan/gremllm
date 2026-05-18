@@ -63,39 +63,49 @@
 
 (defn resolve-permission
   "Determine permission outcome from a coerced AcpPermissionRequest and session cwd.
-   Returns {:outcome {:outcome \"selected\" :option-id \"...\"}}
-   or      {:outcome {:outcome \"cancelled\"}}."
+
+   Returns a tagged result:
+     {:resolution :immediate
+      :outcome    {:outcome \"selected\" :option-id \"...\"}}   ; or :outcome \"cancelled\"
+     {:resolution :deferred
+      :tool-call-id \"tc\"
+      :diffs        [{:type \"diff\" :path ... :old-text ... :new-text ...}]}
+
+   :deferred is returned for in-workspace edits — the caller is responsible
+   for stashing a resolver keyed by :tool-call-id and surfacing :diffs to the
+   user for accept/reject. All other paths (read, fetch, out-of-workspace
+   edit, unhandled kinds) return :immediate with a synchronous outcome."
   [permission-request session-cwd]
   (let [{:keys [options tool-call]} permission-request
-        {:keys [kind]} tool-call]
+        {:keys [kind tool-call-id]} tool-call]
     ;; Policy (not transport validation): an empty options list means the agent
     ;; offered nothing actionable, so cancel rather than fabricate a selection.
     (if (empty? options)
-      {:outcome {:outcome "cancelled"}}
+      {:resolution :immediate
+       :outcome    {:outcome "cancelled"}}
       (case kind
         "read"
         (let [opt (select-option options ["allow_always" "allow_once"] first)]
-          {:outcome {:outcome "selected" :option-id (:option-id opt)}})
+          {:resolution :immediate
+           :outcome    {:outcome "selected" :option-id (:option-id opt)}})
 
         "edit"
-        ;; Critical workflow nuance: approving an in-workspace edit/write means
-        ;; "allow the agent to complete the proposal path", not "write the file
-        ;; immediately". The ACP bridge keeps writeTextFile as a dry-run no-op,
-        ;; so the successful path is still non-mutating. Rejecting changes the
-        ;; semantics entirely: Claude reports that the user refused the tool, and
-        ;; the proposal step fails instead of returning a reviewable diff.
-        ;; Prefer allow_once so every Edit re-enters this resolver and gets a
-        ;; fresh path check. allow_always would create a session-scoped rule
-        ;; keyed only on toolName, bypassing the workspace-root guard for all
-        ;; subsequent edits—including ones outside the workspace root.
+        ;; In-workspace edit defers to the user via the pending-diffs UI.
+        ;; Out-of-workspace edit auto-rejects immediately (preserves the
+        ;; workspace-root guard from the prior policy).
         (let [raw-path       (requested-path tool-call)
               normalized-cwd (when session-cwd (.resolve path-module session-cwd))
               normalized-req (when raw-path (.resolve path-module raw-path))]
           (if (and normalized-cwd normalized-req (within-root? normalized-req normalized-cwd))
-            (let [opt (select-option options ["allow_once" "allow_always"] first)]
-              {:outcome {:outcome "selected" :option-id (:option-id opt)}})
+            {:resolution    :deferred
+             :tool-call-id  tool-call-id
+             :diffs         (let [content (:content tool-call)
+                                  diffs   (when content
+                                            (filterv #(= "diff" (:type %)) content))]
+                              (when (seq diffs) diffs))}
             (let [opt (select-option options ["reject_once" "reject_always"] last)]
-              {:outcome {:outcome "selected" :option-id (:option-id opt)}})))
+              {:resolution :immediate
+               :outcome    {:outcome "selected" :option-id (:option-id opt)}})))
 
         "fetch"
         ;; WebSearch is read-only and idempotent; mirror the "read" policy
@@ -104,10 +114,13 @@
         ;; route those to a renderer-side permission dialog.
         (if (= "WebSearch" (requested-tool-name tool-call))
           (let [opt (select-option options ["allow_always" "allow_once"] first)]
-            {:outcome {:outcome "selected" :option-id (:option-id opt)}})
+            {:resolution :immediate
+             :outcome    {:outcome "selected" :option-id (:option-id opt)}})
           (let [opt (select-option options ["reject_once" "reject_always"] last)]
-            {:outcome {:outcome "selected" :option-id (:option-id opt)}}))
+            {:resolution :immediate
+             :outcome    {:outcome "selected" :option-id (:option-id opt)}}))
 
         ;; Default: no policy defined for this kind yet — reject until classified.
         (let [opt (select-option options ["reject_once" "reject_always"] last)]
-          {:outcome {:outcome "selected" :option-id (:option-id opt)}})))))
+          {:resolution :immediate
+           :outcome    {:outcome "selected" :option-id (:option-id opt)}})))))

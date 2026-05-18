@@ -73,65 +73,83 @@
         file-in-cwd  (.resolve path-mod cwd "gremllm-launch-log.md")
         file-out     (.resolve path-mod (.cwd js/process) "README.md")
         options      (full-options-js)
-        option-id    (fn [result] (get-in result [:outcome :option-id]))
-        make-req     (fn [kind tool-name raw-input]
+        immediate-id (fn [result]
+                       (when (= :immediate (:resolution result))
+                         (get-in result [:outcome :option-id])))
+        make-req     (fn [kind tool-name raw-input & [extra]]
                        (coerce-permission-req
-                         #js {:sessionId "session-known"
-                              :toolCall  #js {:toolCallId "tc"
-                                              :toolName   tool-name
-                                              :kind       kind
-                                              :title      "op"
-                                              :rawInput   raw-input
-                                              :locations  #js []}
-                              :options   options}))]
-    (testing "read tool call is allowed regardless of path"
+                         (clj->js
+                           {:sessionId "session-known"
+                            :toolCall  (merge {:toolCallId "tc"
+                                               :toolName   tool-name
+                                               :kind       kind
+                                               :title      "op"
+                                               :rawInput   raw-input
+                                               :locations  []}
+                                              (or extra {}))
+                            :options   (js->clj options)})))]
+    (testing "read tool call is :immediate allow"
       (is (= "allow-always"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "read" "mcp__acp__Read" #js {:path file-in-cwd})
-                          cwd)))))
-    (testing "edit within cwd is allowed"
-      (is (= "allow-once"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "edit" "mcp__acp__Edit" #js {:path file-in-cwd})
-                          cwd)))))
-    (testing "edit outside cwd is rejected"
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "read" "mcp__acp__Read" {:path file-in-cwd})
+                             cwd)))))
+    (testing "edit within cwd is :deferred carrying tool-call-id and diffs"
+      (let [result (acp-permission/resolve-permission
+                     (make-req "edit" "mcp__acp__Edit"
+                               {:file_path file-in-cwd}
+                               {:content [{:type "diff"
+                                           :path file-in-cwd
+                                           :oldText "a"
+                                           :newText "b"}]})
+                     cwd)]
+        (is (= :deferred (:resolution result)))
+        (is (= "tc" (:tool-call-id result)))
+        (is (= [{:type "diff" :path file-in-cwd :old-text "a" :new-text "b"}]
+               (:diffs result)))))
+    (testing "edit within cwd with no content still :deferred (empty diffs)"
+      (let [result (acp-permission/resolve-permission
+                     (make-req "edit" "mcp__acp__Edit" {:file_path file-in-cwd})
+                     cwd)]
+        (is (= :deferred (:resolution result)))
+        (is (nil? (:diffs result)))))
+    (testing "edit outside cwd is :immediate reject"
       (is (= "reject-once"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "edit" "mcp__acp__Edit" #js {:file_path file-out})
-                          cwd)))))
-    (testing "edit without path metadata is rejected"
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "edit" "mcp__acp__Edit" {:file_path file-out})
+                             cwd)))))
+    (testing "edit without path metadata is :immediate reject"
       (is (= "reject-once"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "edit" "mcp__acp__Edit" #js {:replace_all false})
-                          cwd)))))
-    (testing "edit with nil session-cwd is rejected"
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "edit" "mcp__acp__Edit" {:replace_all false})
+                             cwd)))))
+    (testing "edit with nil session-cwd is :immediate reject"
       (is (= "reject-once"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "edit" "mcp__acp__Edit" #js {:path file-in-cwd})
-                          nil)))))
-    (testing "WebSearch fetch tool call is allowed"
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "edit" "mcp__acp__Edit" {:path file-in-cwd})
+                             nil)))))
+    (testing "WebSearch fetch tool call is :immediate allow"
       (is (= "allow-always"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "fetch" "WebSearch" #js {:query "latest news"})
-                          cwd)))))
-    (testing "WebFetch fetch tool call is rejected (round-2 contract)"
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "fetch" "WebSearch" {:query "latest news"})
+                             cwd)))))
+    (testing "WebFetch fetch tool call is :immediate reject"
       (is (= "reject-once"
-             (option-id (acp-permission/resolve-permission
-                          (make-req "fetch" "WebFetch" #js {:url "https://example.com"})
-                          cwd)))))
-    (testing "empty options yields cancelled"
-      (is (= "cancelled"
-             (get-in (acp-permission/resolve-permission
-                       (coerce-permission-req
-                         #js {:sessionId "session-known"
-                              :toolCall  #js {:toolCallId "tc"
-                                              :kind       "read"
-                                              :title      "op"
-                                              :rawInput   #js {:path file-in-cwd}
-                                              :locations  #js []}
-                              :options   #js []})
-                       cwd)
-                     [:outcome :outcome]))))))
+             (immediate-id (acp-permission/resolve-permission
+                             (make-req "fetch" "WebFetch" {:url "https://example.com"})
+                             cwd)))))
+    (testing "empty options yields :immediate cancelled"
+      (let [result (acp-permission/resolve-permission
+                     (coerce-permission-req
+                       #js {:sessionId "session-known"
+                            :toolCall  #js {:toolCallId "tc"
+                                            :kind       "read"
+                                            :title      "op"
+                                            :rawInput   #js {:path file-in-cwd}
+                                            :locations  #js []}
+                            :options   #js []})
+                     cwd)]
+        (is (= :immediate (:resolution result)))
+        (is (= "cancelled" (get-in result [:outcome :outcome])))))))
 
 (deftest test-permission-request-fetch-kind-no-locations
   (testing "coerces requestPermission with fetch kind and absent locations"

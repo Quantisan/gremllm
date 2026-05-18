@@ -68,9 +68,16 @@
      :text             (acp-codec/acp-read-display-label update)}]])
 
 (defn append-edit-diffs
-  "Appends pending diffs extracted from an Edit/Write tool-call-update's content."
-  [_state update]
-  [[:topic.actions/append-pending-diffs (acp-codec/edit-diffs update)]])
+  "Appends pending diffs extracted from an Edit/Write tool-call-update's content.
+   Skips updates whose tool-call-id was already resolved via accept/reject — the
+   propose-then-execute path stashes the diff at requestPermission time, then the
+   SDK's PostToolUse hook re-emits the same diff after disk write completes."
+  [state update]
+  (let [topic-id     (topic-state/get-active-topic-id state)
+        tool-call-id (:tool-call-id update)
+        resolved     (topic-state/get-resolved-tool-calls state topic-id)]
+    (when-not (contains? resolved tool-call-id)
+      [[:topic.actions/append-pending-diffs (acp-codec/edit-diffs update)]])))
 
 (defn session-update
   "Routes incoming ACP session updates to the matching chat-state operation.

@@ -256,3 +256,33 @@
                 {:session-update :tool-call-update
                  :tool-call-id "toolu_01Ext"
                  :meta {:claude-code {:tool-name "Read"}}})))))
+
+(deftest test-permission-request-content-coercion
+  (testing "requestPermission payload with diff content coerces into :tool-call :content"
+    (let [coerced (acp-codec/acp-permission-request-from-js
+                    #js {:sessionId "s-1"
+                         :toolCall  #js {:toolCallId "tc-1"
+                                         :kind       "edit"
+                                         :rawInput   #js {:file_path "/ws/document.md"}
+                                         :content    #js [#js {:type "diff"
+                                                                :path "/ws/document.md"
+                                                                :oldText "old"
+                                                                :newText "new"}]}
+                         :options   #js []})
+          content (get-in coerced [:tool-call :content])]
+      (is (= 1 (count content)))
+      (is (= "diff" (-> content first :type)))
+      (is (= "old"  (-> content first :old-text)))
+      (is (= "new"  (-> content first :new-text)))
+      (is (= "/ws/document.md" (-> content first :path))))))
+
+(deftest test-permission-edit-diffs
+  (testing "returns diff items from a permission request's tool-call content"
+    (let [req {:tool-call {:content [{:type "diff" :path "/p" :old-text "a" :new-text "b"}
+                                      {:type "content" :text "ignored"}]}}]
+      (is (= [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]
+             (acp-codec/permission-edit-diffs req)))))
+  (testing "returns nil when no diff items present"
+    (is (nil? (acp-codec/permission-edit-diffs {:tool-call {:content []}}))))
+  (testing "returns nil when content key absent"
+    (is (nil? (acp-codec/permission-edit-diffs {:tool-call {}})))))

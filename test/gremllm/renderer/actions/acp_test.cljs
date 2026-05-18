@@ -231,3 +231,27 @@
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
 
+(deftest append-edit-diffs-suppression-test
+  (testing "skips diffs whose tool-call-id is already in :resolved-tool-calls"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs []
+                                                 :resolved-tool-calls #{"tc-1"}}}}}
+          update   {:session-update :tool-call-update
+                    :tool-call-id   "tc-1"
+                    :content        [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]}]
+      (is (nil? (acp/append-edit-diffs state update))
+          "PostToolUse for already-resolved tool-call should be ignored")))
+  (testing "passes through diffs for unresolved tool-call-id (existing path)"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs []
+                                                 :resolved-tool-calls #{}}}}}
+          update   {:session-update :tool-call-update
+                    :tool-call-id   "tc-2"
+                    :content        [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]}
+          actions  (acp/append-edit-diffs state update)]
+      (is (= 1 (count actions)))
+      (is (= :topic.actions/append-pending-diffs (ffirst actions))))))

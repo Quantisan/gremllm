@@ -49,6 +49,15 @@
                          (fn [_ event-data]
                            (nxr/dispatch store {} [[:acp.events/session-update (acp-codec/acp-session-update-from-ipc event-data)]])))
 
+    ;; Handle ACP permission-pending events from main process. The payload is
+    ;; an already-coerced AcpPermissionRequest (passed via send-to-renderer
+    ;; which clj->js-es the map; we reverse the trip back to CLJS here).
+    (.onAcpPermissionPending js/window.electronAPI
+                             (fn [_ event-data]
+                               (nxr/dispatch store {}
+                                             [[:topic.actions/append-pending-permission
+                                               (js->clj event-data :keywordize-keys true)]])))
+
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]

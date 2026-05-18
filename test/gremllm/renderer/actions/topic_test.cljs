@@ -117,3 +117,105 @@
             [:topic.effects/auto-save topic-id]]
            (topic/finalize-turn {} topic-id)))))
 
+(def ^:private sample-options
+  [{:kind "allow_always" :option-id "allow_always" :name "Always Allow"}
+   {:kind "allow_once"   :option-id "allow"        :name "Allow"}
+   {:kind "reject_once"  :option-id "reject"       :name "Reject"}])
+
+(deftest append-pending-permission-test
+  (testing "appends diffs tagged with tool-call-id and stashes options keyed by tool-call-id"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs []}}}}
+          enriched {:tool-call {:tool-call-id "tc-1"
+                                :content [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]}
+                    :options sample-options}
+          actions  (topic/append-pending-permission state enriched)]
+      (is (= [[:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}]]
+              [:effects/save
+               (topic-state/pending-permission-options-path topic-id)
+               {"tc-1" sample-options}]]
+             actions))))
+  (testing "preserves existing pending-permission-options when a second permission lands"
+    (let [topic-id "t1"
+          existing-options [{:kind "allow_once" :option-id "ok" :name "ok"}]
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs []
+                                                 :pending-permission-options {"tc-prev" existing-options}}}}}
+          enriched {:tool-call {:tool-call-id "tc-1"
+                                :content [{:type "diff" :path "/p" :old-text "a" :new-text "b"}]}
+                    :options sample-options}
+          actions  (topic/append-pending-permission state enriched)]
+      (is (= {"tc-prev" existing-options "tc-1" sample-options}
+             (nth (second actions) 2)))))
+  (testing "is a no-op when permission carries no diff content"
+    (let [state    {:active-topic-id "t1"
+                    :topics {"t1" {:id "t1" :session {:pending-diffs []}}}}
+          enriched {:tool-call {:tool-call-id "tc-1" :content []}
+                    :options sample-options}]
+      (is (nil? (topic/append-pending-permission state enriched))))))
+
+(deftest accept-diff-test
+  (testing "looks up allow_once option-id, emits IPC resolve, clears pending-diffs/options, records resolved"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs
+                                                 [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}
+                                                  {:type "diff" :path "/q" :old-text "x" :new-text "y" :tool-call-id "tc-2"}]
+                                                 :pending-permission-options {"tc-1" sample-options
+                                                                              "tc-2" sample-options}
+                                                 :resolved-tool-calls #{}}}}}
+          actions  (topic/accept-diff state "tc-1")]
+      (is (= [[:acp.effects/resolve-permission "tc-1" "allow"]
+              [:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               [{:type "diff" :path "/q" :old-text "x" :new-text "y" :tool-call-id "tc-2"}]]
+              [:effects/save
+               (topic-state/pending-permission-options-path topic-id)
+               {"tc-2" sample-options}]
+              [:effects/save
+               (topic-state/resolved-tool-calls-path topic-id)
+               #{"tc-1"}]]
+             actions)))))
+
+(deftest reject-diff-test
+  (testing "looks up reject_once option-id, emits IPC reject, clears pending-diffs/options, records resolved"
+    (let [topic-id "t1"
+          state    {:active-topic-id topic-id
+                    :topics {topic-id {:id topic-id
+                                       :session {:pending-diffs
+                                                 [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}]
+                                                 :pending-permission-options {"tc-1" sample-options}
+                                                 :resolved-tool-calls #{"tc-prev"}}}}}
+          actions  (topic/reject-diff state "tc-1")]
+      (is (= [[:acp.effects/resolve-permission "tc-1" "reject"]
+              [:effects/save
+               (topic-state/pending-diffs-path topic-id)
+               []]
+              [:effects/save
+               (topic-state/pending-permission-options-path topic-id)
+               {}]
+              [:effects/save
+               (topic-state/resolved-tool-calls-path topic-id)
+               #{"tc-prev" "tc-1"}]]
+             actions)))))
+
+(deftest resolve-diff-missing-kind-test
+  (testing "logs and emits no resolve effect when stashed options omit the requested kind"
+    (with-console-error-silenced
+      (let [topic-id "t1"
+            options-without-allow [{:kind "reject_once" :option-id "reject" :name "Reject"}]
+            state    {:active-topic-id topic-id
+                      :topics {topic-id {:id topic-id
+                                         :session {:pending-diffs
+                                                   [{:type "diff" :path "/p" :old-text "a" :new-text "b" :tool-call-id "tc-1"}]
+                                                   :pending-permission-options {"tc-1" options-without-allow}
+                                                   :resolved-tool-calls #{}}}}}
+            actions  (topic/accept-diff state "tc-1")]
+        (is (not-any? #(= :acp.effects/resolve-permission (first %)) actions)
+            "no resolve-permission effect when kind not found")))))

@@ -97,19 +97,27 @@
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-workspace-dir @store)]]))))
+                       [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-workspace-dir @store)]])))
+
+  (.on ipcMain "acp/resolve-permission"
+       ;; Fire-and-forget: renderer notifies main of user's accept/reject choice;
+       ;; main resolves the pending Promise the SDK is awaiting.
+       (fn [_event _ipc-correlation-id tool-call-id option-id]
+         (nxr/dispatch store {}
+                       [[:acp.effects/resolve-permission tool-call-id option-id]]))))
 
 (defn- setup-system-resources [store]
   (register-domain-handlers store)
   (menu/create-menu store)
   ;; Initialize ACP in-process agent eagerly at launch.
-  ;; Session update callback receives raw JS params from SDK, coerces
-  ;; via codec, and dispatches as a Nexus action.
-  ;;
-  ;; NOTE: Direct call, not a Nexus effect. Bootstrap infrastructure differs
-  ;; from runtime capabilities - other ACP effects handle user operations.
+  ;; Session updates and permission-pending events both flow into Nexus actions
+  ;; that fan out to the renderer via IPC.
   (acp-effects/initialize
-    {:on-session-update (acp-effects/make-session-update-callback store nil)}))
+    {:on-session-update
+     (acp-effects/make-session-update-callback store nil)
+     :on-pending-permission
+     (fn [enriched]
+       (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))}))
 
 (defn- initialize-app [store]
   (setup-system-resources store)

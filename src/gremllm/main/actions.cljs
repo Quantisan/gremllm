@@ -84,6 +84,16 @@
     (js/console.log "[ACP→IPC] Pushing session update to acp-session-id:" acp-session-id)
     [[:ipc.effects/send-to-renderer "acp:session-update" event-data]]))
 
+(nxr/register-action! :acp.events/permission-pending
+  (fn [_state enriched]
+    (js/console.log "[ACP→IPC] Pushing permission-pending tool-call-id:"
+                    (get-in enriched [:tool-call :tool-call-id]))
+    [[:ipc.effects/send-to-renderer "acp:permission-pending" enriched]]))
+
+(nxr/register-effect! :acp.effects/resolve-permission
+  (fn [_ _ tool-call-id option-id]
+    (acp-effects/resolve-pending-permission! tool-call-id option-id)))
+
 ;; ACP Effects Registration
 ;; ========================
 

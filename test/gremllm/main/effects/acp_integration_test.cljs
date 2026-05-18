@@ -2,6 +2,7 @@
   (:require ["fs/promises" :as fsp]
             ["os" :as os]
             ["path" :as path]
+            [clojure.string :as str]
             [cljs.test :refer [deftest is testing async]]
             [gremllm.main.actions]
             [gremllm.main.actions.acp :as acp-actions]
@@ -23,23 +24,24 @@
       (delegate params))))
 
 (defn- live-acp-context
-  [{:keys [copy-doc?]}]
+  [{:keys [copy-doc? on-pending-permission]}]
   (let [tmp-dir  (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))
         src-path (path/resolve "resources/gremllm-launch-log.md")]
-    {:store    (atom {})
-     :recorder (acp-trace/make-recorder)
-     :tmp-dir  tmp-dir
-     :src-path src-path
-     :doc-path (when copy-doc?
-                 (path/join tmp-dir "gremllm-launch-log.md"))}))
+    {:store                 (atom {})
+     :recorder              (acp-trace/make-recorder)
+     :tmp-dir               tmp-dir
+     :src-path              src-path
+     :doc-path              (when copy-doc?
+                              (path/join tmp-dir "gremllm-launch-log.md"))
+     :on-pending-permission on-pending-permission}))
 
 (defn- initialize-recorded-acp!
-  [{:keys [store recorder]}]
+  [{:keys [store recorder on-pending-permission]}]
   (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
     (acp/initialize
-      {:on-session-update (acp/make-session-update-callback store (:on-session-update recorder))
-       :on-permission     (:on-permission recorder)
-       :on-write          (:on-write recorder)})))
+      {:on-session-update     (acp/make-session-update-callback store (:on-session-update recorder))
+       :on-permission         (:on-permission recorder)
+       :on-pending-permission on-pending-permission})))
 
 (defn- setup-live-acp!
   [{:keys [tmp-dir src-path doc-path] :as ctx}]
@@ -148,7 +150,7 @@
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
                      (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
-                     (print-event-summary! "read-only" (:recorder ctx) [:read :write :permission])
+                     (print-event-summary! "read-only" (:recorder ctx) [:read :permission])
                      (println "=== end ===")))
             (.catch (fn [err]
                       (is false (str "read-only test failed: " err))))
@@ -157,75 +159,106 @@
                                                       :prompt   "Summarize the first paragraph..."
                                                       :done     done}))))))))
 
-(deftest test-live-write-new-file
-  (testing "write-new-file prompt: observe whether Write tool triggers writeTextFile"
-    (async done
-      (let [ctx    (live-acp-context nil)
-            result (atom nil)]
-        (-> (setup-live-acp! ctx)
-            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
-            (.then (fn [session-id]
-                     (acp/prompt session-id
-                       [{:type "text"
-                         :text "Create a new file called notes.md in the current directory with the single line: hello"}])))
-            (.then (fn [^js r]
-                     (reset! result r)
-                     (is (= "end_turn" (.-stopReason r)))
-                     (is (pos? (count @(-> ctx :recorder :events))) "Expected at least one event")
-                     (print-event-summary! "write-new-file" (:recorder ctx) [:write :permission])
-                     (let [notes-path (path/join (:tmp-dir ctx) "notes.md")]
-                       (println (str "  notes.md on disk: "
-                                     (try
-                                       (.accessSync (js/require "fs") notes-path)
-                                       "YES — SDK wrote directly"
-                                       (catch :default _
-                                         "NO — dry-run prevented write")))))
-                     (println "=== end ===")))
-            (.catch (fn [err]
-                      (is false (str "write-new-file test failed: " err))))
-            (.finally (fn []
-                        (finish-live-acp! ctx result {:scenario "write-new-file"
-                                                      :prompt   "Create a new file called notes.md..."
-                                                      :done     done}))))))))
+(defn- pick-option-id
+  "Find the option-id whose :kind matches the given kind in an enriched
+   permission request's :options vector. Mirrors renderer's option-id-for-kind."
+  [enriched kind]
+  (->> (:options enriched)
+       (some (fn [opt] (when (= kind (:kind opt)) (:option-id opt))))))
 
-(defn- some-diff-event?
-  "True when the recorder captured at least one session update carrying diff content
-   (i.e. an :edit-completed? event consumable by the diff-staging pipeline)."
-  [events]
-  (some (fn [{:keys [kind payload]}]
-          (and (= :session-update kind)
-               (acp-codec/edit-completed? (:update payload))))
-        events))
+(defn- make-decider
+  "Build an :on-pending-permission callback that captures each enriched request
+   into the given atom, then synchronously resolves it with the option-id matching
+   decision-kind. acp/initialize stashes the resolver before firing this callback,
+   so synchronous resolution is safe."
+  [decision-kind captured]
+  (fn [enriched]
+    (swap! captured conj enriched)
+    (let [tool-call-id (get-in enriched [:tool-call :tool-call-id])
+          option-id    (pick-option-id enriched decision-kind)]
+      (when option-id
+        (acp/resolve-pending-permission! tool-call-id option-id)))))
 
-(deftest test-live-document-first-edit
-  (testing "document-first edit: trace all coerced events, observe (not assert) writeTextFile"
+(def ^:private edit-prompt
+  "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else.")
+
+(deftest test-live-edit-accept
+  (testing "domain workflow: agent requests Edit, user accepts, fs write occurs"
     (async done
-      (let [ctx    (live-acp-context {:copy-doc? true})
-            result (atom nil)]
+      (let [captured (atom [])
+            ctx      (live-acp-context {:copy-doc?             true
+                                        :on-pending-permission (make-decider "allow_once" captured)})
+            result   (atom nil)]
         (-> (setup-live-acp! ctx)
             (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
             (.then (fn [session-id]
                      (acp/prompt session-id
                        (acp-actions/prompt-content-blocks
-                         {:text "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else."}
+                         {:text edit-prompt}
                          (:doc-path ctx)))))
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (some-diff-event? @(-> ctx :recorder :events))
-                         "Expected at least one session update with diff content (edit-completed?). The agent must propose file mutations via a diff-emitting channel; until the follow-up to commit 322fc41 lands this assertion is the red guide-rail.")
-                     (print-event-summary! "document-first-edit" (:recorder ctx) [:write])
+                     (let [edit-perms (->> @captured
+                                           (filter #(= "edit" (get-in % [:tool-call :kind]))))
+                           edit-perm  (first edit-perms)
+                           diffs      (->> (get-in edit-perm [:tool-call :content])
+                                           (filter #(= "diff" (:type %))))
+                           opt-kinds  (set (map :kind (:options edit-perm)))]
+                       (is (seq edit-perms)
+                           "Expected at least one pending-permission for an edit tool call")
+                       (is (seq diffs)
+                           "Expected diff content in the captured edit permission")
+                       (is (every? #(str/starts-with? (:path %) (:tmp-dir ctx)) diffs)
+                           "Expected every diff path to be inside the test tmp-dir")
+                       (is (contains? opt-kinds "allow_once")
+                           "Expected allow_once option in the permission request")
+                       (is (contains? opt-kinds "reject_once")
+                           "Expected reject_once option in the permission request"))
+                     (print-event-summary! "edit-accept" (:recorder ctx) [:permission])
                      (println "=== end ===")
-                     ;; disallowedTools blocks Edit/Write/MultiEdit/NotebookEdit but not Bash;
-                     ;; comparing on-disk content to the source copy also catches Bash-based circumvention.
+                     (js/Promise.all #js [(.readFile fsp (:src-path ctx) "utf8")
+                                          (.readFile fsp (:doc-path ctx) "utf8")])))
+            (.then (fn [^js contents]
+                     (is (not= (aget contents 0) (aget contents 1))
+                         "Expected document.md on disk to differ from source after accept.")))
+            (.catch (fn [err]
+                      (is false (str "edit-accept test failed: " err))))
+            (.finally (fn []
+                        (finish-live-acp! ctx result {:scenario "edit-accept"
+                                                      :prompt   edit-prompt
+                                                      :done     done}))))))))
+
+(deftest test-live-edit-reject
+  (testing "domain workflow: agent requests Edit, user rejects, fs write suppressed"
+    (async done
+      (let [captured (atom [])
+            ctx      (live-acp-context {:copy-doc?             true
+                                        :on-pending-permission (make-decider "reject_once" captured)})
+            result   (atom nil)]
+        (-> (setup-live-acp! ctx)
+            (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
+            (.then (fn [session-id]
+                     (acp/prompt session-id
+                       (acp-actions/prompt-content-blocks
+                         {:text edit-prompt}
+                         (:doc-path ctx)))))
+            (.then (fn [^js r]
+                     (reset! result r)
+                     (is (some #(= "edit" (get-in % [:tool-call :kind])) @captured)
+                         "Expected at least one pending-permission for an edit tool call (subsumes the dropped guide-rail).")
+                     (print-event-summary! "edit-reject" (:recorder ctx) [:permission])
+                     (println "=== end ===")
+                     ;; disallowedTools blocks MultiEdit/NotebookEdit; this comparison
+                     ;; also catches Bash-based circumvention.
                      (js/Promise.all #js [(.readFile fsp (:src-path ctx) "utf8")
                                           (.readFile fsp (:doc-path ctx) "utf8")])))
             (.then (fn [^js contents]
                      (is (= (aget contents 0) (aget contents 1))
-                         "Expected document.md on disk to be unchanged from the source copy.")))
+                         "Expected document.md on disk to be unchanged after reject.")))
             (.catch (fn [err]
-                      (is false (str "document-first-edit test failed: " err))))
+                      (is false (str "edit-reject test failed: " err))))
             (.finally (fn []
-                        (finish-live-acp! ctx result {:scenario "document-first-edit"
-                                                      :prompt   "...change the title to anything..."
+                        (finish-live-acp! ctx result {:scenario "edit-reject"
+                                                      :prompt   edit-prompt
                                                       :done     done}))))))))
