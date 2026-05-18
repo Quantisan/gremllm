@@ -60,7 +60,7 @@
    [:topic.effects/auto-save topic-id]])
 
 (defn append-pending-diffs [state diffs]
-  ;; TODO: incoming diffs should be matched with acp-session-id
+  ;; TODO (inbound-routing): see state/topic.cljs acp-session-id-path
   (let [topic-id (topic-state/get-active-topic-id state)
         existing (or (get-in state (topic-state/pending-diffs-path topic-id)) [])]
     [[:effects/save (topic-state/pending-diffs-path topic-id) (into existing diffs)]]))
@@ -72,6 +72,7 @@
    :pending-permission-options keyed by :tool-call-id (so accept/reject can
    map ACP :kind to the agent-defined :option-id). No-op when no diffs."
   [state enriched]
+  ;; TODO (inbound-routing): see state/topic.cljs acp-session-id-path
   (let [{:keys [tool-call-id content]} (:tool-call enriched)
         diffs (when content (filterv #(= "diff" (:type %)) content))]
     (when (seq diffs)

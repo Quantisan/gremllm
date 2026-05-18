@@ -61,8 +61,21 @@
   (get-in (get-topic state topic-id) [:session :id]))
 
 (defn acp-session-id-path [topic-id]
-  ;; TODO: add reverse lookup from acp-session-id to topic-id for correct
-  ;; inbound routing of session updates to the originating topic
+  ;; TODO (inbound-routing): renderer ACP inbound handlers dispatch to the
+  ;; active topic, not to the topic whose agent emitted the event. Cross-turn
+  ;; topic switches land session updates, pending diffs, and pending
+  ;; permissions on the wrong topic.
+  ;;
+  ;; Fix: reverse lookup from acp-session-id to topic-id, resolved at the IPC
+  ;; boundary in renderer/core.cljs before per-domain actions dispatch.
+  ;;
+  ;; Affected: actions/topic.cljs append-pending-diffs and
+  ;; append-pending-permission; core.cljs onAcpSessionUpdate.
+  ;;
+  ;; Click-time accept/reject is defended by construction: Accept/Reject
+  ;; buttons render only on the topic owning :pending-diffs, so click-time
+  ;; and append-time active-topic always match. The gap is purely at IPC
+  ;; arrival.
   (-> topics-path (conj topic-id :session :id)))
 
 (defn find-message-index-by-tool-call-id
