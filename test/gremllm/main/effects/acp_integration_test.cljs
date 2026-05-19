@@ -8,6 +8,7 @@
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.acp :as acp]
             [gremllm.main.effects.acp-trace :as acp-trace]
+            [gremllm.main.effects.acp.permission :as acp-permission]
             [gremllm.schema.codec.acp :as acp-codec]))
 
 (defn- result-summary [result]
@@ -24,24 +25,24 @@
       (delegate params))))
 
 (defn- live-acp-context
-  [{:keys [copy-doc? on-pending-permission]}]
+  [{:keys [copy-doc? on-awaiting-user-decision]}]
   (let [tmp-dir  (path/join (.tmpdir os) (str "gremllm-test-" (random-uuid)))
         src-path (path/resolve "resources/gremllm-launch-log.md")]
-    {:store                 (atom {})
-     :recorder              (acp-trace/make-recorder)
-     :tmp-dir               tmp-dir
-     :src-path              src-path
-     :doc-path              (when copy-doc?
-                              (path/join tmp-dir "gremllm-launch-log.md"))
-     :on-pending-permission on-pending-permission}))
+    {:store                      (atom {})
+     :recorder                   (acp-trace/make-recorder)
+     :tmp-dir                    tmp-dir
+     :src-path                   src-path
+     :doc-path                   (when copy-doc?
+                                   (path/join tmp-dir "gremllm-launch-log.md"))
+     :on-awaiting-user-decision  on-awaiting-user-decision}))
 
 (defn- initialize-recorded-acp!
-  [{:keys [store recorder on-pending-permission]}]
+  [{:keys [store recorder on-awaiting-user-decision]}]
   (with-redefs [acp/read-text-file (make-read-recorder (:on-read recorder))]
     (acp/initialize
-      {:on-session-update     (acp/make-session-update-callback store (:on-session-update recorder))
-       :on-permission         (:on-permission recorder)
-       :on-pending-permission on-pending-permission})))
+      {:on-session-update          (acp/make-session-update-callback store (:on-session-update recorder))
+       :on-permission-request      (:on-permission recorder)
+       :on-awaiting-user-decision  on-awaiting-user-decision})))
 
 (defn- setup-live-acp!
   [{:keys [tmp-dir src-path doc-path] :as ctx}]
@@ -167,9 +168,9 @@
        (some (fn [opt] (when (= kind (:kind opt)) (:option-id opt))))))
 
 (defn- make-decider
-  "Build an :on-pending-permission callback that captures each enriched request
+  "Build an :on-awaiting-user-decision callback that captures each enriched request
    into the given atom, then synchronously resolves it with the option-id matching
-   decision-kind. acp/initialize stashes the resolver before firing this callback,
+   decision-kind. The resolver is registered before this callback fires,
    so synchronous resolution is safe."
   [decision-kind captured]
   (fn [enriched]
@@ -177,7 +178,7 @@
     (let [tool-call-id (get-in enriched [:tool-call :tool-call-id])
           option-id    (pick-option-id enriched decision-kind)]
       (when option-id
-        (acp/resolve-pending-permission! tool-call-id option-id)))))
+        (acp-permission/record-decision! tool-call-id option-id)))))
 
 (def ^:private edit-prompt
   "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else.")
@@ -187,7 +188,7 @@
     (async done
       (let [captured (atom [])
             ctx      (live-acp-context {:copy-doc?             true
-                                        :on-pending-permission (make-decider "allow_once" captured)})
+                                        :on-awaiting-user-decision (make-decider "allow_once" captured)})
             result   (atom nil)]
         (-> (setup-live-acp! ctx)
             (.then (fn [_] (acp/new-session (:tmp-dir ctx))))
@@ -234,7 +235,7 @@
     (async done
       (let [captured (atom [])
             ctx      (live-acp-context {:copy-doc?             true
-                                        :on-pending-permission (make-decider "reject_once" captured)})
+                                        :on-awaiting-user-decision (make-decider "reject_once" captured)})
             result   (atom nil)]
         (-> (setup-live-acp! ctx)
             (.then (fn [_] (acp/new-session (:tmp-dir ctx))))

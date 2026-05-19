@@ -5,6 +5,7 @@
             [gremllm.main.actions.workspace :as workspace-actions]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.effects.acp :as acp-effects]
+            [gremllm.main.effects.acp.permission :as acp-permission]
             [gremllm.main.io :as io]
             [gremllm.main.window :as window]))
 
@@ -92,7 +93,7 @@
 
 (nxr/register-effect! :acp.effects/resolve-permission
   (fn [_ _ tool-call-id option-id]
-    (acp-effects/resolve-pending-permission! tool-call-id option-id)))
+    (acp-permission/record-decision! tool-call-id option-id)))
 
 ;; ACP Effects Registration
 ;; ========================

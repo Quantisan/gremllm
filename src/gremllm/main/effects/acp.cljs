@@ -2,8 +2,8 @@
   "ACP effect handlers - owns connection lifecycle.
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
+            [gremllm.main.effects.acp.permission :as permission]
             [gremllm.schema.codec.acp :as acp-codec]
-            [gremllm.schema.codec.acp.permission :as acp-permission]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
             ["fs/promises" :as fsp]
@@ -38,35 +38,6 @@
 ;;    :dispose-agent <fn>
 ;;    :ready         <init-promise>}
 (defonce ^:private state (atom nil))
-
-;; Resolvers for ACP requestPermission calls awaiting user input.
-;; Keyed by ACP tool-call-id. Each entry is a 1-arg fn that takes a
-;; permission outcome (e.g. "allow_once", "reject_once") and resolves the
-;; pending JS Promise returned to the SDK from resolve-cb.
-(defonce ^:private pending-permissions (atom {}))
-
-(defn stash-pending-permission!
-  "Register a resolver for a pending ACP permission request. If an entry
-   already exists for tool-call-id the prior resolver is discarded (and
-   the awaiting SDK Promise will hang); this is unexpected and logged."
-  [tool-call-id resolver]
-  (when (contains? @pending-permissions tool-call-id)
-    (js/console.warn "[ACP] replacing pending permission resolver for" tool-call-id))
-  (swap! pending-permissions assoc tool-call-id resolver))
-
-(defn resolve-pending-permission!
-  "Fire the registered resolver for tool-call-id with the given option-id
-   (e.g. \"allow_once\", \"reject_once\"). No-op if no resolver is registered."
-  [tool-call-id option-id]
-  (when-let [resolver (get @pending-permissions tool-call-id)]
-    (swap! pending-permissions dissoc tool-call-id)
-    (resolver option-id)
-    nil))
-
-(defn pending-permission-snapshot
-  "Snapshot of the current pending-permissions map. For tests/inspection."
-  []
-  @pending-permissions)
 
 (defn slice-content-by-lines
   "Slice string content by 1-indexed line offset and limit.
@@ -162,66 +133,31 @@
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
-     :on-session-update     callback receiving raw JS session update params from SDK.
-     :on-permission         optional tap receiving coerced+enriched permission request params.
-     :on-pending-permission optional callback receiving enriched permission request params
-                            when the resolver defers to user input (in-workspace edit).
-                            Fires *after* the resolver is registered, so a synchronous call
-                            to resolve-pending-permission! from inside this callback (e.g.
-                            from tests) resolves the SDK Promise correctly."
-  [{:keys [on-session-update on-permission on-pending-permission]}]
+     :on-session-update          callback receiving raw JS session update params from SDK.
+     :on-permission-request      optional tap receiving enriched permission request params
+                                 for every SDK resolvePermission call (immediate or deferred).
+     :on-awaiting-user-decision  optional tap receiving enriched permission request params
+                                 only when the resolver defers to user input (in-workspace edit).
+                                 Fires *after* the resolver is registered, so a synchronous call
+                                 to record-decision! from inside this callback (e.g. from tests)
+                                 resolves the SDK Promise correctly."
+  [{:keys [on-session-update on-permission-request on-awaiting-user-decision]}]
   (set-claude-executable-for-packaged-app!)
   (if-let [ready (:ready @state)]
     ready
-    (let [;; Per-connection tool-name tracker. Seeded from session updates so
-          ;; the permission resolver can enrich requests that arrive without a
-          ;; toolName (ACP sends it in _meta.claudeCode.toolName on the session
-          ;; update, not always in the permission request directly).
-          tool-names   (atom {})
-          session-cb   (fn [raw-params]
-                         (try
-                           (swap! tool-names acp-permission/remember-tool-name
-                                  (acp-codec/acp-session-update-from-js raw-params))
-                           (catch :default _))
-                         (when on-session-update (on-session-update raw-params)))
-          resolve-cb   (fn [^js raw-params session-cwd]
-                         (try
-                           (let [enriched (->> raw-params
-                                               acp-codec/acp-permission-request-from-js
-                                               (acp-permission/enrich-permission-params @tool-names))
-                                 result   (acp-permission/resolve-permission enriched session-cwd)]
-                             (when on-permission
-                               (try (on-permission enriched)
-                                    (catch :default e
-                                      (js/console.error "ACP on-permission tap failed (non-fatal; resolved outcome is unaffected)" e))))
-                             (case (:resolution result)
-                               :immediate
-                               (acp-codec/acp-permission-outcome-to-js
-                                 {:outcome (:outcome result)})
-
-                               :deferred
-                               (let [tool-call-id  (:tool-call-id result)
-                                     pending-promise (js/Promise.
-                                                       (fn [resolve _reject]
-                                                         (stash-pending-permission!
-                                                           tool-call-id
-                                                           (fn [option-id]
-                                                             (resolve
-                                                               (acp-codec/acp-permission-outcome-to-js
-                                                                 {:outcome {:outcome   "selected"
-                                                                            :option-id option-id}}))))))]
-                                 (when on-pending-permission
-                                   (try (on-pending-permission enriched)
-                                        (catch :default e
-                                          (js/console.error "ACP on-pending-permission tap failed" e))))
-                                 pending-promise)))
-                           (catch :default e
-                             (js/console.error "ACP permission resolve failed" e "raw params:" raw-params)
-                             #js {:outcome #js {:outcome "cancelled"}})))
-          ^js result   (create-connection
-                         #js {:onSessionUpdate   session-cb
-                              :onReadTextFile    read-text-file
-                              :resolvePermission resolve-cb})
+    (let [session-cb  (fn [raw-params]
+                        (try
+                          (permission/track-tool-name!
+                            (acp-codec/acp-session-update-from-js raw-params))
+                          (catch :default _))
+                        (when on-session-update (on-session-update raw-params)))
+          resolve-cb  (permission/make-resolve-permission
+                        {:on-permission-request     on-permission-request
+                         :on-awaiting-user-decision on-awaiting-user-decision})
+          ^js result  (create-connection
+                        #js {:onSessionUpdate   session-cb
+                             :onReadTextFile    read-text-file
+                             :resolvePermission resolve-cb})
           dispose-agent (.-disposeAgent result)
           ready-promise (start-connection! (.-connection result)
                                            (.-protocolVersion result)
@@ -270,7 +206,7 @@
   "Tear down in-process ACP agent. Returns a promise that resolves after dispose
    settles so callers (e.g. a before-quit hook) can await cleanup."
   []
-  (reset! pending-permissions {})
+  (permission/clear!)
   (if-let [{:keys [dispose-agent]} @state]
     (do (reset! state nil)
         (dispose-agent))
