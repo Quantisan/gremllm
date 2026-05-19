@@ -6,7 +6,8 @@
             [gremllm.schema.codec.acp.permission :as acp-permission]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
-            ["fs/promises" :as fsp]))
+            ["fs/promises" :as fsp]
+            ["path" :as path]))
 
 ;; _meta.claudeCode.options overrides for the pinned claude-agent-acp session-setup path
 ;; (node_modules/@agentclientprotocol/claude-agent-acp/dist/acp-agent.js:1095-1137).
@@ -137,6 +138,25 @@
                                (throw err))))
                   (throw err))))))
 
+(defn- get-electron-app []
+  (when (exists? js/require)
+    (try
+      (.-app (js/require "electron/main"))
+      (catch :default _ nil))))
+
+(defn- set-claude-executable-for-packaged-app!
+  "In a packaged app the ACP SDK's native binary lives in app.asar.unpacked,
+   but require.resolve returns an asar-virtual path that spawn can't execute.
+   Setting this env var makes the SDK skip its own resolution entirely."
+  []
+  (when-let [app (get-electron-app)]
+    (when (.-isPackaged app)
+      (let [binary (path/join (.-resourcesPath js/process)
+                              "app.asar.unpacked" "node_modules" "@anthropic-ai"
+                              (str "claude-agent-sdk-" (.-platform js/process) "-" (.-arch js/process))
+                              "claude")]
+        (set! (.. js/process -env -CLAUDE_CODE_EXECUTABLE) binary)))))
+
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
    opts keys:
@@ -148,6 +168,7 @@
                             to resolve-pending-permission! from inside this callback (e.g.
                             from tests) resolves the SDK Promise correctly."
   [{:keys [on-session-update on-permission on-pending-permission]}]
+  (set-claude-executable-for-packaged-app!)
   (if-let [ready (:ready @state)]
     ready
     (let [;; Per-connection tool-name tracker. Seeded from session updates so

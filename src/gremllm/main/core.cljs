@@ -9,8 +9,7 @@
             [gremllm.main.state :as state]
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
-            ["electron/main" :refer [app BrowserWindow ipcMain]]
-            ["path" :as path]))
+            ["electron/main" :refer [app BrowserWindow ipcMain]]))
 
 (defn register-domain-handlers
   "Register IPC handlers for core domain operations.
@@ -107,34 +106,15 @@
          (nxr/dispatch store {}
                        [[:acp.effects/resolve-permission tool-call-id option-id]]))))
 
-(defn- set-claude-executable-for-packaged-app!
-  "In a packaged app the ACP SDK's native binary lives in app.asar.unpacked,
-   but require.resolve returns an asar-virtual path that spawn can't execute.
-   Setting this env var makes the SDK skip its own resolution entirely."
-  []
-  (when (.-isPackaged app)
-    (let [binary (path/join (.-resourcesPath js/process)
-                            "app.asar.unpacked" "node_modules" "@anthropic-ai"
-                            (str "claude-agent-sdk-" (.-platform js/process) "-" (.-arch js/process))
-                            "claude")]
-      (set! (.. js/process -env -CLAUDE_CODE_EXECUTABLE) binary))))
-
-(defn- setup-system-resources [store]
+(defn- initialize-app [store]
   (register-domain-handlers store)
   (menu/create-menu store)
-  (set-claude-executable-for-packaged-app!)
-  ;; Initialize ACP in-process agent eagerly at launch.
-  ;; Session updates and permission-pending events both flow into Nexus actions
-  ;; that fan out to the renderer via IPC.
   (acp-effects/initialize
     {:on-session-update
      (acp-effects/make-session-update-callback store nil)
      :on-pending-permission
      (fn [enriched]
-       (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))}))
-
-(defn- initialize-app [store]
-  (setup-system-resources store)
+       (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))})
   (nxr/dispatch store {} [[:window.actions/create]]))
 
 (defn- handle-app-activate
