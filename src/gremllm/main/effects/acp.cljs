@@ -151,11 +151,13 @@
   []
   (when-let [app (get-electron-app)]
     (when (.-isPackaged app)
-      (let [binary (path/join (.-resourcesPath js/process)
-                              "app.asar.unpacked" "node_modules" "@anthropic-ai"
-                              (str "claude-agent-sdk-" (.-platform js/process) "-" (.-arch js/process))
-                              "claude")]
-        (set! (.. js/process -env -CLAUDE_CODE_EXECUTABLE) binary)))))
+      (let [platform-specific-package (str "claude-agent-sdk-"
+                                         (.-platform js/process) "-"
+                                         (.-arch js/process))
+            unpacked-binary-path    (path/join (.-resourcesPath js/process)
+                                               "app.asar.unpacked" "node_modules" "@anthropic-ai"
+                                               platform-specific-package "claude")]
+        (set! (.. js/process -env -CLAUDE_CODE_EXECUTABLE) unpacked-binary-path)))))
 
 (defn initialize
   "Initialize ACP connection eagerly. Idempotent.
