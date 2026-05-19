@@ -4,7 +4,9 @@ const { FuseV1Options, FuseVersion } = require("@electron/fuses");
 module.exports = {
 	name: "Gremllm",
 	packagerConfig: {
-		asar: true,
+		asar: {
+			unpack: "**/node_modules/@anthropic-ai/claude-agent-sdk-*/**",
+		},
 	},
 	rebuildConfig: {},
 	makers: [
