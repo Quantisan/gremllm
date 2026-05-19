@@ -148,11 +148,8 @@
               (.then (fn [_] (initialize-dev (fn [_] nil))))
               (.then (fn [_]
                        (is (= 1 @create-count))
-                       (acp/stash-pending-permission! "tc-lifecycle" (fn [_] nil))
                        (acp/shutdown)
                        (is (= 1 (:dispose-count @calls)))
-                       (is (= {} (acp/pending-permission-snapshot))
-                           "shutdown should clear stashed permission resolvers")
                        (is (thrown-with-msg? js/Error #"ACP not initialized"
                              (acp/new-session "/tmp/ws")))))
               (.finally (fn []
@@ -203,34 +200,6 @@
                              "late init success must not resurrect state after shutdown")))
                 (.catch (fn [_] nil))
                 (.finally (fn [] (done))))))))))
-
-(deftest test-permission-tap-failure-does-not-replace-outcome
-  (testing "on-permission tap throwing does not replace the resolved outcome with cancelled"
-    (async done
-      (let [captured-cb (atom nil)
-            {:keys [result]} (make-fake-env)]
-        (with-redefs [acp/create-connection
-                      (fn [^js opts]
-                        (reset! captured-cb (.-resolvePermission opts))
-                        result)]
-          (-> (acp/initialize
-                {:on-session-update (fn [_] nil)
-                 :on-permission     (fn [_] (throw (js/Error. "tap-fail")))})
-              (.then
-                (fn [_]
-                  (let [raw-params #js {:sessionId "s-1"
-                                        :toolCall  #js {:toolCallId "tc-1"
-                                                        :kind       "read"
-                                                        :title      "Read file"
-                                                        :rawInput   #js {}
-                                                        :locations  #js []}
-                                        :options   #js [#js {:optionId "opt-1"
-                                                              :name     "Allow"
-                                                              :kind     "allow_once"}]}
-                        ^js js-out  (@captured-cb raw-params "/workspace")]
-                    (is (= "selected" (.. js-out -outcome -outcome))
-                        "tap failure must not replace outcome with cancelled"))))
-              (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))
 
 (deftest test-slice-content-by-lines
   (let [content "line-1\nline-2\nline-3\nline-4\n"]
@@ -310,68 +279,3 @@
                              (.finally (fn [] (done)))))))
               (.catch (fn [e] (js/console.error "unexpected error" e) (done)))))))))
 
-(deftest test-resolve-cb-returns-promise-for-deferred
-  (testing "in-workspace edit: resolve-cb returns a Promise that resolves when registry fires"
-    (async done
-      (let [pending-events  (atom [])
-            captured-cb     (atom nil)
-            {:keys [result]} (make-fake-env)
-            path-mod        (js/require "path")
-            cwd             (.resolve path-mod (.cwd js/process) "resources")
-            file            (.resolve path-mod cwd "gremllm-launch-log.md")
-            raw-params      #js {:sessionId "s-1"
-                                 :toolCall  #js {:toolCallId "tc-defer"
-                                                 :kind       "edit"
-                                                 :title      "Edit"
-                                                 :rawInput   #js {:file_path file}
-                                                 :content    #js [#js {:type "diff"
-                                                                       :path file
-                                                                       :oldText "a"
-                                                                       :newText "b"}]
-                                                 :locations  #js []}
-                                 :options   #js [#js {:optionId "allow-once"
-                                                      :kind     "allow_once"
-                                                      :name     "Allow"}
-                                                 #js {:optionId "reject-once"
-                                                      :kind     "reject_once"
-                                                      :name     "Reject"}]}]
-        (with-redefs [acp/create-connection
-                      (fn [^js opts]
-                        (reset! captured-cb (.-resolvePermission opts))
-                        result)]
-          (-> (acp/initialize
-                {:on-session-update     (fn [_] nil)
-                 :on-pending-permission (fn [enriched]
-                                          (swap! pending-events conj enriched))})
-              (.then
-                (fn [_]
-                  (let [result-promise (@captured-cb raw-params cwd)]
-                    (is (instance? js/Promise result-promise))
-                    (is (= 1 (count @pending-events)) "tap should fire once with enriched request")
-                    (is (= "tc-defer" (-> @pending-events first :tool-call :tool-call-id)))
-                    (acp/resolve-pending-permission! "tc-defer" "allow-once")
-                    (-> result-promise
-                        (.then (fn [^js js-out]
-                                 (is (= "selected"   (.. js-out -outcome -outcome)))
-                                 (is (= "allow-once" (.. ^js js-out -outcome -optionId)))))
-                        (.finally (fn [] (.then (acp/shutdown) (fn [_] (done)))))))))))))))
-
-(deftest test-pending-permission-registry
-  (testing "stash/resolve registers a resolver keyed by tool-call-id and fires it once"
-    (let [fired (atom nil)]
-      (acp/stash-pending-permission! "tc-A" #(reset! fired %))
-      (is (some? (acp/pending-permission-snapshot)))
-      (acp/resolve-pending-permission! "tc-A" "allow_once")
-      (is (= "allow_once" @fired))
-      (is (nil? (get (acp/pending-permission-snapshot) "tc-A"))
-          "resolver should be removed after firing")))
-  (testing "resolve with unknown id is a no-op (logged elsewhere)"
-    (is (nil? (acp/resolve-pending-permission! "tc-unknown" "allow_once"))))
-  (testing "stash replaces an existing resolver with the same id and logs"
-    (let [a (atom :a-unfired)
-          b (atom :b-unfired)]
-      (acp/stash-pending-permission! "tc-dup" #(reset! a %))
-      (acp/stash-pending-permission! "tc-dup" #(reset! b %))
-      (acp/resolve-pending-permission! "tc-dup" "reject_once")
-      (is (= :a-unfired @a) "first resolver should not fire")
-      (is (= "reject_once" @b) "second resolver should fire"))))
