@@ -109,6 +109,8 @@
 (defn- initialize-app [store]
   (register-domain-handlers store)
   (menu/create-menu store)
+  ;; TODO: callback map couples this call site to permission ns internals —
+  ;; the caller must know the subsystem's lifecycle moments to subscribe.
   (acp-effects/initialize
     {:on-session-update
      (acp-effects/make-session-update-callback store nil)
