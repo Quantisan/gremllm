@@ -72,7 +72,7 @@
             resolve-cb (permission/make-resolve-permission
                          {:on-awaiting-user-decision (fn [_] nil)})]
         (let [p (resolve-cb raw-params cwd)]
-          (is (some? (permission/awaiting-snapshot)))
+          (is (contains? (permission/awaiting-snapshot) "tc-defer"))
           (permission/record-decision! "tc-defer" "allow-once")
           (-> p
               (.then (fn [_]
@@ -83,11 +83,22 @@
   (testing "record-decision! with unknown id is a no-op"
     (is (nil? (permission/record-decision! "tc-unknown" "allow_once"))))
 
+  (testing "clear! empties awaiting-user-decision registry"
+    (async done
+      (let [{:keys [raw-params cwd]} (make-deferred-params)
+            resolve-cb (permission/make-resolve-permission {})]
+        (resolve-cb raw-params cwd)
+        (is (contains? (permission/awaiting-snapshot) "tc-defer"))
+        (permission/clear!)
+        (is (= {} (permission/awaiting-snapshot)))
+        (done))))
+
   (testing "second deferred request for same tool-call-id replaces resolver"
     (async done
       (let [{:keys [raw-params cwd]} (make-deferred-params)
             resolve-cb (permission/make-resolve-permission {})
-            _p1 (resolve-cb raw-params cwd)
+            _p1 (resolve-cb raw-params cwd) ; Promise intentionally never resolves
+
             p2  (resolve-cb raw-params cwd)]
         (permission/record-decision! "tc-defer" "reject-once")
         (-> p2

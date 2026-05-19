@@ -31,7 +31,9 @@
   @awaiting-user-decision)
 
 (defn clear!
-  "Reset all permission state. Called from ACP shutdown."
+  "Reset all permission state. Called from ACP shutdown.
+   Both atoms must be reset together — tool-name-by-id feeds enrichment
+   and awaiting-user-decision holds live resolvers."
   []
   (reset! tool-name-by-id {})
   (reset! awaiting-user-decision {}))
