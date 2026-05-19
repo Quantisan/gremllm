@@ -112,7 +112,7 @@
   (acp-effects/initialize
     {:on-session-update
      (acp-effects/make-session-update-callback store nil)
-     :on-pending-permission
+     :on-awaiting-user-decision
      (fn [enriched]
        (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))})
   (nxr/dispatch store {} [[:window.actions/create]]))
