@@ -86,16 +86,6 @@
           (is (= topic loaded))
           (is (= [excerpt-fixture] (:excerpts loaded))))))))
 
-(deftest test-create-document
-  (testing "creates document file and returns content"
-    (with-temp-dir "create-document"
-      (fn [temp-dir]
-        (let [content  "# Untitled Document\n"
-              filepath (io/document-file-path temp-dir)
-              result   (workspace/create-document {:filepath filepath :content content})]
-          (is (= content (:content result)))
-          (is (= content (io/read-file filepath))))))))
-
 (deftest test-write-meta-if-missing!
   (testing "writes meta.edn with :doc-path when absent"
     (with-temp-dir "meta-write"
@@ -169,26 +159,35 @@
               (is (= {(:id good-topic) good-topic} result)))))))))
 
 (deftest test-load-and-sync
-  (testing "loads topics and dispatches sync event"
+  (testing "reads document, loads topics from storage dir, persists meta, dispatches document:opened"
     (with-temp-dir "load-sync"
       (fn [temp-dir]
-        (let [topics-dir (io/topics-dir-path temp-dir)
-              topic {:id "topic-123" :name "Test" :messages []}
-              dispatched (atom nil)]
+        (let [user-data-dir temp-dir
+              doc-path      (io/path-join temp-dir "memo.md")
+              storage-dir   (io/document-storage-dir user-data-dir doc-path)
+              topics-dir    (io/topics-dir-path storage-dir)
+              topic         {:id "topic-123" :name "Test" :messages []}
+              store         (atom {:user-data-dir user-data-dir})
+              dispatched    (atom nil)]
 
-          ;; Setup: write a topic file
+          ;; Setup: document content on disk + a topic in the per-document storage dir
+          (io/write-file doc-path "# Memo\n")
           (io/ensure-dir topics-dir)
           (write-topic-file topics-dir topic)
 
-          ;; Execute with mock context
+          ;; Execute: store is the 2nd positional arg (Nexus effect signature)
           (workspace/load-and-sync
             {:dispatch #(reset! dispatched %)}
-            nil
-            temp-dir)
+            store
+            doc-path)
 
           ;; Verify IPC effect
           (let [[[effect-key channel data]] @dispatched]
             (is (= :ipc.effects/send-to-renderer effect-key))
-            (is (= "workspace:opened" channel))
-            (is (contains? data :topics))
-            (is (contains? data :document))))))))
+            (is (= "document:opened" channel))
+            (is (= "# Memo\n" (get-in data [:document :content])))
+            (is (contains? (:topics data) "topic-123")))
+
+          ;; meta.edn written into the storage dir
+          (is (= {:doc-path doc-path}
+                 (edn/read-string (io/read-file (io/path-join storage-dir "meta.edn"))))))))))

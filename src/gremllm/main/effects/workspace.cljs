@@ -4,6 +4,7 @@
   ;; Runtime dependency: electron/main dialog
   ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
+            [gremllm.main.state :as state]
             [clojure.edn :as edn]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
@@ -46,17 +47,6 @@
   (io/ensure-dir dir)
   (io/write-file filepath content)
   filepath)
-
-;;; ---------------------------------------------------------------------------
-;;; Document Operations
-
-(defn create-document
-  "Create a new document file in the workspace."
-  [{:keys [filepath content]}]
-  (when (io/file-exists? filepath)
-    (throw (js/Error. (str "Document already exists at " filepath))))
-  (io/write-file filepath content)
-  {:content content})
 
 ;;; ---------------------------------------------------------------------------
 ;;; Per-Document Metadata
@@ -110,16 +100,18 @@
       (.-dialog (js/require "electron/main"))
       (catch :default _ nil))))
 
-(defn pick-folder-dialog [{:keys [dispatch]} _]
+(defn pick-document-dialog [{:keys [dispatch]} _]
   (when-let [dialog (get-dialog)]
     (-> (.showOpenDialog dialog
-                         #js {:title "Open Workspace Folder"
-                              :properties #js ["openDirectory"]
+                         #js {:title "Open"
+                              :properties #js ["openFile"]
+                              :filters #js [#js {:name "Markdown"
+                                                 :extensions #js ["md" "markdown"]}]
                               :buttonLabel "Open"})
         (.then (fn [^js result]
                  (when-not (.-canceled result)
-                   (let [workspace-folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
+                   (let [doc-path (first (.-filePaths result))]
+                     (dispatch [[:document.actions/open doc-path]]))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Topic Delete Operations
@@ -154,19 +146,22 @@
     (js/Promise.resolve nil)))
 
 ;;; ---------------------------------------------------------------------------
-;;; Workspace Sync Operations
+;;; Document Sync Operations
 
-(defn- read-document [workspace-path]
-  (let [doc-path (io/document-file-path workspace-path)]
-    {:content (when (io/file-exists? doc-path)
-                (io/read-file doc-path))}))
+(defn- read-document [doc-path]
+  {:content (when (io/file-exists? doc-path)
+              (io/read-file doc-path))})
 
 (defn load-and-sync
-  "Load topics and workspace metadata, then send sync payload to renderer."
-  [{:keys [dispatch]} _ workspace-path]
-  (let [workspace-name (io/path-basename workspace-path)
-        workspace-meta (schema/create-workspace-meta workspace-name)
-        document       (read-document workspace-path)
-        topics         (-> workspace-path io/topics-dir-path load-topics)
-        sync-payload   (codec/workspace-sync-for-ipc topics workspace-meta document)]
-    (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))
+  "Read the document, load its topics from per-document storage, persist meta,
+   then send the sync payload to the renderer."
+  [{:keys [dispatch]} store doc-path]
+  (let [user-data-dir (state/get-user-data-dir @store)
+        storage-dir   (io/document-storage-dir user-data-dir doc-path)
+        document-name (io/path-basename doc-path)
+        document-meta (schema/create-workspace-meta document-name)
+        document      (read-document doc-path)
+        topics        (-> storage-dir io/topics-dir-path load-topics)
+        sync-payload  (codec/workspace-sync-for-ipc topics document-meta document)]
+    (write-meta-if-missing! storage-dir doc-path)
+    (dispatch [[:ipc.effects/send-to-renderer "document:opened" sync-payload]])))
