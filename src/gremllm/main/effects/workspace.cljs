@@ -59,6 +59,20 @@
   {:content content})
 
 ;;; ---------------------------------------------------------------------------
+;;; Per-Document Metadata
+
+(def ^:private meta-filename "meta.edn")
+
+(defn write-meta-if-missing!
+  "Persist {:doc-path ...} to <storage-dir>/meta.edn, only if not already
+   present. Not load-bearing for v1 — supports a future recent-documents UI."
+  [storage-dir doc-path]
+  (let [meta-path (io/path-join storage-dir meta-filename)]
+    (when-not (io/file-exists? meta-path)
+      (io/ensure-dir storage-dir)
+      (io/write-file meta-path (pr-str {:doc-path doc-path})))))
+
+;;; ---------------------------------------------------------------------------
 ;;; Topic Collection Operations
 
 (defn enumerate

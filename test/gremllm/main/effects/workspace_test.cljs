@@ -1,5 +1,6 @@
 (ns gremllm.main.effects.workspace-test
   (:require [cljs.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [gremllm.main.effects.workspace :as workspace]
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir with-console-error-silenced]]))
@@ -94,6 +95,26 @@
               result   (workspace/create-document {:filepath filepath :content content})]
           (is (= content (:content result)))
           (is (= content (io/read-file filepath))))))))
+
+(deftest test-write-meta-if-missing!
+  (testing "writes meta.edn with :doc-path when absent"
+    (with-temp-dir "meta-write"
+      (fn [storage-dir]
+        (let [doc-path  "/Users/paul/memo.md"
+              meta-path (io/path-join storage-dir "meta.edn")]
+          (workspace/write-meta-if-missing! storage-dir doc-path)
+          (is (io/file-exists? meta-path))
+          (is (= {:doc-path doc-path}
+                 (edn/read-string (io/read-file meta-path))))))))
+  (testing "does not overwrite an existing meta.edn"
+    (with-temp-dir "meta-keep"
+      (fn [storage-dir]
+        (let [meta-path (io/path-join storage-dir "meta.edn")]
+          (io/ensure-dir storage-dir)
+          (io/write-file meta-path (pr-str {:doc-path "/original.md"}))
+          (workspace/write-meta-if-missing! storage-dir "/different.md")
+          (is (= {:doc-path "/original.md"}
+                 (edn/read-string (io/read-file meta-path)))))))))
 
 (deftest test-enumerate-topics
   (testing "enumerate returns only topic files, sorted, with filename and filepath"
