@@ -28,7 +28,7 @@
 ;; - We bridge this gap with IPC, maintaining clean separation
 
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
-(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:document.actions/pick]]))
+(nxr/register-action! :menu.actions/open-document (fn [_state] [[:document.actions/pick]]))
 (nxr/register-action! :menu.actions/new-window (fn [_state] [[:window.actions/create]]))
 
 ;; Store Effects
