@@ -8,6 +8,29 @@
    (is (= "/app/data/User/workspaces/default/topics"
          (io/topics-dir-path workspace-dir)))))
 
+(deftest test-path->document-hash
+  (testing "hex-encoded, fixed length (SHA-256 = 64 chars)"
+    (let [hash (io/path->document-hash "/Users/paul/memo.md")]
+      (is (string? hash))
+      (is (= 64 (count hash)))
+      (is (re-matches #"[0-9a-f]+" hash))))
+  (testing "stable: same path yields same hash"
+    (is (= (io/path->document-hash "/Users/paul/memo.md")
+           (io/path->document-hash "/Users/paul/memo.md"))))
+  (testing "different paths yield different hashes"
+    (is (not= (io/path->document-hash "/Users/paul/a.md")
+              (io/path->document-hash "/Users/paul/b.md"))))
+  (testing "normalizes path: equivalent paths yield same hash"
+    (is (= (io/path->document-hash "/Users/paul/memo.md")
+           (io/path->document-hash "/Users/paul/../paul/memo.md")))))
+
+(deftest test-document-storage-dir
+  (testing "composes <user-data>/User/documents/<hash>"
+    (let [doc-path "/Users/paul/memo.md"
+          hash     (io/path->document-hash doc-path)]
+      (is (= (str "/app/data/User/documents/" hash)
+             (io/document-storage-dir "/app/data" doc-path))))))
+
 (deftest test-file-timestamps
   (testing "returns created-at and last-accessed-at (ms)"
     (with-temp-dir "timestamps"
