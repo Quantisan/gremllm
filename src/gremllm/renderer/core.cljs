@@ -39,10 +39,10 @@
                         :save-topic (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
                         nil)))
 
-    ;; Handle workspace sync from main process
-    (.onWorkspaceOpened js/window.electronAPI
-                        (fn [_ topics-data]
-                          (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
+    ;; Handle document sync from main process
+    (.onDocumentOpened js/window.electronAPI
+                       (fn [_ topics-data]
+                         (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
 
     ;; Handle ACP session updates from main process
     (.onAcpSessionUpdate js/window.electronAPI
