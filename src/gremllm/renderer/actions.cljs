@@ -172,9 +172,6 @@
 (nxr/register-action! :workspace.actions/pick-document workspace/pick-document)
 
 ;; Document
-(nxr/register-action! :document.actions/create document/create)
-(nxr/register-action! :document.actions/create-success document/create-success)
-(nxr/register-action! :document.actions/create-error document/create-error)
 (nxr/register-action! :document.actions/set-content document/set-content)
 
 ;; Topic
