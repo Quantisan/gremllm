@@ -129,10 +129,10 @@
   (fn [_ _ & args]
     (apply js/console.error args)))
 
-;; Workspace reload effect
+;; Document reload effect
 (nxr/register-effect! :workspace.effects/reload
   (fn [_ _]
-    (.reloadWorkspace js/window.electronAPI)))
+    (.reloadDocument js/window.electronAPI)))
 
 ;; ACP: forward user's accept/reject for a pending permission to the main process.
 (nxr/register-effect! :acp.effects/resolve-permission
@@ -169,7 +169,7 @@
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 (nxr/register-action! :workspace.actions/set workspace/set-workspace)
-(nxr/register-action! :workspace.actions/pick-folder workspace/pick-folder)
+(nxr/register-action! :workspace.actions/pick-document workspace/pick-document)
 
 ;; Document
 (nxr/register-action! :document.actions/create document/create)

@@ -45,9 +45,9 @@
   ;; Don't auto-create anything on load error - let user handle it
   [])
 
-(defn pick-folder
-  "User wants to pick and open a different workspace folder."
+(defn pick-document
+  "User wants to pick and open a different document."
   [_state]
   [[:effects/promise
-    {:promise (.pickWorkspaceFolder js/window.electronAPI)}]])
-     ;; No handlers needed - workspace data arrives via workspace:opened IPC event
+    {:promise (.openDocument js/window.electronAPI)}]])
+     ;; No handlers needed - document data arrives via document:opened IPC event
