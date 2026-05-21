@@ -7,7 +7,6 @@
 (def ^:private user-subdir "User")
 (def ^:private documents-subdir "documents")
 (def ^:private topics-subdir "topics")
-(def ^:private document-filename "document.md")
 
 ;; Clojure-friendly wrappers around Node's `path` API
 (defn path-join
@@ -92,7 +91,3 @@
   "Per-document state directory: <user-data-dir>/User/documents/<hash>."
   [user-data-dir doc-path]
   (path-join user-data-dir user-subdir documents-subdir (path->document-hash doc-path)))
-
-;; TODO: remove with its last consumer (acp send-prompt) in the IPC rewiring task.
-(defn document-file-path [workspace-dir]
-  (path-join workspace-dir document-filename))

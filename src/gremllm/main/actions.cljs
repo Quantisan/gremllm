@@ -7,6 +7,7 @@
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.acp.permission :as acp-permission]
             [gremllm.main.io :as io]
+            [gremllm.main.state :as state]
             [gremllm.main.window :as window]))
 
 ;; Register how to extract state from the system
@@ -64,6 +65,10 @@
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
+;; App-level Actions
+(nxr/register-action! :app.actions/set-user-data-dir
+  (fn [_state dir] [[:store.effects/save state/user-data-dir dir]]))
+
 ;; Document Actions/Effects Registration
 (nxr/register-action! :document.actions/open workspace-actions/open)
 (nxr/register-action! :document.actions/pick workspace-actions/pick)
@@ -106,10 +111,8 @@
     (dispatch [[:ipc.effects/promise->reply (acp-effects/resume-session cwd acp-session-id)]])))
 
 (nxr/register-effect! :acp.effects/send-prompt
-  (fn [{:keys [dispatch]} _ acp-session-id message workspace-dir]
-    (let [maybe-document-path (some-> workspace-dir io/document-file-path)
-          maybe-document-path (when (and maybe-document-path (io/file-exists? maybe-document-path))
-                                maybe-document-path)
+  (fn [{:keys [dispatch]} _ acp-session-id message doc-path]
+    (let [maybe-document-path (when (and doc-path (io/file-exists? doc-path)) doc-path)
           content-blocks (acp-actions/prompt-content-blocks message maybe-document-path)]
       (dispatch [[:ipc.effects/promise->reply
                   (acp-effects/prompt acp-session-id content-blocks)]]))))
