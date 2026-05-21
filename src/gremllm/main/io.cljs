@@ -1,9 +1,11 @@
 (ns gremllm.main.io
   (:require ["path" :as path]
             ["fs" :as fs]
+            ["crypto" :as crypto]
             ["node:url" :as node-url]))
 
 (def ^:private user-subdir "User")
+(def ^:private documents-subdir "documents")
 (def ^:private topics-subdir "topics")
 (def ^:private document-filename "document.md")
 
@@ -75,8 +77,22 @@
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-(defn topics-dir-path [workspace-dir]
-  (path-join workspace-dir topics-subdir))
+(defn topics-dir-path [storage-dir]
+  (path-join storage-dir topics-subdir))
 
+(defn path->document-hash
+  "SHA-256 (hex) of the document's normalized absolute path. Stable key for
+   locating a document's per-document state under userData."
+  [doc-path]
+  (-> (crypto/createHash "sha256")
+      (.update (path/resolve doc-path))
+      (.digest "hex")))
+
+(defn document-storage-dir
+  "Per-document state directory: <user-data-dir>/User/documents/<hash>."
+  [user-data-dir doc-path]
+  (path-join user-data-dir user-subdir documents-subdir (path->document-hash doc-path)))
+
+;; TODO: remove with its last consumer (acp send-prompt) in the IPC rewiring task.
 (defn document-file-path [workspace-dir]
   (path-join workspace-dir document-filename))
