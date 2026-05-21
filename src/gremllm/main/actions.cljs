@@ -27,7 +27,7 @@
 ;; - We bridge this gap with IPC, maintaining clean separation
 
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
-(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/pick-folder]]))
+(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:document.actions/pick]]))
 (nxr/register-action! :menu.actions/new-window (fn [_state] [[:window.actions/create]]))
 
 ;; Store Effects
@@ -64,13 +64,12 @@
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
-;; Workspace Actions/Effects Registration
-(nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
-(nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
-(nxr/register-action! :workspace.actions/pick-folder workspace-actions/pick-folder)
-(nxr/register-action! :workspace.actions/reload workspace-actions/reload)
+;; Document Actions/Effects Registration
+(nxr/register-action! :document.actions/open workspace-actions/open)
+(nxr/register-action! :document.actions/pick workspace-actions/pick)
+(nxr/register-action! :document.actions/reload workspace-actions/reload)
 
-(nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
+(nxr/register-effect! :workspace.effects/pick-document-dialog workspace-effects/pick-document-dialog)
 (nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
 
 ;; ACP Event Actions
