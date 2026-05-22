@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release-macos:
@@ -22,10 +22,8 @@ jobs:
       - name: Build macOS artifact
         run: npm run make
 
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v7
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          path: out/make/**/*.dmg
-          if-no-files-found: error
-          archive: false
-          retention-days: 30
+          files: out/make/**/*.dmg
+          prerelease: true
