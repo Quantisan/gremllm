@@ -27,7 +27,7 @@ jobs:
         run: npm run make
 
       - name: Upload DMG to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: out/make/**/*.dmg
           draft: true
