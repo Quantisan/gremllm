@@ -1,7 +1,7 @@
 {
   "name": "gremllm",
   "productName": "Gremllm",
-  "version": "0.8.0-rc.2",
+  "version": "0.8.0-rc.3",
   "description": "An Experimental IDE (Idea Development Environment)",
   "license": "MIT",
   "author": "Quantisan, LLC",
