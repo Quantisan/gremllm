@@ -169,7 +169,7 @@
 (nxr/register-action! :workspace.actions/load-error workspace/load-error)
 (nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
 (nxr/register-action! :workspace.actions/set workspace/set-workspace)
-(nxr/register-action! :workspace.actions/pick-document workspace/pick-document)
+(nxr/register-action! :document.actions/pick-document workspace/pick-document)
 
 ;; Document
 (nxr/register-action! :document.actions/set-content document/set-content)
