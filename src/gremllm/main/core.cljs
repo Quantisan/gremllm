@@ -26,7 +26,7 @@
    ASYNC HANDLERS (fire-and-forget, return #js {}):
    - Dispatch to registered Nexus actions (not effects directly)
    - Flow: Dispatch action → Return empty → Effects execute → Events notify renderer
-   - Examples: acp/prompt, document/reload, document/open
+   - Examples: acp/prompt, document/reload, document/pick
    - Why: Action registry provides discoverability and instrumentation points
 
    Both patterns maintain FCIS: sync handlers pipeline through pure functions;
@@ -58,9 +58,8 @@
                            [[:document.actions/reload]])
              #js {}))
 
-  (.handle ipcMain "document/open"
+  (.handle ipcMain "document/pick"
            (fn [_event]
-             ;; Opens the file picker; chosen document flows back via document:opened
              (nxr/dispatch store {}
                            [[:document.actions/pick]])
              #js {}))

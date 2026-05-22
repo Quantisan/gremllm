@@ -2,7 +2,7 @@
   (:require [nexus.registry :as nxr]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.ipc :as ipc-effects]
-            [gremllm.main.actions.workspace :as workspace-actions]
+            [gremllm.main.actions.document :as document-actions]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.acp.permission :as acp-permission]
@@ -28,7 +28,7 @@
 ;; - We bridge this gap with IPC, maintaining clean separation
 
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
-(nxr/register-action! :menu.actions/open-document (fn [_state] [[:document.actions/pick]]))
+(nxr/register-action! :menu.actions/open-document (fn [_state] [[:menu.effects/send-command :open-document]]))
 (nxr/register-action! :menu.actions/new-window (fn [_state] [[:window.actions/create]]))
 
 ;; Store Effects
@@ -70,12 +70,12 @@
   (fn [_state dir] [[:store.effects/save state/user-data-dir dir]]))
 
 ;; Document Actions/Effects Registration
-(nxr/register-action! :document.actions/open workspace-actions/set-active-document)
-(nxr/register-action! :document.actions/pick workspace-actions/pick-document)
-(nxr/register-action! :document.actions/reload workspace-actions/reload)
+(nxr/register-action! :document.actions/open document-actions/open)
+(nxr/register-action! :document.actions/pick document-actions/pick)
+(nxr/register-action! :document.actions/reload document-actions/reload)
 
-(nxr/register-effect! :workspace.effects/pick-document-dialog workspace-effects/pick-document-dialog)
-(nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
+(nxr/register-effect! :document.effects/pick-dialog workspace-effects/pick-dialog)
+(nxr/register-effect! :document.effects/load-and-sync workspace-effects/load-and-sync)
 
 ;; ACP Event Actions
 ;; =================

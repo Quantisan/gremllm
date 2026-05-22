@@ -68,7 +68,7 @@ const acpResolvePermission = ({ toolCallId, optionId }) => {
 contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	deleteTopic: (topicId) => ipcRenderer.invoke("topic/delete", topicId),
-	openDocument: () => ipcRenderer.invoke("document/open"),
+	pickDocument: () => ipcRenderer.invoke("document/pick"),
 	reloadDocument: () => ipcRenderer.invoke("document/reload"),
 	onMenuCommand: (callback) => ipcRenderer.on("menu:command", callback),
 	onDocumentOpened: (callback) => ipcRenderer.on("document:opened", callback),
