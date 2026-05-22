@@ -45,8 +45,8 @@ ACP arrives exclusively through the `acp:session-update` event stream.
 
 ### Document Open Or Reload
 
-Start in `core.cljs` at `document/open` (which opens the file picker) or
-`document/reload`, then follow `main.actions.workspace` and
+Start in `core.cljs` at `document/pick` (which opens the file picker) or
+`document/reload`, then follow `main.actions.document` and
 `main.effects.workspace/load-and-sync`. That effect reads the chosen `.md` file
 at its real path, loads `topics/*.edn` from the document's per-document storage
 dir under `userData`, writes `meta.edn` if absent, and pushes `document:opened`
@@ -75,7 +75,7 @@ on each side of the seam.
 All handlers are registered in `core.cljs`. The preload bridge (`resources/public/js/preload.js`) exposes promise-style wrappers and intent-driven listeners so the renderer never touches raw IPC strings.
 
 **Topic:** `topic/save`, `topic/delete`
-**Document:** `document/open`, `document/reload`, `document:opened` (event, main → renderer)
+**Document:** `document/pick`, `document/reload`, `document:opened` (event, main → renderer)
 **ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp:session-update` (event, main → renderer)
 **Menu:** `menu:command` (event, main → renderer)
 
