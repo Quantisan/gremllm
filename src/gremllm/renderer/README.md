@@ -4,7 +4,7 @@
 
 The renderer owns the Nexus store, Replicant rendering, preload-driven IPC
 consumption, topic and document state, and the document-first user workflows
-that tie chat activity back to `document.md`.
+that tie chat activity back to the active document.
 
 ## Structure
 
@@ -24,7 +24,7 @@ that tie chat activity back to `document.md`.
 
 ### App Bootstrap
 
-Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
+Start in `core.cljs`, which wires preload listeners for `document:opened`,
 `acp:session-update`, and `menu:command`, installs the render watcher, and
 performs the first render explicitly so the welcome view appears before any
 state change.
@@ -32,7 +32,7 @@ state change.
 ### Workspace Hydration
 
 Follow `renderer.actions.workspace/opened`, which normalizes the
-`workspace:opened` payload into renderer state including workspace metadata,
+`document:opened` payload into renderer state including workspace metadata,
 topic map, and document content.
 
 ### Prompt Submission
