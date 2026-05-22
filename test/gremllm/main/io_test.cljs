@@ -4,9 +4,9 @@
             [gremllm.test-utils :refer [with-temp-dir]]))
 
 (deftest test-topics-dir-path
- (let [workspace-dir "/app/data/User/workspaces/default"]
-   (is (= "/app/data/User/workspaces/default/topics"
-         (io/topics-dir-path workspace-dir)))))
+ (let [storage-dir "/app/data/User/documents/abc123"]
+   (is (= "/app/data/User/documents/abc123/topics"
+         (io/topics-dir-path storage-dir)))))
 
 (deftest test-path->document-hash
   (testing "hex-encoded, fixed length (SHA-256 = 64 chars)"

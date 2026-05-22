@@ -4,7 +4,7 @@
 
 The renderer owns the Nexus store, Replicant rendering, preload-driven IPC
 consumption, topic and document state, and the document-first user workflows
-that tie chat activity back to `document.md`.
+that tie chat activity back to the active document.
 
 ## Structure
 
@@ -33,7 +33,7 @@ state change.
 ### Workspace Hydration
 
 Follow `renderer.actions.workspace/opened`, which normalizes the
-`workspace:opened` payload into renderer state including workspace metadata,
+`document:opened` payload into renderer state including workspace metadata,
 topic map, and document content.
 
 ### Prompt Submission
