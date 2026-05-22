@@ -25,7 +25,8 @@ that tie chat activity back to `document.md`.
 ### App Bootstrap
 
 Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
-`acp:session-update`, and `menu:command`, installs the render watcher, and
+`acp:session-update`, `acp:permission-pending`, and `menu:command`, installs
+the render watcher, and
 performs the first render explicitly so the welcome view appears before any
 state change.
 
@@ -45,11 +46,13 @@ structured user message, dispatches chat updates, and calls
 ### Streaming Session Updates
 
 Start in `renderer.actions.acp/session-update`, which routes assistant chunks,
-reasoning chunks, tool events, and pending diff accumulation into topic state.
-Tool events are forwarded to `renderer.actions.tool-call/start` and `/update`,
-which own per-message tool-call state. The `AcpUpdate` coercion happens at the
-IPC boundary in `src/gremllm/schema/codec.cljs` before the update reaches this
-action.
+reasoning chunks, tool events (including web-search start/update and
+read-completed), and pending diff accumulation into topic state. Tool events are
+forwarded to `renderer.actions.tool-call/start` and `/update`, which own
+per-message tool-call state; edit-completed events dispatch to
+`:topic.actions/append-pending-diffs`. The `AcpUpdate` coercion happens at the
+IPC boundary in `src/gremllm/schema/codec/acp.cljs` before the update reaches
+this action.
 
 ### Excerpt Capture And Document Review
 
@@ -76,6 +79,7 @@ not a domain action.
 - `src/gremllm/renderer/ui/document.cljs`
 - `src/gremllm/renderer/ui/document/diffs.cljs`
 - `src/gremllm/renderer/ui/document/locator.cljs`
+- `src/gremllm/renderer/ui/elements.cljs`
 - `src/gremllm/renderer/ui/document/highlights.cljs`
 
 ## Tests

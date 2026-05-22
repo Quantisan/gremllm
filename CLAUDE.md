@@ -44,7 +44,7 @@ Why PE due diligence:
 - Main process owns Electron lifecycle, native integration, workspace and topic persistence, and ACP connection bootstrap
 - Renderer owns application state, user workflows, document rendering, excerpt capture, and pending diff presentation
 - Schema/codecs own shared contracts and boundary transforms
-- The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle, callbacks, and permission resolution
+- The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle and callbacks, while `main.effects.acp.permission` owns permission resolution
 
 **Detailed Architecture Docs:**
 - `src/gremllm/main/README.md`

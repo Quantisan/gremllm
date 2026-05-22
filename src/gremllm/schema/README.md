@@ -15,7 +15,7 @@ process, or JS boundaries needs validation or translation.
 - `src/gremllm/schema/codec/acp.cljs`: ACP wire-to-CLJS coercion — session
   updates and permission request codecs
 - `src/gremllm/schema/codec/acp/permission.cljs`: pure permission policy used
-  by `main.effects.acp`
+  by `main.effects.acp.permission`
 
 ## Operational Rules
 
@@ -75,8 +75,8 @@ Shapes are labeled by role; file location follows from that.
 - `AcpPermissionRequest`: permission request shape from the ACP SDK
 
 **Policy** (`schema/codec/acp/permission.cljs`):
-- Permission decision inputs used by `main.effects.acp` to resolve ACP
-  permission requests without involving the JS transport bridge
+- Permission decision inputs used by `main.effects.acp.permission` to resolve
+  ACP permission requests without involving the JS transport bridge
 
 ## Entry Points
 

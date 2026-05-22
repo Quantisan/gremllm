@@ -25,7 +25,8 @@ IPC event.
 Note the mechanism split: `acp/*` handlers use `ipcMain.on` (fire-and-forget;
 no return value, the renderer never awaits the call), while all other handlers —
 including the Nexus-dispatching ones — use `ipcMain.handle`. Renderer state for
-ACP arrives exclusively through the `acp:session-update` event stream.
+ACP arrives through the `acp:session-update` and `acp:permission-pending`
+event streams.
 
 ## Domain Map
 
@@ -35,7 +36,9 @@ ACP arrives exclusively through the `acp:session-update` event stream.
 - `actions/`: pure planning helpers for ACP prompt content, documents, topics,
   and workspace actions
 - `effects/`: imperative file I/O, dialogs, IPC replies, ACP runtime
-  integration, attachment storage
+  integration, attachment storage; `effects/acp/permission.cljs` owns the
+  SDK `resolvePermission` seam and deferred-approval state
+- `effects/ipc.cljs`: IPC boundary effects
 - `window.cljs`: BrowserWindow sizing, preload wiring, and close handling
 - `menu.cljs`: native menu template and dispatch into renderer-facing commands
 - `io.cljs`: path helpers and file utilities
@@ -67,9 +70,15 @@ Start in `core.cljs` at `document/create`, then follow
 Start in `core.cljs` at `acp/new-session`, `acp/resume-session`, or
 `acp/prompt`. Session runtime behavior lives in `main.effects.acp`, while
 prompt content construction lives in `main.actions.acp`. The JS transport bridge
-is at `src/js/acp/index.js`; permission policy is at
-`src/gremllm/schema/codec/acp_permission.cljs`. See those READMEs for details
-on each side of the seam.
+is at `src/js/acp/index.js`; pure permission policy is at
+`src/gremllm/schema/codec/acp/permission.cljs` and runtime permission state
+lives in `main.effects.acp.permission`. See those READMEs for details on each
+side of the seam.
+
+### Deferred Permission Flow
+
+Start in `core.cljs` at `acp/resolve-permission`, which dispatches to
+`effects.acp.permission/record-decision!` to unblock the SDK callback.
 
 ## IPC Channels
 
@@ -77,7 +86,7 @@ All handlers are registered in `core.cljs`. The preload bridge (`resources/publi
 
 **Topic:** `topic/save`, `topic/delete`
 **Document:** `document/create`
-**ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp:session-update` (event, main → renderer)
+**ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp/resolve-permission`, `acp:session-update` (event, main → renderer), `acp:permission-pending` (event, main → renderer)
 **Workspace:** `workspace/pick-folder`, `workspace/reload`, `workspace:opened` (event, main → renderer)
 **Menu:** `menu:command` (event, main → renderer)
 
@@ -98,5 +107,6 @@ See `src/gremllm/main/io.cljs` for path helpers and `src/gremllm/schema/codec.cl
 - `src/gremllm/main/actions.cljs`
 - `src/gremllm/main/effects/workspace.cljs`
 - `src/gremllm/main/effects/acp.cljs`
+- `src/gremllm/main/effects/acp/permission.cljs`
 - `src/gremllm/main/window.cljs`
 - `src/gremllm/main/menu.cljs`
