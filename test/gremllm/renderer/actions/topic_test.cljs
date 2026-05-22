@@ -89,7 +89,7 @@
     (let [topic-id "topic-123"
           state    {}
           actions  (topic/delete-topic-success state topic-id)]
-      (is (= [[:workspace.effects/reload]] actions)
+      (is (= [[:document.effects/reload]] actions)
           "should return workspace reload effect"))))
 
 (deftest delete-topic-error-test

@@ -48,8 +48,8 @@ event streams.
 
 ### Document Open Or Reload
 
-Start in `core.cljs` at `document/open` (which opens the file picker) or
-`document/reload`, then follow `main.actions.workspace` and
+Start in `core.cljs` at `document/pick` (which opens the file picker) or
+`document/reload`, then follow `main.actions.document` and
 `main.effects.workspace/load-and-sync`. That effect reads the chosen `.md` file
 at its real path, loads `topics/*.edn` from the document's per-document storage
 dir under `userData`, writes `meta.edn` if absent, and pushes `document:opened`
