@@ -36,7 +36,8 @@
     (.onMenuCommand js/window.electronAPI
                     (fn [_ command-str]
                       (case (keyword command-str)
-                        :save-topic (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
+                        :save-topic    (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
+                        :open-document (nxr/dispatch store {} [[:document.actions/pick]])
                         nil)))
 
     ;; Handle document sync from main process

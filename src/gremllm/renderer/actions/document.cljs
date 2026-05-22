@@ -8,6 +8,12 @@
 ;; also a persistence pitfall: `:excerpt.actions/invalidate-across-topics`
 ;; only mutates renderer state, so a later reload can resurrect the invalidated
 ;; excerpts from disk.
+(defn pick
+  "Initiate the file picker to open a document."
+  [_state]
+  [[:effects/promise
+    {:promise (.pickDocument js/window.electronAPI)}]])
+
 (defn set-content [_state content]
   [[:effects/save document-state/content-path content]
    [:excerpt.actions/invalidate-across-topics]
