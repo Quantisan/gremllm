@@ -48,5 +48,5 @@
      [:p {:style {:color      "var(--pico-muted-color)"
                   :font-style "italic"}}
       "No document open."]
-     [:button {:on {:click [[:document.actions/pick-document]]}}
+     [:button {:on {:click [[:document.actions/pick]]}}
       "Open…"]]))

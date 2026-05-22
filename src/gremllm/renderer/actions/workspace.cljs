@@ -45,9 +45,3 @@
   ;; Don't auto-create anything on load error - let user handle it
   [])
 
-(defn pick-document
-  "User wants to pick and open a different document."
-  [_state]
-  [[:effects/promise
-    {:promise (.openDocument js/window.electronAPI)}]])
-     ;; No handlers needed - document data arrives via document:opened IPC event

@@ -5,5 +5,5 @@
           :style {:text-align "center"
                   :margin-top "20vh"}}
    [:h1 "Gremllm"]
-   [:button {:on {:click [[:document.actions/pick-document]]}}
+   [:button {:on {:click [[:document.actions/pick]]}}
     "Open a document…"]])
