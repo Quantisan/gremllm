@@ -70,8 +70,8 @@
   (fn [_state dir] [[:store.effects/save state/user-data-dir dir]]))
 
 ;; Document Actions/Effects Registration
-(nxr/register-action! :document.actions/open workspace-actions/open)
-(nxr/register-action! :document.actions/pick workspace-actions/pick)
+(nxr/register-action! :document.actions/open workspace-actions/set-active-document)
+(nxr/register-action! :document.actions/pick workspace-actions/pick-document)
 (nxr/register-action! :document.actions/reload workspace-actions/reload)
 
 (nxr/register-effect! :workspace.effects/pick-document-dialog workspace-effects/pick-document-dialog)
