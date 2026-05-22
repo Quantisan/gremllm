@@ -76,8 +76,8 @@
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-(defn topics-dir-path [storage-dir]
-  (path-join storage-dir topics-subdir))
+(defn topics-dir-path [document-data-dir]
+  (path-join document-data-dir topics-subdir))
 
 (defn path->document-hash
   "SHA-256 (hex) of the document's normalized absolute path. Stable key for
@@ -87,7 +87,7 @@
       (.update (path/resolve doc-path))
       (.digest "hex")))
 
-(defn document-storage-dir
+(defn document-data-dir
   "Per-document state directory: <user-data-dir>/User/documents/<hash>."
   [user-data-dir doc-path]
   (path-join user-data-dir user-subdir documents-subdir (path->document-hash doc-path)))
