@@ -100,7 +100,7 @@
       (.-dialog (js/require "electron/main"))
       (catch :default _ nil))))
 
-(defn pick-document-dialog [{:keys [dispatch]} _]
+(defn pick-dialog [{:keys [dispatch]} _]
   (when-let [dialog (get-dialog)]
     (-> (.showOpenDialog dialog
                          #js {:title "Open"
