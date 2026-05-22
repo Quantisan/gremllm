@@ -4,10 +4,6 @@
   [:main {:class "container"
           :style {:text-align "center"
                   :margin-top "20vh"}}
-   [:header
-    [:h1 "Welcome to Gremllm"]
-    [:p "Open a Markdown document to begin"]]
+   [:h1 "Gremllm"]
    [:button {:on {:click [[:document.actions/pick-document]]}}
-    "Open…"]
-   [:footer
-    [:small "Open any .md file from anywhere on your machine."]]])
+    "Open a document…"]])
