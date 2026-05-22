@@ -4,7 +4,6 @@
   ;; Runtime dependency: electron/main dialog
   ;; Loaded dynamically to support testing outside Electron environment
   (:require [gremllm.main.io :as io]
-            [gremllm.main.state :as state]
             [clojure.edn :as edn]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
@@ -54,12 +53,12 @@
 (def ^:private meta-filename "meta.edn")
 
 (defn write-meta-if-missing!
-  "Persist {:doc-path ...} to <storage-dir>/meta.edn, only if not already
+  "Persist {:doc-path ...} to <document-data-dir>/meta.edn, only if not already
    present. Not load-bearing for v1 — supports a future recent-documents UI."
-  [storage-dir doc-path]
-  (let [meta-path (io/path-join storage-dir meta-filename)]
+  [document-data-dir doc-path]
+  (let [meta-path (io/path-join document-data-dir meta-filename)]
     (when-not (io/file-exists? meta-path)
-      (io/ensure-dir storage-dir)
+      (io/ensure-dir document-data-dir)
       (io/write-file meta-path (pr-str {:doc-path doc-path})))))
 
 ;;; ---------------------------------------------------------------------------
@@ -155,13 +154,11 @@
 (defn load-and-sync
   "Read the document, load its topics from per-document storage, persist meta,
    then send the sync payload to the renderer."
-  [{:keys [dispatch]} store doc-path]
-  (let [user-data-dir (state/get-user-data-dir @store)
-        storage-dir   (io/document-storage-dir user-data-dir doc-path)
-        document-name (io/path-basename doc-path)
+  [{:keys [dispatch]} _store doc-path document-data-dir]
+  (let [document-name (io/path-basename doc-path)
         document-meta (schema/create-workspace-meta document-name)
         document      (read-document doc-path)
-        topics        (-> storage-dir io/topics-dir-path load-topics)
+        topics        (-> document-data-dir io/topics-dir-path load-topics)
         sync-payload  (codec/workspace-sync-for-ipc topics document-meta document)]
-    (write-meta-if-missing! storage-dir doc-path)
+    (write-meta-if-missing! document-data-dir doc-path)
     (dispatch [[:ipc.effects/send-to-renderer "document:opened" sync-payload]])))

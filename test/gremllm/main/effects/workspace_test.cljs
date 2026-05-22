@@ -89,20 +89,20 @@
 (deftest test-write-meta-if-missing!
   (testing "writes meta.edn with :doc-path when absent"
     (with-temp-dir "meta-write"
-      (fn [storage-dir]
+      (fn [document-data-dir]
         (let [doc-path  "/Users/paul/memo.md"
-              meta-path (io/path-join storage-dir "meta.edn")]
-          (workspace/write-meta-if-missing! storage-dir doc-path)
+              meta-path (io/path-join document-data-dir "meta.edn")]
+          (workspace/write-meta-if-missing! document-data-dir doc-path)
           (is (io/file-exists? meta-path))
           (is (= {:doc-path doc-path}
                  (edn/read-string (io/read-file meta-path))))))))
   (testing "does not overwrite an existing meta.edn"
     (with-temp-dir "meta-keep"
-      (fn [storage-dir]
-        (let [meta-path (io/path-join storage-dir "meta.edn")]
-          (io/ensure-dir storage-dir)
+      (fn [document-data-dir]
+        (let [meta-path (io/path-join document-data-dir "meta.edn")]
+          (io/ensure-dir document-data-dir)
           (io/write-file meta-path (pr-str {:doc-path "/original.md"}))
-          (workspace/write-meta-if-missing! storage-dir "/different.md")
+          (workspace/write-meta-if-missing! document-data-dir "/different.md")
           (is (= {:doc-path "/original.md"}
                  (edn/read-string (io/read-file meta-path)))))))))
 
@@ -159,27 +159,26 @@
               (is (= {(:id good-topic) good-topic} result)))))))))
 
 (deftest test-load-and-sync
-  (testing "reads document, loads topics from storage dir, persists meta, dispatches document:opened"
+  (testing "reads document, loads topics from document data dir, persists meta, dispatches document:opened"
     (with-temp-dir "load-sync"
       (fn [temp-dir]
-        (let [user-data-dir temp-dir
-              doc-path      (io/path-join temp-dir "memo.md")
-              storage-dir   (io/document-storage-dir user-data-dir doc-path)
-              topics-dir    (io/topics-dir-path storage-dir)
-              topic         {:id "topic-123" :name "Test" :messages []}
-              store         (atom {:user-data-dir user-data-dir})
-              dispatched    (atom nil)]
+        (let [doc-path         (io/path-join temp-dir "memo.md")
+              document-data-dir (io/document-data-dir temp-dir doc-path)
+              topics-dir       (io/topics-dir-path document-data-dir)
+              topic            {:id "topic-123" :name "Test" :messages []}
+              dispatched       (atom nil)]
 
-          ;; Setup: document content on disk + a topic in the per-document storage dir
+          ;; Setup: document content on disk + a topic in the per-document data dir
           (io/write-file doc-path "# Memo\n")
           (io/ensure-dir topics-dir)
           (write-topic-file topics-dir topic)
 
-          ;; Execute: store is the 2nd positional arg (Nexus effect signature)
+          ;; Execute: document-data-dir passed as arg (action computes, effect receives)
           (workspace/load-and-sync
             {:dispatch #(reset! dispatched %)}
-            store
-            doc-path)
+            (atom {})
+            doc-path
+            document-data-dir)
 
           ;; Verify IPC effect
           (let [[[effect-key channel data]] @dispatched]
@@ -188,6 +187,6 @@
             (is (= "# Memo\n" (get-in data [:document :content])))
             (is (contains? (:topics data) "topic-123")))
 
-          ;; meta.edn written into the storage dir
+          ;; meta.edn written into the document data dir
           (is (= {:doc-path doc-path}
-                 (edn/read-string (io/read-file (io/path-join storage-dir "meta.edn"))))))))))
+                 (edn/read-string (io/read-file (io/path-join document-data-dir "meta.edn"))))))))))

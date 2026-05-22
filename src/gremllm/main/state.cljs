@@ -13,16 +13,16 @@
 (defn get-user-data-dir [state]
   (get-in state user-data-dir))
 
-(defn get-storage-dir
+(defn get-document-data-dir
   "Per-document state directory for the active document, or nil if no document
    is open (or userData is not yet known)."
   [state]
   (let [doc-path      (get-active-document-path state)
         user-data-dir (get-user-data-dir state)]
     (when (and doc-path user-data-dir)
-      (io/document-storage-dir user-data-dir doc-path))))
+      (io/document-data-dir user-data-dir doc-path))))
 
 (defn get-topics-dir
-  "Topics directory under the active document's storage dir, or nil."
+  "Topics directory under the active document's data dir, or nil."
   [state]
-  (some-> (get-storage-dir state) io/topics-dir-path))
+  (some-> (get-document-data-dir state) io/topics-dir-path))
