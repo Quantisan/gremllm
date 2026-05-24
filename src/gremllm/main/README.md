@@ -57,7 +57,7 @@ to the renderer.
 Start in `core.cljs` at `topic/save` or `topic/delete`. The topics directory is
 derived from the active document via `state/get-document-paths`; then follow
 `main.actions.topic` for the pure save or delete plan and
-`main.effects.document` for the disk effect.
+`main.effects.topic` for the disk effect.
 
 ### ACP Session Operations
 
