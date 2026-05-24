@@ -47,7 +47,7 @@ ACP arrives exclusively through the `acp:session-update` event stream.
 
 Start in `core.cljs` at `document/pick` (which opens the file picker) or
 `document/reload`, then follow `main.actions.document` and
-`main.effects.workspace/load-and-sync`. That effect reads the chosen `.md` file
+`main.effects.document/load-and-sync`. That effect reads the chosen `.md` file
 at its real path, loads `topics/*.edn` from the document's per-document storage
 dir under `userData`, writes `meta.edn` if absent, and pushes `document:opened`
 to the renderer.
@@ -57,7 +57,7 @@ to the renderer.
 Start in `core.cljs` at `topic/save` or `topic/delete`. The topics directory is
 derived from the active document via `state/get-document-paths`; then follow
 `main.actions.topic` for the pure save or delete plan and
-`main.effects.workspace` for the disk effect.
+`main.effects.document` for the disk effect.
 
 ### ACP Session Operations
 
@@ -102,7 +102,7 @@ and `path->document-hash`) and `src/gremllm/schema/codec.cljs` for disk codecs.
 
 - `src/gremllm/main/core.cljs`
 - `src/gremllm/main/actions.cljs`
-- `src/gremllm/main/effects/workspace.cljs`
+- `src/gremllm/main/effects/document.cljs`
 - `src/gremllm/main/effects/acp.cljs`
 - `src/gremllm/main/window.cljs`
 - `src/gremllm/main/menu.cljs`

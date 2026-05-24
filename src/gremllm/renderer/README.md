@@ -11,9 +11,9 @@ that tie chat activity back to the active document.
 - `core.cljs`: renderer bootstrap, IPC listeners, render loop, initial dispatch
 - `actions.cljs`: action and effect registration, DOM placeholders, promise
   handling, store-level effects
-- `actions/`: domain actions for UI, workspace, topics, messages, ACP,
+- `actions/`: domain actions for UI, document, topics, messages, ACP,
   tool calls, excerpts, and document state
-- `state/`: focused selectors and paths for document, workspace, topic, form,
+- `state/`: focused selectors and paths for document, topic, form,
   excerpt, loading, and UI state
 - `ui.cljs`: app-level composition
 - `ui/`: chat, topics, welcome, markdown, and document views
@@ -29,10 +29,10 @@ Start in `core.cljs`, which wires preload listeners for `document:opened`,
 performs the first render explicitly so the welcome view appears before any
 state change.
 
-### Workspace Hydration
+### Document Hydration
 
-Follow `renderer.actions.workspace/opened`, which normalizes the
-`document:opened` payload into renderer state including workspace metadata,
+Follow `renderer.actions.document/opened`, which normalizes the
+`document:opened` payload into renderer state including document metadata,
 topic map, and document content.
 
 ### Prompt Submission

@@ -5,8 +5,8 @@
 
 ;; Design note: `set-content` currently does two jobs: replace document text
 ;; and invalidate excerpts across all topics. That is a leaky boundary because
-;; this action is also used for workspace hydration/reload, so opening a
-;; workspace can invalidate excerpts even when no user edit happened. There is
+;; this action is also used for document hydration/reload, so opening a
+;; document can invalidate excerpts even when no user edit happened. There is
 ;; also a persistence pitfall: `:excerpt.actions/invalidate-across-topics`
 ;; only mutates renderer state, so a later reload can resurrect the invalidated
 ;; excerpts from disk.
@@ -37,7 +37,7 @@
   [_state sync-data-js]
   (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc sync-data-js)]
     ;; TODO: When document revision tracking lands, compare the incoming document revision here and clear staged selections across topics on change.
-    ;; Why: staged anchors are revision-bound workspace/topic context, so invalidation belongs at the workspace sync boundary rather than in a generic document setter.
+    ;; Why: staged anchors are revision-bound document/topic context, so invalidation belongs at the document sync boundary rather than in a generic document setter.
     (cond-> [[:document.actions/set-meta document-meta]
              [:document.actions/set-content (:content document)]]
       (empty? topics) (conj [:document.actions/initialize-empty])

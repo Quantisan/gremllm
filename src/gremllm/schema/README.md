@@ -9,7 +9,7 @@ process, or JS boundaries needs validation or translation.
 ## Files
 
 - `src/gremllm/schema.cljs`: canonical data models for messages, attachments,
-  excerpts, topics, sessions, and workspace-level structures
+  excerpts, topics, sessions, and document-level structures
 - `src/gremllm/schema/codec.cljs`: boundary adapters for disk, IPC, and DOM
   selection capture
 - `src/gremllm/schema/codec/acp.cljs`: ACP wire-to-CLJS coercion — session
