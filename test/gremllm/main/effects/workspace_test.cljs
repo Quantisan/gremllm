@@ -162,23 +162,21 @@
   (testing "reads document, loads topics from document data dir, dispatches document:opened"
     (with-temp-dir "load-sync"
       (fn [temp-dir]
-        (let [doc-path         (io/path-join temp-dir "memo.md")
-              document-data-dir (io/document-data-dir temp-dir doc-path)
-              topics-dir       (io/topics-dir-path document-data-dir)
-              topic            {:id "topic-123" :name "Test" :messages []}
-              dispatched       (atom nil)]
+        (let [doc-path    (io/path-join temp-dir "memo.md")
+              paths      (io/document-paths temp-dir doc-path)
+              topic      {:id "topic-123" :name "Test" :messages []}
+              dispatched (atom nil)]
 
           ;; Setup: document content on disk + a topic in the per-document data dir
           (io/write-file doc-path "# Memo\n")
-          (io/ensure-dir topics-dir)
-          (write-topic-file topics-dir topic)
+          (io/ensure-dir (:topics-dir paths))
+          (write-topic-file (:topics-dir paths) topic)
 
-          ;; Execute: document-data-dir passed as arg (action computes, effect receives)
+          ;; Execute: paths map passed as arg (action computes, effect receives)
           (workspace/load-and-sync
             {:dispatch #(reset! dispatched %)}
             (atom {})
-            doc-path
-            document-data-dir)
+            paths)
 
           ;; Verify IPC effect
           (let [[[effect-key channel data]] @dispatched]
@@ -188,4 +186,4 @@
             (is (contains? (:topics data) "topic-123")))
 
           ;; meta.edn NOT written by load-and-sync (separate persist-meta effect)
-          (is (not (io/file-exists? (io/path-join document-data-dir "meta.edn")))))))))
+          (is (not (io/file-exists? (io/path-join (:data-dir paths) "meta.edn")))))))))

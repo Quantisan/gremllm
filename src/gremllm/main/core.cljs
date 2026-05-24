@@ -37,7 +37,7 @@
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
-             (let [topics-dir (state/get-topics-dir @store)]
+             (let [{:keys [topics-dir]} (state/get-document-paths @store)]
                (-> (js->clj topic-data :keywordize-keys true)
                    (codec/topic-from-ipc)
                    (topic-actions/topic->save-plan topics-dir)
@@ -45,7 +45,7 @@
 
   (.handle ipcMain "topic/delete"
            (fn [_event topic-id]
-             (let [topics-dir (state/get-topics-dir @store)]
+             (let [{:keys [topics-dir]} (state/get-document-paths @store)]
                (-> topic-id
                    (codec/topic-id-from-ipc)
                    (topic-actions/topic->delete-plan topics-dir)

@@ -31,10 +31,6 @@
       (.toString)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn user-dir-path
-  "Build a path under the app's user scope directory (User)."
-  [user-data-dir & segments]
-  (apply path-join user-data-dir user-subdir segments))
 
 (defn ensure-dir [dir]
   (.mkdirSync fs dir #js {:recursive true}))
@@ -76,9 +72,6 @@
   [dir]
   (array-seq (.readdirSync fs dir)))
 
-(defn topics-dir-path [document-data-dir]
-  (path-join document-data-dir topics-subdir))
-
 (defn path->document-hash
   "SHA-256 (hex) of the document's normalized absolute path. Stable key for
    locating a document's per-document state under userData."
@@ -87,7 +80,12 @@
       (.update (path/resolve doc-path))
       (.digest "hex")))
 
-(defn document-data-dir
-  "Per-document state directory: <user-data-dir>/User/documents/<hash>."
+(defn document-paths
+  "Build all per-document paths from root inputs. Returns a plain map —
+   the single source of truth for the document path hierarchy."
   [user-data-dir doc-path]
-  (path-join user-data-dir user-subdir documents-subdir (path->document-hash doc-path)))
+  (let [hash     (path->document-hash doc-path)
+        data-dir (path-join user-data-dir user-subdir documents-subdir hash)]
+    {:doc-path   doc-path
+     :data-dir   data-dir
+     :topics-dir (path-join data-dir topics-subdir)}))

@@ -153,16 +153,16 @@
 
 (defn record-source-path
   "Nexus effect: record the document's filesystem location in the data dir."
-  [_ctx _store document-data-dir doc-path]
-  (write-meta-if-missing! document-data-dir doc-path))
+  [_ctx _store {:keys [data-dir doc-path]}]
+  (write-meta-if-missing! data-dir doc-path))
 
 (defn load-and-sync
   "Read the document, load its topics from per-document storage,
    then send the sync payload to the renderer."
-  [{:keys [dispatch]} _store doc-path document-data-dir]
+  [{:keys [dispatch]} _store {:keys [doc-path data-dir topics-dir]}]
   (let [document-name (io/path-basename doc-path)
         document-meta (schema/create-workspace-meta document-name)
         document      (read-document doc-path)
-        topics        (-> document-data-dir io/topics-dir-path load-topics)
+        topics        (load-topics topics-dir)
         sync-payload  (codec/workspace-sync-for-ipc topics document-meta document)]
     (dispatch [[:ipc.effects/send-to-renderer "document:opened" sync-payload]])))
