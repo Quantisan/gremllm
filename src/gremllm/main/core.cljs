@@ -24,10 +24,10 @@
    - Why: Electron's IPC requires synchronous return values
 
    ASYNC HANDLERS (fire-and-forget, return #js {}):
-   - Dispatch to registered Nexus actions (not effects directly)
-   - Flow: Dispatch action → Return empty → Effects execute → Events notify renderer
+   - Dispatch to registered Nexus actions or effects
+   - Flow: Dispatch action/effect → Return empty → Effects execute → Events notify renderer
    - Examples: acp/prompt, document/reload, document/pick
-   - Why: Action registry provides discoverability and instrumentation points
+   - Actions when the handler needs state or composition; effects directly when it's a straight passthrough
 
    Both patterns maintain FCIS: sync handlers pipeline through pure functions;
    async handlers route through registered actions that return effect descriptions.
@@ -61,7 +61,7 @@
   (.handle ipcMain "document/pick"
            (fn [_event]
              (nxr/dispatch store {}
-                           [[:document.actions/pick]])
+                           [[:document.effects/pick-dialog]])
              #js {}))
 
   ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
