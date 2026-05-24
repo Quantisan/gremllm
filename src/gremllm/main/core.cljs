@@ -4,7 +4,6 @@
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.workspace :as workspace-effects]
             [gremllm.main.menu :as menu]
-            [gremllm.main.io :as io]
             [gremllm.main.state :as state]
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
@@ -70,14 +69,14 @@
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/new-session"}
-                       [[:acp.effects/new-session (some-> (state/get-active-document-path @store) io/path-dirname)]])))
+                       [[:acp.effects/new-session (state/get-working-dir @store)]])))
 
   (.on ipcMain "acp/resume-session"
        (fn [event ipc-correlation-id acp-session-id]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/resume-session"}
-                       [[:acp.effects/resume-session (some-> (state/get-active-document-path @store) io/path-dirname) acp-session-id]])))
+                       [[:acp.effects/resume-session (state/get-working-dir @store) acp-session-id]])))
 
   (.on ipcMain "acp/prompt"
        (fn [event ipc-correlation-id acp-session-id message]
