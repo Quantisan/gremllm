@@ -58,7 +58,7 @@ to the renderer.
 ### Topic Save Or Delete
 
 Start in `core.cljs` at `topic/save` or `topic/delete`. The topics directory is
-derived from the active document via `state/get-topics-dir`; then follow
+derived from the active document via `state/get-document-paths`; then follow
 `main.actions.topic` for the pure save or delete plan and
 `main.effects.workspace` for the disk effect.
 

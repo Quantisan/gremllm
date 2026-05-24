@@ -3,10 +3,14 @@
             [gremllm.main.io :as io]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
-(deftest test-topics-dir-path
- (let [document-data-dir "/app/data/User/documents/abc123"]
-   (is (= "/app/data/User/documents/abc123/topics"
-         (io/topics-dir-path document-data-dir)))))
+(deftest test-document-paths
+  (let [doc-path "/Users/paul/memo.md"
+        hash     (io/path->document-hash doc-path)
+        paths    (io/document-paths "/app/data" doc-path)]
+    (testing "returns doc-path, data-dir, and topics-dir"
+      (is (= doc-path (:doc-path paths)))
+      (is (= (str "/app/data/User/documents/" hash) (:data-dir paths)))
+      (is (= (str "/app/data/User/documents/" hash "/topics") (:topics-dir paths))))))
 
 (deftest test-path->document-hash
   (testing "hex-encoded, fixed length (SHA-256 = 64 chars)"
@@ -24,12 +28,6 @@
     (is (= (io/path->document-hash "/Users/paul/memo.md")
            (io/path->document-hash "/Users/paul/../paul/memo.md")))))
 
-(deftest test-document-data-dir
-  (testing "composes <user-data>/User/documents/<hash>"
-    (let [doc-path "/Users/paul/memo.md"
-          hash     (io/path->document-hash doc-path)]
-      (is (= (str "/app/data/User/documents/" hash)
-             (io/document-data-dir "/app/data" doc-path))))))
 
 (deftest test-file-timestamps
   (testing "returns created-at and last-accessed-at (ms)"
