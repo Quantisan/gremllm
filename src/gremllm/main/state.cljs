@@ -13,6 +13,10 @@
 (defn get-user-data-dir [state]
   (get-in state user-data-dir))
 
+(defn get-working-dir
+  [state]
+  (some-> (get-active-document-path state) io/path-dirname))
+
 (defn get-document-paths
   "Per-document paths for the active document, or nil if no document
    is open (or userData is not yet known)."
