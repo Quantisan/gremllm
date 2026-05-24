@@ -52,7 +52,6 @@
 
 (def ^:private meta-filename "meta.edn")
 
-;; TODO: should be be a Nexus effect?
 (defn write-meta-if-missing!
   "Persist {:doc-path ...} to <document-data-dir>/meta.edn, only if not already
    present. Not load-bearing for v1 — supports a future recent-documents UI."
@@ -152,8 +151,13 @@
   {:content (when (io/file-exists? doc-path)
               (io/read-file doc-path))})
 
+(defn record-source-path
+  "Nexus effect: record the document's filesystem location in the data dir."
+  [_ctx _store document-data-dir doc-path]
+  (write-meta-if-missing! document-data-dir doc-path))
+
 (defn load-and-sync
-  "Read the document, load its topics from per-document storage, persist meta,
+  "Read the document, load its topics from per-document storage,
    then send the sync payload to the renderer."
   [{:keys [dispatch]} _store doc-path document-data-dir]
   (let [document-name (io/path-basename doc-path)
@@ -161,5 +165,4 @@
         document      (read-document doc-path)
         topics        (-> document-data-dir io/topics-dir-path load-topics)
         sync-payload  (codec/workspace-sync-for-ipc topics document-meta document)]
-    (write-meta-if-missing! document-data-dir doc-path)
     (dispatch [[:ipc.effects/send-to-renderer "document:opened" sync-payload]])))
