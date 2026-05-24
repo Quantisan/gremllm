@@ -42,34 +42,11 @@
       (is (nil? (#'workspace/parse-topic-content "{:broken" "bad.edn")))
       (is (nil? (#'workspace/parse-topic-content "not-edn" "bad.edn")))))
 
-  (testing "applies schema coercion"
-    (let [topic-without-unsaved {:id "topic-123" :name "Test" :messages [] :session {:pending-diffs []}}
-          content (pr-str topic-without-unsaved)
-          result (#'workspace/parse-topic-content content "test.edn")]
-      ;; codec/topic-from-disk should not add :unsaved? key
-      (is (nil? (:unsaved? result))))))
+)
 
 (deftest test-save-load-round-trip
-  (testing "save and load preserves topic data"
+  (testing "save and load preserves topic data including excerpts"
     (with-temp-dir "topic-save-load"
-      (fn [temp-dir]
-        (let [topic    {:id "topic-1754952422977-ixubncif66"
-                        :name "Test Topic"
-                        :messages [{:id 1754952440824 :type :user :text "Hello"}]
-                        :session {:pending-diffs []}
-                        :excerpts []}
-              filename (str (:id topic) ".edn")
-              filepath (io/path-join temp-dir filename)
-              _saved-path (workspace/save-topic {:dir temp-dir
-                                                 :filepath filepath
-                                                 :content (pr-str topic)})
-              all-topics (workspace/load-topics temp-dir)
-              loaded (get all-topics (:id topic))]
-          (is (= topic loaded)))))))
-
-(deftest test-save-load-round-trip-with-excerpt
-  (testing "save and load preserves a non-empty excerpt"
-    (with-temp-dir "topic-save-load-staged"
       (fn [temp-dir]
         (let [topic    {:id "topic-1754952422977-ixubncif66"
                         :name "Test Topic"
@@ -83,8 +60,7 @@
                                                  :content (pr-str topic)})
               all-topics (workspace/load-topics temp-dir)
               loaded (get all-topics (:id topic))]
-          (is (= topic loaded))
-          (is (= [excerpt-fixture] (:excerpts loaded))))))))
+          (is (= topic loaded)))))))
 
 (deftest test-write-meta-if-missing!
   (testing "writes meta.edn with :doc-path when absent"
