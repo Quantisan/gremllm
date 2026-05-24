@@ -43,7 +43,7 @@
     ;; Handle document sync from main process
     (.onDocumentOpened js/window.electronAPI
                        (fn [_ topics-data]
-                         (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
+                         (nxr/dispatch store {} [[:document.actions/opened topics-data]])))
 
     ;; Handle ACP session updates from main process
     (.onAcpSessionUpdate js/window.electronAPI

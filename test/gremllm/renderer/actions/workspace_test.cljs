@@ -1,5 +1,5 @@
 (ns gremllm.renderer.actions.workspace-test
-  (:require [gremllm.renderer.actions.workspace :as workspace]
+  (:require [gremllm.renderer.actions.document :as document]
             [gremllm.test-utils :refer [with-console-error-silenced]]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
@@ -28,24 +28,24 @@
 (deftest opened-test
   (testing "Empty workspace initializes new topic"
     (let [workspace-data (create-workspace-data-js)
-          effects (workspace/opened {} workspace-data)]
-      (is (has-action? effects :workspace.actions/set))
+          effects (document/opened {} workspace-data)]
+      (is (has-action? effects :document.actions/set-meta))
       (is (has-action? effects :document.actions/set-content))
-      (is (has-action? effects :workspace.actions/initialize-empty))))
+      (is (has-action? effects :document.actions/initialize-empty))))
 
   (testing "Workspace with topics restores them"
     (let [topic (schema/create-topic)
           workspace-data (create-workspace-data-js {:topics {"tid" topic}})
-          effects (workspace/opened {} workspace-data)
-          [_ restore-params] (get-action effects :workspace.actions/restore-with-topics)]
-      (is (has-action? effects :workspace.actions/set))
+          effects (document/opened {} workspace-data)
+          [_ restore-params] (get-action effects :document.actions/restore-with-topics)]
+      (is (has-action? effects :document.actions/set-meta))
       (is (has-action? effects :document.actions/set-content))
       (is (= "tid" (:active-topic-id restore-params)))
       (is (contains? (:topics restore-params) "tid"))))
 
   (testing "Workspace with document content dispatches set-content"
     (let [workspace-data (create-workspace-data-js {:document {:content "# Test Document"}})
-          effects (workspace/opened {} workspace-data)
+          effects (document/opened {} workspace-data)
           [_ content] (get-action effects :document.actions/set-content)]
       (is (has-action? effects :document.actions/set-content))
       (is (= "# Test Document" content)))))
@@ -53,8 +53,8 @@
 (deftest restore-with-topics-test
   (testing "Sets active topic without model param"
     (let [topic (schema/create-topic)
-          effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
-                                                      :active-topic-id "tid"})
+          effects (document/restore-with-topics {} {:topics          {"tid" topic}
+                                                     :active-topic-id "tid"})
           [_ topic-id] (get-action effects :topic.actions/set-active)]
       (is (= "tid" topic-id))
       (is (= 2 (count (get-action effects :topic.actions/set-active)))
@@ -62,8 +62,8 @@
 
   (testing "Restores all topics to state"
     (let [topic (schema/create-topic)
-          effects (workspace/restore-with-topics {} {:topics          {"tid" topic}
-                                                      :active-topic-id "tid"})
+          effects (document/restore-with-topics {} {:topics          {"tid" topic}
+                                                     :active-topic-id "tid"})
           [_ topics-path saved-topics] (get-action effects :effects/save)]
       (is (= [:topics] topics-path))
       (is (contains? saved-topics "tid")))))
@@ -74,8 +74,8 @@
           topic2 (schema/create-topic)
           workspace-data (create-workspace-data-js {:topics {"tid1" topic1
                                                               "tid2" topic2}})
-          effects (workspace/opened {} workspace-data)
-          [_ restore-params] (get-action effects :workspace.actions/restore-with-topics)
+          effects (document/opened {} workspace-data)
+          [_ restore-params] (get-action effects :document.actions/restore-with-topics)
           selected-id (:active-topic-id restore-params)]
       (is (contains? #{"tid1" "tid2"} selected-id))
       (is (= 2 (count (:topics restore-params)))))))
@@ -83,5 +83,5 @@
 (deftest load-error-test
   (testing "Returns no effects on error"
     (with-console-error-silenced
-      (let [effects (workspace/load-error {} (js/Error. "Test error"))]
+      (let [effects (document/load-error {} (js/Error. "Test error"))]
         (is (empty? effects))))))
