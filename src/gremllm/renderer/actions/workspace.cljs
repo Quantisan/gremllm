@@ -1,22 +1,23 @@
 (ns gremllm.renderer.actions.workspace
   (:require [gremllm.schema.codec :as codec]
-            [gremllm.renderer.state.workspace :as workspace-state]
+            [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn mark-loaded
-  "Mark the workspace as successfully loaded and ready for use."
+  "Mark the document as successfully loaded and ready for use."
   [_state]
-  [[:effects/save workspace-state/loaded-path true]])
+  [[:effects/save document-state/loaded-path true]])
 
 (defn set-workspace
-  "Save workspace metadata into renderer state."
-  [_state workspace]
-  [[:effects/save workspace-state/workspace-path workspace]])
+  "Save document metadata into renderer state.
+   Writes :name individually — must NOT replace the entire [:document] map."
+  [_state document-meta]
+  [[:effects/save document-state/name-path (:name document-meta)]])
 
 (defn opened
-  "A workspace folder has been opened/loaded from disk."
-  [_state workspace-data-js]
-  (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc workspace-data-js)]
+  "A document has been opened/loaded from disk."
+  [_state sync-data-js]
+  (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc sync-data-js)]
     ;; TODO: When document revision tracking lands, compare the incoming document revision here and clear staged selections across topics on change.
     ;; Why: staged anchors are revision-bound workspace/topic context, so invalidation belongs at the workspace sync boundary rather than in a generic document setter.
     (cond-> [[:workspace.actions/set document-meta]
@@ -28,20 +29,19 @@
                                :active-topic-id (ffirst topics)}]))))
 
 (defn restore-with-topics
-  "Restore a workspace that has existing topics."
+  "Restore a document that has existing topics."
   [_state {:keys [topics active-topic-id]}]
   [[:effects/save topic-state/topics-path topics]
    [:topic.actions/set-active active-topic-id]
    [:workspace.actions/mark-loaded]])
 
 (defn initialize-empty
-  "Initialize an empty workspace with its first topic."
+  "Initialize an empty document with its first topic."
   [_state]
   [[:topic.actions/start-new]
    [:workspace.actions/mark-loaded]])
 
 (defn load-error [_state error]
-  (js/console.error "workspace load failed:" error)
+  (js/console.error "document load failed:" error)
   ;; Don't auto-create anything on load error - let user handle it
   [])
-
