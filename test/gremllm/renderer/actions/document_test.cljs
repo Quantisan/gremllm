@@ -12,7 +12,7 @@
   "Create document sync data with Malli defaults, optionally overriding fields"
   [& [overrides]]
   (-> (m/decode codec/DocumentSyncData
-                {:document-meta {:name "Test Workspace"}}
+                {:document-meta {:name "Test Document"}}
                 mt/default-value-transformer)
       (merge overrides)
       clj->js))
@@ -33,26 +33,26 @@
              (first effects))))))
 
 (deftest opened-test
-  (testing "Empty workspace initializes new topic"
-    (let [workspace-data (create-sync-data-js)
-          effects (document/opened {} workspace-data)]
+  (testing "Empty document initializes new topic"
+    (let [sync-data (create-sync-data-js)
+          effects (document/opened {} sync-data)]
       (is (has-action? effects :document.actions/set-meta))
       (is (has-action? effects :document.actions/set-content))
       (is (has-action? effects :document.actions/initialize-empty))))
 
-  (testing "Workspace with topics restores them"
+  (testing "Document with topics restores them"
     (let [topic (schema/create-topic)
-          workspace-data (create-sync-data-js {:topics {"tid" topic}})
-          effects (document/opened {} workspace-data)
+          sync-data (create-sync-data-js {:topics {"tid" topic}})
+          effects (document/opened {} sync-data)
           [_ restore-params] (get-action effects :document.actions/restore-with-topics)]
       (is (has-action? effects :document.actions/set-meta))
       (is (has-action? effects :document.actions/set-content))
       (is (= "tid" (:active-topic-id restore-params)))
       (is (contains? (:topics restore-params) "tid"))))
 
-  (testing "Workspace with document content dispatches set-content"
-    (let [workspace-data (create-sync-data-js {:document {:content "# Test Document"}})
-          effects (document/opened {} workspace-data)
+  (testing "Document with content dispatches set-content"
+    (let [sync-data (create-sync-data-js {:document {:content "# Test Document"}})
+          effects (document/opened {} sync-data)
           [_ content] (get-action effects :document.actions/set-content)]
       (is (has-action? effects :document.actions/set-content))
       (is (= "# Test Document" content)))))
@@ -79,9 +79,9 @@
   (testing "Selects one topic when multiple exist"
     (let [topic1 (schema/create-topic)
           topic2 (schema/create-topic)
-          workspace-data (create-sync-data-js {:topics {"tid1" topic1
-                                                         "tid2" topic2}})
-          effects (document/opened {} workspace-data)
+          sync-data (create-sync-data-js {:topics {"tid1" topic1
+                                                    "tid2" topic2}})
+          effects (document/opened {} sync-data)
           [_ restore-params] (get-action effects :document.actions/restore-with-topics)
           selected-id (:active-topic-id restore-params)]
       (is (contains? #{"tid1" "tid2"} selected-id))
