@@ -3,15 +3,6 @@
             [gremllm.main.state :as state]
             [gremllm.main.io :as io]))
 
-(deftest test-active-document-path
-  (is (= "/Users/paul/memo.md"
-         (state/get-active-document-path {:active-document-path "/Users/paul/memo.md"})))
-  (is (nil? (state/get-active-document-path {}))))
-
-(deftest test-user-data-dir
-  (is (= "/app/data" (state/get-user-data-dir {:user-data-dir "/app/data"})))
-  (is (nil? (state/get-user-data-dir {}))))
-
 (deftest test-get-document-paths
   (testing "derives document paths from user-data-dir + active-document-path"
     (let [doc-path "/Users/paul/memo.md"

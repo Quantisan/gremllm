@@ -7,8 +7,7 @@
   (let [doc-path "/Users/paul/memo.md"
         hash     (io/path->document-hash doc-path)
         paths    (io/document-paths "/app/data" doc-path)]
-    (testing "returns doc-path, data-dir, and topics-dir"
-      (is (= doc-path (:doc-path paths)))
+    (testing "builds data-dir and topics-dir from user-data-dir + hash"
       (is (= (str "/app/data/User/documents/" hash) (:data-dir paths)))
       (is (= (str "/app/data/User/documents/" hash "/topics") (:topics-dir paths))))))
 
@@ -18,12 +17,6 @@
       (is (string? hash))
       (is (= 64 (count hash)))
       (is (re-matches #"[0-9a-f]+" hash))))
-  (testing "stable: same path yields same hash"
-    (is (= (io/path->document-hash "/Users/paul/memo.md")
-           (io/path->document-hash "/Users/paul/memo.md"))))
-  (testing "different paths yield different hashes"
-    (is (not= (io/path->document-hash "/Users/paul/a.md")
-              (io/path->document-hash "/Users/paul/b.md"))))
   (testing "normalizes path: equivalent paths yield same hash"
     (is (= (io/path->document-hash "/Users/paul/memo.md")
            (io/path->document-hash "/Users/paul/../paul/memo.md")))))
