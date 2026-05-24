@@ -7,7 +7,7 @@
   (.focus node)
   (.select node))
 
-(defn- render-workspace-header [{:keys [name description]}]
+(defn- render-document-header [{:keys [name description]}]
   [:hgroup
    [:h4 (or name "")]
    [:p [:small (or description "")]]])
@@ -42,7 +42,7 @@
 
 (defn render-left-panel-content
   ;; topics-map = schema/DocumentTopics
-  [{:keys [workspace topics-map active-topic-id renaming-topic-id]}]
+  [{:keys [document-meta topics-map active-topic-id renaming-topic-id]}]
   [:div
    [:nav
     [:ul
@@ -52,7 +52,7 @@
                           [:topic.actions/start-new]]}}
        "➕ New Topic"]]]]
    [:hr]
-   (render-workspace-header workspace)
+   (render-document-header document-meta)
    [:nav
     [:ul
      (for [t (vals topics-map)]
