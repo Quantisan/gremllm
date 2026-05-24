@@ -52,6 +52,7 @@
 
 (def ^:private meta-filename "meta.edn")
 
+;; TODO: should be be a Nexus effect?
 (defn write-meta-if-missing!
   "Persist {:doc-path ...} to <document-data-dir>/meta.edn, only if not already
    present. Not load-bearing for v1 — supports a future recent-documents UI."
