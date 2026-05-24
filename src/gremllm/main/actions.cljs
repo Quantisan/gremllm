@@ -71,7 +71,6 @@
 
 ;; Document Actions/Effects Registration
 (nxr/register-action! :document.actions/open document-actions/open)
-(nxr/register-action! :document.actions/pick document-actions/pick)
 (nxr/register-action! :document.actions/reload document-actions/reload)
 
 (nxr/register-effect! :document.effects/pick-dialog workspace-effects/pick-dialog)
