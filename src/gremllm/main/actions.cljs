@@ -3,7 +3,7 @@
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.ipc :as ipc-effects]
             [gremllm.main.actions.document :as document-actions]
-            [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.effects.document :as document-effects]
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.acp.permission :as acp-permission]
             [gremllm.main.io :as io]
@@ -73,9 +73,9 @@
 (nxr/register-action! :document.actions/open document-actions/open)
 (nxr/register-action! :document.actions/reload document-actions/reload)
 
-(nxr/register-effect! :document.effects/pick-dialog workspace-effects/pick-dialog)
-(nxr/register-effect! :document.effects/load-and-sync workspace-effects/load-and-sync)
-(nxr/register-effect! :document.effects/record-source-path workspace-effects/record-source-path)
+(nxr/register-effect! :document.effects/pick-dialog document-effects/pick-dialog)
+(nxr/register-effect! :document.effects/load-and-sync document-effects/load-and-sync)
+(nxr/register-effect! :document.effects/record-source-path document-effects/record-source-path)
 
 ;; ACP Event Actions
 ;; =================
