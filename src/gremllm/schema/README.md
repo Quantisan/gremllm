@@ -65,7 +65,7 @@ Shapes are labeled by role; file location follows from that.
 - `PersistedTopic`: EDN shape written to `topics/*.edn`
 
 **Transmitted (boundary adapter)** (`schema/codec.cljs`):
-- `WorkspaceSyncData`: payload sent from main to renderer during workspace
+- `DocumentSyncData`: payload sent from main to renderer during document
   hydration; defined and coerced at the IPC boundary, not in the canonical
   schema
 

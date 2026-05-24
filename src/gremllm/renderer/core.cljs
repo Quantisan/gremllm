@@ -62,7 +62,7 @@
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]
-                 (when-not (schema/valid-workspace-topics? (topic-state/get-topics-map state))
+                 (when-not (schema/valid-document-topics? (topic-state/get-topics-map state))
                    (js/console.error "Invalid topics in state!"))
 
                  (->> state
