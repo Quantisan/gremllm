@@ -159,7 +159,7 @@
               (is (= {(:id good-topic) good-topic} result)))))))))
 
 (deftest test-load-and-sync
-  (testing "reads document, loads topics from document data dir, persists meta, dispatches document:opened"
+  (testing "reads document, loads topics from document data dir, dispatches document:opened"
     (with-temp-dir "load-sync"
       (fn [temp-dir]
         (let [doc-path         (io/path-join temp-dir "memo.md")
@@ -187,6 +187,5 @@
             (is (= "# Memo\n" (get-in data [:document :content])))
             (is (contains? (:topics data) "topic-123")))
 
-          ;; meta.edn written into the document data dir
-          (is (= {:doc-path doc-path}
-                 (edn/read-string (io/read-file (io/path-join document-data-dir "meta.edn"))))))))))
+          ;; meta.edn NOT written by load-and-sync (separate persist-meta effect)
+          (is (not (io/file-exists? (io/path-join document-data-dir "meta.edn")))))))))

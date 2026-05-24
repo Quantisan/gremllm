@@ -75,6 +75,7 @@
 
 (nxr/register-effect! :document.effects/pick-dialog workspace-effects/pick-dialog)
 (nxr/register-effect! :document.effects/load-and-sync workspace-effects/load-and-sync)
+(nxr/register-effect! :document.effects/record-source-path workspace-effects/record-source-path)
 
 ;; ACP Event Actions
 ;; =================
