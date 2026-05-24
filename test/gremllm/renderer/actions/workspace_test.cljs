@@ -10,8 +10,8 @@
 (defn create-workspace-data-js
   "Create workspace data with Malli defaults, optionally overriding fields"
   [& [overrides]]
-  (-> (m/decode codec/WorkspaceSyncData
-                {:workspace {:name "Test Workspace"}}
+  (-> (m/decode codec/DocumentSyncData
+                {:document-meta {:name "Test Workspace"}}
                 mt/default-value-transformer)
       (merge overrides)
       clj->js))

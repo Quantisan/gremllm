@@ -16,10 +16,10 @@
 (defn opened
   "A workspace folder has been opened/loaded from disk."
   [_state workspace-data-js]
-  (let [{:keys [topics workspace document]} (codec/workspace-sync-from-ipc workspace-data-js)]
+  (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc workspace-data-js)]
     ;; TODO: When document revision tracking lands, compare the incoming document revision here and clear staged selections across topics on change.
     ;; Why: staged anchors are revision-bound workspace/topic context, so invalidation belongs at the workspace sync boundary rather than in a generic document setter.
-    (cond-> [[:workspace.actions/set workspace]
+    (cond-> [[:workspace.actions/set document-meta]
              [:document.actions/set-content (:content document)]]
       (empty? topics) (conj [:workspace.actions/initialize-empty])
       (seq topics)    (conj [:workspace.actions/restore-with-topics

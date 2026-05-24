@@ -161,8 +161,8 @@
    then send the sync payload to the renderer."
   [{:keys [dispatch]} _store {:keys [doc-path data-dir topics-dir]}]
   (let [document-name (io/path-basename doc-path)
-        document-meta (schema/create-workspace-meta document-name)
+        document-meta (schema/create-document-meta document-name)
         document      (read-document doc-path)
         topics        (load-topics topics-dir)
-        sync-payload  (codec/workspace-sync-for-ipc topics document-meta document)]
+        sync-payload  (codec/document-sync-for-ipc topics document-meta document)]
     (dispatch [[:ipc.effects/send-to-renderer "document:opened" sync-payload]])))

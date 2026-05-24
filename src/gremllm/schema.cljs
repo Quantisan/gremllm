@@ -209,15 +209,14 @@
 (defn create-topic []
   (m/decode Topic {} mt/default-value-transformer))
 
-;; TODO: rename to DocumentTopics
-(def WorkspaceTopics
+(def DocumentTopics
   "Map of Topics keyed by Topic ID"
   [:map-of :string Topic])
 
-(defn valid-workspace-topics? [topics-map]
-  (m/validate WorkspaceTopics topics-map))
+(defn valid-document-topics? [topics-map]
+  (m/validate DocumentTopics topics-map))
 
-(defn create-workspace-meta
-  "Constructor for workspace metadata kept at [:workspace] and sent over IPC."
+(defn create-document-meta
+  "Constructor for document metadata sent over IPC."
   [name]
   {:name name})

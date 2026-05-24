@@ -41,7 +41,7 @@
          "×"]]))])
 
 (defn render-left-panel-content
-  ;; topics-map = schema/WorkspaceTopics
+  ;; topics-map = schema/DocumentTopics
   [{:keys [workspace topics-map active-topic-id renaming-topic-id]}]
   [:div
    [:nav
