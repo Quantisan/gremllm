@@ -24,7 +24,7 @@ Early. Not ready for real work.
 
 ## Try it on macOS
 
-Download the `.dmg` from the latest successful run on the [Actions tab](https://github.com/Quantisan/gremllm/actions/workflows/release-macos.yml). After downloading with Safari, remove quarantine before first launch:
+Download the `.dmg` from our [Github Releases](https://github.com/Quantisan/gremllm/releases). After downloading with Safari, remove quarantine before first launch:
 
 ```bash
 xattr -dr com.apple.quarantine Gremllm.app
