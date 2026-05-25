@@ -216,7 +216,11 @@
 (defn valid-document-topics? [topics-map]
   (m/validate DocumentTopics topics-map))
 
+(def DocumentMeta
+  "Metadata about a document, sent over IPC during sync."
+  [:map [:name :string]])
+
 (defn create-document-meta
   "Constructor for document metadata sent over IPC."
   [name]
-  {:name name})
+  (m/decode DocumentMeta {:name name} mt/default-value-transformer))

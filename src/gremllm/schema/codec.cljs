@@ -32,7 +32,7 @@
   "Schema for document data sent from main to renderer via IPC.
    Used when loading a document from disk."
   [:map
-   [:document-meta [:map [:name :string]]]
+   [:document-meta schema/DocumentMeta]
    [:topics {:default {}} schema/DocumentTopics]
    [:document {:default {:content nil}} [:map [:content [:maybe :string]]]]])
 
