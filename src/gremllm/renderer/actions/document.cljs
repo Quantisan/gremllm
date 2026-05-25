@@ -27,10 +27,9 @@
   [[:effects/save document-state/loaded-path true]])
 
 (defn set-meta
-  "Save document metadata into renderer state.
-   Writes :name individually — must NOT replace the entire [:document] map."
+  "Save document metadata into renderer state."
   [_state document-meta]
-  [[:effects/save document-state/name-path (:name document-meta)]])
+  [[:effects/save document-state/meta-path document-meta]])
 
 (defn opened
   "A document has been opened/loaded from disk."
