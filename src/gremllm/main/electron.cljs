@@ -8,11 +8,11 @@
       (js/require "electron/main")
       (catch :default _ nil))))
 
-(defn get-dialog []
+(defn ^js get-dialog []
   (some-> (require-electron-main) .-dialog))
 
-(defn get-browser-window []
+(defn ^js get-browser-window []
   (some-> (require-electron-main) .-BrowserWindow))
 
-(defn get-app []
+(defn ^js get-app []
   (some-> (require-electron-main) .-app))
