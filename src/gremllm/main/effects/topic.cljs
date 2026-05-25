@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.topic
   "Topic persistence side effects and file I/O operations."
-  (:require [gremllm.main.io :as io]
+  (:require [gremllm.main.electron :as electron]
+            [gremllm.main.io :as io]
             [clojure.edn :as edn]
             [gremllm.schema.codec :as codec]))
 
@@ -72,12 +73,6 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Dialog Operations
 
-(defn- get-dialog []
-  (when (exists? js/require)
-    (try
-      (.-dialog (js/require "electron/main"))
-      (catch :default _ nil))))
-
 (defn- user-confirmed-deletion?
   [result]
   (= 1 (.-response result)))
@@ -92,7 +87,7 @@
 (defn delete-topic-with-confirmation
   "Execute topic deletion plan: optionally confirm, then delete from disk."
   [{:keys [filepath confirmation-message confirmation-detail]}]
-  (if-let [dialog (get-dialog)]
+  (if-let [dialog (electron/get-dialog)]
     (-> (.showMessageBox dialog
                          #js {:type "warning"
                               :message confirmation-message

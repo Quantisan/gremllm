@@ -1,6 +1,7 @@
 (ns gremllm.main.effects.document
   "Document lifecycle I/O: open, load, sync to renderer."
-  (:require [gremllm.main.io :as io]
+  (:require [gremllm.main.electron :as electron]
+            [gremllm.main.io :as io]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
@@ -22,14 +23,8 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Dialog Operations
 
-(defn- get-dialog []
-  (when (exists? js/require)
-    (try
-      (.-dialog (js/require "electron/main"))
-      (catch :default _ nil))))
-
 (defn pick-dialog [{:keys [dispatch]} _]
-  (when-let [dialog (get-dialog)]
+  (when-let [dialog (electron/get-dialog)]
     (-> (.showOpenDialog dialog
                          #js {:title "Open"
                               :properties #js ["openFile"]
