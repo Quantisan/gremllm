@@ -41,7 +41,7 @@ When text is selected and a session is already active, the popover offers two ac
 
 ### Visual Markers
 
-Sessions appear in the document as **colored vertical bars in the left margin**, positioned alongside the anchored excerpt text. Bars span the height of the excerpt's block range.
+Sessions appear in the document as **colored vertical bars in the right margin**, positioned alongside the anchored excerpt text. Bars span the height of the excerpt's block range. The right-side placement creates a left-to-right flow — document content → margin hints → chat panel — so bars sit adjacent to the session they activate.
 
 - Each session gets a distinct color from a small rotating palette.
 - The active session's bar is fully opaque; inactive bars are dimmed.
@@ -54,7 +54,7 @@ When a session is active, its anchor excerpt text receives a subtle highlight (t
 
 ### Navigation
 
-Margin bars are the sole navigation surface, replacing the topic list entirely. The left nav overlay, its toggle button, and all topic list UI (rename, delete, new topic button) are removed.
+Margin bars are the sole navigation surface, replacing the topic list entirely. The nav overlay, its toggle button, and all topic list UI (rename, delete, new topic button) are removed.
 
 No session list panel, search, or minimap is included in this version. These are additive features if margin bars prove insufficient for documents with many sessions.
 
