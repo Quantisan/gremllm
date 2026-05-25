@@ -82,9 +82,8 @@ Start in `core.cljs` at `acp/resolve-permission`, which dispatches to
 All handlers are registered in `core.cljs`. The preload bridge (`resources/public/js/preload.js`) exposes promise-style wrappers and intent-driven listeners so the renderer never touches raw IPC strings.
 
 **Topic:** `topic/save`, `topic/delete`
-**Document:** `document/create`
+**Document:** `document/pick`, `document/reload`, `document:opened` (event, main → renderer)
 **ACP:** `acp/new-session`, `acp/resume-session`, `acp/prompt`, `acp/resolve-permission`, `acp:session-update` (event, main → renderer), `acp:permission-pending` (event, main → renderer)
-**Workspace:** `workspace/pick-folder`, `workspace/reload`, `workspace:opened` (event, main → renderer)
 **Menu:** `menu:command` (event, main → renderer)
 
 ## Data Storage

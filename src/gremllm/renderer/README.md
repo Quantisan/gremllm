@@ -24,7 +24,7 @@ that tie chat activity back to the active document.
 
 ### App Bootstrap
 
-Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
+Start in `core.cljs`, which wires preload listeners for `document:opened`,
 `acp:session-update`, `acp:permission-pending`, and `menu:command`, installs
 the render watcher, and
 performs the first render explicitly so the welcome view appears before any
