@@ -6,7 +6,7 @@ Gremllm-specific guidance for Claude Code.
 
 Gremllm is an Idea Development Environment for verified knowledge work. It helps knowledge workers produce artifacts that carry their own proof—stakeholders can see the methodology, evidence, and expert judgment that produced the deliverable. **The artifact is portable; the proof lives in the platform.**
 
-Built with Electron and ClojureScript. The current app is document-first: each workspace centers on a `document.md`, and topics are ACP-backed conversations in service of that document. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling), and `markdown-it` (document/chat rendering).
+Built with Electron and ClojureScript. The current app is document-first: the user opens any markdown file, and topics are ACP-backed conversations in service of that document. Per-document state (topics, metadata) is stored in `userData` keyed by a hash of the file's absolute path. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling), and `markdown-it` (document/chat rendering).
 
 ## Design Principles
 
@@ -41,7 +41,7 @@ Why PE due diligence:
 - `resources/public/js/preload.js` - Intent-driven Electron bridge exposed to the renderer
 
 **Operational Map:**
-- Main process owns Electron lifecycle, native integration, workspace and topic persistence, and ACP connection bootstrap
+- Main process owns Electron lifecycle, native integration, document and topic persistence, and ACP connection bootstrap
 - Renderer owns application state, user workflows, document rendering, excerpt capture, and pending diff presentation
 - Schema/codecs own shared contracts and boundary transforms
 - The JS ACP host owns transport wiring; CLJS `main.effects.acp` owns lifecycle and callbacks, while `main.effects.acp.permission` owns permission resolution
@@ -56,9 +56,11 @@ Why PE due diligence:
 - `src/gremllm/main/core.cljs`
 - `src/gremllm/main/actions/acp.cljs`
 - `src/gremllm/main/effects/acp.cljs`
-- `src/gremllm/main/effects/workspace.cljs`
+- `src/gremllm/main/actions/document.cljs`
+- `src/gremllm/main/effects/document.cljs`
 - `src/gremllm/renderer/core.cljs`
 - `src/gremllm/renderer/actions.cljs`
+- `src/gremllm/renderer/actions/document.cljs`
 - `src/gremllm/renderer/ui/document.cljs`
 - `src/gremllm/renderer/ui/document/diffs.cljs`
 - `src/gremllm/schema.cljs`
@@ -94,7 +96,7 @@ npm run test:integration # Compile + autorun integration tests
 We follow the "skateboard → scooter → bicycle → motorcycle" MVP evolution. Every stage delivers a complete, functional product:
 
 - **Skateboard (complete):** Topic-centered ACP chat with workspace persistence—proved we could ship a working end-to-end Electron + ACP product.
-- **Scooter (current):** Document-first workspace with `document.md`, ACP `resource_link` prompting, and inline pending-diff rendering in the document panel. Annotation capture and diff accept/reject mutation are not complete yet.
+- **Scooter (current):** Document-first workflow — open any markdown file, ACP `resource_link` prompting, and inline pending-diff rendering in the document panel. Annotation capture and diff accept/reject mutation are not complete yet.
 - **Bicycle (next):** Specialized agents and managed context—AI works through steerable agents for specific tasks; context is progressively disclosed per task rather than dumped wholesale.
 - **Motorcycle (future):** Full proof and methodology capture—evidence, methodology, and expert judgment become visible and verifiable.
 
@@ -123,9 +125,9 @@ We practice a form of domain-driven design where the structure of our code—our
 This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
 
 **How this manifests:**
-- **Namespaces:** Organized by domain concepts like `document`, `topic`, `workspace`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
-- **State Actions:** Keywords like `:topic.actions/set-active`, `:document.actions/create`, and `:workspace.actions/open-folder` are namespaced by the part of the system they affect.
-- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/create`, or `topic/save`.
+- **Namespaces:** Organized by domain concepts like `document`, `topic`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
+- **State Actions:** Keywords like `:topic.actions/set-active` and `:document.actions/pick` are namespaced by the part of the system they affect.
+- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/pick`, or `topic/save`.
 
 By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
 
@@ -138,12 +140,10 @@ Gremllm is an **Idea Development Environment**—a structured workspace where kn
 Following FCIS principles, all state changes flow through Nexus:
 
 ```clojure
-;; Actions describe what should happen
-(defn create [_state]
+;; Actions describe what should happen (pure data, no side effects)
+(defn pick [_state]
   [[:effects/promise
-    {:promise    (.createDocument js/window.electronAPI)
-     :on-success [[:document.actions/create-success]]
-     :on-error   [[:document.actions/create-error]]}]])
+    {:promise (.pickDocument js/window.electronAPI)}]])
 
 ;; UI dispatches action vectors
 {:on {:submit [[:effects/prevent-default]
@@ -157,16 +157,16 @@ Following FCIS principles, all state changes flow through Nexus:
 ```
 
 **Conventions:**
-- Domain namespacing: `document.actions/create`, `topic.actions/set-active`, `workspace.actions/open-folder`
+- Domain namespacing: `document.actions/pick`, `topic.actions/set-active`, `document.actions/opened`
 - Always dispatch as vectors: `[[:action-name args]]`
 - Registered placeholders currently include `:event.target/value`, `:event/key-pressed`, `:event/dropped-files`, `:event/text-selection`, `:dom/element-by-id`, and `:dom.element/property`
 
 ## IPC & Data
 
-IPC channels and workspace layout are documented in `src/gremllm/main/README.md`.
+IPC channels and document storage layout are documented in `src/gremllm/main/README.md`.
 
 Cross-cutting facts:
-- **Workspaces** are portable folders (like git repos) — can live anywhere
+- **Documents** are standalone markdown files — can live anywhere on the filesystem
 - **Topics** persist `[:session :id]` and `[:session :pending-diffs]` alongside local message history
 - **Canonical data models** live in `src/gremllm/schema.cljs`; boundary coercions and transport shapes live in `src/gremllm/schema/codec.cljs`
 

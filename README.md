@@ -17,7 +17,7 @@ Early. Not ready for real work.
 - AI assistant via the Agent Client Protocol (Claude, through `claude-agent-acp`) — pinned to the latest Sonnet class with extended thinking (20480-token budget)
 - Pending diffs appear inline with accept/reject controls
 - Selected text stages as structured context for the next prompt
-- Workspaces are portable folders of markdown files — today one `document.md` per workspace
+- Open any markdown file — per-document state stored automatically
 
 **Next:**
 - Quick-action agents: launch a purpose-built topic from a selection (validate, research, simplify)

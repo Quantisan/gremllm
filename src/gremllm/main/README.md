@@ -103,7 +103,7 @@ user keeps it; gremllm never creates or moves it. Topics and meta live under
     └── *.edn                # One file per topic; includes session id and pending diffs
 ```
 
-See `src/gremllm/main/io.cljs` for path helpers (including `document-storage-dir`
+See `src/gremllm/main/io.cljs` for path helpers (including `document-paths`
 and `path->document-hash`) and `src/gremllm/schema/codec.cljs` for disk codecs.
 
 ## Entry Points
