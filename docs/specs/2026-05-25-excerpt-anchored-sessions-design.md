@@ -94,6 +94,30 @@ The anchor records the user's intent: "I want to discuss *this specific text*." 
 
 None required. This is a pre-release MVP. Existing persisted topic data can be discarded. No migration path is needed.
 
+## Open Questions (Blocking)
+
+These must be investigated before Stage 3 removes the topic list fallback.
+
+### OQ1: Return intent — users come back to a document for different reasons
+
+The spec auto-activates the latest session and expects users to navigate by scanning margin bars. But return behavior splits at least three ways: continuing where you left off, surveying what's been done, and looking for a specific past conversation. The spec treats all three as the same. Which return intent is primary for our users, and does auto-activation serve or disrupt it?
+
+### OQ2: Single-channel navigation — margin bars are the only way in
+
+The spec bets everything on one navigation channel and removes the fallback in Stage 3. Three independent concerns converge here:
+
+- If users scan bars directly rather than reading document text to find them, bars are just an unlabeled, unsearchable list — possibly worse than what they replace.
+- At 25+ sessions on a long document, bars may become indistinguishable noise. The spec defers density management but defines no signal for when bars have failed and no criteria for reverting.
+- For non-visual users (screen readers, keyboard-only), the channel doesn't exist at all — sessions have no accessible name, no keyboard trigger for the creation popover, and no programmatic active-state signal (CSS opacity and Custom Highlights carry no accessibility tree exposure).
+
+### OQ3: Degraded states — what the user sees when the design's assumptions break
+
+The spec describes the happy path precisely and is silent on every degraded path. Specific cases that need answers:
+
+- **Anchor drift:** When anchored text is edited, moved, or deleted across document revisions, what does the user observe? A silently orphaned bar looks like a bug. A vanishing bar destroys discoverability. "Defer drift handling" is acceptable; "no defined user-visible behavior" is not.
+- **Wrong auto-activation:** If the latest session belongs to a different work context (e.g., a colleague's prior session in a shared draft), AI output goes into the wrong conversation silently. Does auto-activation signal itself as automatic?
+- **No retrieval cue:** When a user returns after days and doesn't remember where in the document they were working, how do they find the right session without a list or search?
+
 ## Staged Delivery
 
 This work is divided into three stages. Each stage leaves the app fully functional. The sequence front-loads design learning and defers irreversible UI changes.
