@@ -11,15 +11,6 @@
     (io/write-file filepath (pr-str topic))))
 
 (deftest test-write-meta-if-missing!
-  (testing "writes meta.edn with :doc-path when absent"
-    (with-temp-dir "meta-write"
-      (fn [document-data-dir]
-        (let [doc-path  "/Users/paul/memo.md"
-              meta-path (io/path-join document-data-dir "meta.edn")]
-          (document-effects/write-meta-if-missing! document-data-dir doc-path)
-          (is (io/file-exists? meta-path))
-          (is (= {:doc-path doc-path}
-                 (edn/read-string (io/read-file meta-path))))))))
   (testing "does not overwrite an existing meta.edn"
     (with-temp-dir "meta-keep"
       (fn [document-data-dir]

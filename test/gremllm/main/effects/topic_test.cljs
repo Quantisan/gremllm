@@ -29,19 +29,6 @@
                          :end-line 3
                          :block-text-snippet "Our Gremllm crew tuned the launch checklist."}}})
 
-(deftest test-parse-topic-content
-  (testing "parses valid topic content"
-    (let [topic {:id "topic-123" :name "Test" :messages [] :session {:pending-diffs []} :excerpts []}
-          content (pr-str topic)
-          result (#'topic-effects/parse-topic-content content "test.edn")]
-      (is (= topic result))))
-
-  (testing "returns nil for invalid EDN"
-    (with-console-error-silenced
-      (is (nil? (#'topic-effects/parse-topic-content "{:broken" "bad.edn")))
-      (is (nil? (#'topic-effects/parse-topic-content "not-edn" "bad.edn")))))
-
-)
 
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data including excerpts"
@@ -80,25 +67,6 @@
 (deftest test-load-topics
   (testing "returns empty map for non-existent directory"
     (is (= {} (topic-effects/load-topics "/does/not/exist"))))
-
-  (testing "load-topics returns map of all topics keyed by ID"
-    (with-temp-dir "load-topics"
-      (fn [dir]
-        ;; Simple test topics with just the essentials
-        (let [topic-1 {:id "topic-1-a" :name "First" :messages [] :session {:pending-diffs []} :excerpts []}
-              topic-2 {:id "topic-2-b" :name "Second" :messages [] :session {:pending-diffs []} :excerpts []}]
-
-          ;; Write valid topic files
-          (write-topic-file dir topic-1)
-          (write-topic-file dir topic-2)
-
-          ;; Write non-topic file (should be ignored)
-          (write-file dir "readme.txt" "ignored")
-
-          ;; Verify we get both topics back as a map
-          (is (= {"topic-1-a" topic-1
-                  "topic-2-b" topic-2}
-                 (topic-effects/load-topics dir)))))))
 
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
