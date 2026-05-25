@@ -43,7 +43,7 @@
     ;; Handle document sync from main process
     (.onDocumentOpened js/window.electronAPI
                        (fn [_ topics-data]
-                         (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
+                         (nxr/dispatch store {} [[:document.actions/opened topics-data]])))
 
     ;; Handle ACP session updates from main process
     (.onAcpSessionUpdate js/window.electronAPI
@@ -62,7 +62,7 @@
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]
-                 (when-not (schema/valid-workspace-topics? (topic-state/get-topics-map state))
+                 (when-not (schema/valid-document-topics? (topic-state/get-topics-map state))
                    (js/console.error "Invalid topics in state!"))
 
                  (->> state

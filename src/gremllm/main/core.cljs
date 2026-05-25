@@ -2,7 +2,7 @@
   (:require [gremllm.main.actions]
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.acp :as acp-effects]
-            [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
             [gremllm.main.state :as state]
             [gremllm.schema.codec :as codec]
@@ -40,7 +40,7 @@
                (-> (js->clj topic-data :keywordize-keys true)
                    (codec/topic-from-ipc)
                    (topic-actions/topic->save-plan topics-dir)
-                   (workspace-effects/save-topic)))))
+                   (topic-effects/save-topic)))))
 
   (.handle ipcMain "topic/delete"
            (fn [_event topic-id]
@@ -48,7 +48,7 @@
                (-> topic-id
                    (codec/topic-id-from-ipc)
                    (topic-actions/topic->delete-plan topics-dir)
-                   (workspace-effects/delete-topic-with-confirmation)))))
+                   (topic-effects/delete-topic-with-confirmation)))))
 
   ;; Document - async pattern: dispatch to actions, results broadcast via document:opened
   (.handle ipcMain "document/reload"

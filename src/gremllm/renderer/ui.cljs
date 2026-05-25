@@ -3,7 +3,6 @@
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.ui :as ui-state]
-            [gremllm.renderer.state.workspace :as workspace-state]
             [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.renderer.ui.chat :as chat-ui]
@@ -13,9 +12,9 @@
             [gremllm.renderer.ui.elements :as e]))
 
 
-(defn- render-workspace [state]
+(defn- render-document-layout [state]
   ;; TODO: all these state crumbs... is there a more organized method?
-  (let [workspace             (workspace-state/get-workspace state)
+  (let [document-meta         (document-state/get-meta state)
         document-content      (document-state/get-content state)
         pending-diffs         (topic-state/get-pending-diffs state)
         active-topic-id       (topic-state/get-active-topic-id state)
@@ -37,7 +36,7 @@
       (when nav-expanded?
         [e/nav-overlay
          (topics-ui/render-left-panel-content
-           {:workspace         workspace
+           {:document-meta     document-meta
             :active-topic-id   active-topic-id
             :topics-map        topics-map
             :renaming-topic-id renaming-topic-id})])
@@ -73,6 +72,6 @@
          :excerpts             excerpts})]]))
 
 (defn render-app [state]
-  (if (workspace-state/loaded? state)
-    (render-workspace state)
+  (if (document-state/loaded? state)
+    (render-document-layout state)
     (welcome-ui/render-welcome)))

@@ -85,12 +85,12 @@
                          :block-text-snippet "hello world"}}})
 
 (deftest delete-topic-success-test
-  (testing "triggers workspace reload after successful deletion"
+  (testing "triggers document reload after successful deletion"
     (let [topic-id "topic-123"
           state    {}
           actions  (topic/delete-topic-success state topic-id)]
       (is (= [[:document.effects/reload]] actions)
-          "should return workspace reload effect"))))
+          "should return document reload effect"))))
 
 (deftest delete-topic-error-test
   (testing "logs error and returns empty actions"
