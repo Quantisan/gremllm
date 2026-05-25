@@ -12,7 +12,7 @@
             [gremllm.renderer.ui.elements :as e]))
 
 
-(defn- render-document-layout [state]
+(defn- render-app-layout [state]
   ;; TODO: all these state crumbs... is there a more organized method?
   (let [document-meta         (document-state/get-meta state)
         document-content      (document-state/get-content state)
@@ -73,5 +73,5 @@
 
 (defn render-app [state]
   (if (document-state/loaded? state)
-    (render-document-layout state)
+    (render-app-layout state)
     (welcome-ui/render-welcome)))
