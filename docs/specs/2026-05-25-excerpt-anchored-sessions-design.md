@@ -11,7 +11,7 @@ This works for early prototyping but breaks the document-first principle. Topics
 
 ## Goal
 
-Anchor AI conversations to the document text that motivated them. Rename "Topic" to "Session" to reflect the new mental model: a session is a conversation that began at a specific place in the document, stays visually tied to that place, and is discoverable by reading the document itself.
+Anchor AI conversations to the document text that motivated them. A session is a conversation that began at a specific place in the document, stays visually tied to that place, and is discoverable by reading the document itself.
 
 The document becomes the navigation surface. The topic list goes away.
 
@@ -35,8 +35,6 @@ During a conversation, the user can add more excerpts as context for subsequent 
 
 Sessions are always created from a text selection. There are no unanchored, free-floating sessions.
 
-For whole-document questions (not tied to a specific passage), a shortcut creates a document-scoped session (anchor type `:document`, no specific excerpt). This preserves one creation mental model — every session starts from a deliberate user action.
-
 When text is selected and a session is already active, the popover offers two actions: **"Start session"** (creates a new session anchored to this selection) and **"Add excerpt"** (adds the selection as conversation context to the current session). Both are always visible.
 
 ### Visual Markers
@@ -46,7 +44,6 @@ Sessions appear in the document as **colored vertical bars in the right margin**
 - Each session gets a distinct color from a small rotating palette.
 - The active session's bar is fully opaque; inactive bars are dimmed.
 - Clicking a bar switches the chat panel to that session.
-- Whole-document sessions have no margin bar (they are not tied to a visible excerpt range).
 
 Bars do not modify the document text or its rendering pipeline. They are an overlay layer.
 
@@ -62,23 +59,15 @@ No session list panel, search, or minimap is included in this version. These are
 
 The chat panel remains always-visible on the right. Clicking a margin bar switches which session the panel displays — same interaction as clicking a topic in today's list, just triggered from the document margin.
 
-The panel header shows session context: the anchor excerpt text (truncated) for excerpt-anchored sessions, or the document filename for whole-document sessions.
-
 ### Empty State and Document Open
 
-When a document opens with no existing sessions, one whole-document session is auto-created and activated. The user lands in a ready-to-chat state immediately.
+When a document opens with no existing sessions, the chat panel shows an empty state prompting the user to select text. No session is auto-created.
 
-When a document opens with existing sessions, the latest one (by modified timestamps) is auto-activated.
+When a document opens with existing sessions, the latest one (by last-modified timestamp) is auto-activated.
 
 ### Session Lifecycle
 
 Sessions are resumable and open-ended, identical to today's topics. "Session" refers to the AI interaction context, not a time-bounded event. No lifecycle states (open/closed/archived) are introduced.
-
-### Session Naming
-
-Sessions auto-name from a truncation of the user's first message (e.g., "How does this compare to..."). Whole-document sessions follow the same rule. Renaming is not included in the initial version.
-
-**Rationale:** The anchor excerpt is already visible via the margin bar and text highlight — repeating it as the session name is redundant. The user's first message captures intent ("why did they start this session?"), which is not otherwise visible in the document UI.
 
 ### Deletion
 
@@ -90,7 +79,7 @@ Session deletion is not included in the initial version. Sessions accumulate. De
 
 A Session is an AI conversation anchored to a specific place in a document.
 
-- **Anchor** — what this session is tied to. Either a specific document excerpt (with the full `DocumentExcerpt` locator data) or the document as a whole. Required, immutable after creation.
+- **Anchor** — the document excerpt this session is tied to (the full `DocumentExcerpt` locator data). Required, immutable after creation.
 - **Excerpts** — conversation excerpts added during the session, distinct from the anchor. Consumed after each turn, same as today.
 - **ACP session** — the underlying agent session (ID, pending diffs). Unchanged.
 - **Messages** — conversation history. Unchanged.
@@ -101,23 +90,21 @@ The anchor is a new concept. Everything else carries forward from Topic with a n
 
 The anchor records the user's intent: "I want to discuss *this specific text*." It stores the selected text and its document location (block refs, line spans) — the same `DocumentExcerpt` shape the app already uses, promoted from a conversation artifact to a session identity.
 
-For whole-document sessions, the anchor records that the session is document-scoped, with no specific excerpt.
-
 ## Backward Compatibility
 
 None required. This is a pre-release MVP. Existing persisted topic data can be discarded. No migration path is needed.
 
 ## Staged Delivery
 
-This work is divided into four stages. Each stage leaves the app fully functional. The sequence front-loads design learning and defers mechanical work and irreversible UI changes.
+This work is divided into three stages. Each stage leaves the app fully functional. The sequence front-loads design learning and defers irreversible UI changes.
 
 ### Stage 1: Anchor Model (backend, small)
 
-Add the anchor concept to the data model. A topic gains an `:anchor` field that records its spawning excerpt or document-level scope. Persistence stores and loads the new field.
+Add the anchor concept to the data model. A topic gains an `:anchor` field that records its spawning excerpt. Persistence stores and loads the new field.
 
 The app works identically — the anchor is stored but not yet used by any UI. The old topic list and creation flow remain.
 
-**Learns:** Does the anchor/excerpt distinction fit cleanly into the schema and persistence layer?
+**Learns:** Does the anchor fit cleanly into the schema and persistence layer?
 
 ### Stage 2: Margin Bar Rendering (frontend, additive)
 
@@ -127,20 +114,16 @@ Clicking a bar switches the active topic, same as clicking in the list today. Bo
 
 **Learns:** Do bars position correctly against real document content? Does the visual treatment work? How does click-to-switch feel? This is the riskiest unknown — test it while the old UI is still a fallback.
 
-### Stage 3: Domain Rename (full-stack, mechanical)
+### Stage 3: Navigation Overhaul (frontend, the commitment)
 
-Rename Topic → Session everywhere: schema, state paths, action keywords, IPC channels, persistence directory and filenames, preload API, UI text. Zero behavior change.
+Remove the topic list and nav overlay. Change the excerpt selection popover to offer "Start session" and "Add excerpt." Wire up the empty state.
 
-**Why now, not earlier:** By this point the team has lived with the code during Stages 1–2 and knows which files were touched and which patterns emerged. The rename won't collide with ongoing structural changes, and new UI code won't be written with old names only to be immediately renamed.
-
-### Stage 4: Navigation Overhaul (frontend, the commitment)
-
-Remove the topic list and nav overlay. Change the excerpt selection popover to offer "Start session" and "Add excerpt." Add whole-document session auto-creation on document open. Wire up empty states and chat panel header context.
-
-This is the point of no return for the old UI. By this stage the data model is proven (Stage 1), bars are validated (Stage 2), and vocabulary is clean (Stage 3).
+This is the point of no return for the old UI. By this stage the data model is proven (Stage 1) and bars are validated (Stage 2). The Topic → Session rename happens when it's natural — during this stage or after — not as a dedicated phase.
 
 ## Out of Scope
 
+- Whole-document sessions (anchor type `:document`) — select text to start any session
+- Session naming — the margin bar and excerpt highlight identify sessions visually
 - Session list panel, search, or minimap — additive if margin bars prove insufficient
 - Session deletion UI
 - Session rename UI
