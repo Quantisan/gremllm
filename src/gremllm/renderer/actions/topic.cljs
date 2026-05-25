@@ -31,8 +31,8 @@
   [])
 
 (defn delete-topic-success [_state _topic-id]
-  ;; Reload workspace from disk to sync state
-  [[:workspace.effects/reload]])
+  ;; Reload document from disk to sync state
+  [[:document.effects/reload]])
 
 (defn delete-topic-error [_state topic-id error]
   (js/console.error "delete-topic (topic-id: " topic-id ") failed:" error)

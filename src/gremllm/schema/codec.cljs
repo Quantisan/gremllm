@@ -28,12 +28,12 @@
   [topic-id]
   (m/coerce schema/TopicId (js->clj topic-id) mt/json-transformer))
 
-(def WorkspaceSyncData
-  "Schema for workspace data sent from main to renderer via IPC.
-   Used when loading a workspace folder from disk."
+(def DocumentSyncData
+  "Schema for document data sent from main to renderer via IPC.
+   Used when loading a document from disk."
   [:map
-   [:workspace [:map [:name :string]]]
-   [:topics {:default {}} schema/WorkspaceTopics]
+   [:document-meta schema/DocumentMeta]
+   [:topics {:default {}} schema/DocumentTopics]
    [:document {:default {:content nil}} [:map [:content [:maybe :string]]]]])
 
 (defn topic-to-ipc [topic-clj]
@@ -55,18 +55,18 @@
     (js->clj $ :keywordize-keys true)
     (m/coerce schema/Message $ mt/json-transformer)))
 
-(defn workspace-sync-from-ipc
-  "Validates and transforms workspace sync data from IPC. Throws if invalid."
-  [workspace-data-js]
-  (as-> workspace-data-js $
+(defn document-sync-from-ipc
+  "Validates and transforms document sync data from IPC. Throws if invalid."
+  [sync-data-js]
+  (as-> sync-data-js $
     (js->clj $ :keywordize-keys true)
-    (m/coerce WorkspaceSyncData $ mt/json-transformer)))
+    (m/coerce DocumentSyncData $ mt/json-transformer)))
 
-(defn workspace-sync-for-ipc
-  "Validates and prepares workspace sync data for IPC transmission. Throws if invalid."
-  [topics workspace document]
-  (m/coerce WorkspaceSyncData
-            {:topics topics :workspace workspace :document document}
+(defn document-sync-for-ipc
+  "Validates and prepares document sync data for IPC transmission. Throws if invalid."
+  [topics document-meta document]
+  (m/coerce DocumentSyncData
+            {:topics topics :document-meta document-meta :document document}
             mt/strip-extra-keys-transformer))
 
 ;; ========================================

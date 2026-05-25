@@ -1,11 +1,9 @@
 (ns gremllm.main.core
   (:require [gremllm.main.actions]
-            [gremllm.main.actions.document :as document-actions]
             [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.acp :as acp-effects]
-            [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.menu :as menu]
-            [gremllm.main.io :as io]
             [gremllm.main.state :as state]
             [gremllm.schema.codec :as codec]
             [nexus.registry :as nxr]
@@ -25,55 +23,44 @@
    - Why: Electron's IPC requires synchronous return values
 
    ASYNC HANDLERS (fire-and-forget, return #js {}):
-   - Dispatch to registered Nexus actions (not effects directly)
-   - Flow: Dispatch action → Return empty → Effects execute → Events notify renderer
-   - Examples: acp/prompt, workspace/reload, workspace/pick-folder
-   - Why: Action registry provides discoverability and instrumentation points
+   - Dispatch to registered Nexus actions or effects
+   - Flow: Dispatch action/effect → Return empty → Effects execute → Events notify renderer
+   - Examples: acp/prompt, document/reload, document/pick
+   - Actions when the handler needs state or composition; effects directly when it's a straight passthrough
 
    Both patterns maintain FCIS: sync handlers pipeline through pure functions;
    async handlers route through registered actions that return effect descriptions.
 
-   Domains: Topics (save/load), Workspace (bulk ops), ACP (agent sessions)"
+   Domains: Topics (save/load), Document (open/reload), ACP (agent sessions)"
   [store]
   ;; Topics - sync pattern: validate at boundary, pipeline to effect, return filepath
   (.handle ipcMain "topic/save"
            (fn [_event topic-data]
-             (let [workspace-dir (state/get-workspace-dir @store)]
+             (let [{:keys [topics-dir]} (state/get-document-paths @store)]
                (-> (js->clj topic-data :keywordize-keys true)
                    (codec/topic-from-ipc)
-                   (topic-actions/topic->save-plan (io/topics-dir-path workspace-dir))
-                   (workspace-effects/save-topic)))))
+                   (topic-actions/topic->save-plan topics-dir)
+                   (topic-effects/save-topic)))))
 
   (.handle ipcMain "topic/delete"
            (fn [_event topic-id]
-             (let [workspace-dir (state/get-workspace-dir @store)
-                   topics-dir    (io/topics-dir-path workspace-dir)]
+             (let [{:keys [topics-dir]} (state/get-document-paths @store)]
                (-> topic-id
                    (codec/topic-id-from-ipc)
                    (topic-actions/topic->delete-plan topics-dir)
-                   (workspace-effects/delete-topic-with-confirmation)))))
+                   (topic-effects/delete-topic-with-confirmation)))))
 
-  ;; Document - sync pattern: create new document file and return content
-  (.handle ipcMain "document/create"
-           (fn [_event]
-             (let [workspace-dir (state/get-workspace-dir @store)]
-               (-> (document-actions/create-plan workspace-dir)
-                   (workspace-effects/create-document)
-                   (clj->js)))))
-
-  ;; Workspace - async pattern: dispatch to actions, results broadcast via workspace:opened
-  (.handle ipcMain "workspace/reload"
+  ;; Document - async pattern: dispatch to actions, results broadcast via document:opened
+  (.handle ipcMain "document/reload"
            (fn [_event]
              (nxr/dispatch store {}
-                           [[:workspace.actions/reload]])
+                           [[:document.actions/reload]])
              #js {}))
 
-  (.handle ipcMain "workspace/pick-folder"
+  (.handle ipcMain "document/pick"
            (fn [_event]
-             ;; Reuse the existing workspace action - it already handles the full flow
              (nxr/dispatch store {}
-                           [[:workspace.actions/pick-folder]])
-             ;; Return empty - workspace data flows via workspace:opened
+                           [[:document.effects/pick-dialog]])
              #js {}))
 
   ;; ACP - async pattern: dispatch to actions, response flows via IPC reply
@@ -82,22 +69,21 @@
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/new-session"}
-                       [[:acp.effects/new-session (state/get-workspace-dir @store)]])))
+                       [[:acp.effects/new-session (state/get-working-dir @store)]])))
 
   (.on ipcMain "acp/resume-session"
        (fn [event ipc-correlation-id acp-session-id]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/resume-session"}
-                       [[:acp.effects/resume-session (state/get-workspace-dir @store) acp-session-id]])))
+                       [[:acp.effects/resume-session (state/get-working-dir @store) acp-session-id]])))
 
   (.on ipcMain "acp/prompt"
-       ;; TODO: we should pass the document path from Renderer to here
        (fn [event ipc-correlation-id acp-session-id message]
          (nxr/dispatch store {:ipc-event event
                               :ipc-correlation-id ipc-correlation-id
                               :channel "acp/prompt"}
-                       [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-workspace-dir @store)]])))
+                       [[:acp.effects/send-prompt acp-session-id (codec/user-message-from-ipc message) (state/get-active-document-path @store)]])))
 
   (.on ipcMain "acp/resolve-permission"
        ;; Fire-and-forget: renderer notifies main of user's accept/reject choice;
@@ -117,6 +103,7 @@
      :on-awaiting-user-decision
      (fn [enriched]
        (nxr/dispatch store {} [[:acp.events/permission-pending enriched]]))})
+  (nxr/dispatch store {} [[:app.actions/set-user-data-dir (.getPath app "userData")]])
   (nxr/dispatch store {} [[:window.actions/create]]))
 
 (defn- handle-app-activate

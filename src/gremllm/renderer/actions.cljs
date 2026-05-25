@@ -3,7 +3,6 @@
             [gremllm.renderer.actions.ui :as ui]        ; UI interactions
             [gremllm.renderer.actions.messages :as msg]  ; Message handling
             [gremllm.renderer.actions.topic :as topic]
-            [gremllm.renderer.actions.workspace :as workspace]
             [gremllm.renderer.actions.document :as document]
             [gremllm.renderer.actions.acp :as acp]
             [gremllm.renderer.actions.tool-call :as tool-call]
@@ -129,10 +128,10 @@
   (fn [_ _ & args]
     (apply js/console.error args)))
 
-;; Workspace reload effect
-(nxr/register-effect! :workspace.effects/reload
+;; Document reload effect
+(nxr/register-effect! :document.effects/reload
   (fn [_ _]
-    (.reloadWorkspace js/window.electronAPI)))
+    (.reloadDocument js/window.electronAPI)))
 
 ;; ACP: forward user's accept/reject for a pending permission to the main process.
 (nxr/register-effect! :acp.effects/resolve-permission
@@ -162,19 +161,14 @@
   (fn [_state topic-id loading?]
     [[:effects/save (loading-state/loading-path topic-id) loading?]]))
 
-;; Workspace
-(nxr/register-action! :workspace.actions/opened workspace/opened)
-(nxr/register-action! :workspace.actions/restore-with-topics workspace/restore-with-topics)
-(nxr/register-action! :workspace.actions/initialize-empty workspace/initialize-empty)
-(nxr/register-action! :workspace.actions/load-error workspace/load-error)
-(nxr/register-action! :workspace.actions/mark-loaded workspace/mark-loaded)
-(nxr/register-action! :workspace.actions/set workspace/set-workspace)
-(nxr/register-action! :workspace.actions/pick-folder workspace/pick-folder)
-
 ;; Document
-(nxr/register-action! :document.actions/create document/create)
-(nxr/register-action! :document.actions/create-success document/create-success)
-(nxr/register-action! :document.actions/create-error document/create-error)
+(nxr/register-action! :document.actions/opened document/opened)
+(nxr/register-action! :document.actions/restore-with-topics document/restore-with-topics)
+(nxr/register-action! :document.actions/initialize-empty document/initialize-empty)
+(nxr/register-action! :document.actions/load-error document/load-error)
+(nxr/register-action! :document.actions/mark-loaded document/mark-loaded)
+(nxr/register-action! :document.actions/set-meta document/set-meta)
+(nxr/register-action! :document.actions/pick document/pick)
 (nxr/register-action! :document.actions/set-content document/set-content)
 
 ;; Topic

@@ -1,26 +1,64 @@
 (ns gremllm.renderer.actions.document
-  (:require [gremllm.renderer.state.document :as document-state]))
-
-(defn create [_state]
-  [[:effects/promise
-    {:promise    (.createDocument js/window.electronAPI)
-     :on-success [[:document.actions/create-success]]
-     :on-error   [[:document.actions/create-error]]}]])
-
-(defn create-success [_state result-js]
-  [[:document.actions/set-content (.-content result-js)]])
-
-(defn create-error [_state error]
-  [[:ui.effects/console-error "Failed to create document:" error]])
+  (:require [gremllm.schema.codec :as codec]
+            [gremllm.renderer.state.document :as document-state]
+            [gremllm.renderer.state.topic :as topic-state]))
 
 ;; Design note: `set-content` currently does two jobs: replace document text
 ;; and invalidate excerpts across all topics. That is a leaky boundary because
-;; this action is also used for workspace hydration/reload, so opening a
-;; workspace can invalidate excerpts even when no user edit happened. There is
+;; this action is also used for document hydration/reload, so opening a
+;; document can invalidate excerpts even when no user edit happened. There is
 ;; also a persistence pitfall: `:excerpt.actions/invalidate-across-topics`
 ;; only mutates renderer state, so a later reload can resurrect the invalidated
 ;; excerpts from disk.
+(defn pick
+  "Initiate the file picker to open a document."
+  [_state]
+  [[:effects/promise
+    {:promise (.pickDocument js/window.electronAPI)}]])
+
 (defn set-content [_state content]
   [[:effects/save document-state/content-path content]
    [:excerpt.actions/invalidate-across-topics]
    [:excerpt.actions/dismiss-popover]])
+
+(defn mark-loaded
+  "Mark the document as successfully loaded and ready for use."
+  [_state]
+  [[:effects/save document-state/loaded-path true]])
+
+(defn set-meta
+  "Save document metadata into renderer state."
+  [_state document-meta]
+  [[:effects/save document-state/meta-path document-meta]])
+
+(defn opened
+  "A document has been opened/loaded from disk."
+  [_state sync-data-js]
+  (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc sync-data-js)]
+    ;; TODO: When document revision tracking lands, compare the incoming document revision here and clear staged selections across topics on change.
+    ;; Why: staged anchors are revision-bound document/topic context, so invalidation belongs at the document sync boundary rather than in a generic document setter.
+    (cond-> [[:document.actions/set-meta document-meta]
+             [:document.actions/set-content (:content document)]]
+      (empty? topics) (conj [:document.actions/initialize-empty])
+      (seq topics)    (conj [:document.actions/restore-with-topics
+                              {:topics          topics
+                               ;; TODO: save last active topic id so that user can continue where they left off
+                               :active-topic-id (ffirst topics)}]))))
+
+(defn restore-with-topics
+  "Restore a document that has existing topics."
+  [_state {:keys [topics active-topic-id]}]
+  [[:effects/save topic-state/topics-path topics]
+   [:topic.actions/set-active active-topic-id]
+   [:document.actions/mark-loaded]])
+
+(defn initialize-empty
+  "Initialize an empty document with its first topic."
+  [_state]
+  [[:topic.actions/start-new]
+   [:document.actions/mark-loaded]])
+
+(defn load-error [_state error]
+  (js/console.error "document load failed:" error)
+  ;; Don't auto-create anything on load error - let user handle it
+  [])

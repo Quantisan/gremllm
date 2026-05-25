@@ -36,13 +36,14 @@
     (.onMenuCommand js/window.electronAPI
                     (fn [_ command-str]
                       (case (keyword command-str)
-                        :save-topic (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
+                        :save-topic    (nxr/dispatch store {} [[:topic.effects/save-active-topic]])
+                        :open-document (nxr/dispatch store {} [[:document.actions/pick]])
                         nil)))
 
-    ;; Handle workspace sync from main process
-    (.onWorkspaceOpened js/window.electronAPI
-                        (fn [_ topics-data]
-                          (nxr/dispatch store {} [[:workspace.actions/opened topics-data]])))
+    ;; Handle document sync from main process
+    (.onDocumentOpened js/window.electronAPI
+                       (fn [_ topics-data]
+                         (nxr/dispatch store {} [[:document.actions/opened topics-data]])))
 
     ;; Handle ACP session updates from main process
     (.onAcpSessionUpdate js/window.electronAPI
@@ -61,7 +62,7 @@
     ;; Render on every change
     (add-watch store ::render-topic
                (fn [_ _ _ state]
-                 (when-not (schema/valid-workspace-topics? (topic-state/get-topics-map state))
+                 (when-not (schema/valid-document-topics? (topic-state/get-topics-map state))
                    (js/console.error "Invalid topics in state!"))
 
                  (->> state

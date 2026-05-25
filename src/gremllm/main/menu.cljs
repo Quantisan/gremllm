@@ -27,9 +27,9 @@
                                       :accelerator (if is-mac "Cmd+S" "Ctrl+S")
                                       :click #(nxr/dispatch store {} [[:menu.actions/save-topic]])}
 
-                                     {:label "Open Folder..."
+                                     {:label "Open…"
                                       :accelerator (if is-mac "Cmd+O" "Ctrl+O")
-                                      :click #(nxr/dispatch store {} [[:menu.actions/open-folder]])}
+                                      :click #(nxr/dispatch store {} [[:menu.actions/open-document]])}
 
                                      {:type "separator"}
                                      (if is-mac

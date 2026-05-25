@@ -1,18 +1,14 @@
-(ns gremllm.main.effects.workspace
-  "Topic persistence side effects and file I/O operations"
-
-  ;; Runtime dependency: electron/main dialog
-  ;; Loaded dynamically to support testing outside Electron environment
-  (:require [gremllm.main.io :as io]
+(ns gremllm.main.effects.topic
+  "Topic persistence side effects and file I/O operations."
+  (:require [gremllm.main.electron :as electron]
+            [gremllm.main.io :as io]
             [clojure.edn :as edn]
-            [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Private Helpers
 
 (defn- topic-filename?
-  "Check if a filename represents a topic file"
   [filename]
   (.endsWith filename ".edn"))
 
@@ -29,8 +25,6 @@
       nil)))
 
 (defn- read-topic-file-info
-  "Read file metadata for a topic file. Returns map with filename,
-   filepath, and timestamps."
   [topics-dir filename]
   (let [filepath (io/path-join topics-dir filename)]
     (merge {:filename filename
@@ -46,17 +40,6 @@
   (io/ensure-dir dir)
   (io/write-file filepath content)
   filepath)
-
-;;; ---------------------------------------------------------------------------
-;;; Document Operations
-
-(defn create-document
-  "Create a new document file in the workspace."
-  [{:keys [filepath content]}]
-  (when (io/file-exists? filepath)
-    (throw (js/Error. (str "Document already exists at " filepath))))
-  (io/write-file filepath content)
-  {:content content})
 
 ;;; ---------------------------------------------------------------------------
 ;;; Topic Collection Operations
@@ -90,33 +73,11 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Dialog Operations
 
-(defn- get-dialog []
-  (when (exists? js/require)
-    (try
-      (.-dialog (js/require "electron/main"))
-      (catch :default _ nil))))
-
-(defn pick-folder-dialog [{:keys [dispatch]} _]
-  (when-let [dialog (get-dialog)]
-    (-> (.showOpenDialog dialog
-                         #js {:title "Open Workspace Folder"
-                              :properties #js ["openDirectory"]
-                              :buttonLabel "Open"})
-        (.then (fn [^js result]
-                 (when-not (.-canceled result)
-                   (let [workspace-folder-path (first (.-filePaths result))]
-                     (dispatch [[:workspace.actions/open-folder workspace-folder-path]]))))))))
-
-;;; ---------------------------------------------------------------------------
-;;; Topic Delete Operations
-
 (defn- user-confirmed-deletion?
-  "Check if user confirmed deletion in dialog result."
   [result]
   (= 1 (.-response result)))
 
 (defn- attempt-delete
-  "Delete topic file, logging errors on failure."
   [filepath]
   (try
     (io/delete-file filepath)
@@ -126,7 +87,7 @@
 (defn delete-topic-with-confirmation
   "Execute topic deletion plan: optionally confirm, then delete from disk."
   [{:keys [filepath confirmation-message confirmation-detail]}]
-  (if-let [dialog (get-dialog)]
+  (if-let [dialog (electron/get-dialog)]
     (-> (.showMessageBox dialog
                          #js {:type "warning"
                               :message confirmation-message
@@ -138,21 +99,3 @@
                 (when (user-confirmed-deletion? result)
                   (attempt-delete filepath)))))
     (js/Promise.resolve nil)))
-
-;;; ---------------------------------------------------------------------------
-;;; Workspace Sync Operations
-
-(defn- read-document [workspace-path]
-  (let [doc-path (io/document-file-path workspace-path)]
-    {:content (when (io/file-exists? doc-path)
-                (io/read-file doc-path))}))
-
-(defn load-and-sync
-  "Load topics and workspace metadata, then send sync payload to renderer."
-  [{:keys [dispatch]} _ workspace-path]
-  (let [workspace-name (io/path-basename workspace-path)
-        workspace-meta (schema/create-workspace-meta workspace-name)
-        document       (read-document workspace-path)
-        topics         (-> workspace-path io/topics-dir-path load-topics)
-        sync-payload   (codec/workspace-sync-for-ipc topics workspace-meta document)]
-    (dispatch [[:ipc.effects/send-to-renderer "workspace:opened" sync-payload]])))

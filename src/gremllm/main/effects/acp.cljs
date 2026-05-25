@@ -3,6 +3,7 @@
    JS module is a thin factory; CLJS manages state and public API."
   (:require [clojure.string :as str]
             [gremllm.main.effects.acp.permission :as permission]
+            [gremllm.main.electron :as electron]
             [gremllm.schema.codec.acp :as acp-codec]
             [nexus.registry :as nxr]
             ["/js/acp/index" :as acp-factory]
@@ -109,18 +110,13 @@
                                (throw err))))
                   (throw err))))))
 
-(defn- get-electron-app []
-  (when (exists? js/require)
-    (try
-      (.-app (js/require "electron/main"))
-      (catch :default _ nil))))
 
 (defn- set-claude-executable-for-packaged-app!
   "In a packaged app the ACP SDK's native binary lives in app.asar.unpacked,
    but require.resolve returns an asar-virtual path that spawn can't execute.
    Setting this env var makes the SDK skip its own resolution entirely."
   []
-  (when-let [app (get-electron-app)]
+  (when-let [app (electron/get-app)]
     (when (.-isPackaged app)
       (let [platform-specific-package (str "claude-agent-sdk-"
                                          (.-platform js/process) "-"

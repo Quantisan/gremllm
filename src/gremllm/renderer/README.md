@@ -4,16 +4,16 @@
 
 The renderer owns the Nexus store, Replicant rendering, preload-driven IPC
 consumption, topic and document state, and the document-first user workflows
-that tie chat activity back to `document.md`.
+that tie chat activity back to the active document.
 
 ## Structure
 
 - `core.cljs`: renderer bootstrap, IPC listeners, render loop, initial dispatch
 - `actions.cljs`: action and effect registration, DOM placeholders, promise
   handling, store-level effects
-- `actions/`: domain actions for UI, workspace, topics, messages, ACP,
+- `actions/`: domain actions for UI, document, topics, messages, ACP,
   tool calls, excerpts, and document state
-- `state/`: focused selectors and paths for document, workspace, topic, form,
+- `state/`: focused selectors and paths for document, topic, form,
   excerpt, loading, and UI state
 - `ui.cljs`: app-level composition
 - `ui/`: chat, topics, welcome, markdown, and document views
@@ -24,16 +24,16 @@ that tie chat activity back to `document.md`.
 
 ### App Bootstrap
 
-Start in `core.cljs`, which wires preload listeners for `workspace:opened`,
+Start in `core.cljs`, which wires preload listeners for `document:opened`,
 `acp:session-update`, `acp:permission-pending`, and `menu:command`, installs
 the render watcher, and
 performs the first render explicitly so the welcome view appears before any
 state change.
 
-### Workspace Hydration
+### Document Hydration
 
-Follow `renderer.actions.workspace/opened`, which normalizes the
-`workspace:opened` payload into renderer state including workspace metadata,
+Follow `renderer.actions.document/opened`, which normalizes the
+`document:opened` payload into renderer state including document metadata,
 topic map, and document content.
 
 ### Prompt Submission

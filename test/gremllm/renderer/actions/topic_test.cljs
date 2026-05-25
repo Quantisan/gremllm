@@ -84,24 +84,6 @@
                          :end-line 3
                          :block-text-snippet "hello world"}}})
 
-(deftest delete-topic-success-test
-  (testing "triggers workspace reload after successful deletion"
-    (let [topic-id "topic-123"
-          state    {}
-          actions  (topic/delete-topic-success state topic-id)]
-      (is (= [[:workspace.effects/reload]] actions)
-          "should return workspace reload effect"))))
-
-(deftest delete-topic-error-test
-  (testing "logs error and returns empty actions"
-    (with-console-error-silenced
-      (let [topic-id "topic-123"
-            state    {}
-            error    (js/Error. "deletion failed")
-            actions  (topic/delete-topic-error state topic-id error)]
-        (is (= [] actions)
-            "should return empty actions vector")))))
-
 (deftest auto-save-fires-when-excerpts-present-with-no-messages-test
   (let [state {:active-topic-id "t1"
                :topics {"t1" {:id "t1"

@@ -9,7 +9,7 @@ process, or JS boundaries needs validation or translation.
 ## Files
 
 - `src/gremllm/schema.cljs`: canonical data models for messages, attachments,
-  excerpts, topics, sessions, and workspace-level structures
+  excerpts, topics, sessions, and document-level structures
 - `src/gremllm/schema/codec.cljs`: boundary adapters for disk, IPC, and DOM
   selection capture
 - `src/gremllm/schema/codec/acp.cljs`: ACP wire-to-CLJS coercion — session
@@ -65,7 +65,7 @@ Shapes are labeled by role; file location follows from that.
 - `PersistedTopic`: EDN shape written to `topics/*.edn`
 
 **Transmitted (boundary adapter)** (`schema/codec.cljs`):
-- `WorkspaceSyncData`: payload sent from main to renderer during workspace
+- `DocumentSyncData`: payload sent from main to renderer during document
   hydration; defined and coerced at the IPC boundary, not in the canonical
   schema
 

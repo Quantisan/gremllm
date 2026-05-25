@@ -23,7 +23,7 @@ SDK client and the in-process agent over ndjson streams.
   tool-name tracking, resolver registry, and the `resolvePermission` callback
   factory
 - `src/gremllm/schema/codec/acp/permission.cljs`: pure CLJS permission policy
-  invoked by `main.effects.acp.permission`; keeps workspace-path checks and
+  invoked by `main.effects.acp.permission`; keeps document-path checks and
   approval logic out of the JS transport bridge
 
 ## File Writes

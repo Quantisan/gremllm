@@ -2,11 +2,12 @@
   (:require [nexus.registry :as nxr]
             [gremllm.main.actions.acp :as acp-actions]
             [gremllm.main.effects.ipc :as ipc-effects]
-            [gremllm.main.actions.workspace :as workspace-actions]
-            [gremllm.main.effects.workspace :as workspace-effects]
+            [gremllm.main.actions.document :as document-actions]
+            [gremllm.main.effects.document :as document-effects]
             [gremllm.main.effects.acp :as acp-effects]
             [gremllm.main.effects.acp.permission :as acp-permission]
             [gremllm.main.io :as io]
+            [gremllm.main.state :as state]
             [gremllm.main.window :as window]))
 
 ;; Register how to extract state from the system
@@ -27,7 +28,7 @@
 ;; - We bridge this gap with IPC, maintaining clean separation
 
 (nxr/register-action! :menu.actions/save-topic (fn [_state] [[:menu.effects/send-command :save-topic]]))
-(nxr/register-action! :menu.actions/open-folder (fn [_state] [[:workspace.actions/pick-folder]]))
+(nxr/register-action! :menu.actions/open-document (fn [_state] [[:menu.effects/send-command :open-document]]))
 (nxr/register-action! :menu.actions/new-window (fn [_state] [[:window.actions/create]]))
 
 ;; Store Effects
@@ -64,14 +65,17 @@
 (nxr/register-effect! :ipc.effects/reply-error ipc-effects/reply-error)
 (nxr/register-effect! :ipc.effects/promise->reply ipc-effects/promise->reply)
 
-;; Workspace Actions/Effects Registration
-(nxr/register-action! :workspace.actions/set-directory workspace-actions/set-directory)
-(nxr/register-action! :workspace.actions/open-folder workspace-actions/open-folder)
-(nxr/register-action! :workspace.actions/pick-folder workspace-actions/pick-folder)
-(nxr/register-action! :workspace.actions/reload workspace-actions/reload)
+;; App-level Actions
+(nxr/register-action! :app.actions/set-user-data-dir
+  (fn [_state dir] [[:store.effects/save state/user-data-dir dir]]))
 
-(nxr/register-effect! :workspace.effects/pick-folder-dialog workspace-effects/pick-folder-dialog)
-(nxr/register-effect! :workspace.effects/load-and-sync workspace-effects/load-and-sync)
+;; Document Actions/Effects Registration
+(nxr/register-action! :document.actions/open document-actions/open)
+(nxr/register-action! :document.actions/reload document-actions/reload)
+
+(nxr/register-effect! :document.effects/pick-dialog document-effects/pick-dialog)
+(nxr/register-effect! :document.effects/load-and-sync document-effects/load-and-sync)
+(nxr/register-effect! :document.effects/record-source-path document-effects/record-source-path)
 
 ;; ACP Event Actions
 ;; =================
@@ -107,10 +111,8 @@
     (dispatch [[:ipc.effects/promise->reply (acp-effects/resume-session cwd acp-session-id)]])))
 
 (nxr/register-effect! :acp.effects/send-prompt
-  (fn [{:keys [dispatch]} _ acp-session-id message workspace-dir]
-    (let [maybe-document-path (some-> workspace-dir io/document-file-path)
-          maybe-document-path (when (and maybe-document-path (io/file-exists? maybe-document-path))
-                                maybe-document-path)
+  (fn [{:keys [dispatch]} _ acp-session-id message doc-path]
+    (let [maybe-document-path (when (and doc-path (io/file-exists? doc-path)) doc-path)
           content-blocks (acp-actions/prompt-content-blocks message maybe-document-path)]
       (dispatch [[:ipc.effects/promise->reply
                   (acp-effects/prompt acp-session-id content-blocks)]]))))

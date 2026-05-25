@@ -68,11 +68,10 @@ const acpResolvePermission = ({ toolCallId, optionId }) => {
 contextBridge.exposeInMainWorld("electronAPI", {
 	saveTopic: (topicData) => ipcRenderer.invoke("topic/save", topicData),
 	deleteTopic: (topicId) => ipcRenderer.invoke("topic/delete", topicId),
-	createDocument: () => ipcRenderer.invoke("document/create"),
-	pickWorkspaceFolder: () => ipcRenderer.invoke("workspace/pick-folder"),
-	reloadWorkspace: () => ipcRenderer.invoke("workspace/reload"),
+	pickDocument: () => ipcRenderer.invoke("document/pick"),
+	reloadDocument: () => ipcRenderer.invoke("document/reload"),
 	onMenuCommand: (callback) => ipcRenderer.on("menu:command", callback),
-	onWorkspaceOpened: (callback) => ipcRenderer.on("workspace:opened", callback),
+	onDocumentOpened: (callback) => ipcRenderer.on("document:opened", callback),
 	onAcpSessionUpdate: (callback) => ipcRenderer.on("acp:session-update", callback),
 	onAcpPermissionPending: (callback) => ipcRenderer.on("acp:permission-pending", callback),
 	// File path API - uses webUtils.getPathForFile to get filesystem paths from File objects
