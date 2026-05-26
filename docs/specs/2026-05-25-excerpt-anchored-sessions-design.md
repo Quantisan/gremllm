@@ -124,6 +124,35 @@ The spec describes the happy path precisely and is silent on every degraded path
 - **Wrong auto-activation:** If the latest session belongs to a different work context (e.g., a colleague's prior session in a shared draft), AI output goes into the wrong conversation silently. Does auto-activation signal itself as automatic?
 - **No retrieval cue:** When a user returns after days and doesn't remember where in the document they were working, how do they find the right session without a list or search?
 
+## Design Bets
+
+These are the design's load-bearing assumptions — not problems to solve before shipping, but hypotheses to test with users after implementation. If any bet is wrong, the fix is structural, not incremental. Watch for disconfirming signal early.
+
+### Bet 1: AI sessions behave like annotations
+
+> "Research across Google Docs, Figma, Notion, GitHub PRs, Hypothesis, and legal annotation tools shows universal 1:1 anchoring."
+
+The 1:1 anchoring model and the cited evidence from annotation tools rest on a structural analogy: that AI conversation sessions are the same kind of artifact as comments or annotations. But annotations are reactive — a thought pinned to a fixed referent. AI sessions are exploratory, evolving, and routinely span multiple document regions. The analogy is doing enormous load-bearing work without examination. If AI sessions are a structurally different artifact class, the 1:1 model, the margin bar identity system, and the "no multi-anchor" decision all inherit a flawed premise.
+
+**Watch for:** Sessions that outgrow their anchor — conversations where the anchor text becomes irrelevant halfway through, or where users wish they could "move" a session to a different part of the document.
+
+### Bet 2: The atomic unit of "what I want to discuss" is a text region, not a conceptual thread
+
+> "Sessions are always created from a text selection."
+> "The anchor records the user's intent: 'I want to discuss this specific text.'"
+
+The spec treats the document as a collection of nodes — selectable passages — and anchors conversations to them. But knowledge work often follows arrows: a pricing assumption in paragraph 3 that constrains the risk assessment in paragraph 12 that undermines the thesis in the executive summary. The meaningful unit isn't a passage; it's the thread of reasoning connecting passages. A text selection captures a node. It can't capture "the tension between these two claims" or "the logic chain running through sections 2, 4, and 7." If the interesting conversations happen along arrows rather than at nodes, 1:1 anchoring to a text region systematically misses the conversations that carry the most expert signal.
+
+**Watch for:** Users who select text as a starting point but immediately paste or reference other document sections in their first message — a signal that the real unit of discussion is a cross-cutting thread, not a passage.
+
+### Bet 3: Users navigate past conversations by spatial document context, not by content recall
+
+> "The document becomes the navigation surface. The topic list goes away."
+
+The spec bets that users will remember AI conversations by where in the document they happened — spatial recall — rather than by what they were about — content recall. This is a cognitive model claim about how PE analysts actually think. If they search for "the pricing assumptions conversation" rather than "the one near paragraph 12," the document-as-navigation thesis is wrong regardless of how margin bars are implemented. Spatial recall works for small counts and recent sessions; content recall dominates as sessions accumulate and time passes.
+
+**Watch for:** Users scrolling through the document hunting for a margin bar they can't find, or asking "where was that conversation about X?" — both signals that content recall, not spatial recall, is the dominant retrieval mode.
+
 ## Staged Delivery
 
 This work is divided into three stages. Each stage leaves the app fully functional. The sequence front-loads design learning and defers irreversible UI changes.
