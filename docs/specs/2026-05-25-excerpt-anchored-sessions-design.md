@@ -69,6 +69,12 @@ When a document opens with existing sessions, the latest one (by last-modified t
 
 Sessions are resumable and open-ended, identical to today's topics. "Session" refers to the AI interaction context, not a time-bounded event. No lifecycle states (open/closed/archived) are introduced.
 
+### Anchor Versioning
+
+Anchors are scoped to the document version that existed when the session was created. When document content changes, prior anchors are archived as belonging to a previous version and are not displayed. The session data is preserved, not deleted.
+
+This eliminates anchor drift as a design problem — anchors never follow edits, so there is no ambiguity about whether a bar still points to the right text. The mechanics of versioning (how versions are identified, what triggers archival, how archived sessions surface) are deferred.
+
 ### Deletion
 
 Session deletion is not included in the initial version. Sessions accumulate. Deletion can be added later through a context menu or session management UI.
@@ -114,7 +120,7 @@ The spec bets everything on one navigation channel and removes the fallback in S
 
 The spec describes the happy path precisely and is silent on every degraded path. Specific cases that need answers:
 
-- **Anchor drift:** When anchored text is edited, moved, or deleted across document revisions, what does the user observe? A silently orphaned bar looks like a bug. A vanishing bar destroys discoverability. "Defer drift handling" is acceptable; "no defined user-visible behavior" is not.
+- **~~Anchor drift~~:** Resolved — anchors are scoped to a document version. When content changes, prior anchors are archived and not displayed (see Anchor Versioning). No drift occurs.
 - **Wrong auto-activation:** If the latest session belongs to a different work context (e.g., a colleague's prior session in a shared draft), AI output goes into the wrong conversation silently. Does auto-activation signal itself as automatic?
 - **No retrieval cue:** When a user returns after days and doesn't remember where in the document they were working, how do they find the right session without a list or search?
 
@@ -155,4 +161,4 @@ This is the point of no return for the old UI. By this stage the data model is p
 - Annotation density management (clustering, progressive disclosure)
 - Scrollbar minimap marks
 - Cross-session references or linking
-- Anchor drift handling (what happens when the document text under an anchor changes)
+- Anchor versioning mechanics (version identity, archival triggers, surfacing archived sessions) — the design choice is made (see Anchor Versioning); the implementation is deferred
