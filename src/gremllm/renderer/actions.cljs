@@ -9,7 +9,6 @@
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.ui.document.locator :as locator]
-            [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
@@ -183,13 +182,6 @@
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/start-from-selection topic/start-from-selection)
 (nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)
-(nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
-(nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
-(nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
-(nxr/register-action! :topic.actions/set-name topic/set-name)
-(nxr/register-action! :ui.actions/exit-topic-rename-mode
-  (fn [_state _topic-id]
-    [[:effects/save ui-state/renaming-topic-id-path nil]]))
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)

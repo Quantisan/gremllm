@@ -91,28 +91,6 @@
     (is (= expected (codec/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest commit-rename-test
-  (let [topic-id "topic-123"
-        state    {:topics {topic-id {:id topic-id :name "Original Name"}}}]
-
-    (testing "blank name - should exit rename mode without saving"
-      (let [actions (topic/commit-rename state topic-id "   ")]
-        (is (= 1 (count actions)))
-        (is (= :ui.actions/exit-topic-rename-mode (ffirst actions)))))
-
-    (testing "unchanged name - should exit rename mode without saving"
-      (let [actions (topic/commit-rename state topic-id "Original Name")]
-        (is (= 1 (count actions)))
-        (is (= :ui.actions/exit-topic-rename-mode (ffirst actions)))))
-
-    (testing "valid new name - should save, exit rename mode, and auto-save"
-      (let [actions (topic/commit-rename state topic-id "New Name")]
-        (is (= 3 (count actions)))
-        (is (= :topic.actions/set-name (ffirst actions)))
-        (is (= "New Name" (nth (first actions) 2)))
-        (is (= :ui.actions/exit-topic-rename-mode (first (second actions))))
-        (is (= :topic.effects/auto-save (first (nth actions 2))))))))
-
 (deftest set-active-does-not-init-acp-test
   (testing "set-active only saves active-topic-id, no ACP init"
     (let [result (topic/set-active {} "topic-123")]
