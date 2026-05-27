@@ -148,7 +148,8 @@
         (start-from-selection state anchor)))))
 
 (defn set-active
-  "Set the active topic. ACP session init is handled separately."
+  "Set the active topic. ACP session init is handled separately.
+   TODO(slice2): rewire ACP init on activation."
   [_state topic-id]
   [[:effects/save topic-state/active-topic-id-path topic-id]])
 

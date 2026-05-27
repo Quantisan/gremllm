@@ -199,7 +199,8 @@
   (mu/merge
     PersistedTopic
     [:map
-     [:anchor {:optional true} DocumentExcerpt]
+     [:anchor {:optional true} DocumentExcerpt] ;; TODO(slice2): persist anchor in PersistedTopic
+
      [:unsaved? {:optional true} :boolean]]))
 
 ;; TODO: refactor with (generate-topic-id)

@@ -104,6 +104,7 @@
                       :font-style "italic"}}
         "Select text in the document to start a session."]]
 
+      ;; TODO(slice2): connect ACP; shell sessions show disabled placeholder
       (and active-topic (nil? (get-in active-topic [:session :id])))
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}
