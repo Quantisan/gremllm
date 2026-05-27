@@ -31,6 +31,7 @@
         (highlights/sync! article excerpts)
         (highlights/sync-anchor! article (:active-anchor-text session-opts))
         (highlights/sync-anchor-preview! article (:preview-anchor-text session-opts))
+        ;; gutter bars are positioned from block rects — requires sync-block-metadata! above
         (when gutter-el
           (gutter/sync! gutter-el article (:topics-map session-opts)))))))
 
