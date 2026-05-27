@@ -126,7 +126,7 @@
   (when (seq excerpts)
     [:div.excerpt-list
      (for [{:keys [id text]} excerpts]
-       [:span.excerpt-chip {:key id}
+       [:span.excerpt-chip {:replicant/key id}
         "excerpt: " (truncate text composer-excerpt-cap)
         [:button.dismiss
          {:type "button"

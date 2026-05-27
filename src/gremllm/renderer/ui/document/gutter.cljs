@@ -11,7 +11,8 @@
   (let [topic-id (:id topic)
         anchor-text (get-in topic [:anchor :text])]
     [:button.session-bar-target
-     {:aria-label   (str "Session: " (truncate anchor-text 40))
+     {:replicant/key topic-id
+      :aria-label   (str "Session: " (truncate anchor-text 40))
       :aria-pressed (if active? "true" "false")
       :data-topic-id topic-id
       :style {:--bar-color color}
@@ -30,7 +31,6 @@
      (for [topic anchored]
        (let [active? (= (:id topic) active-topic-id)
              color   (session-state/color-for-topic topics-map (:id topic))]
-         ^{:key (:id topic)}
          (render-bar topic active? color)))]))
 
 (defn sync!
