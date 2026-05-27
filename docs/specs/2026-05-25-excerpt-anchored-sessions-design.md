@@ -102,7 +102,7 @@ None required. This is a pre-release MVP. Existing persisted topic data can be d
 
 ## Open Questions (Blocking)
 
-These must be investigated before Stage 3 removes the topic list fallback.
+These must be investigated before Slice 1 removes the topic list fallback.
 
 ### OQ1: Return intent — users come back to a document for different reasons
 
@@ -110,7 +110,7 @@ The spec auto-activates the latest session and expects users to navigate by scan
 
 ### OQ2: Single-channel navigation — margin bars are the only way in
 
-The spec bets everything on one navigation channel and removes the fallback in Stage 3. Three independent concerns converge here:
+The spec bets everything on one navigation channel and removes the fallback in Slice 1. Three independent concerns converge here:
 
 - If users scan bars directly rather than reading document text to find them, bars are just an unlabeled, unsearchable list — possibly worse than what they replace.
 - At 25+ sessions on a long document, bars may become indistinguishable noise. The spec defers density management but defines no signal for when bars have failed and no criteria for reverting.
@@ -155,29 +155,21 @@ The spec bets that users will remember AI conversations by where in the document
 
 ## Staged Delivery
 
-This work is divided into three stages. Each stage leaves the app fully functional. The sequence front-loads design learning and defers irreversible UI changes.
+Two slices. Slice 1 front-loads the riskiest unknown — do margin bars work against real document content? — by building the UI first with stubbed data. The app will be broken between slices. Clean-slate assumption: existing topic data is discarded.
 
-### Stage 1: Anchor Model (backend, small)
+### Slice 1: Rendering + Navigation (UI, the risk)
 
-Add the anchor concept to the data model. A topic gains an `:anchor` field that records its spawning excerpt. Persistence stores and loads the new field.
+Define the Anchor schema (text + locator + timestamp). Stub session creation from the text-selection popover — "Start session" captures a real anchor from the current selection. Render colored margin bars positioned by anchor locator data. Remove the nav overlay and topic list. Wire empty state, bar-click switching, and auto-activation of the latest session on document open. Persistence ignores anchors — sessions don't survive restart.
 
-The app works identically — the anchor is stored but not yet used by any UI. The old topic list and creation flow remain.
+**Learns:** Do bars position correctly against real document content? Does the visual treatment work? Does popover-driven creation feel right? How does click-to-switch from the margin feel?
+
+### Slice 2: Anchor Model + Integration (data, the plumbing)
+
+Update `PersistedTopic` and disk codecs to persist the anchor. Wire anchor into the full save/load pipeline. Clean up the creation flow — remove the old "New Topic" path entirely. Anchor feeds the ACP prompt as first-message context. Sessions survive restart.
 
 **Learns:** Does the anchor fit cleanly into the schema and persistence layer?
 
-### Stage 2: Margin Bar Rendering (frontend, additive)
-
-Render colored margin bars in the document panel for topics that have an excerpt anchor. The old topic list still works — bars are a new layer alongside the existing UI, not a replacement.
-
-Clicking a bar switches the active topic, same as clicking in the list today. Both navigation surfaces coexist.
-
-**Learns:** Do bars position correctly against real document content? Does the visual treatment work? How does click-to-switch feel? This is the riskiest unknown — test it while the old UI is still a fallback.
-
-### Stage 3: Navigation Overhaul (frontend, the commitment)
-
-Remove the topic list and nav overlay. Change the excerpt selection popover to offer "Start session" and "Add excerpt." Wire up the empty state.
-
-This is the point of no return for the old UI. By this stage the data model is proven (Stage 1) and bars are validated (Stage 2). The Topic → Session rename happens when it's natural — during this stage or after — not as a dedicated phase.
+The Topic → Session rename happens when natural — during either slice or after — not as a dedicated phase.
 
 ## Out of Scope
 
