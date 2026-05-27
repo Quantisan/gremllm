@@ -17,6 +17,17 @@
             --tva-amber: #D45B12;
             --tva-concrete: #8C8C8C;
             --tva-teal: #004B49;
+
+            /* Session color palette */
+            --session-color-1: #E07634;
+            --session-color-2: #3D8B8A;
+            --session-color-3: #7B5EA7;
+            --session-color-4: #C4534A;
+            --session-color-5: #4A7B3F;
+
+            /* Active session color (updated by JS on session switch) */
+            --active-session-color: var(--session-color-1);
+            --preview-session-color: var(--session-color-1);
         }
 
         /* Light Scope — Document Panel, Welcome Screen */
@@ -193,6 +204,71 @@
             overflow-y: auto;
             padding: var(--pico-spacing);
             transition: flex 0.3s ease;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .document-panel > article {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-gutter {
+            flex: 0 0 24px;
+            position: relative;
+            border-left: 1px solid var(--pico-muted-border-color);
+        }
+
+        .session-gutter[role="toolbar"] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-bar-target {
+            position: absolute;
+            right: 0;
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+        }
+
+        .session-bar-target:hover {
+            background: color-mix(in srgb, var(--bar-color) 8%, transparent);
+        }
+
+        .session-bar {
+            width: 5px;
+            border-radius: 3px;
+            height: 100%;
+            position: absolute;
+            right: 6px;
+            top: 0;
+        }
+
+        .session-bar--active {
+            opacity: 1;
+            box-shadow: 0 0 4px color-mix(in srgb, var(--bar-color) 50%, transparent);
+        }
+
+        .session-bar--inactive {
+            opacity: 0.35;
+        }
+
+        .session-bar-target:hover .session-bar--inactive {
+            opacity: 0.70;
+        }
+
+        ::highlight(anchor) {
+            background-color: color-mix(in srgb, var(--active-session-color) 12%, transparent);
+        }
+
+        ::highlight(anchor-preview) {
+            background-color: color-mix(in srgb, var(--preview-session-color) 8%, transparent);
         }
 
         .chat-panel {
