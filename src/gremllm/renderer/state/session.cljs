@@ -20,7 +20,7 @@
 
 (defn color-for-topic
   [topics-map topic-id]
-  (let [sorted-ids (sort (keys topics-map))
+  (let [sorted-ids (mapv :id (anchored-topics-sorted topics-map))
         idx (.indexOf sorted-ids topic-id)]
     (when-not (neg? idx)
       (nth session-colors (mod idx (count session-colors))))))

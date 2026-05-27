@@ -2,10 +2,12 @@
   (:require [cljs.test :refer [deftest is testing]]
             [gremllm.renderer.state.session :as session-state]))
 
+(def stub-anchor {:id "e1" :text "x" :locator {}})
+
 (deftest color-for-topic-test
-  (let [topics-map {"topic-1000-a" {:id "topic-1000-a" :name "T1"}
-                    "topic-2000-b" {:id "topic-2000-b" :name "T2"}
-                    "topic-3000-c" {:id "topic-3000-c" :name "T3"}}]
+  (let [topics-map {"topic-1000-a" {:id "topic-1000-a" :name "T1" :anchor stub-anchor}
+                    "topic-2000-b" {:id "topic-2000-b" :name "T2" :anchor stub-anchor}
+                    "topic-3000-c" {:id "topic-3000-c" :name "T3" :anchor stub-anchor}}]
     (testing "first topic gets color 1"
       (is (= "#E07634" (session-state/color-for-topic topics-map "topic-1000-a"))))
     (testing "second topic gets color 2"
@@ -16,7 +18,8 @@
 (deftest color-wraps-modulo-5-test
   (let [topics-map (into {} (map-indexed
                               (fn [i _] [(str "topic-" (* (inc i) 1000) "-x")
-                                         {:id (str "topic-" (* (inc i) 1000) "-x")}])
+                                         {:id (str "topic-" (* (inc i) 1000) "-x")
+                                          :anchor stub-anchor}])
                               (range 7)))]
     (testing "6th topic wraps to color 1"
       (let [sorted-ids (sort (keys topics-map))]
