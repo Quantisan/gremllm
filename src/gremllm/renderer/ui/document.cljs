@@ -2,7 +2,8 @@
   (:require [gremllm.renderer.ui.markdown :as md]
             [gremllm.renderer.ui.document.diffs :as diffs]
             [gremllm.renderer.ui.document.highlights :as highlights]
-            [gremllm.renderer.ui.document.locator :as locator]))
+            [gremllm.renderer.ui.document.locator :as locator]
+            [gremllm.renderer.ui.document.gutter :as gutter]))
 
 (defn- render-diff-segments [segments]
   (into [:div]
@@ -20,29 +21,26 @@
                                  "Reject"]]]))
               segments)))
 
-(defn- on-render-sync [content excerpts]
+(defn- on-render-sync [content excerpts session-opts]
   (fn [{:replicant/keys [node life-cycle]}]
     (if (= :replicant.life-cycle/unmount life-cycle)
       (highlights/clear-all!)
-      ;; Replicant re-renders markdown into a fresh DOM subtree, which drops
-      ;; any prior block decorations. Re-apply both after every render:
-      ;; - sync-block-metadata! stamps source-line data-* attrs on each block
-      ;;   so mouseup selections resolve to markdown coords via DOM .closest()
-      ;;   (see locator/selection-locator-from-dom).
-      ;; - highlights/sync! re-paints excerpt ranges against the new nodes.
-      (do
-        (locator/sync-block-metadata! node content)
-        (highlights/sync! node excerpts)))))
+      (let [article node
+            gutter-el (some-> article .-parentElement (.querySelector ".session-gutter"))]
+        (locator/sync-block-metadata! article content)
+        (highlights/sync! article excerpts)
+        (highlights/sync-anchor! article (:active-anchor-text session-opts))
+        (highlights/sync-anchor-preview! article (:preview-anchor-text session-opts))
+        (when gutter-el
+          (gutter/sync! gutter-el article (:topics-map session-opts)))))))
 
-(defn render-document [content pending-diffs excerpts]
+(defn render-document [content pending-diffs excerpts session-opts]
   (if content
     (if (seq pending-diffs)
       (let [segments (diffs/compose content pending-diffs)]
-        ;; Intentionally no selection capture in diff mode: review is modal here,
-        ;; so accept/reject is the only allowed interaction (see 58cd32e).
         [:article.diff-mode (render-diff-segments segments)])
       [:article {:on                  {:mouseup [[:excerpt.actions/capture [:event/text-selection]]]}
-                 :replicant/on-render (on-render-sync content excerpts)}
+                 :replicant/on-render (on-render-sync content excerpts session-opts)}
        (md/markdown->hiccup content)])
     [:article
      [:p {:style {:color      "var(--pico-muted-color)"
