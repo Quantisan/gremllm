@@ -132,10 +132,9 @@
   (resolve-diff-actions state tool-call-id "reject_once"))
 
 (defn set-active
-  "Set the active topic and initialize its ACP session."
+  "Set the active topic. ACP session init is handled separately."
   [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]
-   [:acp.effects/init-session topic-id]])
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 (defn begin-rename [state topic-id]
   ;; Enter inline rename mode for this topic

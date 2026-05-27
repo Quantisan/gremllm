@@ -54,6 +54,12 @@
         (is (= :ui.actions/exit-topic-rename-mode (first (second actions))))
         (is (= :topic.effects/auto-save (first (nth actions 2))))))))
 
+(deftest set-active-does-not-init-acp-test
+  (testing "set-active only saves active-topic-id, no ACP init"
+    (let [result (topic/set-active {} "topic-123")]
+      (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]]
+             result)))))
+
 (deftest auto-save-test
   (let [topic-id       "topic-123"
         empty-topic    {:id topic-id :messages []}
