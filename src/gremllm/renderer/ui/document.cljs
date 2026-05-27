@@ -58,9 +58,10 @@
       (let [article node
             gutter-el (some-> article .-parentElement (.querySelector ".session-gutter"))]
         (locator/sync-block-metadata! article content)
-        (highlights/sync! article excerpts)
-        (highlights/sync-anchor! article (:active-anchor-text session-opts))
-        (highlights/sync-anchor-preview! article (:preview-anchor-text session-opts))
+        (let [index (highlights/flatten-article article)]
+          (highlights/sync! index excerpts)
+          (highlights/sync-anchor! index (:active-anchor-text session-opts))
+          (highlights/sync-anchor-preview! index (:preview-anchor-text session-opts)))
         ;; gutter bars are positioned from block rects — requires sync-block-metadata! above
         (when gutter-el
           (gutter/sync! gutter-el article (:topics-map session-opts)))))))
