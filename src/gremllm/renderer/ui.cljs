@@ -2,46 +2,26 @@
   (:require [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.form :as form-state]
             [gremllm.renderer.state.loading :as loading-state]
-            [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.renderer.ui.chat :as chat-ui]
-            [gremllm.renderer.ui.topics :as topics-ui]
             [gremllm.renderer.ui.welcome :as welcome-ui]
             [gremllm.renderer.ui.document :as document-ui]
             [gremllm.renderer.ui.elements :as e]))
 
-
 (defn- render-app-layout [state]
-  ;; TODO: all these state crumbs... is there a more organized method?
-  (let [document-meta         (document-state/get-meta state)
-        document-content      (document-state/get-content state)
+  (let [document-content      (document-state/get-content state)
         pending-diffs         (topic-state/get-pending-diffs state)
         active-topic-id       (topic-state/get-active-topic-id state)
-        topics-map            (topic-state/get-topics-map state)
-        renaming-topic-id     (ui-state/renaming-topic-id state)
-        nav-expanded?         (ui-state/nav-expanded? state)
         captured              (excerpt-state/get-captured state)
         anchor                (excerpt-state/get-anchor state)
         popover-pos           (excerpt-state/popover-position captured anchor)
         excerpts              (topic-state/get-excerpts state)]
     [e/app-layout
-     ;; Zone 1: Nav strip
-     [e/nav-strip {:on {:click [[:ui.actions/toggle-nav]]}}
-      [:span {:style {:font-size "1.5rem"}} "📁"]]
-
-     ;; Zone 2: Document panel
+     ;; Zone 1: Document panel
      [e/document-panel {:on {:scroll    [[:excerpt.actions/dismiss-popover]]
                              :mousedown [[:excerpt.actions/dismiss-popover]]}}
-      (when nav-expanded?
-        [e/nav-overlay
-         (topics-ui/render-left-panel-content
-           {:document-meta     document-meta
-            :active-topic-id   active-topic-id
-            :topics-map        topics-map
-            :renaming-topic-id renaming-topic-id})])
       (document-ui/render-document document-content pending-diffs excerpts)
-      ;; TODO: not domain obvious... perhaps rename or comment?
       (when popover-pos
         [:button {:style {:position      "absolute"
                           :top           (str (:top popover-pos) "px")
@@ -58,7 +38,7 @@
                        :click     [[:excerpt.actions/add]]}}
          "Add excerpt"])]
 
-     ;; Zone 3: Chat panel
+     ;; Zone 2: Chat panel
      [e/chat-panel
       (let [messages (topic-state/get-messages state)
             awaiting-response? (and (loading-state/loading? state active-topic-id)

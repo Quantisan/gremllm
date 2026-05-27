@@ -96,7 +96,6 @@
         }
 
         /* Structural background rule — dark-scoped elements need explicit backgrounds */
-        .nav-strip[data-theme=dark],
         .chat-panel[data-theme=dark] {
             background-color: var(--pico-background-color);
             color: var(--pico-color);
@@ -185,59 +184,6 @@
             padding: 0 0.125rem;
             font-size: 0.625rem;
             line-height: 1;
-        }
-
-        .topic-item {
-            /* Keep topic link and delete control on one line */
-            display: flex;
-            align-items: center;
-            gap: calc(var(--pico-spacing) / 4);
-        }
-
-        .topic-item > a {
-            /* Let link take remaining row space */
-            flex: 1 1 auto;
-        }
-
-        .topic-item > button {
-            /* Tighten button spacing inside list */
-            margin: 0;
-            /* Lean on Pico palette */
-            border-color: var(--pico-muted-border-color);
-            color: var(--pico-muted-color);
-
-            /* Show delete button only on hover */
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        /* Show delete button only on hover */
-        .topic-item:hover > button {
-            opacity: 1;
-        }
-
-        /* Three-zone layout */
-        .nav-strip {
-            flex: 0 0 48px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: var(--pico-spacing);
-            border-right: 1px solid var(--pico-muted-border-color);
-            cursor: pointer;
-        }
-
-        .nav-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 280px;
-            z-index: 10;
-            background: var(--pico-background-color);
-            border-right: 1px solid var(--pico-muted-border-color);
-            overflow-y: auto;
-            padding: var(--pico-spacing);
         }
 
         .document-panel {

@@ -1,8 +1,7 @@
 (ns gremllm.renderer.actions.ui
   (:require [gremllm.schema :as schema]
             [gremllm.renderer.state.form :as form-state]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.ui :as ui-state]))
+            [gremllm.renderer.state.topic :as topic-state]))
 
 ;; UI Actions
 ;; This file contains actions for two related namespaces:
@@ -64,6 +63,3 @@
 (defn clear-pending-attachments [_state]
   [[:effects/save form-state/pending-attachments-path []]])
 
-(defn toggle-nav [state]
-  (let [expanded? (ui-state/nav-expanded? state)]
-    [[:effects/save ui-state/nav-expanded-path (not expanded?)]]))
