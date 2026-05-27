@@ -23,7 +23,7 @@
 (defn- on-render-sync [content excerpts]
   (fn [{:replicant/keys [node life-cycle]}]
     (if (= :replicant.life-cycle/unmount life-cycle)
-      (highlights/clear!)
+      (highlights/clear-all!)
       ;; Replicant re-renders markdown into a fresh DOM subtree, which drops
       ;; any prior block decorations. Re-apply both after every render:
       ;; - sync-block-metadata! stamps source-line data-* attrs on each block

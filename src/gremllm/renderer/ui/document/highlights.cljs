@@ -103,8 +103,31 @@
     (doseq [r ranges] (.add hl r))
     (.set js/CSS.highlights highlight-name hl)))
 
-(defn clear!
-  "Removes the excerpt highlight registry entry. Call on article
-   unmount to avoid leaving ranges that point to detached nodes."
+(def ^:private anchor-highlight-name "anchor")
+(def ^:private anchor-preview-highlight-name "anchor-preview")
+
+(defn sync-anchor!
+  [article anchor-text]
+  (if (and article (seq anchor-text))
+    (let [index (flatten-article article)
+          hl    (js/Highlight.)]
+      (when-let [range-info (locate-range-in-flat-text index anchor-text)]
+        (.add hl (make-range range-info)))
+      (.set js/CSS.highlights anchor-highlight-name hl))
+    (.delete js/CSS.highlights anchor-highlight-name)))
+
+(defn sync-anchor-preview!
+  [article preview-anchor-text]
+  (if (and article (seq preview-anchor-text))
+    (let [index (flatten-article article)
+          hl    (js/Highlight.)]
+      (when-let [range-info (locate-range-in-flat-text index preview-anchor-text)]
+        (.add hl (make-range range-info)))
+      (.set js/CSS.highlights anchor-preview-highlight-name hl))
+    (.delete js/CSS.highlights anchor-preview-highlight-name)))
+
+(defn clear-all!
   []
-  (.delete js/CSS.highlights highlight-name))
+  (.delete js/CSS.highlights highlight-name)
+  (.delete js/CSS.highlights anchor-highlight-name)
+  (.delete js/CSS.highlights anchor-preview-highlight-name))
