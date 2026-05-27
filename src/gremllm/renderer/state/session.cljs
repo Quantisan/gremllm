@@ -1,7 +1,11 @@
 (ns gremllm.renderer.state.session)
 
 (def session-colors
-  ["#E07634" "#3D8B8A" "#7B5EA7" "#C4534A" "#4A7B3F"])
+  ["var(--session-color-1)"
+   "var(--session-color-2)"
+   "var(--session-color-3)"
+   "var(--session-color-4)"
+   "var(--session-color-5)"])
 
 (def hovered-bar-topic-id-path [:ui :hovered-bar-topic-id])
 

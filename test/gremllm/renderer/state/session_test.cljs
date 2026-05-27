@@ -9,11 +9,11 @@
                     "topic-2000-b" {:id "topic-2000-b" :name "T2" :anchor stub-anchor}
                     "topic-3000-c" {:id "topic-3000-c" :name "T3" :anchor stub-anchor}}]
     (testing "first topic gets color 1"
-      (is (= "#E07634" (session-state/color-for-topic topics-map "topic-1000-a"))))
+      (is (= "var(--session-color-1)" (session-state/color-for-topic topics-map "topic-1000-a"))))
     (testing "second topic gets color 2"
-      (is (= "#3D8B8A" (session-state/color-for-topic topics-map "topic-2000-b"))))
+      (is (= "var(--session-color-2)" (session-state/color-for-topic topics-map "topic-2000-b"))))
     (testing "third topic gets color 3"
-      (is (= "#7B5EA7" (session-state/color-for-topic topics-map "topic-3000-c"))))))
+      (is (= "var(--session-color-3)" (session-state/color-for-topic topics-map "topic-3000-c"))))))
 
 (deftest color-wraps-modulo-5-test
   (let [topics-map (into {} (map-indexed
