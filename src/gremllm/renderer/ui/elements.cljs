@@ -34,3 +34,7 @@
     [:summary.tool-detail-summary summary]
     (when query [:div.tool-detail-body query])]])
 
+(defalias session-gutter [attrs & body]
+  (into [:div.session-gutter (merge {:role "toolbar"
+                                     :aria-label "Document sessions"} attrs)] body))
+
