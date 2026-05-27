@@ -27,12 +27,11 @@
                              (session-state/color-for-topic topics-map active-topic-id))
         preview-color      (when hovered-topic-id
                              (session-state/color-for-topic topics-map hovered-topic-id))]
-    [e/app-layout
+    [e/app-layout {:style {:--active-session-color  (or active-color "transparent")
+                           :--preview-session-color (or preview-color "transparent")}}
      ;; Zone 1: Document panel (with gutter)
      [e/document-panel {:on    {:scroll    [[:excerpt.actions/dismiss-popover]]
-                                :mousedown [[:excerpt.actions/dismiss-popover]]}
-                        :style {:--active-session-color  (or active-color "transparent")
-                                :--preview-session-color (or preview-color "transparent")}}
+                                :mousedown [[:excerpt.actions/dismiss-popover]]}}
       (document-ui/render-document document-content pending-diffs excerpts
                                    {:active-anchor-text   (get-in active-topic [:anchor :text])
                                     :preview-anchor-text  (get-in hovered-topic [:anchor :text])
