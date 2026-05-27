@@ -199,6 +199,7 @@
   (mu/merge
     PersistedTopic
     [:map
+     [:anchor {:optional true} DocumentExcerpt]
      [:unsaved? {:optional true} :boolean]]))
 
 ;; TODO: refactor with (generate-topic-id)
