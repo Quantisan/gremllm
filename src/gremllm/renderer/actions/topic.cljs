@@ -3,6 +3,8 @@
             [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.excerpt :as excerpt-state]
+            [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
 
@@ -130,6 +132,25 @@
    and records tool-call-id in :resolved-tool-calls."
   [state tool-call-id]
   (resolve-diff-actions state tool-call-id "reject_once"))
+
+(defn start-from-selection
+  "Create a new shell session anchored to the given excerpt."
+  [_state anchor]
+  (let [new-topic (assoc (schema/create-topic) :anchor anchor)
+        topic-id  (:id new-topic)]
+    [[:effects/save (topic-state/topic-path topic-id) new-topic]
+     [:topic.actions/set-active topic-id]
+     [:excerpt.actions/dismiss-popover]]))
+
+(defn start-session-from-capture
+  "Build an anchor from the current excerpt capture state, then create a session."
+  [state]
+  (let [captured (excerpt-state/get-captured state)
+        locator-hints (excerpt-state/get-locator-hints state)]
+    (when (and captured locator-hints)
+      (let [anchor (excerpt/capture->excerpt captured locator-hints
+                                             (str "excerpt-" (random-uuid)))]
+        (start-from-selection state anchor)))))
 
 (defn set-active
   "Set the active topic. ACP session init is handled separately."

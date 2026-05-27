@@ -20,6 +20,65 @@
     (is (= :topic.actions/set-active action-name) "second should be set-active action")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
+(deftest start-from-selection-test
+  (let [anchor {:id "excerpt-abc"
+                :text "launched on a Tuesday"
+                :locator {:document-relative-path "document.md"
+                          :start-block {:kind :paragraph :index 2
+                                        :start-line 3 :end-line 3
+                                        :block-text-snippet "Our Gremllm"}
+                          :end-block {:kind :paragraph :index 2
+                                      :start-line 3 :end-line 3
+                                      :block-text-snippet "Our Gremllm"}}}
+        result (topic/start-from-selection {} anchor)
+        [[_ topic-path saved-topic] [set-active-action set-active-id] dismiss-action] result]
+
+    (is (= 3 (count result)) "should return save, set-active, dismiss-popover")
+
+    (is (= :effects/save (first (first result))))
+    (is (= anchor (:anchor saved-topic)) "anchor is set on the new topic")
+    (is (= "New Topic" (:name saved-topic)))
+    (is (= [] (:messages saved-topic)))
+    (is (= [] (:excerpts saved-topic)))
+    (is (string? (:id saved-topic)))
+    (is (= (topic-state/topic-path (:id saved-topic)) topic-path))
+
+    (is (= :topic.actions/set-active set-active-action))
+    (is (= (:id saved-topic) set-active-id))
+
+    (is (= [:excerpt.actions/dismiss-popover] dismiss-action))))
+
+(deftest start-session-from-capture-test
+  (let [block {:kind :paragraph :index 2
+               :start-line 3 :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}
+        state {:excerpt {:captured {:text "launched on a Tuesday"
+                                    :range-count 1
+                                    :anchor-node "#text"
+                                    :anchor-offset 0
+                                    :focus-node "#text"
+                                    :focus-offset 21
+                                    :range {:bounding-rect {:height 17 :left 100 :top 50 :width 200}
+                                            :client-rects [{:height 17 :left 100 :top 50 :width 200}]
+                                            :common-ancestor "#text"
+                                            :start-container "#text"
+                                            :start-text "Our Gremllm launched on a Tuesday."
+                                            :start-offset 15
+                                            :end-container "#text"
+                                            :end-text "Our Gremllm launched on a Tuesday."
+                                            :end-offset 36}}
+                         :locator-hints {:document-relative-path "document.md"
+                                         :start-block block
+                                         :end-block block}}}
+        result (topic/start-session-from-capture state)]
+    (testing "returns effects when captured state exists"
+      (is (= 3 (count result)))
+      (is (= :effects/save (first (first result))))
+      (let [[_ _ saved-topic] (first result)]
+        (is (= "launched on a Tuesday" (get-in saved-topic [:anchor :text])))))
+    (testing "returns nil when no captured state"
+      (is (nil? (topic/start-session-from-capture {}))))))
+
 (def ^:private expected-new-topic (schema/create-topic))
 
 (deftest normalize-topic-test

@@ -182,6 +182,8 @@
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)
 (nxr/register-action! :topic.actions/set-active topic/set-active)
+(nxr/register-action! :topic.actions/start-from-selection topic/start-from-selection)
+(nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)
 (nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
 (nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
 (nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
