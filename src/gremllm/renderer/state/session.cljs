@@ -20,6 +20,10 @@
 
 (defn anchored-topics-sorted
   [topics-map]
+  ;; TODO: we want to sort by last modified time
+  ;;
+  ;; Sort by :id == sort by creation time: ids are `topic-<timestamp>-<random>`,
+  ;; so lexicographic order is creation order (see schema/generate-topic-id).
   (->> (vals topics-map)
        (filter :anchor)
        (sort-by :id)))
