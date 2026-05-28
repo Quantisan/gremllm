@@ -92,7 +92,7 @@
      "Computing..."]])
 
 (defn render-chat-area [messages awaiting-response? session-opts]
-  (let [{:keys [active-topic active-topic-id]} session-opts]
+  (let [{:keys [active-topic active-topic-id shell?]} session-opts]
     (cond
       (nil? active-topic-id)
       [e/chat-area
@@ -105,8 +105,8 @@
         "Select text in the document to start a session."]]
 
       ;; TODO(slice2): connect ACP; shell sessions show disabled placeholder.
-      ;; shell? detection duplicated in ui.cljs — extract session/shell? when re-wiring.
-      (and active-topic (nil? (get-in active-topic [:session :id])))
+      ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
+      shell?
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}
         [:blockquote {:style {:border-left-color "var(--pico-primary)"

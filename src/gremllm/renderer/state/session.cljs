@@ -2,9 +2,12 @@
 
 ;; TODO(slice2): this namespace speaks "session" but operates on "topic" state/schema.
 ;; Reconcile the vocabulary when topic -> session rename lands (see actions.cljs).
-;; Also extract a `shell?` predicate here — shell-ness (no ACP session id) is currently
-;; detected two ways: ui.cljs via get-acp-session-id, chat.cljs via [:session :id]. When
-;; ACP re-wires in Slice 2, both must update; one definition prevents a stale branch.
+
+(defn shell?
+  "A shell session is anchored but has no live ACP session id yet.
+   Single source of truth for shell-ness; Slice 2 ACP re-wiring changes only this."
+  [topic]
+  (nil? (get-in topic [:session :id])))
 
 (def session-colors
   ["var(--session-color-1)"

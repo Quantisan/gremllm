@@ -119,5 +119,6 @@
     (let [topic {:id "t1" :name "T" :anchor {:id "e1" :text "sample anchor text" :locator {}}
                  :session {}}
           hiccup (chat-ui/render-chat-area [] false {:active-topic topic
-                                                      :active-topic-id "t1"})]
+                                                      :active-topic-id "t1"
+                                                      :shell? true})]
       (is (contains-text? hiccup "sample anchor text")))))

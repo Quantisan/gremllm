@@ -26,6 +26,13 @@
         (is (= (session-state/color-for-topic topics-map (nth sorted-ids 5))
                (session-state/color-for-topic topics-map (nth sorted-ids 0))))))))
 
+(deftest shell?-test
+  (testing "anchored topic with no ACP session id is a shell"
+    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor :session {}})))
+    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor}))))
+  (testing "topic with a live ACP session id is not a shell"
+    (is (false? (session-state/shell? {:id "t1" :anchor stub-anchor :session {:id "s1"}})))))
+
 (deftest anchored-topics-sorted-test
   (let [topics-map {"topic-3000-c" {:id "topic-3000-c" :anchor {:id "e1" :text "x" :locator {}}}
                     "topic-1000-a" {:id "topic-1000-a"}
