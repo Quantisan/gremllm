@@ -128,7 +128,7 @@
   [state tool-call-id]
   (resolve-diff-actions state tool-call-id "reject_once"))
 
-(defn start-from-selection
+(defn start-anchored-session
   "Create a new shell session anchored to the given excerpt."
   [_state anchor]
   (let [new-topic (assoc (schema/create-topic) :anchor anchor)
@@ -138,14 +138,17 @@
      [:excerpt.actions/dismiss-popover]]))
 
 (defn start-session-from-capture
-  "Build an anchor from the current excerpt capture state, then create a session."
+  "Build an anchor from the current excerpt capture state, then start an
+   anchored session."
   [state]
-  (let [captured (excerpt-state/get-captured state)
+  (let [captured      (excerpt-state/get-captured state)
         locator-hints (excerpt-state/get-locator-hints state)]
     (when (and captured locator-hints)
+      ;; FCIS leak (pre-existing): random-uuid in a pure action — move id
+      ;; generation to an effect/placeholder in a later pass.
       (let [anchor (excerpt/capture->excerpt captured locator-hints
                                              (str "excerpt-" (random-uuid)))]
-        (start-from-selection state anchor)))))
+        [[:topic.actions/start-anchored-session anchor]]))))
 
 (defn set-active
   "Set the active topic. ACP session init is handled separately.

@@ -20,7 +20,7 @@
     (is (= :topic.actions/set-active action-name) "second should be set-active action")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
-(deftest start-from-selection-test
+(deftest start-anchored-session-test
   (let [anchor {:id "excerpt-abc"
                 :text "launched on a Tuesday"
                 :locator {:document-relative-path "document.md"
@@ -30,7 +30,7 @@
                           :end-block {:kind :paragraph :index 2
                                       :start-line 3 :end-line 3
                                       :block-text-snippet "Our Gremllm"}}}
-        result (topic/start-from-selection {} anchor)
+        result (topic/start-anchored-session {} anchor)
         [[_ topic-path saved-topic] [set-active-action set-active-id] dismiss-action] result]
 
     (is (= 3 (count result)) "should return save, set-active, dismiss-popover")
@@ -71,11 +71,11 @@
                                          :start-block block
                                          :end-block block}}}
         result (topic/start-session-from-capture state)]
-    (testing "returns effects when captured state exists"
-      (is (= 3 (count result)))
-      (is (= :effects/save (first (first result))))
-      (let [[_ _ saved-topic] (first result)]
-        (is (= "launched on a Tuesday" (get-in saved-topic [:anchor :text])))))
+    (testing "dispatches start-anchored-session with the built anchor"
+      (let [[[action-name anchor]] result]
+        (is (= 1 (count result)) "dispatches a single nested action")
+        (is (= :topic.actions/start-anchored-session action-name))
+        (is (= "launched on a Tuesday" (:text anchor)))))
     (testing "returns nil when no captured state"
       (is (nil? (topic/start-session-from-capture {}))))))
 

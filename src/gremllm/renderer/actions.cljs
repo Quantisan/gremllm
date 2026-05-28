@@ -183,7 +183,7 @@
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
 (nxr/register-action! :topic.actions/start-new topic/start-new-topic)  ;; TODO: not integrated yet. Need to design for whole-doc anchored session.
 (nxr/register-action! :topic.actions/set-active topic/set-active)
-(nxr/register-action! :topic.actions/start-from-selection topic/start-from-selection)
+(nxr/register-action! :topic.actions/start-anchored-session topic/start-anchored-session)
 (nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
