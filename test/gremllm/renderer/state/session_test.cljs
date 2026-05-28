@@ -6,25 +6,25 @@
 
 (deftest color-for-topic-test
   (let [topics-map {"topic-1000-a" {:id "topic-1000-a" :name "T1" :anchor stub-anchor}
-                    "topic-2000-b" {:id "topic-2000-b" :name "T2" :anchor stub-anchor}
-                    "topic-3000-c" {:id "topic-3000-c" :name "T3" :anchor stub-anchor}}]
-    (testing "first topic gets color 1"
-      (is (= "var(--session-color-1)" (session-state/color-for-topic topics-map "topic-1000-a"))))
-    (testing "second topic gets color 2"
-      (is (= "var(--session-color-2)" (session-state/color-for-topic topics-map "topic-2000-b"))))
-    (testing "third topic gets color 3"
-      (is (= "var(--session-color-3)" (session-state/color-for-topic topics-map "topic-3000-c"))))))
+                    "topic-2000-b" {:id "topic-2000-b" :name "T2"}}]
+    (testing "an anchored session gets one of the palette colors"
+      (is (some #{(session-state/color-for-topic topics-map "topic-1000-a")}
+                session-state/session-colors)))
+    (testing "an unanchored session has no color"
+      (is (nil? (session-state/color-for-topic topics-map "topic-2000-b"))))
+    (testing "an unknown id has no color"
+      (is (nil? (session-state/color-for-topic topics-map "topic-9999-z"))))))
 
-(deftest color-wraps-modulo-5-test
-  (let [topics-map (into {} (map-indexed
-                              (fn [i _] [(str "topic-" (* (inc i) 1000) "-x")
-                                         {:id (str "topic-" (* (inc i) 1000) "-x")
-                                          :anchor stub-anchor}])
-                              (range 7)))]
-    (testing "6th topic wraps to color 1"
-      (let [sorted-ids (sort (keys topics-map))]
-        (is (= (session-state/color-for-topic topics-map (nth sorted-ids 5))
-               (session-state/color-for-topic topics-map (nth sorted-ids 0))))))))
+(deftest color-stable-across-set-changes-test
+  ;; Color is keyed off the stable topic id, not the session's position in the
+  ;; live anchored list -- so a bar keeps its color as other sessions come and go.
+  (let [alone     {"topic-2000-b" {:id "topic-2000-b" :anchor stub-anchor}}
+        surrounded {"topic-1000-a" {:id "topic-1000-a" :anchor stub-anchor}
+                    "topic-2000-b" {:id "topic-2000-b" :anchor stub-anchor}
+                    "topic-3000-c" {:id "topic-3000-c" :anchor stub-anchor}}]
+    (testing "same id yields the same color regardless of which other sessions exist"
+      (is (= (session-state/color-for-topic alone "topic-2000-b")
+             (session-state/color-for-topic surrounded "topic-2000-b"))))))
 
 (deftest shell?-test
   (testing "anchored topic with no ACP session id is a shell"

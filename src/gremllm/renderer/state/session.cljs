@@ -36,8 +36,15 @@
   (last (anchored-topics-sorted topics-map)))
 
 (defn color-for-topic
+  "Palette color for an anchored session, derived from its stable, immutable
+   topic id. Keying on the id (not the live anchored-list position, and not the
+   mutable ACP :session :id) keeps a bar's color fixed as sessions are added or
+   removed and as the ACP session re-wires. nil when the session is not anchored.
+
+   TODO(slice2): persist an assigned color slot at creation. With only five
+   colors, distinct adjacent bars aren't guaranteed -- collisions are common past
+   a couple of sessions; a persisted round-robin slot stays both stable and
+   distinct, and lands naturally alongside anchor persistence."
   [topics-map topic-id]
-  (let [sorted-ids (mapv :id (anchored-topics-sorted topics-map))
-        idx (.indexOf sorted-ids topic-id)]
-    (when-not (neg? idx)
-      (nth session-colors (mod idx (count session-colors))))))
+  (when (get-in topics-map [topic-id :anchor])
+    (nth session-colors (mod (hash topic-id) (count session-colors)))))
