@@ -24,10 +24,6 @@
             --session-color-3: #7B5EA7;
             --session-color-4: #C4534A;
             --session-color-5: #4A7B3F;
-
-            /* Active session color (updated by JS on session switch) */
-            --active-session-color: var(--session-color-1);
-            --preview-session-color: var(--session-color-1);
         }
 
         /* Light Scope — Document Panel, Welcome Screen */
@@ -127,7 +123,7 @@
 
         .assistant-bubble {
             background: var(--pico-card-background-color);
-            border-left: 3px solid var(--active-session-color, var(--tva-teal));
+            border-left: 3px solid var(--active-session-color);
         }
 
         .reasoning-bubble {
@@ -138,7 +134,7 @@
 
         .tool-detail-bubble {
             background: color-mix(in srgb, var(--tva-parchment) 5%, transparent);
-            border-left: 3px solid var(--active-session-color, var(--tva-teal));
+            border-left: 3px solid var(--active-session-color);
             opacity: 0.85;
             padding: 0.5rem 0.75rem;
             margin: 0.5rem 0;
