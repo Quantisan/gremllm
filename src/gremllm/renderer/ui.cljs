@@ -23,10 +23,8 @@
         active-topic       (topic-state/get-active-topic state)
         hovered-topic-id   (session-state/get-hovered-bar-topic-id state)
         hovered-topic      (when hovered-topic-id (get topics-map hovered-topic-id))
-        active-color       (when active-topic-id
-                             (session-state/color-for-topic topics-map active-topic-id))
-        preview-color      (when hovered-topic-id
-                             (session-state/color-for-topic topics-map hovered-topic-id))
+        active-color       (session-state/color-for-topic topics-map active-topic-id)
+        preview-color      (session-state/color-for-topic topics-map hovered-topic-id)
         shell?             (session-state/shell? active-topic)]
     [e/app-layout {:style {:--active-session-color  (or active-color "transparent")
                            :--preview-session-color (or preview-color "transparent")}}

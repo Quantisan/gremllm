@@ -21,8 +21,7 @@
            :mouseenter [[:effects/save session-state/hovered-bar-topic-id-path topic-id]]
            :mouseleave [[:effects/save session-state/hovered-bar-topic-id-path nil]]}}
      [:div.session-bar
-      {:class (if active? "session-bar--active" "session-bar--inactive")
-       :style {:background-color color}}]]))
+      {:class (if active? "session-bar--active" "session-bar--inactive")}]]))
 
 (defn render-gutter
   [topics-map active-topic-id]
