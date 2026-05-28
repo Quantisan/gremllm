@@ -79,6 +79,7 @@
            :loading?            (loading-state/loading? state active-topic-id)
            :pending-attachments (form-state/get-pending-attachments state)
            :excerpts            excerpts
+           ;; TODO(slice2): shell? detection duplicated in chat.cljs — extract session/shell?
            :shell?              (nil? (topic-state/get-acp-session-id state active-topic-id))}))]]))
 
 (defn render-app [state]

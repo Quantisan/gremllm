@@ -1,5 +1,11 @@
 (ns gremllm.renderer.state.session)
 
+;; TODO(slice2): this namespace speaks "session" but operates on "topic" state/schema.
+;; Reconcile the vocabulary when topic -> session rename lands (see actions.cljs).
+;; Also extract a `shell?` predicate here — shell-ness (no ACP session id) is currently
+;; detected two ways: ui.cljs via get-acp-session-id, chat.cljs via [:session :id]. When
+;; ACP re-wires in Slice 2, both must update; one definition prevents a stale branch.
+
 (def session-colors
   ["var(--session-color-1)"
    "var(--session-color-2)"

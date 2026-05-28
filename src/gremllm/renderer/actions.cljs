@@ -172,6 +172,9 @@
 ;; Topic
 
 ;; Register all topic actions
+;; TODO(slice2): rename topic -> session across actions/state/IPC/schema. The visual
+;; layer already speaks "session"; persistence/actions still speak "topic". Do the
+;; rename when ACP is re-wired, before the seam drifts into permanent ambiguity.
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
 (nxr/register-action! :topic.actions/append-pending-permission topic/append-pending-permission)
 (nxr/register-action! :topic.actions/accept-diff topic/accept-diff)
