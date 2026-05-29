@@ -199,7 +199,10 @@
   (mu/merge
     PersistedTopic
     [:map
-     [:anchor {:optional true} DocumentExcerpt] ;; TODO(slice2): persist anchor in PersistedTopic
+     ;; TODO(slice2): persist anchor in PersistedTopic. Required-vs-optional there
+     ;; is a product call, not a schema call: it hinges on whether unanchored
+     ;; whole-doc sessions (see start-new-topic) survive the Topic->Session pivot.
+     [:anchor {:optional true} DocumentExcerpt]
 
      [:unsaved? {:optional true} :boolean]]))
 
