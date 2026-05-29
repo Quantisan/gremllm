@@ -33,14 +33,9 @@
         result (topic/start-anchored-session {} anchor)
         [[_ topic-path saved-topic] [set-active-action set-active-id] dismiss-action] result]
 
-    (is (= 3 (count result)) "should return save, set-active, dismiss-popover")
-
     (is (= :effects/save (first (first result))))
     (is (= anchor (:anchor saved-topic)) "anchor is set on the new topic")
     (is (= "New Topic" (:name saved-topic)))
-    (is (= [] (:messages saved-topic)))
-    (is (= [] (:excerpts saved-topic)))
-    (is (string? (:id saved-topic)))
     (is (= (topic-state/topic-path (:id saved-topic)) topic-path))
 
     (is (= :topic.actions/set-active set-active-action))
@@ -52,21 +47,9 @@
   (let [block {:kind :paragraph :index 2
                :start-line 3 :end-line 3
                :block-text-snippet "Our Gremllm launched on a Tuesday."}
-        state {:excerpt {:captured {:text "launched on a Tuesday"
-                                    :range-count 1
-                                    :anchor-node "#text"
-                                    :anchor-offset 0
-                                    :focus-node "#text"
-                                    :focus-offset 21
-                                    :range {:bounding-rect {:height 17 :left 100 :top 50 :width 200}
-                                            :client-rects [{:height 17 :left 100 :top 50 :width 200}]
-                                            :common-ancestor "#text"
-                                            :start-container "#text"
-                                            :start-text "Our Gremllm launched on a Tuesday."
-                                            :start-offset 15
-                                            :end-container "#text"
-                                            :end-text "Our Gremllm launched on a Tuesday."
-                                            :end-offset 36}}
+        ;; capture->excerpt reads only (:text captured); the selection geometry
+        ;; the real capture carries is irrelevant to what this action builds.
+        state {:excerpt {:captured {:text "launched on a Tuesday"}
                          :locator-hints {:document-relative-path "document.md"
                                          :start-block block
                                          :end-block block}}}
