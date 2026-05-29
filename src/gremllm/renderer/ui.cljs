@@ -12,6 +12,7 @@
             [gremllm.renderer.ui.elements :as e]))
 
 (defn- render-app-layout [state]
+  ;; TODO: all these state crumbs... is there a more organized method?
   (let [document-content   (document-state/get-content state)
         pending-diffs      (topic-state/get-pending-diffs state)
         active-topic-id    (topic-state/get-active-topic-id state)
