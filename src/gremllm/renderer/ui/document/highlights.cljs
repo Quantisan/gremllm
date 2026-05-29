@@ -91,20 +91,40 @@
 
 ;; TODO: is there a simpler way to do this?
 (defn sync!
-  "Rebuilds the excerpt highlight registry entry from the given excerpts
-   against article's current text content. Safe to call
-   on every render; missing matches are silently dropped."
-  [article excerpts]
-  (let [index  (flatten-article article)
-        ranges (->> (excerpt-texts excerpts)
+  "Rebuilds the excerpt highlight registry entry from the given excerpts.
+   index is the result of flatten-article. Safe to call on every render;
+   missing matches are silently dropped."
+  [index excerpts]
+  (let [ranges (->> (excerpt-texts excerpts)
                     (keep #(locate-range-in-flat-text index %))
                     (mapv make-range))
         hl     (js/Highlight.)]
     (doseq [r ranges] (.add hl r))
     (.set js/CSS.highlights highlight-name hl)))
 
-(defn clear!
-  "Removes the excerpt highlight registry entry. Call on article
-   unmount to avoid leaving ranges that point to detached nodes."
+(def ^:private anchor-highlight-name "anchor")
+(def ^:private anchor-preview-highlight-name "anchor-preview")
+
+(defn sync-anchor!
+  [index anchor-text]
+  (if (and index (seq anchor-text))
+    (let [hl (js/Highlight.)]
+      (when-let [range-info (locate-range-in-flat-text index anchor-text)]
+        (.add hl (make-range range-info)))
+      (.set js/CSS.highlights anchor-highlight-name hl))
+    (.delete js/CSS.highlights anchor-highlight-name)))
+
+(defn sync-anchor-preview!
+  [index preview-anchor-text]
+  (if (and index (seq preview-anchor-text))
+    (let [hl (js/Highlight.)]
+      (when-let [range-info (locate-range-in-flat-text index preview-anchor-text)]
+        (.add hl (make-range range-info)))
+      (.set js/CSS.highlights anchor-preview-highlight-name hl))
+    (.delete js/CSS.highlights anchor-preview-highlight-name)))
+
+(defn clear-all!
   []
-  (.delete js/CSS.highlights highlight-name))
+  (.delete js/CSS.highlights highlight-name)
+  (.delete js/CSS.highlights anchor-highlight-name)
+  (.delete js/CSS.highlights anchor-preview-highlight-name))

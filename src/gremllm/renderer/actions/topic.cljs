@@ -1,8 +1,8 @@
 (ns gremllm.renderer.actions.topic
   (:require [nexus.registry :as nxr]
-            [clojure.string :as str]
             [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.ui :as ui-state]
+            [gremllm.renderer.state.excerpt :as excerpt-state]
+            [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
 
@@ -17,9 +17,6 @@
 
 (defn mark-unsaved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) true]])
-
-(defn set-name [_state topic-id new-name]
-  [[:effects/save (topic-state/topic-field-path topic-id :name) new-name]])
 
 (defn save-topic-success [_state topic-id filepath]
   ;; TODO: UI notification
@@ -131,39 +128,33 @@
   [state tool-call-id]
   (resolve-diff-actions state tool-call-id "reject_once"))
 
+(defn start-anchored-session
+  "Create a new shell session anchored to the given excerpt."
+  [_state anchor]
+  (let [new-topic (assoc (schema/create-topic) :anchor anchor)
+        topic-id  (:id new-topic)]
+    [[:effects/save (topic-state/topic-path topic-id) new-topic]
+     [:topic.actions/set-active topic-id]
+     [:excerpt.actions/dismiss-popover]]))
+
+(defn start-session-from-capture
+  "Build an anchor from the current excerpt capture state, then start an
+   anchored session."
+  [state]
+  (let [captured      (excerpt-state/get-captured state)
+        locator-hints (excerpt-state/get-locator-hints state)]
+    (when (and captured locator-hints)
+      ;; FCIS leak (pre-existing): random-uuid in a pure action — move id
+      ;; generation to an effect/placeholder in a later pass.
+      (let [anchor (excerpt/capture->excerpt captured locator-hints
+                                             (str "excerpt-" (random-uuid)))]
+        [[:topic.actions/start-anchored-session anchor]]))))
+
 (defn set-active
-  "Set the active topic and initialize its ACP session."
+  "Set the active topic. ACP session init is handled separately.
+   TODO(slice2): rewire ACP init on activation."
   [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]
-   [:acp.effects/init-session topic-id]])
-
-(defn begin-rename [state topic-id]
-  ;; Enter inline rename mode for this topic
-  (when (topic-state/get-topic-field state topic-id :name)
-    [[:effects/save ui-state/renaming-topic-id-path topic-id]]))
-
-(defn commit-rename [state topic-id new-name]
-  (let [new-name (-> (or new-name "") str/trim)
-        current  (topic-state/get-topic-field state topic-id :name)]
-    (cond
-      (str/blank? new-name)
-      [[:ui.actions/exit-topic-rename-mode topic-id]]
-
-      (= new-name current)
-      [[:ui.actions/exit-topic-rename-mode topic-id]]
-
-      :else
-      [[:topic.actions/set-name topic-id new-name]
-       [:ui.actions/exit-topic-rename-mode topic-id]
-       [:topic.effects/auto-save topic-id]])))
-
-(defn handle-rename-keys [_state topic-id {:keys [key]} value]
-  (case key
-    "Enter"  [[:effects/prevent-default]
-              [:topic.actions/commit-rename topic-id value]]
-    "Escape" [[:effects/prevent-default]
-              [:ui.actions/exit-topic-rename-mode topic-id]]
-    nil))
+  [[:effects/save topic-state/active-topic-id-path topic-id]])
 
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic

@@ -1,7 +1,8 @@
 (ns gremllm.renderer.actions.document
   (:require [gremllm.schema.codec :as codec]
             [gremllm.renderer.state.document :as document-state]
-            [gremllm.renderer.state.topic :as topic-state]))
+            [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.session :as session-state]))
 
 ;; Design note: `set-content` currently does two jobs: replace document text
 ;; and invalidate excerpts across all topics. That is a leaky boundary because
@@ -35,28 +36,26 @@
   "A document has been opened/loaded from disk."
   [_state sync-data-js]
   (let [{:keys [topics document-meta document]} (codec/document-sync-from-ipc sync-data-js)]
-    ;; TODO: When document revision tracking lands, compare the incoming document revision here and clear staged selections across topics on change.
-    ;; Why: staged anchors are revision-bound document/topic context, so invalidation belongs at the document sync boundary rather than in a generic document setter.
     (cond-> [[:document.actions/set-meta document-meta]
              [:document.actions/set-content (:content document)]]
       (empty? topics) (conj [:document.actions/initialize-empty])
       (seq topics)    (conj [:document.actions/restore-with-topics
-                              {:topics          topics
-                               ;; TODO: save last active topic id so that user can continue where they left off
-                               :active-topic-id (ffirst topics)}]))))
+                              {:topics topics}]))))
 
 (defn restore-with-topics
-  "Restore a document that has existing topics."
-  [_state {:keys [topics active-topic-id]}]
-  [[:effects/save topic-state/topics-path topics]
-   [:topic.actions/set-active active-topic-id]
-   [:document.actions/mark-loaded]])
+  "Restore a document that has existing topics.
+   Auto-activates the most recently created anchored session.
+   TODO(slice2): unanchored topics are invisible until anchor persistence lands."
+  [_state {:keys [topics]}]
+  (let [recent (session-state/most-recent-anchored topics)]
+    (cond-> [[:effects/save topic-state/topics-path topics]]
+      recent (conj [:topic.actions/set-active (:id recent)])
+      true   (conj [:document.actions/mark-loaded]))))
 
 (defn initialize-empty
-  "Initialize an empty document with its first topic."
+  "Initialize an empty document with no active session."
   [_state]
-  [[:topic.actions/start-new]
-   [:document.actions/mark-loaded]])
+  [[:document.actions/mark-loaded]])
 
 (defn load-error [_state error]
   (js/console.error "document load failed:" error)

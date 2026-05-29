@@ -25,7 +25,7 @@
        first))
 
 (deftest opened-test
-  (testing "Empty document initializes new topic"
+  (testing "Empty document initializes empty"
     (let [sync-data (create-sync-data-js)
           effects (document/opened {} sync-data)]
       (is (has-action? effects :document.actions/set-meta))
@@ -39,26 +39,39 @@
           [_ restore-params] (get-action effects :document.actions/restore-with-topics)]
       (is (has-action? effects :document.actions/set-meta))
       (is (has-action? effects :document.actions/set-content))
-      (is (= "tid" (:active-topic-id restore-params)))
-      (is (contains? (:topics restore-params) "tid"))))
+      (is (contains? (:topics restore-params) "tid"))
+      (is (not (contains? restore-params :active-topic-id))
+          "opened no longer passes active-topic-id — restore derives it"))))
 
-)
+(deftest initialize-empty-no-topic-test
+  (testing "Empty document does not create a topic — just marks loaded"
+    (let [effects (document/initialize-empty {})]
+      (is (= [[:document.actions/mark-loaded]] effects))
+      (is (not (has-action? effects :topic.actions/start-new))))))
 
+;; Intentional layer split: session_test proves *which* topic is most-recent
+;; (the selector logic); this test proves restore-with-topics *wires* set-active
+;; to that selector's result. Keep both — they cover different layers.
 (deftest restore-with-topics-test
-  (testing "Sets active topic without model param"
-    (let [topic (schema/create-topic)
-          effects (document/restore-with-topics {} {:topics          {"tid" topic}
-                                                     :active-topic-id "tid"})
-          [_ topic-id] (get-action effects :topic.actions/set-active)]
-      (is (= "tid" topic-id))
-      (is (= 2 (count (get-action effects :topic.actions/set-active)))
-          "should only pass topic-id, not model")))
+  (let [block {:kind :paragraph :index 1 :start-line 1 :end-line 1 :block-text-snippet "x"}
+        anchor {:id "e1" :text "x" :locator {:document-relative-path "d.md"
+                                              :start-block block :end-block block}}]
+    (testing "Activates most recent anchored topic"
+      (let [old-topic (assoc (schema/create-topic) :id "topic-1000-a")
+            new-topic (assoc (schema/create-topic) :id "topic-2000-b" :anchor anchor)
+            effects (document/restore-with-topics {} {:topics {"topic-1000-a" old-topic
+                                                                "topic-2000-b" new-topic}})
+            [_ activated-id] (get-action effects :topic.actions/set-active)]
+        (is (= "topic-2000-b" activated-id))))
 
-  (testing "Restores all topics to state"
-    (let [topic (schema/create-topic)
-          effects (document/restore-with-topics {} {:topics          {"tid" topic}
-                                                     :active-topic-id "tid"})
-          [_ topics-path saved-topics] (get-action effects :effects/save)]
-      (is (= [:topics] topics-path))
-      (is (contains? saved-topics "tid")))))
+    (testing "No activation when no anchored topics"
+      (let [old-topic (assoc (schema/create-topic) :id "topic-1000-a")
+            effects (document/restore-with-topics {} {:topics {"topic-1000-a" old-topic}})]
+        (is (not (has-action? effects :topic.actions/set-active)))))
 
+    (testing "Restores all topics to state"
+      (let [topic (assoc (schema/create-topic) :id "tid" :anchor anchor)
+            effects (document/restore-with-topics {} {:topics {"tid" topic}})
+            [_ topics-path saved-topics] (get-action effects :effects/save)]
+        (is (= [:topics] topics-path))
+        (is (contains? saved-topics "tid"))))))

@@ -91,20 +91,43 @@
       "⠿"]
      "Computing..."]])
 
-(defn render-chat-area [messages awaiting-response?]
-  [e/chat-area {}
-   (for [message messages]
-     (render-message message))
+(defn render-chat-area [messages awaiting-response? session-opts]
+  (let [{:keys [active-topic active-topic-id shell?]} session-opts]
+    (cond
+      (nil? active-topic-id)
+      [e/chat-area
+       [:div {:style {:display "flex"
+                      :align-items "center"
+                      :justify-content "center"
+                      :height "100%"
+                      :color "var(--pico-muted-color)"
+                      :font-style "italic"}}
+        "Select text in the document to start a session."]]
 
-   ;; Show loading indicator while waiting for first chunk
-   (when awaiting-response?
-     (render-loading-indicator))])
+      ;; TODO(slice2): connect ACP; shell sessions show disabled placeholder.
+      ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
+      shell?
+      [e/chat-area
+       [:div {:style {:padding "var(--pico-spacing)"}}
+        [:blockquote {:style {:border-left-color "var(--pico-primary)"
+                              :font-size "0.9rem"
+                              :opacity 0.8}}
+         (get-in active-topic [:anchor :text])]
+        [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
+         "Session not connected."]]]
+
+      :else
+      [e/chat-area {}
+       (for [message messages]
+         (render-message message))
+       (when awaiting-response?
+         (render-loading-indicator))])))
 
 (defn- render-composer-excerpts [excerpts]
   (when (seq excerpts)
     [:div.excerpt-list
      (for [{:keys [id text]} excerpts]
-       [:span.excerpt-chip {:key id}
+       [:span.excerpt-chip {:replicant/key id}
         "excerpt: " (truncate text composer-excerpt-cap)
         [:button.dismiss
          {:type "button"
@@ -128,7 +151,7 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? pending-attachments excerpts]}]
+(defn render-input-form [{:keys [input-value loading? pending-attachments excerpts shell?]}]
   [:footer
    [:form {:on {:submit [[:effects/prevent-default]
                          [:form.actions/submit]]}}
@@ -138,7 +161,8 @@
      [:textarea {:class "chat-input"
                  :rows 2
                  :value input-value
-                 :placeholder "Type a message... (Shift+Enter for new line)"
+                 :placeholder (if shell? "Session not connected" "Type a message... (Shift+Enter for new line)")
+                 :disabled (or loading? shell?)
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
                       :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
                       :dragover [[:form.actions/handle-dragover]]
@@ -147,5 +171,5 @@
                  :autofocus true}]
 
      [:button {:type "submit"
-               :disabled (or loading? (str/blank? input-value))}
+               :disabled (or loading? shell? (str/blank? input-value))}
       "Send"]]]])

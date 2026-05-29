@@ -6,6 +6,10 @@
             [gremllm.schema-test :as schema-test]
             [lookup.core :as lookup]))
 
+(def ^:private active-session-opts
+  {:active-topic {:id "t1" :name "T" :session {:id "s1"}}
+   :active-topic-id "t1"})
+
 (deftest render-input-form-test
   (testing ":on-submit handler has correct structure"
     (let [hiccup (chat-ui/render-input-form
@@ -48,7 +52,8 @@
 (deftest plain-user-message-renders-text-test
   (let [hiccup (chat-ui/render-chat-area
                 [(schema-test/create-message {:id 1 :type :user :text "hello"})]
-                false)]
+                false
+                active-session-opts)]
     (is (contains-text? hiccup "hello"))))
 
 (deftest user-message-with-excerpts-renders-smoke-test
@@ -58,7 +63,8 @@
                    :type :user
                    :text "reword these"
                    :context {:excerpts [same-block-excerpt]}})]
-                false)]
+                false
+                active-session-opts)]
     (is (contains-text? hiccup "reword these"))))
 
 (deftest tool-call-web-search-renders-test
@@ -71,7 +77,8 @@
                      :tool-call-status "completed"
                      :query "CRDT vs OT"
                      :text ""}]
-                   false)]
+                   false
+                   active-session-opts)]
       (is (contains-text? hiccup "Searched the web"))
       (is (contains-text? hiccup "CRDT vs OT"))))
 
@@ -84,7 +91,8 @@
                      :tool-call-status "pending"
                      :query nil
                      :text ""}]
-                   false)]
+                   false
+                   active-session-opts)]
       (is (contains-text? hiccup "Searching the web")))))
 
 (deftest tool-call-read-renders-test
@@ -96,5 +104,21 @@
                      :tool :read
                      :tool-call-status "completed"
                      :text "Read — foo.md (12 lines)"}]
-                   false)]
+                   false
+                   active-session-opts)]
       (is (contains-text? hiccup "Read — foo.md (12 lines)")))))
+
+(deftest no-active-session-prompt-test
+  (testing "renders prompt when no active session"
+    (let [hiccup (chat-ui/render-chat-area [] false {:active-topic nil
+                                                      :active-topic-id nil})]
+      (is (contains-text? hiccup "Select text")))))
+
+(deftest shell-session-shows-anchor-context-test
+  (testing "shell session shows anchor text context"
+    (let [topic {:id "t1" :name "T" :anchor {:id "e1" :text "sample anchor text" :locator {}}
+                 :session {}}
+          hiccup (chat-ui/render-chat-area [] false {:active-topic topic
+                                                      :active-topic-id "t1"
+                                                      :shell? true})]
+      (is (contains-text? hiccup "sample anchor text")))))

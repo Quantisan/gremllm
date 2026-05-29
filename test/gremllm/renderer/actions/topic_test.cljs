@@ -20,6 +20,48 @@
     (is (= :topic.actions/set-active action-name) "second should be set-active action")
     (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
+(deftest start-anchored-session-test
+  (let [anchor {:id "excerpt-abc"
+                :text "launched on a Tuesday"
+                :locator {:document-relative-path "document.md"
+                          :start-block {:kind :paragraph :index 2
+                                        :start-line 3 :end-line 3
+                                        :block-text-snippet "Our Gremllm"}
+                          :end-block {:kind :paragraph :index 2
+                                      :start-line 3 :end-line 3
+                                      :block-text-snippet "Our Gremllm"}}}
+        result (topic/start-anchored-session {} anchor)
+        [[_ topic-path saved-topic] [set-active-action set-active-id] dismiss-action] result]
+
+    (is (= :effects/save (first (first result))))
+    (is (= anchor (:anchor saved-topic)) "anchor is set on the new topic")
+    (is (= "New Topic" (:name saved-topic)))
+    (is (= (topic-state/topic-path (:id saved-topic)) topic-path))
+
+    (is (= :topic.actions/set-active set-active-action))
+    (is (= (:id saved-topic) set-active-id))
+
+    (is (= [:excerpt.actions/dismiss-popover] dismiss-action))))
+
+(deftest start-session-from-capture-test
+  (let [block {:kind :paragraph :index 2
+               :start-line 3 :end-line 3
+               :block-text-snippet "Our Gremllm launched on a Tuesday."}
+        ;; capture->excerpt reads only (:text captured); the selection geometry
+        ;; the real capture carries is irrelevant to what this action builds.
+        state {:excerpt {:captured {:text "launched on a Tuesday"}
+                         :locator-hints {:document-relative-path "document.md"
+                                         :start-block block
+                                         :end-block block}}}
+        result (topic/start-session-from-capture state)]
+    (testing "dispatches start-anchored-session with the built anchor"
+      (let [[[action-name anchor]] result]
+        (is (= 1 (count result)) "dispatches a single nested action")
+        (is (= :topic.actions/start-anchored-session action-name))
+        (is (= "launched on a Tuesday" (:text anchor)))))
+    (testing "returns nil when no captured state"
+      (is (nil? (topic/start-session-from-capture {}))))))
+
 (def ^:private expected-new-topic (schema/create-topic))
 
 (deftest normalize-topic-test
@@ -32,27 +74,11 @@
     (is (= expected (codec/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest commit-rename-test
-  (let [topic-id "topic-123"
-        state    {:topics {topic-id {:id topic-id :name "Original Name"}}}]
-
-    (testing "blank name - should exit rename mode without saving"
-      (let [actions (topic/commit-rename state topic-id "   ")]
-        (is (= 1 (count actions)))
-        (is (= :ui.actions/exit-topic-rename-mode (ffirst actions)))))
-
-    (testing "unchanged name - should exit rename mode without saving"
-      (let [actions (topic/commit-rename state topic-id "Original Name")]
-        (is (= 1 (count actions)))
-        (is (= :ui.actions/exit-topic-rename-mode (ffirst actions)))))
-
-    (testing "valid new name - should save, exit rename mode, and auto-save"
-      (let [actions (topic/commit-rename state topic-id "New Name")]
-        (is (= 3 (count actions)))
-        (is (= :topic.actions/set-name (ffirst actions)))
-        (is (= "New Name" (nth (first actions) 2)))
-        (is (= :ui.actions/exit-topic-rename-mode (first (second actions))))
-        (is (= :topic.effects/auto-save (first (nth actions 2))))))))
+(deftest set-active-does-not-init-acp-test
+  (testing "set-active only saves active-topic-id, no ACP init"
+    (let [result (topic/set-active {} "topic-123")]
+      (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]]
+             result)))))
 
 (deftest auto-save-test
   (let [topic-id       "topic-123"

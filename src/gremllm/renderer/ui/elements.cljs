@@ -4,12 +4,6 @@
 (defalias app-layout [attrs body]
   (into [:div.app-layout (merge {} attrs)] body))
 
-(defalias nav-strip [attrs & body]
-  (into [:nav.nav-strip (merge {:data-theme "dark"} attrs)] body))
-
-(defalias nav-overlay [attrs & body]
-  (into [:aside.nav-overlay (merge {:data-theme "dark"} attrs)] body))
-
 (defalias document-panel [attrs & body]
   (into [:section.document-panel (merge {} attrs)] body))
 
@@ -40,5 +34,7 @@
     [:summary.tool-detail-summary summary]
     (when query [:div.tool-detail-body query])]])
 
-(defalias topic-item [attrs & body]
-  (into [:div.topic-item (merge {} attrs)] body))
+(defalias session-gutter [attrs & body]
+  (into [:div.session-gutter (merge {:role "toolbar"
+                                     :aria-label "Document sessions"} attrs)] body))
+

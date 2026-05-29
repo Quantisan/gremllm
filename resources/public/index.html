@@ -17,6 +17,13 @@
             --tva-amber: #D45B12;
             --tva-concrete: #8C8C8C;
             --tva-teal: #004B49;
+
+            /* Session color palette */
+            --session-color-1: #E07634;
+            --session-color-2: #3D8B8A;
+            --session-color-3: #7B5EA7;
+            --session-color-4: #C4534A;
+            --session-color-5: #4A7B3F;
         }
 
         /* Light Scope — Document Panel, Welcome Screen */
@@ -96,7 +103,6 @@
         }
 
         /* Structural background rule — dark-scoped elements need explicit backgrounds */
-        .nav-strip[data-theme=dark],
         .chat-panel[data-theme=dark] {
             background-color: var(--pico-background-color);
             color: var(--pico-color);
@@ -117,7 +123,7 @@
 
         .assistant-bubble {
             background: var(--pico-card-background-color);
-            border-left: 3px solid var(--tva-teal);
+            border-left: 3px solid var(--active-session-color);
         }
 
         .reasoning-bubble {
@@ -128,7 +134,7 @@
 
         .tool-detail-bubble {
             background: color-mix(in srgb, var(--tva-parchment) 5%, transparent);
-            border-left: 3px solid var(--tva-teal);
+            border-left: 3px solid var(--active-session-color);
             opacity: 0.85;
             padding: 0.5rem 0.75rem;
             margin: 0.5rem 0;
@@ -187,59 +193,6 @@
             line-height: 1;
         }
 
-        .topic-item {
-            /* Keep topic link and delete control on one line */
-            display: flex;
-            align-items: center;
-            gap: calc(var(--pico-spacing) / 4);
-        }
-
-        .topic-item > a {
-            /* Let link take remaining row space */
-            flex: 1 1 auto;
-        }
-
-        .topic-item > button {
-            /* Tighten button spacing inside list */
-            margin: 0;
-            /* Lean on Pico palette */
-            border-color: var(--pico-muted-border-color);
-            color: var(--pico-muted-color);
-
-            /* Show delete button only on hover */
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        /* Show delete button only on hover */
-        .topic-item:hover > button {
-            opacity: 1;
-        }
-
-        /* Three-zone layout */
-        .nav-strip {
-            flex: 0 0 48px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: var(--pico-spacing);
-            border-right: 1px solid var(--pico-muted-border-color);
-            cursor: pointer;
-        }
-
-        .nav-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 280px;
-            z-index: 10;
-            background: var(--pico-background-color);
-            border-right: 1px solid var(--pico-muted-border-color);
-            overflow-y: auto;
-            padding: var(--pico-spacing);
-        }
-
         .document-panel {
             flex: 3;
             min-width: 50%;
@@ -247,6 +200,77 @@
             overflow-y: auto;
             padding: var(--pico-spacing);
             transition: flex 0.3s ease;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .document-panel > article {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-gutter {
+            flex: 0 0 24px;
+            position: relative;
+            border-left: 1px solid var(--pico-muted-border-color);
+        }
+
+        .session-gutter[role="toolbar"] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-bar-target {
+            position: absolute;
+            right: 0;
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+        }
+
+        .session-bar-target:hover {
+            background: color-mix(in srgb, var(--bar-color) 8%, transparent);
+        }
+
+        .session-bar {
+            width: 5px;
+            border-radius: 3px;
+            height: 100%;
+            position: absolute;
+            right: 6px;
+            top: 0;
+            background-color: var(--bar-color);   /* single color source, inherited from .session-bar-target */
+        }
+
+        .session-bar--active {
+            opacity: 1;
+            box-shadow: 0 0 4px color-mix(in srgb, var(--bar-color) 50%, transparent);
+        }
+
+        .session-bar--inactive {
+            opacity: 0.35;
+        }
+
+        .session-bar-target:hover .session-bar--inactive {
+            opacity: 0.70;
+        }
+
+        ::highlight(anchor) {
+            background-color: color-mix(in srgb, var(--active-session-color) 12%, transparent);
+        }
+
+        ::highlight(anchor-preview) {
+            background-color: color-mix(in srgb, var(--preview-session-color) 8%, transparent);
+        }
+
+        .selection-popover {
+            display: flex;
+            gap: 4px;
         }
 
         .chat-panel {

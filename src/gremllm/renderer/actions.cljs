@@ -9,7 +9,6 @@
             [gremllm.renderer.actions.excerpt :as excerpt]
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.ui.document.locator :as locator]
-            [gremllm.renderer.state.ui :as ui-state]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
@@ -150,7 +149,6 @@
 (nxr/register-action! :ui.actions/clear-pending-attachments ui/clear-pending-attachments)
 (nxr/register-action! :ui.actions/scroll-chat-to-bottom ui/scroll-chat-to-bottom)
 (nxr/register-action! :ui.actions/focus-chat-input ui/focus-chat-input)
-(nxr/register-action! :ui.actions/toggle-nav ui/toggle-nav)
 
 ;; Message
 (nxr/register-action! :messages.actions/add-to-chat msg/add-message)
@@ -174,21 +172,19 @@
 ;; Topic
 
 ;; Register all topic actions
+;; TODO(slice2): rename topic -> session across actions/state/IPC/schema. The visual
+;; layer already speaks "session"; persistence/actions still speak "topic". Do the
+;; rename when ACP is re-wired, before the seam drifts into permanent ambiguity.
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
 (nxr/register-action! :topic.actions/append-pending-permission topic/append-pending-permission)
 (nxr/register-action! :topic.actions/accept-diff topic/accept-diff)
 (nxr/register-action! :topic.actions/reject-diff topic/reject-diff)
 (nxr/register-action! :tool-call.actions/start  tool-call/start-tool-call)
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
-(nxr/register-action! :topic.actions/start-new topic/start-new-topic)
+(nxr/register-action! :topic.actions/start-new topic/start-new-topic)  ;; TODO: not integrated yet. Need to design for whole-doc anchored session.
 (nxr/register-action! :topic.actions/set-active topic/set-active)
-(nxr/register-action! :topic.actions/begin-rename topic/begin-rename)
-(nxr/register-action! :topic.actions/commit-rename topic/commit-rename)
-(nxr/register-action! :topic.actions/handle-rename-keys topic/handle-rename-keys)
-(nxr/register-action! :topic.actions/set-name topic/set-name)
-(nxr/register-action! :ui.actions/exit-topic-rename-mode
-  (fn [_state _topic-id]
-    [[:effects/save ui-state/renaming-topic-id-path nil]]))
+(nxr/register-action! :topic.actions/start-anchored-session topic/start-anchored-session)
+(nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)
 (nxr/register-action! :topic.actions/mark-unsaved topic/mark-unsaved)
 (nxr/register-action! :topic.actions/mark-active-unsaved topic/mark-active-unsaved)
 (nxr/register-action! :topic.actions/mark-saved topic/mark-saved)
