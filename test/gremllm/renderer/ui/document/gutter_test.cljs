@@ -20,7 +20,7 @@
   (let [hiccup (gutter/render-gutter sample-topics "topic-1000-a")
         buttons (lookup/select 'button hiccup)]
     (testing "renders a button for each anchored topic"
-      (is (= 2 (count buttons))))
+      (is (= (count sample-topics) (count buttons))))
     (testing "active bar has aria-pressed true"
       (let [active-btn (first buttons)
             attrs (lookup/attrs active-btn)]

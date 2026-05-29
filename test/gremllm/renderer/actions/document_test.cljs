@@ -49,6 +49,9 @@
       (is (= [[:document.actions/mark-loaded]] effects))
       (is (not (has-action? effects :topic.actions/start-new))))))
 
+;; Intentional layer split: session_test proves *which* topic is most-recent
+;; (the selector logic); this test proves restore-with-topics *wires* set-active
+;; to that selector's result. Keep both — they cover different layers.
 (deftest restore-with-topics-test
   (let [block {:kind :paragraph :index 1 :start-line 1 :end-line 1 :block-text-snippet "x"}
         anchor {:id "e1" :text "x" :locator {:document-relative-path "d.md"

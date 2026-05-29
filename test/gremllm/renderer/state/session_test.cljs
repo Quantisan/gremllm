@@ -33,20 +33,24 @@
   (testing "topic with a live ACP session id is not a shell"
     (is (false? (session-state/shell? {:id "t1" :anchor stub-anchor :session {:id "s1"}})))))
 
-(deftest anchored-topics-sorted-test
-  (let [topics-map {"topic-3000-c" {:id "topic-3000-c" :anchor {:id "e1" :text "x" :locator {}}}
-                    "topic-1000-a" {:id "topic-1000-a"}
-                    "topic-2000-b" {:id "topic-2000-b" :anchor {:id "e2" :text "y" :locator {}}}}]
-    (testing "returns only anchored topics sorted by id ascending"
-      (is (= ["topic-2000-b" "topic-3000-c"]
-             (mapv :id (session-state/anchored-topics-sorted topics-map)))))
-    (testing "most-recent-anchored returns last by id descending"
-      (is (= "topic-3000-c"
-             (:id (session-state/most-recent-anchored topics-map)))))))
+(deftest anchored-topics-test
+  (testing "with anchored topics present"
+    ;; Fixture deliberately includes an un-anchored "topic-1000-a": one assertion
+    ;; proves both that unanchored topics are filtered out AND that the rest sort
+    ;; by :id ascending (== creation order; see anchored-topics-sorted).
+    (let [topics-map {"topic-3000-c" {:id "topic-3000-c" :anchor {:id "e1" :text "x" :locator {}}}
+                      "topic-1000-a" {:id "topic-1000-a"}
+                      "topic-2000-b" {:id "topic-2000-b" :anchor {:id "e2" :text "y" :locator {}}}}]
+      (testing "returns only anchored topics sorted by id ascending"
+        (is (= ["topic-2000-b" "topic-3000-c"]
+               (mapv :id (session-state/anchored-topics-sorted topics-map)))))
+      (testing "most-recent-anchored returns last by id descending"
+        (is (= "topic-3000-c"
+               (:id (session-state/most-recent-anchored topics-map)))))))
 
-(deftest no-anchored-topics-test
-  (let [topics-map {"topic-1000-a" {:id "topic-1000-a"}}]
-    (testing "returns empty when no anchored topics"
-      (is (empty? (session-state/anchored-topics-sorted topics-map))))
-    (testing "most-recent-anchored returns nil"
-      (is (nil? (session-state/most-recent-anchored topics-map))))))
+  (testing "with no anchored topics"
+    (let [topics-map {"topic-1000-a" {:id "topic-1000-a"}}]
+      (testing "returns empty"
+        (is (empty? (session-state/anchored-topics-sorted topics-map))))
+      (testing "most-recent-anchored returns nil"
+        (is (nil? (session-state/most-recent-anchored topics-map)))))))
