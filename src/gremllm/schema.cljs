@@ -165,7 +165,9 @@
   [:map
    [:type [:= "diff"]]
    [:path :string]
-   [:old-text {:optional true} :string]
+   ;; old-text may be nil for a new-file Write (mirrors AcpDiffItem at the ACP
+   ;; boundary); persisting a nil here must not fail Topic coercion on save.
+   [:old-text {:optional true} [:maybe :string]]
    [:new-text :string]])
 
 (def AcpSession

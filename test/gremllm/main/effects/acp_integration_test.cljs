@@ -102,8 +102,9 @@
        (filter #(= :permission (:kind %)))
        count))
 
-(defn- session-pinned-mode [ctx]
+(defn- session-pinned-mode
   "The most recent permission mode the session reported via config-option-update."
+  [ctx]
   (->> (session-updates ctx)
        (keep acp-codec/config-update-mode)
        last))
