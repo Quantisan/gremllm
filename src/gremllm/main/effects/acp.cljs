@@ -165,15 +165,15 @@
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
-;; Pin every session to "default" permission mode. gremllm's accept/reject diff
-;; gate depends on edits routing through resolvePermission, which only happens in
-;; "default" mode. claude-agent-acp 0.40+ honors permissions.defaultMode from the
-;; user's global ~/.claude/settings.json (acp-agent.js:1512, settings.js:75) — so a
-;; user with auto/acceptEdits/bypassPermissions set globally would silently bypass
-;; review. permissionMode cannot be overridden via _meta.claudeCode.options (it is
-;; assigned after the options spread at acp-agent.js:1565), so we use setSessionMode.
+;; Our accept/reject diff gate only works when edits route through
+;; resolvePermission, which the agent only does in "default" permission mode.
+;; Since claude-agent-acp 0.40+, a session's starting mode comes from the user's
+;; global ~/.claude/settings.json, so a user with acceptEdits/bypassPermissions
+;; set there would silently skip review. That mode can't be overridden at session
+;; creation (it is assigned after _meta.claudeCode.options is spread in,
+;; acp-agent.js:1565), so we force it afterward with setSessionMode.
 (defn- pin-default-mode!
-  "Force the session into 'default' permission mode, resolving to acp-session-id."
+  "Set the session to 'default' permission mode. Returns a promise of acp-session-id."
   [acp-session-id]
   (-> (.setSessionMode (conn!) #js {:sessionId acp-session-id :modeId "default"})
       (.then (fn [_] acp-session-id))))
