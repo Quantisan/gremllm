@@ -133,6 +133,16 @@
                                                       :data "something"}]}))
                      :update)]
       (is (= [{:type "unknown_future_type" :data "something"}]
+             (:content update)))))
+
+  (testing "new-file Write diff: oldText null coerces without throwing"
+    (let [update (-> (acp-codec/acp-session-update-from-js
+                       (session-update-js {:sessionUpdate "tool_call_update"
+                                           :toolCallId "toolu_write"
+                                           :content [{:type "diff" :path "/new.py"
+                                                      :oldText nil :newText "print(1)"}]}))
+                     :update)]
+      (is (= [{:type "diff" :path "/new.py" :old-text nil :new-text "print(1)"}]
              (:content update))))))
 
 (deftest acp-coerces-usage-update

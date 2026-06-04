@@ -117,6 +117,13 @@
   (when (= :tool-call-update session-update)
     status))
 
+(defn config-update-mode
+  "Extracts the session permission mode from a config-option-update, or nil.
+   Reads the \"mode\" config option's :current-value (e.g. \"default\")."
+  [{:keys [session-update config-options]}]
+  (when (= :config-option-update session-update)
+    (some #(when (= "mode" (:id %)) (:current-value %)) config-options)))
+
 ;; ACP Update sub-schemas
 (def AcpTextContent
   "Schema for text content in ACP chunks. Consumer reads :text only."
@@ -135,11 +142,12 @@
 
 (def AcpDiffItem
   "Structured diff content from a tool-call-update write operation.
-   old-text is optional — absent when ACP creates a new file."
+   old-text is optional and may be null — the SDK sends oldText: null when
+   creating a new file (Write tool), so accept both absence and an explicit nil."
   [:map
    [:type [:= "diff"]]
    [:path :string]
-   [:old-text {:optional true} :string]
+   [:old-text {:optional true} [:maybe :string]]
    [:new-text :string]])
 
 (def AcpToolCallContentItem
@@ -216,6 +224,14 @@
    schema-rejection log spam (see #244)."
   [:map [:session-update [:= :usage-update]]])
 
+(def AcpConfigOptionUpdate
+  "Emitted when a session config option changes (e.g. after setSessionMode).
+   Consumer: config-update-mode reads the \"mode\" option's :current-value.
+   :config-options entries are kept as open maps — only the mode value is load-bearing."
+  [:map
+   [:session-update  [:= :config-option-update]]
+   [:config-options {:optional true} [:vector :map]]])
+
 (def AcpUpdate
   "Discriminated union of ACP session update types. Dispatches on :session-update."
   [:multi {:dispatch (fn [m]
@@ -231,7 +247,8 @@
    [:agent-message-chunk        AcpAgentMessageChunk]
    [:tool-call                  AcpToolCall]
    [:tool-call-update           AcpToolCallUpdate]
-   [:usage-update               AcpUsageUpdate]])
+   [:usage-update               AcpUsageUpdate]
+   [:config-option-update       AcpConfigOptionUpdate]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
