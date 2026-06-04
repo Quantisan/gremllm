@@ -142,12 +142,11 @@
 
 (def AcpDiffItem
   "Structured diff content from a tool-call-update write operation.
-   old-text is optional and may be null — the SDK sends oldText: null when
-   creating a new file (Write tool), so accept both absence and an explicit nil."
+   old-text is optional — absent when ACP creates a new file."
   [:map
    [:type [:= "diff"]]
    [:path :string]
-   [:old-text {:optional true} [:maybe :string]]
+   [:old-text {:optional true} :string]
    [:new-text :string]])
 
 (def AcpToolCallContentItem

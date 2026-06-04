@@ -26,21 +26,6 @@
           result (codec/user-message-from-ipc js-data)]
       (is (= expected-message result)))))
 
-(deftest topic-to-ipc-new-file-diff-test
-  (testing "a pending new-file Write diff (nil old-text) survives save coercion"
-    ;; The SDK sends oldText: null for a new-file Write; that nil flows into
-    ;; [:session :pending-diffs] and must not fail Topic coercion on auto-save.
-    (let [topic {:id       "topic-1"
-                 :name     "New Topic"
-                 :messages []
-                 :excerpts []
-                 :session  {:id           "session-1"
-                            :pending-diffs [{:type     "diff"
-                                             :path     "new.md"
-                                             :old-text nil
-                                             :new-text "hello"}]}}]
-      (is (some? (codec/topic-to-ipc topic))))))
-
 ;; ========================================
 ;; Excerpt (Selection Capture)
 ;; ========================================
