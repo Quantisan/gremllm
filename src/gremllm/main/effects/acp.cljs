@@ -182,14 +182,16 @@
   "Create new ACP session for given working directory."
   [cwd]
   (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta session-meta})
-      (.then (fn [result] (pin-default-mode! (.-sessionId result))))))
+      (.then (fn [^js result] (.-sessionId result)))
+      (.then pin-default-mode!)))
 
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
   (-> (.resumeSession (conn!)
         #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta session-meta})
-      (.then (fn [_] (pin-default-mode! acp-session-id)))))
+      (.then (constantly acp-session-id))
+      (.then pin-default-mode!)))
 
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."
