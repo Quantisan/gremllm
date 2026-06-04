@@ -62,6 +62,30 @@
               (.finally (fn [] (done)))))))))
 
 ;; ---------------------------------------------------------------------------
+;; New-file Write fails closed at the gate. New-file Write is not a supported UX yet; this pins
+;; that.
+;;
+;; Take the approvable in-workspace edit and change one thing: a Write to a
+;; not-yet-existing file carries oldText: null. AcpDiffItem rejects nil, so the
+;; gate cancels instead of proposing the change — the agent is denied and the
+;; user is never asked.
+;; ---------------------------------------------------------------------------
+
+(deftest test-new-file-write-fails-closed
+  (testing "new-file Write (oldText null) is cancelled at the gate, never shown to the user"
+    (let [{:keys [raw-params cwd]} (make-deferred-params)
+          ^js diff   (aget (.. ^js raw-params -toolCall -content) 0)
+          _          (set! (.-oldText diff) nil)
+          awaiting   (atom [])
+          resolve-cb (permission/make-resolve-permission
+                       {:on-awaiting-user-decision #(swap! awaiting conj %)})
+          ^js js-out (resolve-cb raw-params cwd)]
+      (is (= "cancelled" (.. js-out -outcome -outcome))
+          "agent must be denied (fail closed), not allowed through")
+      (is (empty? @awaiting)
+          "user must never be prompted to approve a change that cannot be coerced"))))
+
+;; ---------------------------------------------------------------------------
 ;; Registry: record-decision! fires resolver, removes from snapshot
 ;; ---------------------------------------------------------------------------
 
