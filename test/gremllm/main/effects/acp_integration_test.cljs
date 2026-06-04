@@ -102,13 +102,6 @@
        (filter #(= :permission (:kind %)))
        count))
 
-(defn- session-pinned-mode
-  "The most recent permission mode the session reported via config-option-update."
-  [ctx]
-  (->> (session-updates ctx)
-       (keep acp-codec/config-update-mode)
-       last))
-
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
@@ -192,6 +185,13 @@
       (when option-id
         (acp-permission/record-decision! tool-call-id option-id)))))
 
+(defn- session-permission-mode
+  "The most recent permission mode the session reported via config-option-update."
+  [ctx]
+  (->> (session-updates ctx)
+       (keep acp-codec/config-update-mode)
+       last))
+
 (def ^:private edit-prompt
   "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else.")
 
@@ -212,7 +212,7 @@
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
-                     (is (= "default" (session-pinned-mode ctx))
+                     (is (= "default" (session-permission-mode ctx))
                          "Session must be pinned to 'default' permission mode or the edit gate is bypassed")
                      (is (pos? (permission-event-count ctx))
                          "Edit permission gate bypassed — agent auto-approved without requesting permission (session not in 'default' mode?)")
@@ -262,7 +262,7 @@
                          (:doc-path ctx)))))
             (.then (fn [^js r]
                      (reset! result r)
-                     (is (= "default" (session-pinned-mode ctx))
+                     (is (= "default" (session-permission-mode ctx))
                          "Session must be pinned to 'default' permission mode or the edit gate is bypassed")
                      (is (pos? (permission-event-count ctx))
                          "Edit permission gate bypassed — agent auto-approved without requesting permission (session not in 'default' mode?)")
