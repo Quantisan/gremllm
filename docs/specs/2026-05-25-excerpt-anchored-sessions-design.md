@@ -41,7 +41,7 @@ When text is selected and a session is already active, the popover offers two ac
 
 Sessions appear in the document as **colored vertical bars in the right margin**, positioned alongside the anchored excerpt text. Bars span the height of the excerpt's block range. The right-side placement creates a left-to-right flow — document content → margin hints → chat panel — so bars sit adjacent to the session they activate.
 
-- Each session gets a distinct color from a small rotating palette.
+- Each session gets a color from a small rotating palette. (Slice 1 derives it as `hash(session-id) mod 5`, so adjacent bars are not guaranteed distinct; a persisted per-session color slot is deferred.)
 - The active session's bar is fully opaque; inactive bars are dimmed.
 - Clicking a bar switches the chat panel to that session.
 
@@ -63,7 +63,7 @@ The chat panel remains always-visible on the right. Clicking a margin bar switch
 
 When a document opens with no existing sessions, the chat panel shows an empty state prompting the user to select text. No session is auto-created.
 
-When a document opens with existing sessions, the latest one (by last-modified timestamp) is auto-activated.
+When a document opens with existing sessions, the latest one is auto-activated. (Slice 1 sorts by session id, i.e. creation order, not last-modified — last-modified ordering is a known-deferred refinement.)
 
 ### Session Lifecycle
 
@@ -159,13 +159,13 @@ Two slices. Slice 1 front-loads the riskiest unknown — do margin bars work aga
 
 ### Slice 1: Rendering + Navigation (UI, the risk)
 
-Define the Anchor schema (text + locator + timestamp). Stub session creation from the text-selection popover — "Start session" captures a real anchor from the current selection. Render colored margin bars positioned by anchor locator data. Remove the nav overlay and topic list. Wire empty state, bar-click switching, and auto-activation of the latest session on document open. Persistence ignores anchors — sessions don't survive restart.
+Add the anchor as an in-memory field reusing the existing `DocumentExcerpt` shape (id + text + locator) — no new schema, no timestamp. Stub session creation from the text-selection popover — "Start session" captures a real anchor from the current selection. Render colored margin bars positioned by anchor locator data. Remove the nav overlay and topic list. Wire empty state, bar-click switching, and auto-activation of the latest session on document open. Persistence ignores anchors (the anchor lives only on the in-memory `Topic`, stripped before disk) — sessions don't survive restart. A newly created session is a non-functional **shell**: it shows its anchor and a margin bar, but the composer is disabled and no ACP conversation runs yet (deferred to Slice 2).
 
 **Learns:** Do bars position correctly against real document content? Does the visual treatment work? Does popover-driven creation feel right? How does click-to-switch from the margin feel?
 
 ### Slice 2: Anchor Model + Integration (data, the plumbing)
 
-Update `PersistedTopic` and disk codecs to persist the anchor. Wire anchor into the full save/load pipeline. Clean up the creation flow — remove the old "New Topic" path entirely. Anchor feeds the ACP prompt as first-message context. Sessions survive restart.
+Persist the anchor into `PersistedTopic` as a **required** field and update disk codecs — every session is anchored, so unanchored sessions cannot round-trip. Wire anchor into the full save/load pipeline. Wire the shell session to a live ACP conversation — activating a session initializes ACP and enables the composer. Clean up the creation flow — remove the old "New Topic" / whole-doc creation path entirely (left orphaned in Slice 1). Anchor feeds the ACP prompt as first-message context. Sessions survive restart.
 
 **Learns:** Does the anchor fit cleanly into the schema and persistence layer?
 
