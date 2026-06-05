@@ -114,7 +114,8 @@
                               :opacity 0.8}}
          (get-in active-topic [:anchor :text])]
         [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         "Session not connected."]]]
+         "🚧 Shell session — ACP chat isn't wired up yet (Slice 2). "
+         "This placeholder is expected, not a bug."]]]
 
       :else
       [e/chat-area {}
@@ -161,7 +162,7 @@
      [:textarea {:class "chat-input"
                  :rows 2
                  :value input-value
-                 :placeholder (if shell? "Session not connected" "Type a message... (Shift+Enter for new line)")
+                 :placeholder (if shell? "🚧 ACP not wired yet (Slice 2)" "Type a message... (Shift+Enter for new line)")
                  :disabled (or loading? shell?)
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
                       :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]

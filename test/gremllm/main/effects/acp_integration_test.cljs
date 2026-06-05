@@ -180,6 +180,13 @@
       (when option-id
         (acp-permission/record-decision! tool-call-id option-id)))))
 
+(defn- session-permission-mode
+  "The most recent permission mode the session reported via config-option-update."
+  [ctx]
+  (->> (session-updates ctx)
+       (keep acp-codec/config-update-mode)
+       last))
+
 (def ^:private edit-prompt
   "Read the linked document. Do not plan or ask questions; just make one edit now: change the title to anything. Do not change anything else.")
 
@@ -200,6 +207,8 @@
             (.then (fn [^js r]
                      (reset! result r)
                      (is (= "end_turn" (.-stopReason r)))
+                     (is (= "default" (session-permission-mode ctx))
+                         "Session must be pinned to 'default' permission mode or the edit gate is bypassed")
                      (let [edit-perms (->> @captured
                                            (filter #(= "edit" (get-in % [:tool-call :kind]))))
                            edit-perm  (first edit-perms)

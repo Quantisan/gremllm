@@ -165,18 +165,33 @@
   (or (:connection @state)
       (throw (js/Error. "ACP not initialized"))))
 
+;; Our accept/reject diff gate only works when edits route through
+;; resolvePermission, which the agent only does in "default" permission mode.
+;; Since claude-agent-acp 0.40+, a session's starting mode comes from the user's
+;; global ~/.claude/settings.json, so a user with acceptEdits/bypassPermissions
+;; set there would silently skip review. That mode can't be overridden at session
+;; creation (it is assigned after _meta.claudeCode.options is spread in,
+;; acp-agent.js:1565), so we force it afterward with setSessionMode.
+(defn- pin-default-mode!
+  "Set the session to 'default' permission mode. Returns a promise of acp-session-id."
+  [acp-session-id]
+  (-> (.setSessionMode (conn!) #js {:sessionId acp-session-id :modeId "default"})
+      (.then (fn [_] acp-session-id))))
+
 (defn new-session
   "Create new ACP session for given working directory."
   [cwd]
   (-> (.newSession (conn!) #js {:cwd cwd :mcpServers #js [] :_meta session-meta})
-      (.then (fn [result] (.-sessionId result)))))
+      (.then (fn [^js result] (.-sessionId result)))
+      (.then pin-default-mode!)))
 
 (defn resume-session
   "Resume existing ACP session by ID."
   [cwd acp-session-id]
   (-> (.resumeSession (conn!)
         #js {:sessionId acp-session-id :cwd cwd :mcpServers #js [] :_meta session-meta})
-      (.then (fn [_] acp-session-id))))
+      (.then (constantly acp-session-id))
+      (.then pin-default-mode!)))
 
 (defn prompt
   "Send prompt to ACP agent. Returns promise of result."

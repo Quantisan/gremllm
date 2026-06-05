@@ -14,6 +14,7 @@
    (let [calls (atom {:initialize []
                       :new-session []
                       :resume-session []
+                      :set-session-mode []
                       :prompt []
                       :dispose-count 0})
          conn  #js {:initialize
@@ -27,6 +28,10 @@
                     :resumeSession
                     (fn [payload]
                       (swap! calls update :resume-session conj payload)
+                      (js/Promise.resolve #js {}))
+                    :setSessionMode
+                    (fn [payload]
+                      (swap! calls update :set-session-mode conj payload)
                       (js/Promise.resolve #js {}))
                     :prompt
                     (fn [payload]
@@ -126,6 +131,11 @@
                              ^js prompt-arg (first (:prompt @calls))]
                          (is (= cwd (.-cwd new-session-arg)))
                          (is (= 0 (alength (.-mcpServers new-session-arg))))
+                         (let [^js mode-args (:set-session-mode @calls)]
+                           (is (= 2 (count mode-args))
+                               "new-session and resume-session each pin the mode")
+                           (is (every? #(= "default" (.-modeId ^js %)) mode-args)
+                               "sessions are pinned to 'default' permission mode"))
                          (is (= "s-123" (.-sessionId resume-arg)))
                          (is (= cwd (.-cwd resume-arg)))
                          (is (= "s-123" (.-sessionId prompt-arg)))

@@ -117,6 +117,15 @@
   (when (= :tool-call-update session-update)
     status))
 
+(defn config-update-mode
+  "The \"mode\" config option's :current-value from a config-option-update
+   (e.g. \"default\"), or nil. No production caller: the edit-gate integration
+   test reads this to confirm pin-default-mode! took effect, since an unpinned
+   session bypasses the edit gate."
+  [{:keys [session-update config-options]}]
+  (when (= :config-option-update session-update)
+    (some #(when (= "mode" (:id %)) (:current-value %)) config-options)))
+
 ;; ACP Update sub-schemas
 (def AcpTextContent
   "Schema for text content in ACP chunks. Consumer reads :text only."
@@ -216,6 +225,23 @@
    schema-rejection log spam (see #244)."
   [:map [:session-update [:= :usage-update]]])
 
+(def AcpConfigOption
+  "One :config-options entry. config-update-mode reads :id (to find \"mode\")
+   and its :current-value, left untyped because entry types vary on the wire —
+   a string for the mode select, a boolean for a toggle."
+  [:map
+   [:id            {:optional true} :string]
+   [:current-value {:optional true} :any]])
+
+(def AcpConfigOptionUpdate
+  "An ACP config-option change, e.g. the mode flip after setSessionMode.
+   Production coerces but ignores it; entries are modeled (see AcpConfigOption)
+   only so config-update-mode can read the \"mode\" value, which the edit-gate
+   integration test uses to confirm the session pinned to \"default\"."
+  [:map
+   [:session-update  [:= :config-option-update]]
+   [:config-options {:optional true} [:vector AcpConfigOption]]])
+
 (def AcpUpdate
   "Discriminated union of ACP session update types. Dispatches on :session-update."
   [:multi {:dispatch (fn [m]
@@ -231,7 +257,8 @@
    [:agent-message-chunk        AcpAgentMessageChunk]
    [:tool-call                  AcpToolCall]
    [:tool-call-update           AcpToolCallUpdate]
-   [:usage-update               AcpUsageUpdate]])
+   [:usage-update               AcpUsageUpdate]
+   [:config-option-update       AcpConfigOptionUpdate]])
 
 (def AcpSessionUpdate
   "Schema for session updates from ACP."
