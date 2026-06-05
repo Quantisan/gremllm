@@ -97,11 +97,6 @@
        (filter #(= :session-update (:kind %)))
        (map (comp :update :payload))))
 
-(defn- permission-event-count [ctx]
-  (->> @(-> ctx :recorder :events)
-       (filter #(= :permission (:kind %)))
-       count))
-
 (deftest test-live-acp-happy-path
   (testing "initialize, create session, prompt, and receive updates"
     (async done
@@ -214,8 +209,6 @@
                      (is (= "end_turn" (.-stopReason r)))
                      (is (= "default" (session-permission-mode ctx))
                          "Session must be pinned to 'default' permission mode or the edit gate is bypassed")
-                     (is (pos? (permission-event-count ctx))
-                         "Edit permission gate bypassed — agent auto-approved without requesting permission (session not in 'default' mode?)")
                      (let [edit-perms (->> @captured
                                            (filter #(= "edit" (get-in % [:tool-call :kind]))))
                            edit-perm  (first edit-perms)
@@ -262,10 +255,6 @@
                          (:doc-path ctx)))))
             (.then (fn [^js r]
                      (reset! result r)
-                     (is (= "default" (session-permission-mode ctx))
-                         "Session must be pinned to 'default' permission mode or the edit gate is bypassed")
-                     (is (pos? (permission-event-count ctx))
-                         "Edit permission gate bypassed — agent auto-approved without requesting permission (session not in 'default' mode?)")
                      (is (some #(= "edit" (get-in % [:tool-call :kind])) @captured)
                          "Expected at least one pending-permission for an edit tool call (subsumes the dropped guide-rail).")
                      (print-event-summary! "edit-reject" (:recorder ctx) [:permission])
