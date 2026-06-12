@@ -8,9 +8,9 @@ Gremllm is an Idea Development Environment for verified knowledge work. It helps
 
 Built with Electron and ClojureScript. The current app is document-first: the user opens any markdown file, and topics are ACP-backed conversations in service of that document. Per-document state (topics, metadata) is stored in `userData` keyed by a hash of the file's absolute path. Key tech: Replicant (reactive UI), Nexus (state management), Dataspex (state inspection), Shadow-CLJS (build tool), PicoCSS (styling), and `markdown-it` (document/chat rendering).
 
-## Design Principles
+## Product Principles
 
-These principles guide every implementation decision:
+Use these to judge whether a feature or change fits the product. They are judgment heuristics for *what* to build, not hard rules:
 
 1. **Document-first, not chat-first** - The artifact is the center of gravity, not the conversation history
 2. **Expert judgment and taste are elevated, not hidden** - Where human expertise made the difference is visible and valued
@@ -30,6 +30,15 @@ Why PE due diligence:
 - Scrutiny is the norm—these documents get challenged
 
 **Broader hypothesis:** Other domains with established expert processes (consulting, legal, policy) have similar needs. PE is the beachhead.
+
+## Current Scope
+
+We follow a "skateboard → scooter → bicycle → motorcycle" MVP evolution — every stage ships a complete, functional product. Use the current stage as a scope guardrail: build for where we are, not for later stages.
+
+- **Skateboard (complete):** Topic-centered ACP chat with workspace persistence — proved we could ship a working end-to-end Electron + ACP product.
+- **Scooter (current):** Document-first workflow — open any markdown file, ACP `resource_link` prompting, and inline pending-diff rendering in the document panel. Annotation capture and diff accept/reject mutation are not complete yet.
+- **Bicycle (next):** Specialized agents and managed context — AI works through steerable agents for specific tasks; context is progressively disclosed per task rather than dumped wholesale.
+- **Motorcycle (future):** Full proof and methodology capture — evidence, methodology, and expert judgment become visible and verifiable.
 
 ## Architecture
 
@@ -90,50 +99,35 @@ npm run test:integration # Compile + autorun integration tests
 - Specs: `docs/specs/`
 - Plans: `docs/plans/`
 
-## Design Philosophy
+## Engineering Rules
 
-### Pragmatic Evolution: From Skateboard to Motorcycle
-We follow the "skateboard → scooter → bicycle → motorcycle" MVP evolution. Every stage delivers a complete, functional product:
-
-- **Skateboard (complete):** Topic-centered ACP chat with workspace persistence—proved we could ship a working end-to-end Electron + ACP product.
-- **Scooter (current):** Document-first workflow — open any markdown file, ACP `resource_link` prompting, and inline pending-diff rendering in the document panel. Annotation capture and diff accept/reject mutation are not complete yet.
-- **Bicycle (next):** Specialized agents and managed context—AI works through steerable agents for specific tasks; context is progressively disclosed per task rather than dumped wholesale.
-- **Motorcycle (future):** Full proof and methodology capture—evidence, methodology, and expert judgment become visible and verifiable.
+These are hard constraints on every code change. Obey them; don't relitigate them per task.
 
 ### Strict FCIS (Functional Core, Imperative Shell)
-We maintain a strict separation between pure functions and side effects:
+Keep a strict separation between pure functions and side effects.
 
-**Functional Core (Pure):**
-- All business logic, data transformations, and decision making
-- Actions that return effect descriptions (not perform them)
+**Functional Core (pure) — all of:**
+- Business logic, data transformations, and decision making
+- Actions that *return* effect descriptions (never perform them)
 - State derivations and computations
 - UI components (pure data structures)
-- Console logging for debugging is acceptable
+- Console logging for debugging is acceptable here
 
-**Imperative Shell (Effects):**
-- ALL side effects are isolated in effect handlers
+**Imperative Shell (effects) — isolate all of:**
 - DOM manipulation, IPC calls, file I/O, HTTP requests
 - State mutations (only via registered effects)
 - Promise handling and async operations
 - Random value generation (UUIDs, etc.)
 
-Effects are registered in a single, obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`). The rest of the codebase remains pure. This isn't just a preference—it's a strict architectural requirement. IPC handlers in `main/core.cljs` are also part of the imperative shell.
+Register effects in one obvious location per process (`main/actions.cljs` and `renderer/actions.cljs`); keep the rest of the codebase pure. IPC handlers in `main/core.cljs` are part of the imperative shell.
 
 ### Modelarity: Code Reflects the Domain
-We practice a form of domain-driven design where the structure of our code—our namespaces, functions, and data—mirrors the way we think and talk about the problem (credit: Kevlin Henney). If we discuss "saving a topic" or "handling a form submission," the corresponding code should be found in a predictable location like `topic.actions/save` or `form.actions/submit`.
+Structure code — namespaces, functions, data — to mirror how we talk about the problem (credit: Kevlin Henney). If we say "saving a topic" or "handling a form submission," the code lives in a predictable place like `topic.actions/save` or `form.actions/submit`. The solution space mirrors the problem space.
 
-This principle ensures that the solution space (the code) directly corresponds to the problem space (the domain concepts).
-
-**How this manifests:**
-- **Namespaces:** Organized by domain concepts like `document`, `topic`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
-- **State Actions:** Keywords like `:topic.actions/set-active` and `:document.actions/pick` are namespaced by the part of the system they affect.
-- **IPC Channels:** Named for the domain action they perform, such as `acp/prompt`, `document/pick`, or `topic/save`.
-
-By aligning our code with our mental model, we reduce cognitive load, make the system easier to navigate, and ensure that as the application grows, its complexity remains manageable. The code becomes self-documenting.
-
-### Vision: An Idea Development Environment for Verified Knowledge Work
-
-Gremllm is an **Idea Development Environment**—a structured workspace where knowledge workers produce artifacts that carry their own proof. The principles above define the working model: the document stays central, expert judgment stays visible, and humans direct the work while AI proposes the writing. As work progresses, Gremllm captures process, evidence, and judgment alongside the artifact so stakeholders can examine not just the deliverable, but how it was produced. **The artifact is portable; the proof lives in the platform.**
+**This manifests as:**
+- **Namespaces:** organized by domain concepts like `document`, `topic`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
+- **State Actions:** keywords like `:topic.actions/set-active` and `:document.actions/pick`, namespaced by the part of the system they affect.
+- **IPC Channels:** named for the domain action they perform, such as `acp/prompt`, `document/pick`, or `topic/save`.
 
 ## State Management with Nexus
 
