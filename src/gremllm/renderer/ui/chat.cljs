@@ -92,7 +92,7 @@
      "Computing..."]])
 
 (defn render-chat-area [messages awaiting-response? session-opts]
-  (let [{:keys [active-topic active-topic-id shell?]} session-opts]
+  (let [{:keys [active-topic active-topic-id loading? shell?]} session-opts]
     (cond
       (nil? active-topic-id)
       [e/chat-area
@@ -104,8 +104,8 @@
                       :font-style "italic"}}
         "Select text in the document to start a session."]]
 
-      ;; TODO(slice2): connect ACP; shell sessions show disabled placeholder.
       ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
+      ;; True while the ACP session is connecting (loading?) or after init failed.
       shell?
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}
@@ -114,8 +114,9 @@
                               :opacity 0.8}}
          (get-in active-topic [:anchor :text])]
         [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         "🚧 Shell session — ACP chat isn't wired up yet (Slice 2). "
-         "This placeholder is expected, not a bug."]]]
+         (if loading?
+           "Connecting session..."
+           "Session not connected — click its session bar to retry.")]]]
 
       :else
       [e/chat-area {}
@@ -162,7 +163,7 @@
      [:textarea {:class "chat-input"
                  :rows 2
                  :value input-value
-                 :placeholder (if shell? "🚧 ACP not wired yet (Slice 2)" "Type a message... (Shift+Enter for new line)")
+                 :placeholder (if shell? "Connecting session..." "Type a message... (Shift+Enter for new line)")
                  :disabled (or loading? shell?)
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
                       :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
