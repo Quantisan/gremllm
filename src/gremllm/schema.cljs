@@ -107,7 +107,7 @@
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context     {:optional true}
-    [:map
+    [:map {:closed true}
      [:excerpts {:optional true} [:vector DocumentExcerpt]]
      [:anchor   {:optional true} DocumentExcerpt]]]])
 

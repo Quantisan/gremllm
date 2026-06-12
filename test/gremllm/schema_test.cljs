@@ -161,7 +161,8 @@
     (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture})))
     (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture
                                              :excerpts [anchor-fixture]})))
-    (is (m/validate schema/UserMessage (msg {:excerpts [anchor-fixture]})))))
+    (is (m/validate schema/UserMessage (msg {:excerpts [anchor-fixture]})))
+    (is (not (m/validate schema/UserMessage (msg {:anchor anchor-fixture :unknown "x"}))))))
 
 (deftest persisted-topic-requires-anchor-test
   (testing "topic without anchor is invalid post-slice2"
