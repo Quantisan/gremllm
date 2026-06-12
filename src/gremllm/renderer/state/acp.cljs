@@ -8,5 +8,5 @@
 (defn live? [state topic-id]
   (contains? (get-in state live-topics-path #{}) topic-id))
 
-(defn mark-live [state topic-id]
+(defn with-topic-live [state topic-id]
   (conj (get-in state live-topics-path #{}) topic-id))

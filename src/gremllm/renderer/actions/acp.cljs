@@ -118,7 +118,7 @@
   (js/console.log "[ACP] Session ready:" acp-session-id "for topic:" topic-id)
   [[:loading.actions/set-loading? topic-id false]
    [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]
-   [:effects/save acp-state/live-topics-path (acp-state/mark-live state topic-id)]])
+   [:effects/save acp-state/live-topics-path (acp-state/with-topic-live state topic-id)]])
 
 (defn session-error
   "ACP session initialization failed."
