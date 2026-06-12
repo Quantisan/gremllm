@@ -25,9 +25,10 @@
     (is (nil? (ui/submit-messages state)))))
 
 (deftest submit-without-excerpts-sends-plain-message-test
+  ;; First-message send on a topic without an anchor — :messages [] is explicit
   (let [state {:form {:user-input "hello"}
                :active-topic-id "t1"
-               :topics {"t1" {:excerpts []}}}
+               :topics {"t1" {:messages [] :excerpts []}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
         [_ topic-id message] add-msg
         [_ sent-message] send]
@@ -40,9 +41,10 @@
     (is (= message sent-message))))
 
 (deftest submit-with-excerpts-attaches-context-test
+  ;; First-message send on a topic without an anchor — :messages [] is explicit
   (let [state {:form {:user-input "reword these"}
                :active-topic-id "t1"
-               :topics {"t1" {:excerpts [sample-excerpt]}}}
+               :topics {"t1" {:messages [] :excerpts [sample-excerpt]}}}
         [add-msg _ _ _ send] (ui/submit-messages state)
         [_ topic-id message] add-msg
         [_ sent-message] send]
