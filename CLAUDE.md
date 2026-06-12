@@ -146,6 +146,14 @@ A hard constraint here; see `~/.claude/CLAUDE.md` "Test-First Development" for t
 - **Test:** pure action / state-derivation logic, and `schema/codec` boundary transforms (IPC / disk / ACP / DOM) — where misuse fails dangerously.
 - **Skip:** hiccup / UI structure, action vectors that pass args through without branching, and thin effect / shell wiring — confirm those in the running app.
 
+### Frame Before You Build
+See `~/.claude/CLAUDE.md` "Problem Framing (Hammock-Driven)" for the posture. In this codebase, "surface evidence from ground truth" means:
+
+- **The problem:** the product principle and current scope stage it serves, and the real user need — not just the feature request.
+- **The data:** canonical models in `schema.cljs` and boundary shapes in `schema/codec.cljs` — read the real shape, don't assume it.
+- **The boundaries:** the trust boundaries it crosses (IPC, disk, ACP, DOM) and what malformed or edge data looks like there.
+- **Prior art:** existing actions / effects / codecs to mirror.
+
 ## State Management with Nexus
 
 Following FCIS principles, all state changes flow through Nexus:
