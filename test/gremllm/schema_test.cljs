@@ -156,6 +156,13 @@
       (is (m/validate schema/Message
                       (create-message {:id 1 :type :user :text "hello"}))))))
 
+(deftest user-message-context-variants-test
+  (let [msg (fn [context] {:id 1 :type :user :text "t" :context context})]
+    (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture})))
+    (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture
+                                             :excerpts [anchor-fixture]})))
+    (is (m/validate schema/UserMessage (msg {:excerpts [anchor-fixture]})))))
+
 (deftest persisted-topic-requires-anchor-test
   (testing "topic without anchor is invalid post-slice2"
     (let [anchorless {:id "topic-123-abc" :name "N"

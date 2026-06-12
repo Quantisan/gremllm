@@ -107,7 +107,9 @@
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context     {:optional true}
-    [:map [:excerpts [:vector DocumentExcerpt]]]]])
+    [:map
+     [:excerpts {:optional true} [:vector DocumentExcerpt]]
+     [:anchor   {:optional true} DocumentExcerpt]]]])
 
 (def AssistantMessage
   [:map {:closed true}
