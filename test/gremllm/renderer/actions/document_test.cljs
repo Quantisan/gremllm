@@ -65,9 +65,11 @@
         (is (= "topic-2000-b" activated-id))))
 
     (testing "No activation when no anchored topics"
-      (let [old-topic (-> (schema/create-topic schema-test/anchor-fixture)
-                          (assoc :id "topic-1000-a")
-                          (dissoc :anchor))
+      ;; Topics like this are rejected at the disk boundary post-slice-2 (topic-from-disk
+      ;; throws on missing :anchor). This filter is defense in depth against malformed
+      ;; in-memory state that bypassed the codec.
+      (let [old-topic {:id "topic-1000-a" :name "New Topic"
+                       :session {:pending-diffs []} :messages [] :excerpts []}
             effects (document/restore-with-topics {} {:topics {"topic-1000-a" old-topic}})]
         (is (not (has-action? effects :topic.actions/set-active)))))
 

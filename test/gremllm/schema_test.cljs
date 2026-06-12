@@ -104,23 +104,6 @@
     (is (not (m/validate schema/BlockRef
                          {:kind :paragraph :index 2 :start-line 3 :end-line 3})))))
 
-(deftest document-excerpt-test
-  (let [block {:kind :paragraph
-               :index 2
-               :start-line 3
-               :end-line 3
-               :block-text-snippet "Our Gremllm launched on a Tuesday."}]
-    (testing "valid DocumentExcerpt validates"
-      (is (m/validate schema/DocumentExcerpt
-                      {:id "excerpt-abc"
-                       :text "launched on a Tuesday"
-                       :locator {:document-relative-path "document.md"
-                                 :start-block block
-                                 :end-block block}})))
-    (testing "missing :locator fails"
-      (is (not (m/validate schema/DocumentExcerpt
-                           {:id "e" :text "t"}))))))
-
 (def anchor-fixture
   {:id "excerpt-abc"
    :text "launched on a Tuesday"
@@ -132,32 +115,29 @@
                            :start-line 3 :end-line 3
                            :block-text-snippet "Our Gremllm launched on a Tuesday."}}})
 
+(deftest document-excerpt-test
+  (testing "valid DocumentExcerpt validates"
+    (is (m/validate schema/DocumentExcerpt anchor-fixture)))
+  (testing "missing :locator fails"
+    (is (not (m/validate schema/DocumentExcerpt
+                         {:id "e" :text "t"})))))
+
 (deftest topic-with-anchor-test
-  (let [block {:kind :paragraph
-               :index 2
-               :start-line 3
-               :end-line 3
-               :block-text-snippet "Our Gremllm launched on a Tuesday."}
-        anchor {:id "excerpt-abc"
-                :text "launched on a Tuesday"
-                :locator {:document-relative-path "document.md"
-                          :start-block block
-                          :end-block block}}]
-    (testing "Topic with anchor validates"
-      (is (m/validate schema/Topic
-                      {:id "topic-123-abc"
-                       :name "New Topic"
-                       :anchor anchor
-                       :session {:pending-diffs []}
-                       :messages []
-                       :excerpts []})))
-    (testing "Topic without anchor still validates (optional field)"
-      (is (m/validate schema/Topic
-                      {:id "topic-123-abc"
-                       :name "New Topic"
-                       :session {:pending-diffs []}
-                       :messages []
-                       :excerpts []})))))
+  (testing "Topic with anchor validates"
+    (is (m/validate schema/Topic
+                    {:id "topic-123-abc"
+                     :name "New Topic"
+                     :anchor anchor-fixture
+                     :session {:pending-diffs []}
+                     :messages []
+                     :excerpts []})))
+  (testing "Topic without anchor is invalid — anchor is required post-slice-2"
+    (is (not (m/validate schema/Topic
+                         {:id "topic-123-abc"
+                          :name "New Topic"
+                          :session {:pending-diffs []}
+                          :messages []
+                          :excerpts []})))))
 
 (deftest message-with-context-test
   (let [excerpt {:id "e1"
@@ -183,6 +163,13 @@
       (is (m/validate schema/Message
                       (create-message {:id 1 :type :user :text "hello"}))))))
 
+(deftest persisted-topic-requires-anchor-test
+  (testing "topic without anchor is invalid post-slice2"
+    (let [anchorless {:id "topic-123-abc" :name "N"
+                      :session {:pending-diffs []} :messages [] :excerpts []}]
+      (is (not (m/validate schema/PersistedTopic anchorless)))
+      (is (not (m/validate schema/Topic anchorless))))))
+
 (deftest persisted-topic-excerpts-are-document-excerpts-test
   (let [excerpt {:id "e1"
                  :text "snippet"
@@ -200,6 +187,7 @@
     (is (m/validate schema/PersistedTopic
                     {:id "t1"
                      :name "T"
+                     :anchor anchor-fixture
                      :session {:pending-diffs []}
                      :messages []
                      :excerpts [excerpt]}))))

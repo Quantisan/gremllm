@@ -14,8 +14,6 @@
 (defn- write-file [dir filename content]
   (io/write-file (io/path-join dir filename) content))
 
-;; TODO: DRY: use schema/PersistedTopic default instead of hardcoding instances
-
 (def ^:private excerpt-fixture
   {:id "staged-1"
    :text "Our Gremllm crew"
@@ -31,10 +29,10 @@
                          :end-line 3
                          :block-text-snippet "Our Gremllm crew tuned the launch checklist."}}})
 
-
 (defn- make-valid-topic []
   {:id "topic-1754952422977-ixubncif66"
    :name "Test Topic"
+   :anchor schema-test/anchor-fixture
    :messages [{:id 1754952440824 :type :user :text "Hello"}]
    :session {:pending-diffs []}
    :excerpts []})
@@ -53,11 +51,7 @@
   (testing "save and load preserves topic data including excerpts"
     (with-temp-dir "topic-save-load"
       (fn [temp-dir]
-        (let [topic    {:id "topic-1754952422977-ixubncif66"
-                        :name "Test Topic"
-                        :messages [{:id 1754952440824 :type :user :text "Hello"}]
-                        :session {:pending-diffs []}
-                        :excerpts [excerpt-fixture]}
+        (let [topic    (assoc (make-valid-topic) :excerpts [excerpt-fixture])
               filename (str (:id topic) ".edn")
               filepath (io/path-join temp-dir filename)
               _saved-path (topic-effects/save-topic {:dir temp-dir
@@ -90,7 +84,8 @@
   (testing "skips corrupt files and loads valid ones"
     (with-temp-dir "load-with-corrupt"
       (fn [dir]
-        (let [good-topic {:id "topic-111-good" :name "Valid" :messages [] :session {:pending-diffs []} :excerpts []}]
+        (let [good-topic {:id "topic-111-good" :name "Valid" :anchor schema-test/anchor-fixture
+                          :messages [] :session {:pending-diffs []} :excerpts []}]
           ;; Write one valid and one corrupt file
           (write-topic-file dir good-topic)
           (write-file dir "topic-999-bad.edn" "{:broken")

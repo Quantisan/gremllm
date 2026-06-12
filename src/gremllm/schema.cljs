@@ -189,7 +189,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"}        :string]
-   [:anchor {:optional true}            DocumentExcerpt]
+   [:anchor                             DocumentExcerpt]
    [:session {:default {}}              AcpSession]
    [:messages {:default []}             [:vector Message]]
    [:excerpts {:default []}             [:vector DocumentExcerpt]]])
