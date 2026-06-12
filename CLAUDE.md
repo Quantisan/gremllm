@@ -140,6 +140,12 @@ Structure code — namespaces, functions, data — to mirror how we talk about t
 ### Validate at Boundaries
 Every trust boundary — IPC, disk, ACP transport, DOM capture — coerces and validates incoming data through `schema/codec` before it reaches core logic. Canonical models live in `schema.cljs`; boundary transforms in `schema/codec.cljs`. Name coercions for their boundary, and fail fast at the edge, not deep in business logic.
 
+### Test Conservatively
+A hard constraint here; see `~/.claude/CLAUDE.md` "Test-First Development" for the posture and the prune-before-done self-review. This rule pins what counts as domain logic *in this codebase*:
+
+- **Test:** pure action / state-derivation logic, and `schema/codec` boundary transforms (IPC / disk / ACP / DOM) — where misuse fails dangerously.
+- **Skip:** hiccup / UI structure, action vectors that pass args through without branching, and thin effect / shell wiring — confirm those in the running app.
+
 ## State Management with Nexus
 
 Following FCIS principles, all state changes flow through Nexus:
