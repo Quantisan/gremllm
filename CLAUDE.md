@@ -93,6 +93,14 @@ npm run test:all   # Compile + autorun unit and integration tests
 npm run test:integration # Compile + autorun integration tests
 ```
 
+## Verifying Work
+
+Before declaring a code change done:
+
+- **Unit tests pass** — run `npm run test` and confirm green.
+- **Integration tests pass** — run `npm run test:all` (or `npm run test:integration`) for changes touching IPC, ACP, or persistence boundaries.
+- **Manual app check** — for renderer/UI changes, confirm the behavior in the running app (`npm run dev`), not tests alone.
+
 ## File Conventions
 
 **Design artifacts:**
