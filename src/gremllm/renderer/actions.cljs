@@ -181,7 +181,6 @@
 (nxr/register-action! :topic.actions/reject-diff topic/reject-diff)
 (nxr/register-action! :tool-call.actions/start  tool-call/start-tool-call)
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
-(nxr/register-action! :topic.actions/start-new topic/start-new-topic)  ;; TODO: not integrated yet. Need to design for whole-doc anchored session.
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/start-anchored-session topic/start-anchored-session)
 (nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)

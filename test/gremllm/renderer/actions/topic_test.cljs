@@ -3,22 +3,15 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema :as schema]
+            [gremllm.schema-test :as schema-test]
             [gremllm.schema.codec :as codec]
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
-(deftest start-new-topic-test
-  (let [result (topic/start-new-topic {})
-        [[_ topic-path saved-topic] [action-name active-id]] result]
-
-    (is (= 2 (count result)) "should return exactly two effects")
-
-    (is (= :effects/save (first (first result))) "first should be save effect")
-    (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
-    (is (= (topic-state/topic-path (:id saved-topic)) topic-path) "should save to correct topics path")
-
-    (is (= :topic.actions/set-active action-name) "second should be set-active action")
-    (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
+(deftest create-topic-with-anchor-test
+  (let [topic (schema/create-topic schema-test/anchor-fixture)]
+    (is (= schema-test/anchor-fixture (:anchor topic)))
+    (is (string? (:id topic)))))
 
 (deftest start-anchored-session-test
   (let [anchor {:id "excerpt-abc"
@@ -62,7 +55,7 @@
     (testing "returns nil when no captured state"
       (is (nil? (topic/start-session-from-capture {}))))))
 
-(def ^:private expected-new-topic (schema/create-topic))
+(def ^:private expected-new-topic (schema/create-topic schema-test/anchor-fixture))
 
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic

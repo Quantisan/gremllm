@@ -6,12 +6,6 @@
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]))
 
-(defn start-new-topic [_state]
-  (let [new-topic (schema/create-topic)
-        topic-id  (:id new-topic)]
-    [[:effects/save (topic-state/topic-path topic-id) new-topic]
-     [:topic.actions/set-active topic-id]]))
-
 (defn mark-saved [_state topic-id]
   [[:effects/save (topic-state/topic-field-path topic-id :unsaved?) false]])
 
@@ -131,7 +125,7 @@
 (defn start-anchored-session
   "Create a new shell session anchored to the given excerpt."
   [_state anchor]
-  (let [new-topic (assoc (schema/create-topic) :anchor anchor)
+  (let [new-topic (schema/create-topic anchor)
         topic-id  (:id new-topic)]
     [[:effects/save (topic-state/topic-path topic-id) new-topic]
      [:topic.actions/set-active topic-id]

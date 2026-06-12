@@ -207,8 +207,10 @@
   "Schema for topic identifiers shared across IPC boundaries."
   [:string {:min 1}])
 
-(defn create-topic []
-  (m/decode Topic {} mt/default-value-transformer))
+(defn create-topic
+  "Creates a new topic anchored to the given DocumentExcerpt."
+  [anchor]
+  (assoc (m/decode Topic {} mt/default-value-transformer) :anchor anchor))
 
 (def DocumentTopics
   "Map of Topics keyed by Topic ID"
