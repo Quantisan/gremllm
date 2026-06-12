@@ -44,3 +44,16 @@
               :uri "file:///workspace/document.md"
               :name "document.md"}
              (second blocks-with-document))))))
+
+(deftest anchor-section-test
+  (let [body (:text (first (acp/prompt-content-blocks
+                            {:text "hello" :context {:anchor excerpt}} nil)))]
+    (is (re-find #"Anchor:" body))
+    (is (re-find #"p2" body) "BlockRef :kind keyword renders as compact label")
+    (is (not (re-find #"References:" body)))))
+
+(deftest anchor-precedes-references-test
+  (let [body (:text (first (acp/prompt-content-blocks
+                            {:text "hello" :context {:anchor excerpt :excerpts [excerpt]}} nil)))]
+    (is (re-find #"Anchor:" body))
+    (is (< (.indexOf body "Anchor:") (.indexOf body "References:")))))
