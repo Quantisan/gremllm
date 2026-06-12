@@ -24,10 +24,15 @@
     (when (seq text)
       (let [topic-id (topic-state/get-active-topic-id state)
             excerpts (topic-state/get-excerpts state)
+            anchor   (when (empty? (topic-state/get-messages state))
+                       (:anchor (topic-state/get-active-topic state)))
+            context  (cond-> {}
+                       anchor         (assoc :anchor anchor)
+                       (seq excerpts) (assoc :excerpts excerpts))
             message  (cond-> {:id   (schema/generate-message-id)
                               :type :user
                               :text text}
-                       (seq excerpts) (assoc :context {:excerpts excerpts}))]
+                       (seq context) (assoc :context context))]
         [[:messages.actions/add-to-chat topic-id message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
