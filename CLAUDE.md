@@ -111,7 +111,7 @@ Keep a strict separation between pure functions and side effects.
 - Actions that *return* effect descriptions (never perform them)
 - State derivations and computations
 - UI components (pure data structures)
-- Console logging for debugging is acceptable here
+- Console logging is acceptable here (but in the renderer, Dataspex already logs every action and state change — prefer it over manual `console.log`)
 
 **Imperative Shell (effects) — isolate all of:**
 - DOM manipulation, IPC calls, file I/O, HTTP requests
@@ -128,6 +128,9 @@ Structure code — namespaces, functions, data — to mirror how we talk about t
 - **Namespaces:** organized by domain concepts like `document`, `topic`, or `excerpt` (e.g., `renderer.actions.document`, `main.actions.topic`).
 - **State Actions:** keywords like `:topic.actions/set-active` and `:document.actions/pick`, namespaced by the part of the system they affect.
 - **IPC Channels:** named for the domain action they perform, such as `acp/prompt`, `document/pick`, or `topic/save`.
+
+### Validate at Boundaries
+Every trust boundary — IPC, disk, ACP transport, DOM capture — coerces and validates incoming data through `schema/codec` before it reaches core logic. Canonical models live in `schema.cljs`; boundary transforms in `schema/codec.cljs`. Name coercions for their boundary, and fail fast at the edge, not deep in business logic.
 
 ## State Management with Nexus
 
