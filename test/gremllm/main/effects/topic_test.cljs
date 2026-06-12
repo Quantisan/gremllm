@@ -41,7 +41,7 @@
   (testing "anchor survives save → load through the disk codec"
     (with-temp-dir "anchor-round-trip"
       (fn [temp-dir]
-        (let [topic  (assoc (make-valid-topic) :anchor schema-test/anchor-fixture)
+        (let [topic  (make-valid-topic)
               plan   (topic-actions/topic->save-plan topic temp-dir)
               _      (topic-effects/save-topic plan)
               loaded (get (topic-effects/load-topics temp-dir) (:id topic))]

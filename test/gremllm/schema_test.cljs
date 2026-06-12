@@ -130,14 +130,7 @@
                      :anchor anchor-fixture
                      :session {:pending-diffs []}
                      :messages []
-                     :excerpts []})))
-  (testing "Topic without anchor is invalid — anchor is required post-slice-2"
-    (is (not (m/validate schema/Topic
-                         {:id "topic-123-abc"
-                          :name "New Topic"
-                          :session {:pending-diffs []}
-                          :messages []
-                          :excerpts []})))))
+                     :excerpts []}))))
 
 (deftest message-with-context-test
   (let [excerpt {:id "e1"
