@@ -1,11 +1,11 @@
 (ns gremllm.renderer.state.session)
 
-;; TODO(slice2): this namespace speaks "session" but operates on "topic" state/schema.
+;; TODO: this namespace speaks "session" but operates on "topic" state/schema.
 ;; Reconcile the vocabulary when topic -> session rename lands (see actions.cljs).
 
 (defn shell?
-  "A shell session is anchored but has no live ACP session id yet.
-   Single source of truth for shell-ness; Slice 2 ACP re-wiring changes only this."
+  "A shell session is anchored but has no live ACP session id yet (connecting,
+   or init failed). Single source of truth for shell-ness."
   [topic]
   (nil? (get-in topic [:session :id])))
 
@@ -41,10 +41,10 @@
    mutable ACP :session :id) keeps a bar's color fixed as sessions are added or
    removed and as the ACP session re-wires. nil when the session is not anchored.
 
-   TODO(slice2): persist an assigned color slot at creation. With only five
+   TODO: persist an assigned color slot at creation. With only five
    colors, distinct adjacent bars aren't guaranteed -- collisions are common past
-   a couple of sessions; a persisted round-robin slot stays both stable and
-   distinct, and lands naturally alongside anchor persistence."
+   a couple of sessions; a persisted round-robin slot would stay both stable and
+   distinct."
   [topics-map topic-id]
   (when (get-in topics-map [topic-id :anchor])
     (nth session-colors (mod (hash topic-id) (count session-colors)))))
