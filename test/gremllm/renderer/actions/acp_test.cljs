@@ -3,6 +3,7 @@
             [gremllm.schema :as schema]
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.actions.acp :as acp]
+            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.schema-test :as schema-test]))
 
 (deftest test-append-to-response
@@ -230,6 +231,24 @@
         (if (nil? old-window)
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
+
+(deftest init-session-plan-test
+  (let [base {:topics {"t1" {:id "t1" :session {}}}}]
+    (testing "new session when topic has no acp session id"
+      (is (= [[:acp.actions/new-session "t1"]] (acp/init-session-plan base "t1"))))
+    (testing "resume when a persisted acp session id exists"
+      (let [state (assoc-in base [:topics "t1" :session :id] "s1")]
+        (is (= [[:acp.actions/resume-session "t1" "s1"]] (acp/init-session-plan state "t1")))))
+    (testing "no-op when already live this run"
+      (let [state (assoc-in base acp-state/live-topics-path #{"t1"})]
+        (is (nil? (acp/init-session-plan state "t1")))))
+    (testing "no-op while init is in flight"
+      (let [state (assoc-in base [:loading "t1"] true)]
+        (is (nil? (acp/init-session-plan state "t1")))))))
+
+(deftest session-ready-marks-live-test
+  (let [effects (acp/session-ready {} "t1" "s1")]
+    (is (some #(= [:effects/save acp-state/live-topics-path #{"t1"}] %) effects))))
 
 (deftest append-edit-diffs-suppression-test
   (testing "skips diffs whose tool-call-id is already in :resolved-tool-calls"

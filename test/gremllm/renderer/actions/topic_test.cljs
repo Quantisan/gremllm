@@ -67,11 +67,11 @@
     (is (= expected (codec/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest set-active-does-not-init-acp-test
-  (testing "set-active only saves active-topic-id, no ACP init"
-    (let [result (topic/set-active {} "topic-123")]
-      (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]]
-             result)))))
+(deftest set-active-inits-acp-test
+  (testing "set-active saves the id and triggers ACP session init"
+    (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]
+            [:acp.effects/init-session "topic-123"]]
+           (topic/set-active {} "topic-123")))))
 
 (deftest auto-save-test
   (let [topic-id       "topic-123"

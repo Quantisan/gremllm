@@ -220,11 +220,10 @@
 (nxr/register-action! :acp.actions/session-error acp/session-error)
 (nxr/register-action! :acp.events/session-update acp/session-update)
 
-;; Accidental impurity: This routing logic is conceptually pure (state in, action out),
+;; Accidental impurity: init-session-plan is conceptually pure (state in, action out),
 ;; but must be an effect to see live store state. Actions receive immutable snapshots
 ;; captured at dispatch start, missing topic data saved by earlier effects in the chain.
 (nxr/register-effect! :acp.effects/init-session
   (fn [{:keys [dispatch]} store topic-id]
-    (if-let [existing-acp-session-id (topic-state/get-acp-session-id @store topic-id)]
-      (dispatch [[:acp.actions/resume-session topic-id existing-acp-session-id]])
-      (dispatch [[:acp.actions/new-session topic-id]]))))
+    (when-let [effects (acp/init-session-plan @store topic-id)]
+      (dispatch effects))))

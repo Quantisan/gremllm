@@ -145,10 +145,10 @@
         [[:topic.actions/start-anchored-session anchor]]))))
 
 (defn set-active
-  "Set the active topic. ACP session init is handled separately.
-   TODO(slice2): rewire ACP init on activation."
+  "Set the active topic and bring its ACP session live (once per run)."
   [_state topic-id]
-  [[:effects/save topic-state/active-topic-id-path topic-id]])
+  [[:effects/save topic-state/active-topic-id-path topic-id]
+   [:acp.effects/init-session topic-id]])
 
 ;; Generic topic save effect - accepts any topic-id
 (nxr/register-effect! :topic.effects/save-topic

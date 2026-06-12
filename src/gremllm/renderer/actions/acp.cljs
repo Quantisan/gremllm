@@ -2,6 +2,8 @@
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [gremllm.schema :as schema]
             [gremllm.schema.codec.acp :as acp-codec]
+            [gremllm.renderer.state.acp :as acp-state]
+            [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- continuing? [state message-type]
@@ -100,12 +102,23 @@
     (acp-codec/edit-completed? update)
     (append-edit-diffs state update)))
 
+(defn init-session-plan
+  "Decide how to bring a topic's ACP session live: resume a persisted session
+   id, create a new session, or nil when already live or init is in flight."
+  [state topic-id]
+  (when-not (or (acp-state/live? state topic-id)
+                (loading-state/loading? state topic-id))
+    (if-let [acp-session-id (topic-state/get-acp-session-id state topic-id)]
+      [[:acp.actions/resume-session topic-id acp-session-id]]
+      [[:acp.actions/new-session topic-id]])))
+
 (defn session-ready
-  "Session created successfully. Save acp-session-id to topic."
-  [_state topic-id acp-session-id]
+  "Session created/resumed successfully. Save acp-session-id and mark live."
+  [state topic-id acp-session-id]
   (js/console.log "[ACP] Session ready:" acp-session-id "for topic:" topic-id)
   [[:loading.actions/set-loading? topic-id false]
-   [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]])
+   [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]
+   [:effects/save acp-state/live-topics-path (acp-state/mark-live state topic-id)]])
 
 (defn session-error
   "ACP session initialization failed."
