@@ -121,6 +121,17 @@
       (is (not (m/validate schema/DocumentExcerpt
                            {:id "e" :text "t"}))))))
 
+(def anchor-fixture
+  {:id "excerpt-abc"
+   :text "launched on a Tuesday"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph :index 2
+                           :start-line 3 :end-line 3
+                           :block-text-snippet "Our Gremllm launched on a Tuesday."}
+             :end-block   {:kind :paragraph :index 2
+                           :start-line 3 :end-line 3
+                           :block-text-snippet "Our Gremllm launched on a Tuesday."}}})
+
 (deftest topic-with-anchor-test
   (let [block {:kind :paragraph
                :index 2

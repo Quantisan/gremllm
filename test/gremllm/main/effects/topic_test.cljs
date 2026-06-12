@@ -1,7 +1,9 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
+            [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]
+            [gremllm.schema-test :as schema-test]
             [gremllm.test-utils :refer [with-temp-dir with-console-error-silenced]]))
 
 (defn- write-topic-file [dir topic]
@@ -29,6 +31,23 @@
                          :end-line 3
                          :block-text-snippet "Our Gremllm crew tuned the launch checklist."}}})
 
+
+(defn- make-valid-topic []
+  {:id "topic-1754952422977-ixubncif66"
+   :name "Test Topic"
+   :messages [{:id 1754952440824 :type :user :text "Hello"}]
+   :session {:pending-diffs []}
+   :excerpts []})
+
+(deftest anchor-round-trip-test
+  (testing "anchor survives save → load through the disk codec"
+    (with-temp-dir "anchor-round-trip"
+      (fn [temp-dir]
+        (let [topic  (assoc (make-valid-topic) :anchor schema-test/anchor-fixture)
+              plan   (topic-actions/topic->save-plan topic temp-dir)
+              _      (topic-effects/save-topic plan)
+              loaded (get (topic-effects/load-topics temp-dir) (:id topic))]
+          (is (= schema-test/anchor-fixture (:anchor loaded))))))))
 
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data including excerpts"

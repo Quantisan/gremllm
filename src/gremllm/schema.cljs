@@ -189,6 +189,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"}        :string]
+   [:anchor {:optional true}            DocumentExcerpt]
    [:session {:default {}}              AcpSession]
    [:messages {:default []}             [:vector Message]]
    [:excerpts {:default []}             [:vector DocumentExcerpt]]])
@@ -199,11 +200,6 @@
   (mu/merge
     PersistedTopic
     [:map
-     ;; TODO(slice2): persist anchor in PersistedTopic. Required-vs-optional there
-     ;; is a product call, not a schema call: it hinges on whether unanchored
-     ;; whole-doc sessions (see start-new-topic) survive the Topic->Session pivot.
-     [:anchor {:optional true} DocumentExcerpt]
-
      [:unsaved? {:optional true} :boolean]]))
 
 ;; TODO: refactor with (generate-topic-id)
