@@ -19,22 +19,14 @@
     [[:effects/prevent-default]
      [:form.actions/submit]]))
 
-(defn- build-user-message [topic excerpts text]
-  (let [anchor  (when (empty? (:messages topic))
-                  (:anchor topic))
-        context (cond-> {}
-                  anchor         (assoc :anchor anchor)
-                  (seq excerpts) (assoc :excerpts excerpts))]
-    (cond-> {:id   (schema/generate-message-id)
-             :type :user
-             :text text}
-      (seq context) (assoc :context context))))
-
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when (seq text)
       (let [{topic-id :id :as topic} (topic-state/get-active-topic state)
-            message (build-user-message topic (topic-state/get-excerpts state) text)]
+            anchor  (when (empty? (:messages topic))
+                      (:anchor topic))
+            message (schema/user-message text {:anchor   anchor
+                                               :excerpts (topic-state/get-excerpts state)})]
         [[:messages.actions/add-to-chat topic-id message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]

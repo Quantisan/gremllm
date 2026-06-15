@@ -111,6 +111,18 @@
      [:excerpts {:optional true} [:vector DocumentExcerpt]]
      [:anchor   {:optional true} DocumentExcerpt]]]])
 
+(defn user-message
+  "Constructs a UserMessage from chat input. Attaches :context only when
+   anchor or excerpts are present."
+  [text {:keys [anchor excerpts]}]
+  (let [context (cond-> {}
+                  anchor         (assoc :anchor anchor)
+                  (seq excerpts) (assoc :excerpts excerpts))]
+    (cond-> {:id   (generate-message-id)
+             :type :user
+             :text text}
+      (seq context) (assoc :context context))))
+
 (def AssistantMessage
   [:map {:closed true}
    [:id   :int]

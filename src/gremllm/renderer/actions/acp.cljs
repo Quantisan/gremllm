@@ -1,6 +1,7 @@
 (ns gremllm.renderer.actions.acp
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [gremllm.schema.codec.acp :as acp-codec]
             [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.loading :as loading-state]
@@ -165,7 +166,7 @@
        [:effects/promise
         {:promise    (.acpPrompt js/window.electronAPI
                                  acp-session-id
-                                 (clj->js message))
+                                 (codec/user-message-for-ipc message))
          :on-success [[:acp.actions/prompt-succeeded topic-id]]
          :on-error   [[:acp.actions/prompt-failed topic-id]]}]]
       (js/console.error "[ACP] No session for prompt"))))
