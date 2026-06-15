@@ -64,6 +64,17 @@
           [_ sent-message] send]
       (is (= schema-test/anchor-fixture (get-in message [:context :anchor])))
       (is (not (contains? (:context message) :excerpts)))
+      (is (= message sent-message))))
+  (testing "first message carries both anchor and excerpts when both are present"
+    (let [state {:form {:user-input "reword this"}
+                 :active-topic-id "t1"
+                 :topics {"t1" {:id "t1" :anchor schema-test/anchor-fixture
+                                :messages [] :excerpts [sample-excerpt]}}}
+          [add-msg _ _ _ send] (ui/submit-messages state)
+          [_ _ message] add-msg
+          [_ sent-message] send]
+      (is (= schema-test/anchor-fixture (get-in message [:context :anchor])))
+      (is (= [sample-excerpt] (get-in message [:context :excerpts])))
       (is (= message sent-message)))))
 
 (deftest submit-second-message-omits-anchor-test
@@ -77,19 +88,6 @@
           [_ _ message] add-msg
           [_ sent-message] send]
       (is (nil? (:context message)))
-      (is (= message sent-message)))))
-
-(deftest submit-first-message-with-anchor-and-excerpts-test
-  (testing "first message carries both anchor and excerpts in context"
-    (let [state {:form {:user-input "reword this"}
-                 :active-topic-id "t1"
-                 :topics {"t1" {:id "t1" :anchor schema-test/anchor-fixture
-                                :messages [] :excerpts [sample-excerpt]}}}
-          [add-msg _ _ _ send] (ui/submit-messages state)
-          [_ _ message] add-msg
-          [_ sent-message] send]
-      (is (= schema-test/anchor-fixture (get-in message [:context :anchor])))
-      (is (= [sample-excerpt] (get-in message [:context :excerpts])))
       (is (= message sent-message)))))
 
 (deftest test-handle-submit-keys

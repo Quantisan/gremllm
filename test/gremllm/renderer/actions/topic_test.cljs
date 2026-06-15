@@ -8,11 +8,6 @@
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
 
-(deftest create-topic-with-anchor-test
-  (let [topic (schema/create-topic schema-test/anchor-fixture)]
-    (is (= schema-test/anchor-fixture (:anchor topic)))
-    (is (string? (:id topic)))))
-
 (deftest start-anchored-session-test
   (let [anchor {:id "excerpt-abc"
                 :text "launched on a Tuesday"

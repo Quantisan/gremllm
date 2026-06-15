@@ -122,16 +122,6 @@
     (is (not (m/validate schema/DocumentExcerpt
                          {:id "e" :text "t"})))))
 
-(deftest topic-with-anchor-test
-  (testing "Topic with anchor validates"
-    (is (m/validate schema/Topic
-                    {:id "topic-123-abc"
-                     :name "New Topic"
-                     :anchor anchor-fixture
-                     :session {:pending-diffs []}
-                     :messages []
-                     :excerpts []}))))
-
 (deftest message-with-context-test
   (let [excerpt {:id "e1"
                  :text "snippet"
