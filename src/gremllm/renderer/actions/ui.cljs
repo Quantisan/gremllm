@@ -22,10 +22,10 @@
 (defn submit-messages [state]
   (let [text (form-state/get-user-input state)]
     (when (seq text)
-      (let [topic-id (topic-state/get-active-topic-id state)
+      (let [{topic-id :id :as topic} (topic-state/get-active-topic state)
             excerpts (topic-state/get-excerpts state)
-            anchor   (when (empty? (topic-state/get-messages state))
-                       (:anchor (topic-state/get-active-topic state)))
+            anchor   (when (empty? (:messages topic))
+                       (:anchor topic))
             context  (cond-> {}
                        anchor         (assoc :anchor anchor)
                        (seq excerpts) (assoc :excerpts excerpts))
