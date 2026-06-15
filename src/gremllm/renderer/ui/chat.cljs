@@ -67,9 +67,19 @@
    (into [:span.message-references__pills]
          (map render-excerpt-pill excerpts))])
 
+(defn- render-anchor [anchor]
+  ;; The session anchor rides the first message's context. It gets its own row,
+  ;; distinct from References, to mirror the domain split the schema draws.
+  [:div.message-references
+   [:span.message-references__label "Anchored to:"]
+   [:span.message-references__pills
+    (render-excerpt-pill anchor)]])
+
 (defn- render-user-message [{:keys [text context]}]
   [e/user-message
    [:span text]
+   (when-let [anchor (:anchor context)]
+     (render-anchor anchor))
    (when-let [excerpts (seq (:excerpts context))]
      (render-references excerpts))])
 

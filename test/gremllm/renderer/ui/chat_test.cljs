@@ -67,6 +67,18 @@
                 active-session-opts)]
     (is (contains-text? hiccup "reword these"))))
 
+(deftest user-message-with-anchor-renders-anchor-text-test
+  (testing "an anchored first message renders its anchor excerpt text in the thread"
+    (let [hiccup (chat-ui/render-chat-area
+                  [(schema-test/create-message
+                    {:id 1
+                     :type :user
+                     :text "reword these"
+                     :context {:anchor same-block-excerpt}})]
+                  false
+                  active-session-opts)]
+      (is (contains-text? hiccup "this is a selection")))))
+
 (deftest tool-call-web-search-renders-test
   (testing "completed :web-search renders 'Searched the web' + query"
     (let [hiccup (chat-ui/render-chat-area
