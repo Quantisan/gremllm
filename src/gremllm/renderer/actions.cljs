@@ -10,6 +10,7 @@
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.ui.document.locator :as locator]
             [gremllm.renderer.state.topic :as topic-state]
+            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
@@ -138,6 +139,11 @@
     (.acpResolvePermission js/window.electronAPI
                            #js {:toolCallId tool-call-id
                                 :optionId   option-id})))
+
+;; ACP: record that a topic's session went live this run (resume/create succeeded).
+(nxr/register-effect! :acp.effects/mark-topic-live
+  (fn [_ store topic-id]
+    (swap! store update-in acp-state/live-topics-path (fnil conj #{}) topic-id)))
 
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
