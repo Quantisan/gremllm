@@ -163,7 +163,10 @@
      [:textarea {:class "chat-input"
                  :rows 2
                  :value input-value
-                 :placeholder (if shell? "Connecting session..." "Type a message... (Shift+Enter for new line)")
+                 :placeholder (cond
+                                (not shell?) "Type a message... (Shift+Enter for new line)"
+                                loading?     "Connecting session..."
+                                :else        "Session not connected — click its session bar to retry.")
                  :disabled (or loading? shell?)
                  :on {:input [[:form.actions/update-input [:event.target/value]]]
                       :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
