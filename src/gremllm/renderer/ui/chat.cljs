@@ -105,7 +105,7 @@
         "Select text in the document to start a session."]]
 
       ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
-      ;; True while the ACP session is connecting (loading?) or after init failed.
+      ;; True whenever there's no live ACP session id -- new, connecting, or init failed.
       shell?
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}

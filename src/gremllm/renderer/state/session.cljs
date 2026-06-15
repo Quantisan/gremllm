@@ -4,8 +4,9 @@
 ;; Reconcile the vocabulary when topic -> session rename lands (see actions.cljs).
 
 (defn shell?
-  "A shell session is anchored but has no live ACP session id yet (connecting,
-   or init failed). Single source of truth for shell-ness."
+  "A shell session is anchored but has no live ACP session id yet -- covers a
+   brand-new session, one still connecting, and one whose init failed. Single
+   source of truth for shell-ness."
   [topic]
   (nil? (get-in topic [:session :id])))
 
