@@ -5,5 +5,8 @@
 
 (def live-topics-path [:acp :live-topics])
 
+(defn live-topics [state]
+  (get-in state live-topics-path #{}))
+
 (defn live? [state topic-id]
-  (contains? (get-in state live-topics-path #{}) topic-id))
+  (contains? (live-topics state) topic-id))

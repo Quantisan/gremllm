@@ -246,10 +246,19 @@
       (let [state (assoc-in base [:loading "t1"] true)]
         (is (nil? (acp/resume-or-new-session state "t1")))))))
 
+(deftest mark-topic-live-test
+  (testing "adds topic to the live set"
+    (is (some #(= [:effects/save acp-state/live-topics-path #{"t1"}] %)
+              (acp/mark-topic-live {} "t1"))))
+  (testing "preserves existing live topics"
+    (let [state (assoc-in {} acp-state/live-topics-path #{"t2"})]
+      (is (some #(= [:effects/save acp-state/live-topics-path #{"t1" "t2"}] %)
+                (acp/mark-topic-live state "t1"))))))
+
 (deftest session-ready-marks-live-test
-  (testing "emits the mark-topic-live effect for the topic"
-    (let [effects (acp/session-ready {} "t1" "s1")]
-      (is (some #(= [:acp.effects/mark-topic-live "t1"] %) effects)))))
+  (testing "emits the mark-topic-live action for the topic"
+    (is (some #(= [:acp.actions/mark-topic-live "t1"] %)
+              (acp/session-ready {} "t1" "s1")))))
 
 (deftest append-edit-diffs-suppression-test
   (testing "skips diffs whose tool-call-id is already in :resolved-tool-calls"

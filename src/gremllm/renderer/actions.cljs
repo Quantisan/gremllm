@@ -10,7 +10,6 @@
             [gremllm.schema.codec :as codec]
             [gremllm.renderer.ui.document.locator :as locator]
             [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.acp :as acp-state]
             [gremllm.renderer.state.loading :as loading-state]))
 
 ;; Set up how to extract state from your atom
@@ -140,11 +139,6 @@
                            #js {:toolCallId tool-call-id
                                 :optionId   option-id})))
 
-;; ACP: record that a topic's session went live this run (resume/create succeeded).
-(nxr/register-effect! :acp.effects/mark-topic-live
-  (fn [_ store topic-id]
-    (swap! store update-in acp-state/live-topics-path (fnil conj #{}) topic-id)))
-
 ;; UI
 (nxr/register-action! :form.actions/update-input ui/update-input)
 (nxr/register-action! :form.actions/clear-input ui/clear-input)
@@ -224,6 +218,7 @@
 (nxr/register-action! :acp.actions/prompt-failed acp/prompt-failed)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
+(nxr/register-action! :acp.actions/mark-topic-live acp/mark-topic-live)
 (nxr/register-action! :acp.events/session-update acp/session-update)
 
 ;; Accidental impurity: resume-or-new-session is conceptually pure (state in, action out),

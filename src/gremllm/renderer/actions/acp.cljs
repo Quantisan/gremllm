@@ -112,13 +112,19 @@
       [[:acp.actions/resume-session topic-id acp-session-id]]
       [[:acp.actions/new-session topic-id]])))
 
+(defn mark-topic-live
+  "Record that a topic's session went live this run (resume/create succeeded)."
+  [state topic-id]
+  [[:effects/save acp-state/live-topics-path
+    (conj (acp-state/live-topics state) topic-id)]])
+
 (defn session-ready
   "Session created/resumed successfully. Save acp-session-id and mark live."
   [_state topic-id acp-session-id]
   (js/console.log "[ACP] Session ready:" acp-session-id "for topic:" topic-id)
   [[:loading.actions/set-loading? topic-id false]
    [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]
-   [:acp.effects/mark-topic-live topic-id]])
+   [:acp.actions/mark-topic-live topic-id]])
 
 (defn session-error
   "ACP session initialization failed."
