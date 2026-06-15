@@ -102,7 +102,7 @@
     (acp-codec/edit-completed? update)
     (append-edit-diffs state update)))
 
-(defn init-session-plan
+(defn resume-or-new-session
   "Decide how to bring a topic's ACP session live: resume a persisted session
    id, create a new session, or nil when already live or init is in flight."
   [state topic-id]

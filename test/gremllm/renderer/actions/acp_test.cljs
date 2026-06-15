@@ -232,19 +232,19 @@
           (js-delete js/globalThis "window")
           (aset js/globalThis "window" old-window))))))
 
-(deftest init-session-plan-test
+(deftest resume-or-new-session-test
   (let [base {:topics {"t1" {:id "t1" :session {}}}}]
     (testing "new session when topic has no acp session id"
-      (is (= [[:acp.actions/new-session "t1"]] (acp/init-session-plan base "t1"))))
+      (is (= [[:acp.actions/new-session "t1"]] (acp/resume-or-new-session base "t1"))))
     (testing "resume when a persisted acp session id exists"
       (let [state (assoc-in base [:topics "t1" :session :id] "s1")]
-        (is (= [[:acp.actions/resume-session "t1" "s1"]] (acp/init-session-plan state "t1")))))
+        (is (= [[:acp.actions/resume-session "t1" "s1"]] (acp/resume-or-new-session state "t1")))))
     (testing "no-op when already live this run"
       (let [state (assoc-in base acp-state/live-topics-path #{"t1"})]
-        (is (nil? (acp/init-session-plan state "t1")))))
+        (is (nil? (acp/resume-or-new-session state "t1")))))
     (testing "no-op while init is in flight"
       (let [state (assoc-in base [:loading "t1"] true)]
-        (is (nil? (acp/init-session-plan state "t1")))))))
+        (is (nil? (acp/resume-or-new-session state "t1")))))))
 
 (deftest session-ready-marks-live-test
   (testing "adds topic to live set"
