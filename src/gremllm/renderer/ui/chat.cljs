@@ -102,9 +102,9 @@
      "Computing..."]])
 
 (defn render-chat-area [messages awaiting-response? session-opts]
-  (let [{:keys [active-topic status]} session-opts]
+  (let [{:keys [active-topic session-status]} session-opts]
     (cond
-      (= status :no-session)
+      (= session-status :no-session)
       [e/chat-area
        [:div {:style {:display "flex"
                       :align-items "center"
@@ -116,7 +116,7 @@
 
       ;; :connecting / :disconnected are the shell states (no live ACP session id),
       ;; derived by session/session-status in ui.cljs.
-      (or (= status :connecting) (= status :disconnected))
+      (or (= session-status :connecting) (= session-status :disconnected))
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}
         [:blockquote {:style {:border-left-color "var(--pico-primary)"
@@ -124,7 +124,7 @@
                               :opacity 0.8}}
          (get-in active-topic [:anchor :text])]
         [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         (if (= status :connecting)
+         (if (= session-status :connecting)
            "Connecting session..."
            "Session not connected — click its session bar to retry.")]]]
 
@@ -163,8 +163,8 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value status pending-attachments excerpts]}]
-  (let [ready? (= status :ready)]
+(defn render-input-form [{:keys [input-value session-status pending-attachments excerpts]}]
+  (let [ready? (= session-status :ready)]
     [:footer
      [:form {:on {:submit [[:effects/prevent-default]
                            [:form.actions/submit]]}}
@@ -174,7 +174,7 @@
        [:textarea {:class "chat-input"
                    :rows 2
                    :value input-value
-                   :placeholder (case status
+                   :placeholder (case session-status
                                   :connecting   "Connecting session..."
                                   :disconnected "Session not connected — click its session bar to retry."
                                   "Type a message... (Shift+Enter for new line)")

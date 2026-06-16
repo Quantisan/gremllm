@@ -8,13 +8,13 @@
 
 (def ^:private active-session-opts
   {:active-topic {:id "t1" :name "T" :session {:id "s1"}}
-   :status :ready})
+   :session-status :ready})
 
 (deftest render-input-form-test
   (testing ":on-submit handler has correct structure"
     (let [hiccup (chat-ui/render-input-form
                    {:input-value "some input"
-                    :status      :ready})
+                    :session-status :ready})
           form   (lookup/select-one 'form hiccup)]
       (is (some? form) "A :form element should be rendered.")
       (is (= [[:effects/prevent-default] [:form.actions/submit]]
@@ -123,14 +123,14 @@
 
 (deftest no-active-session-prompt-test
   (testing "renders prompt when no active session"
-    (let [hiccup (chat-ui/render-chat-area [] false {:active-topic nil
-                                                      :status :no-session})]
+    (let [hiccup (chat-ui/render-chat-area [] false {:active-topic   nil
+                                                     :session-status :no-session})]
       (is (contains-text? hiccup "Select text")))))
 
 (deftest shell-session-shows-anchor-context-test
   (testing "shell session shows anchor text context"
     (let [topic {:id "t1" :name "T" :anchor {:id "e1" :text "sample anchor text" :locator {}}
                  :session {}}
-          hiccup (chat-ui/render-chat-area [] false {:active-topic topic
-                                                      :status :connecting})]
+          hiccup (chat-ui/render-chat-area [] false {:active-topic   topic
+                                                     :session-status :connecting})]
       (is (contains-text? hiccup "sample anchor text")))))
