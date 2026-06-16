@@ -1,5 +1,5 @@
 (ns gremllm.renderer.state.session-test
-  (:require [cljs.test :refer [deftest is testing]]
+  (:require [cljs.test :refer [deftest is testing are]]
             [gremllm.renderer.state.session :as session-state]))
 
 (def stub-anchor {:id "e1" :text "x" :locator {}})
@@ -26,12 +26,20 @@
       (is (= (session-state/color-for-topic alone "topic-2000-b")
              (session-state/color-for-topic surrounded "topic-2000-b"))))))
 
-(deftest shell?-test
-  (testing "anchored topic with no ACP session id is a shell"
-    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor :session {}})))
-    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor}))))
-  (testing "topic with a live ACP session id is not a shell"
-    (is (false? (session-state/shell? {:id "t1" :anchor stub-anchor :session {:id "s1"}})))))
+(deftest session-status-test
+  ;; The single value the whole chat UI switches on: composes shell-ness
+  ;; (no live ACP session id) with loading (async op in flight) into one status.
+  (let [shell-topic {:id "t1" :anchor stub-anchor :session {}}
+        live-topic  {:id "t1" :anchor stub-anchor :session {:id "s1"}}
+        loading     {:loading {"t1" true}}]
+    (are [state topic-id topic expected]
+         (= expected (session-state/session-status state topic-id topic))
+      ;; state    topic-id   topic        expected
+      {}           nil       nil          :no-session    ; no active topic
+      loading      "t1"      shell-topic  :connecting    ; shell, init in flight
+      {}           "t1"      shell-topic  :disconnected  ; shell, idle or failed
+      loading      "t1"      live-topic   :busy          ; live, awaiting response
+      {}           "t1"      live-topic   :ready)))       ; live, idle
 
 (deftest anchored-topics-test
   (testing "with anchored topics present"

@@ -47,6 +47,12 @@
     (js->clj $ :keywordize-keys true)
     (m/coerce schema/Topic $ mt/json-transformer)))
 
+(defn user-message-for-ipc
+  "Validates a user message and marshals it for IPC. Throws if invalid."
+  [message]
+  (-> (m/coerce schema/UserMessage message mt/json-transformer)
+      (clj->js)))
+
 (defn user-message-from-ipc
   "Transforms structured user message data from IPC into internal Message schema.
    Throws if invalid."

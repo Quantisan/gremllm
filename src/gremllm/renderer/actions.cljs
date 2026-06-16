@@ -172,16 +172,15 @@
 ;; Topic
 
 ;; Register all topic actions
-;; TODO(slice2): rename topic -> session across actions/state/IPC/schema. The visual
+;; TODO: rename topic -> session across actions/state/IPC/schema. The visual
 ;; layer already speaks "session"; persistence/actions still speak "topic". Do the
-;; rename when ACP is re-wired, before the seam drifts into permanent ambiguity.
+;; rename before the seam drifts into permanent ambiguity.
 (nxr/register-action! :topic.actions/append-pending-diffs topic/append-pending-diffs)
 (nxr/register-action! :topic.actions/append-pending-permission topic/append-pending-permission)
 (nxr/register-action! :topic.actions/accept-diff topic/accept-diff)
 (nxr/register-action! :topic.actions/reject-diff topic/reject-diff)
 (nxr/register-action! :tool-call.actions/start  tool-call/start-tool-call)
 (nxr/register-action! :tool-call.actions/update tool-call/update-tool-call)
-(nxr/register-action! :topic.actions/start-new topic/start-new-topic)  ;; TODO: not integrated yet. Need to design for whole-doc anchored session.
 (nxr/register-action! :topic.actions/set-active topic/set-active)
 (nxr/register-action! :topic.actions/start-anchored-session topic/start-anchored-session)
 (nxr/register-action! :topic.actions/start-session-from-capture topic/start-session-from-capture)
@@ -219,13 +218,13 @@
 (nxr/register-action! :acp.actions/prompt-failed acp/prompt-failed)
 (nxr/register-action! :acp.actions/session-ready acp/session-ready)
 (nxr/register-action! :acp.actions/session-error acp/session-error)
+(nxr/register-action! :acp.actions/mark-topic-live acp/mark-topic-live)
 (nxr/register-action! :acp.events/session-update acp/session-update)
 
-;; Accidental impurity: This routing logic is conceptually pure (state in, action out),
+;; Accidental impurity: resume-or-new-session is conceptually pure (state in, action out),
 ;; but must be an effect to see live store state. Actions receive immutable snapshots
 ;; captured at dispatch start, missing topic data saved by earlier effects in the chain.
 (nxr/register-effect! :acp.effects/init-session
   (fn [{:keys [dispatch]} store topic-id]
-    (if-let [existing-acp-session-id (topic-state/get-acp-session-id @store topic-id)]
-      (dispatch [[:acp.actions/resume-session topic-id existing-acp-session-id]])
-      (dispatch [[:acp.actions/new-session topic-id]]))))
+    (when-let [effects (acp/resume-or-new-session @store topic-id)]
+      (dispatch effects))))

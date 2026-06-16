@@ -86,12 +86,6 @@
   (testing "multi-node selection validates against CapturedSelection"
     (is (m/validate schema/CapturedSelection multi-node-selection))))
 
-(deftest anchor-context-schema-test
-  (testing "valid AnchorContext validates"
-    (is (m/validate schema/AnchorContext
-                    {:panel-rect {:top 100 :left 50 :width 800 :height 600}
-                     :panel-scroll-top 20}))))
-
 (deftest block-ref-test
   (testing "valid BlockRef"
     (is (m/validate schema/BlockRef
@@ -104,49 +98,23 @@
     (is (not (m/validate schema/BlockRef
                          {:kind :paragraph :index 2 :start-line 3 :end-line 3})))))
 
-(deftest document-excerpt-test
-  (let [block {:kind :paragraph
-               :index 2
-               :start-line 3
-               :end-line 3
-               :block-text-snippet "Our Gremllm launched on a Tuesday."}]
-    (testing "valid DocumentExcerpt validates"
-      (is (m/validate schema/DocumentExcerpt
-                      {:id "excerpt-abc"
-                       :text "launched on a Tuesday"
-                       :locator {:document-relative-path "document.md"
-                                 :start-block block
-                                 :end-block block}})))
-    (testing "missing :locator fails"
-      (is (not (m/validate schema/DocumentExcerpt
-                           {:id "e" :text "t"}))))))
+(def anchor-fixture
+  {:id "excerpt-abc"
+   :text "launched on a Tuesday"
+   :locator {:document-relative-path "document.md"
+             :start-block {:kind :paragraph :index 2
+                           :start-line 3 :end-line 3
+                           :block-text-snippet "Our Gremllm launched on a Tuesday."}
+             :end-block   {:kind :paragraph :index 2
+                           :start-line 3 :end-line 3
+                           :block-text-snippet "Our Gremllm launched on a Tuesday."}}})
 
-(deftest topic-with-anchor-test
-  (let [block {:kind :paragraph
-               :index 2
-               :start-line 3
-               :end-line 3
-               :block-text-snippet "Our Gremllm launched on a Tuesday."}
-        anchor {:id "excerpt-abc"
-                :text "launched on a Tuesday"
-                :locator {:document-relative-path "document.md"
-                          :start-block block
-                          :end-block block}}]
-    (testing "Topic with anchor validates"
-      (is (m/validate schema/Topic
-                      {:id "topic-123-abc"
-                       :name "New Topic"
-                       :anchor anchor
-                       :session {:pending-diffs []}
-                       :messages []
-                       :excerpts []})))
-    (testing "Topic without anchor still validates (optional field)"
-      (is (m/validate schema/Topic
-                      {:id "topic-123-abc"
-                       :name "New Topic"
-                       :session {:pending-diffs []}
-                       :messages []
-                       :excerpts []})))))
+(deftest document-excerpt-test
+  (testing "valid DocumentExcerpt validates"
+    (is (m/validate schema/DocumentExcerpt anchor-fixture)))
+  (testing "missing :locator fails"
+    (is (not (m/validate schema/DocumentExcerpt
+                         {:id "e" :text "t"})))))
 
 (deftest message-with-context-test
   (let [excerpt {:id "e1"
@@ -172,26 +140,17 @@
       (is (m/validate schema/Message
                       (create-message {:id 1 :type :user :text "hello"}))))))
 
-(deftest persisted-topic-excerpts-are-document-excerpts-test
-  (let [excerpt {:id "e1"
-                 :text "snippet"
-                 :locator {:document-relative-path "document.md"
-                           :start-block {:kind :paragraph
-                                         :index 2
-                                         :start-line 3
-                                         :end-line 3
-                                         :block-text-snippet "Our..."}
-                           :end-block {:kind :paragraph
-                                       :index 2
-                                       :start-line 3
-                                       :end-line 3
-                                       :block-text-snippet "Our..."}}}]
-    (is (m/validate schema/PersistedTopic
-                    {:id "t1"
-                     :name "T"
-                     :session {:pending-diffs []}
-                     :messages []
-                     :excerpts [excerpt]}))))
+(deftest user-message-context-variants-test
+  (let [msg (fn [context] {:id 1 :type :user :text "t" :context context})]
+    (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture})))
+    (is (not (m/validate schema/UserMessage (msg {:anchor anchor-fixture :unknown "x"}))))))
+
+(deftest persisted-topic-requires-anchor-test
+  (testing "topic without anchor is invalid post-slice2"
+    (let [anchorless {:id "topic-123-abc" :name "N"
+                      :session {:pending-diffs []} :messages [] :excerpts []}]
+      (is (not (m/validate schema/PersistedTopic anchorless)))
+      (is (not (m/validate schema/Topic anchorless))))))
 
 (deftest message-tagged-union-test
   (testing ":user variant validates with optional context"

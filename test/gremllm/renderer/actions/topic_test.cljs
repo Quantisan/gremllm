@@ -3,22 +3,10 @@
             [gremllm.renderer.actions.topic :as topic]
             [gremllm.renderer.state.topic :as topic-state]
             [gremllm.schema :as schema]
+            [gremllm.schema-test :as schema-test]
             [gremllm.schema.codec :as codec]
             [malli.core :as m])
   (:require-macros [gremllm.test-utils :refer [with-console-error-silenced]]))
-
-(deftest start-new-topic-test
-  (let [result (topic/start-new-topic {})
-        [[_ topic-path saved-topic] [action-name active-id]] result]
-
-    (is (= 2 (count result)) "should return exactly two effects")
-
-    (is (= :effects/save (first (first result))) "first should be save effect")
-    (is (m/validate schema/Topic saved-topic) "saved topic should be valid per schema")
-    (is (= (topic-state/topic-path (:id saved-topic)) topic-path) "should save to correct topics path")
-
-    (is (= :topic.actions/set-active action-name) "second should be set-active action")
-    (is (= (:id saved-topic) active-id) "should set same topic ID as active")))
 
 (deftest start-anchored-session-test
   (let [anchor {:id "excerpt-abc"
@@ -62,7 +50,7 @@
     (testing "returns nil when no captured state"
       (is (nil? (topic/start-session-from-capture {}))))))
 
-(def ^:private expected-new-topic (schema/create-topic))
+(def ^:private expected-new-topic (schema/create-topic schema-test/anchor-fixture))
 
 (deftest normalize-topic-test
   (let [denormalized (assoc expected-new-topic
@@ -74,11 +62,11 @@
     (is (= expected (codec/topic-from-ipc denormalized))
         "should convert message types from strings to keywords")))
 
-(deftest set-active-does-not-init-acp-test
-  (testing "set-active only saves active-topic-id, no ACP init"
-    (let [result (topic/set-active {} "topic-123")]
-      (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]]
-             result)))))
+(deftest set-active-inits-acp-test
+  (testing "set-active saves the id and triggers ACP session init"
+    (is (= [[:effects/save topic-state/active-topic-id-path "topic-123"]
+            [:acp.effects/init-session "topic-123"]]
+           (topic/set-active {} "topic-123")))))
 
 (deftest auto-save-test
   (let [topic-id       "topic-123"

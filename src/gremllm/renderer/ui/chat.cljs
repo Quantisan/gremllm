@@ -67,9 +67,19 @@
    (into [:span.message-references__pills]
          (map render-excerpt-pill excerpts))])
 
+(defn- render-anchor [anchor]
+  ;; The session anchor rides the first message's context. It gets its own row,
+  ;; distinct from References, to mirror the domain split the schema draws.
+  [:div.message-references
+   [:span.message-references__label "Anchored to:"]
+   [:span.message-references__pills
+    (render-excerpt-pill anchor)]])
+
 (defn- render-user-message [{:keys [text context]}]
   [e/user-message
    [:span text]
+   (when-let [anchor (:anchor context)]
+     (render-anchor anchor))
    (when-let [excerpts (seq (:excerpts context))]
      (render-references excerpts))])
 
@@ -91,53 +101,73 @@
       "⠿"]
      "Computing..."]])
 
+(defn- render-empty-session []
+  [e/chat-area
+   [:div {:style {:display "flex"
+                  :align-items "center"
+                  :justify-content "center"
+                  :height "100%"
+                  :color "var(--pico-muted-color)"
+                  :font-style "italic"}}
+    "Select text in the document to start a session."]])
+
+(defn- render-pending-session [active-topic session-status]
+  [e/chat-area
+   [:div {:style {:padding "var(--pico-spacing)"}}
+    [:blockquote {:style {:border-left-color "var(--pico-primary)"
+                          :font-size "0.9rem"
+                          :opacity 0.8}}
+     (get-in active-topic [:anchor :text])]
+    [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
+     (if (= session-status :connecting)
+       "Connecting session..."
+       "Session not connected — click its session bar to retry.")]]])
+
+(defn- render-thread [messages awaiting-response?]
+  [e/chat-area {}
+   (for [message messages]
+     (render-message message))
+   (when awaiting-response?
+     (render-loading-indicator))])
+
 (defn render-chat-area [messages awaiting-response? session-opts]
-  (let [{:keys [active-topic active-topic-id shell?]} session-opts]
-    (cond
-      (nil? active-topic-id)
-      [e/chat-area
-       [:div {:style {:display "flex"
-                      :align-items "center"
-                      :justify-content "center"
-                      :height "100%"
-                      :color "var(--pico-muted-color)"
-                      :font-style "italic"}}
-        "Select text in the document to start a session."]]
+  (let [{:keys [active-topic session-status]} session-opts]
+    (case session-status
+      :no-session                 (render-empty-session)
+      (:connecting :disconnected) (render-pending-session active-topic session-status)
+      (render-thread messages awaiting-response?))))
 
-      ;; TODO(slice2): connect ACP; shell sessions show disabled placeholder.
-      ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
-      shell?
-      [e/chat-area
-       [:div {:style {:padding "var(--pico-spacing)"}}
-        [:blockquote {:style {:border-left-color "var(--pico-primary)"
-                              :font-size "0.9rem"
-                              :opacity 0.8}}
-         (get-in active-topic [:anchor :text])]
-        [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         "🚧 Shell session — ACP chat isn't wired up yet (Slice 2). "
-         "This placeholder is expected, not a bug."]]]
-
-      :else
-      [e/chat-area {}
-       (for [message messages]
-         (render-message message))
-       (when awaiting-response?
-         (render-loading-indicator))])))
+(defn- composer-excerpt-chip
+  "A single excerpt chip in the composer. `dismiss` is optional trailing hiccup
+   (e.g. a remove button); the anchor chip omits it."
+  [{:keys [id text]} & [dismiss]]
+  [:span.excerpt-chip {:replicant/key id}
+   "excerpt: " (truncate text composer-excerpt-cap)
+   dismiss])
 
 (defn- render-composer-excerpts [excerpts]
   (when (seq excerpts)
     [:div.excerpt-list
-     (for [{:keys [id text]} excerpts]
-       [:span.excerpt-chip {:replicant/key id}
-        "excerpt: " (truncate text composer-excerpt-cap)
-        [:button.dismiss
-         {:type "button"
-          :on {:click [[:excerpt.actions/remove id]]}}
-         "✕"]])
+     (for [{:keys [id] :as excerpt} excerpts]
+       (composer-excerpt-chip excerpt
+         [:button.dismiss
+          {:type "button"
+           :on {:click [[:excerpt.actions/remove id]]}}
+          "✕"]))
      (when (> (count excerpts) 1)
        [:button {:type "button"
                  :on {:click [[:excerpt.actions/clear-active]]}}
         "Clear excerpts"])]))
+
+(defn- render-composer-anchor
+  "Pill for the session's anchor excerpt; caller passes it only while composing
+   the first message, mirroring when the anchor is attached (see
+   renderer.actions.ui/submit-messages). Non-dismissable — removing a session's
+   anchor is meaningless."
+  [anchor]
+  (when anchor
+    [:div.excerpt-list
+     (composer-excerpt-chip anchor)]))
 
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)
@@ -152,25 +182,30 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? pending-attachments excerpts shell?]}]
-  [:footer
-   [:form {:on {:submit [[:effects/prevent-default]
-                         [:form.actions/submit]]}}
-    (render-composer-excerpts excerpts)
-    (render-attachment-indicator pending-attachments)
-    [:fieldset {:role "group"}
-     [:textarea {:class "chat-input"
-                 :rows 2
-                 :value input-value
-                 :placeholder (if shell? "🚧 ACP not wired yet (Slice 2)" "Type a message... (Shift+Enter for new line)")
-                 :disabled (or loading? shell?)
-                 :on {:input [[:form.actions/update-input [:event.target/value]]]
-                      :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
-                      :dragover [[:form.actions/handle-dragover]]
-                      :drop [[:effects/prevent-default]
-                             [:form.actions/handle-file-drop [:event/dropped-files]]]}
-                 :autofocus true}]
+(defn render-input-form [{:keys [input-value session-status pending-attachments excerpts anchor]}]
+  (let [ready? (= session-status :ready)]
+    [:footer
+     [:form {:on {:submit [[:effects/prevent-default]
+                           [:form.actions/submit]]}}
+      (render-composer-anchor anchor)
+      (render-composer-excerpts excerpts)
+      (render-attachment-indicator pending-attachments)
+      [:fieldset {:role "group"}
+       [:textarea {:class "chat-input"
+                   :rows 2
+                   :value input-value
+                   :placeholder (case session-status
+                                  :connecting   "Connecting session..."
+                                  :disconnected "Session not connected — click its session bar to retry."
+                                  "Type a message... (Shift+Enter for new line)")
+                   :disabled (not ready?)
+                   :on {:input [[:form.actions/update-input [:event.target/value]]]
+                        :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
+                        :dragover [[:form.actions/handle-dragover]]
+                        :drop [[:effects/prevent-default]
+                               [:form.actions/handle-file-drop [:event/dropped-files]]]}
+                   :autofocus true}]
 
-     [:button {:type "submit"
-               :disabled (or loading? shell? (str/blank? input-value))}
-      "Send"]]]])
+       [:button {:type "submit"
+                 :disabled (or (not ready?) (str/blank? input-value))}
+        "Send"]]]]))

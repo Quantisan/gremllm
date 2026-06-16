@@ -1,7 +1,10 @@
 (ns gremllm.renderer.actions.acp
   "Actions for managing ACP (Agent Client Protocol) sessions."
   (:require [gremllm.schema :as schema]
+            [gremllm.schema.codec :as codec]
             [gremllm.schema.codec.acp :as acp-codec]
+            [gremllm.renderer.state.acp :as acp-state]
+            [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- continuing? [state message-type]
@@ -100,12 +103,29 @@
     (acp-codec/edit-completed? update)
     (append-edit-diffs state update)))
 
+(defn resume-or-new-session
+  "Decide how to bring a topic's ACP session live: resume a persisted session
+   id, create a new session, or nil when already live or init is in flight."
+  [state topic-id]
+  (when-not (or (acp-state/live? state topic-id)
+                (loading-state/loading? state topic-id))
+    (if-let [acp-session-id (topic-state/get-acp-session-id state topic-id)]
+      [[:acp.actions/resume-session topic-id acp-session-id]]
+      [[:acp.actions/new-session topic-id]])))
+
+(defn mark-topic-live
+  "Record that a topic's session went live this run (resume/create succeeded)."
+  [state topic-id]
+  [[:effects/save acp-state/live-topics-path
+    (conj (acp-state/live-topics state) topic-id)]])
+
 (defn session-ready
-  "Session created successfully. Save acp-session-id to topic."
+  "Session created/resumed successfully. Save acp-session-id and mark live."
   [_state topic-id acp-session-id]
   (js/console.log "[ACP] Session ready:" acp-session-id "for topic:" topic-id)
   [[:loading.actions/set-loading? topic-id false]
-   [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]])
+   [:effects/save (topic-state/acp-session-id-path topic-id) acp-session-id]
+   [:acp.actions/mark-topic-live topic-id]])
 
 (defn session-error
   "ACP session initialization failed."
@@ -146,7 +166,7 @@
        [:effects/promise
         {:promise    (.acpPrompt js/window.electronAPI
                                  acp-session-id
-                                 (clj->js message))
+                                 (codec/user-message-for-ipc message))
          :on-success [[:acp.actions/prompt-succeeded topic-id]]
          :on-error   [[:acp.actions/prompt-failed topic-id]]}]]
       (js/console.error "[ACP] No session for prompt"))))

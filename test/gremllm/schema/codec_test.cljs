@@ -54,6 +54,14 @@
          :toString     (constantly text)
          :getRangeAt   (constantly js-range)}))
 
+(deftest user-message-with-anchor-from-ipc-test
+  (testing "anchor in :context survives IPC with keyword coercion"
+    (let [message {:id 123 :type :user :text "hi"
+                   :context {:anchor schema-test/anchor-fixture}}
+          result  (codec/user-message-from-ipc (clj->js message))]
+      (is (= :paragraph (get-in result [:context :anchor :locator :start-block :kind])))
+      (is (= schema-test/anchor-fixture (get-in result [:context :anchor]))))))
+
 (deftest captured-selection-codec-test
   (testing "reads a live selection mock into CapturedSelection shape"
     (is (= schema-test/single-word-selection

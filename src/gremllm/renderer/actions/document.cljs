@@ -44,8 +44,8 @@
 
 (defn restore-with-topics
   "Restore a document that has existing topics.
-   Auto-activates the most recently created anchored session.
-   TODO(slice2): unanchored topics are invisible until anchor persistence lands."
+   Topics here are anchored — unanchored topics are rejected at the disk boundary
+   before they reach this function. Auto-activates the most recently created one."
   [_state {:keys [topics]}]
   (let [recent (session-state/most-recent-anchored topics)]
     (cond-> [[:effects/save topic-state/topics-path topics]]

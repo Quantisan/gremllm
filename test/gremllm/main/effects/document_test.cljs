@@ -3,6 +3,7 @@
             [clojure.edn :as edn]
             [gremllm.main.effects.document :as document-effects]
             [gremllm.main.io :as io]
+            [gremllm.schema-test :as schema-test]
             [gremllm.test-utils :refer [with-temp-dir]]))
 
 (defn- write-topic-file [dir topic]
@@ -27,7 +28,7 @@
       (fn [temp-dir]
         (let [doc-path    (io/path-join temp-dir "memo.md")
               paths      (io/document-paths temp-dir doc-path)
-              topic      {:id "topic-123" :name "Test" :messages []}
+              topic      {:id "topic-123" :name "Test" :anchor schema-test/anchor-fixture :messages []}
               dispatched (atom nil)]
 
           ;; Setup: document content on disk + a topic in the per-document data dir

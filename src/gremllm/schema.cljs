@@ -107,7 +107,21 @@
    [:text :string]
    [:attachments {:optional true} [:vector AttachmentRef]]
    [:context     {:optional true}
-    [:map [:excerpts [:vector DocumentExcerpt]]]]])
+    [:map {:closed true}
+     [:excerpts {:optional true} [:vector DocumentExcerpt]]
+     [:anchor   {:optional true} DocumentExcerpt]]]])
+
+(defn user-message
+  "Constructs a UserMessage from chat input. Attaches :context only when
+   anchor or excerpts are present."
+  [text {:keys [anchor excerpts]}]
+  (let [context (cond-> {}
+                  anchor         (assoc :anchor anchor)
+                  (seq excerpts) (assoc :excerpts excerpts))]
+    (cond-> {:id   (generate-message-id)
+             :type :user
+             :text text}
+      (seq context) (assoc :context context))))
 
 (def AssistantMessage
   [:map {:closed true}
@@ -189,6 +203,7 @@
   [:map
    [:id {:default/fn generate-topic-id} :string]
    [:name {:default "New Topic"}        :string]
+   [:anchor                             DocumentExcerpt]
    [:session {:default {}}              AcpSession]
    [:messages {:default []}             [:vector Message]]
    [:excerpts {:default []}             [:vector DocumentExcerpt]]])
@@ -199,11 +214,6 @@
   (mu/merge
     PersistedTopic
     [:map
-     ;; TODO(slice2): persist anchor in PersistedTopic. Required-vs-optional there
-     ;; is a product call, not a schema call: it hinges on whether unanchored
-     ;; whole-doc sessions (see start-new-topic) survive the Topic->Session pivot.
-     [:anchor {:optional true} DocumentExcerpt]
-
      [:unsaved? {:optional true} :boolean]]))
 
 ;; TODO: refactor with (generate-topic-id)
@@ -211,8 +221,10 @@
   "Schema for topic identifiers shared across IPC boundaries."
   [:string {:min 1}])
 
-(defn create-topic []
-  (m/decode Topic {} mt/default-value-transformer))
+(defn create-topic
+  "Creates a new topic anchored to the given DocumentExcerpt."
+  [anchor]
+  (assoc (m/decode Topic {} mt/default-value-transformer) :anchor anchor))
 
 (def DocumentTopics
   "Map of Topics keyed by Topic ID"

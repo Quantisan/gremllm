@@ -54,8 +54,15 @@
 (defn excerpts-path [topic-id]
   (conj (topic-path topic-id) :excerpts))
 
-(defn get-excerpts [state]
-  (or (:excerpts (get-active-topic state)) []))
+(defn get-excerpts [active-topic]
+  (or (:excerpts active-topic) []))
+
+(defn composer-anchor
+  "The active topic's anchor, shown in the composer only before the topic has
+   any messages (afterward it lives on the first message instead)."
+  [active-topic]
+  (when (empty? (:messages active-topic))
+    (:anchor active-topic)))
 
 (defn get-acp-session-id [state topic-id]
   (get-in (get-topic state topic-id) [:session :id]))
