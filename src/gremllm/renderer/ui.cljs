@@ -1,7 +1,6 @@
 (ns gremllm.renderer.ui
   (:require [gremllm.renderer.state.topic :as topic-state]
             [gremllm.renderer.state.form :as form-state]
-            [gremllm.renderer.state.loading :as loading-state]
             [gremllm.renderer.state.document :as document-state]
             [gremllm.renderer.state.excerpt :as excerpt-state]
             [gremllm.renderer.state.session :as session-state]
@@ -26,8 +25,7 @@
         hovered-topic      (when hovered-topic-id (get topics-map hovered-topic-id))
         active-color       (session-state/color-for-topic topics-map active-topic-id)
         preview-color      (session-state/color-for-topic topics-map hovered-topic-id)
-        shell?             (session-state/shell? active-topic)
-        loading?           (loading-state/loading? state active-topic-id)]
+        status             (session-state/session-status state active-topic-id active-topic)]
     [e/app-layout {:style {:--active-session-color  (or active-color "transparent")
                            :--preview-session-color (or preview-color "transparent")}}
      ;; Zone 1: Document panel (with gutter)
@@ -68,21 +66,18 @@
      ;; Zone 2: Chat panel
      [e/chat-panel
       (let [messages           (topic-state/get-messages state)
-            awaiting-response? (and loading?
+            awaiting-response? (and (= status :busy)
                                     (= :user (:type (peek messages))))]
         (chat-ui/render-chat-area messages awaiting-response?
-                                  {:active-topic    active-topic
-                                   :active-topic-id active-topic-id
-                                   :loading?        loading?
-                                   :shell?          shell?}))
+                                  {:active-topic active-topic
+                                   :status       status}))
 
       (when active-topic-id
         (chat-ui/render-input-form
           {:input-value         (form-state/get-user-input state)
-           :loading?            loading?
+           :status              status
            :pending-attachments (form-state/get-pending-attachments state)
-           :excerpts            excerpts
-           :shell?              shell?}))]]))
+           :excerpts            excerpts}))]]))
 
 (defn render-app [state]
   (if (document-state/loaded? state)

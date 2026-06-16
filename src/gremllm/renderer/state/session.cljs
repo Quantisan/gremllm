@@ -1,4 +1,5 @@
-(ns gremllm.renderer.state.session)
+(ns gremllm.renderer.state.session
+  (:require [gremllm.renderer.state.loading :as loading-state]))
 
 ;; TODO: this namespace speaks "session" but operates on "topic" state/schema.
 ;; Reconcile the vocabulary when topic -> session rename lands (see actions.cljs).
@@ -9,6 +10,23 @@
    source of truth for shell-ness."
   [topic]
   (nil? (get-in topic [:session :id])))
+
+(defn session-status
+  "Single derived status for the active session, unifying shell-ness (is there a
+   live ACP session?) with loading (is an async op in flight?). The UI switches
+   on this one value instead of threading the two booleans separately.
+     :no-session   -- no active topic
+     :connecting   -- shell session, init in flight
+     :disconnected -- shell session, idle or init failed (retry available)
+     :busy         -- live session, awaiting prompt response
+     :ready        -- live session, idle"
+  [state topic-id topic]
+  (let [loading? (loading-state/loading? state topic-id)]
+    (cond
+      (nil? topic-id) :no-session
+      (shell? topic)  (if loading? :connecting :disconnected)
+      loading?        :busy
+      :else           :ready)))
 
 (def session-colors
   ["var(--session-color-1)"

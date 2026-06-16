@@ -102,9 +102,9 @@
      "Computing..."]])
 
 (defn render-chat-area [messages awaiting-response? session-opts]
-  (let [{:keys [active-topic active-topic-id loading? shell?]} session-opts]
+  (let [{:keys [active-topic status]} session-opts]
     (cond
-      (nil? active-topic-id)
+      (= status :no-session)
       [e/chat-area
        [:div {:style {:display "flex"
                       :align-items "center"
@@ -114,9 +114,9 @@
                       :font-style "italic"}}
         "Select text in the document to start a session."]]
 
-      ;; shell? is the single detection site (session/shell?), computed in ui.cljs.
-      ;; True whenever there's no live ACP session id -- new, connecting, or init failed.
-      shell?
+      ;; :connecting / :disconnected are the shell states (no live ACP session id),
+      ;; derived by session/session-status in ui.cljs.
+      (or (= status :connecting) (= status :disconnected))
       [e/chat-area
        [:div {:style {:padding "var(--pico-spacing)"}}
         [:blockquote {:style {:border-left-color "var(--pico-primary)"
@@ -124,7 +124,7 @@
                               :opacity 0.8}}
          (get-in active-topic [:anchor :text])]
         [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         (if loading?
+         (if (= status :connecting)
            "Connecting session..."
            "Session not connected — click its session bar to retry.")]]]
 
@@ -163,28 +163,29 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value loading? pending-attachments excerpts shell?]}]
-  [:footer
-   [:form {:on {:submit [[:effects/prevent-default]
-                         [:form.actions/submit]]}}
-    (render-composer-excerpts excerpts)
-    (render-attachment-indicator pending-attachments)
-    [:fieldset {:role "group"}
-     [:textarea {:class "chat-input"
-                 :rows 2
-                 :value input-value
-                 :placeholder (cond
-                                (not shell?) "Type a message... (Shift+Enter for new line)"
-                                loading?     "Connecting session..."
-                                :else        "Session not connected — click its session bar to retry.")
-                 :disabled (or loading? shell?)
-                 :on {:input [[:form.actions/update-input [:event.target/value]]]
-                      :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
-                      :dragover [[:form.actions/handle-dragover]]
-                      :drop [[:effects/prevent-default]
-                             [:form.actions/handle-file-drop [:event/dropped-files]]]}
-                 :autofocus true}]
+(defn render-input-form [{:keys [input-value status pending-attachments excerpts]}]
+  (let [ready? (= status :ready)]
+    [:footer
+     [:form {:on {:submit [[:effects/prevent-default]
+                           [:form.actions/submit]]}}
+      (render-composer-excerpts excerpts)
+      (render-attachment-indicator pending-attachments)
+      [:fieldset {:role "group"}
+       [:textarea {:class "chat-input"
+                   :rows 2
+                   :value input-value
+                   :placeholder (case status
+                                  :connecting   "Connecting session..."
+                                  :disconnected "Session not connected — click its session bar to retry."
+                                  "Type a message... (Shift+Enter for new line)")
+                   :disabled (not ready?)
+                   :on {:input [[:form.actions/update-input [:event.target/value]]]
+                        :keydown [[:form.actions/handle-submit-keys [:event/key-pressed]]]
+                        :dragover [[:form.actions/handle-dragover]]
+                        :drop [[:effects/prevent-default]
+                               [:form.actions/handle-file-drop [:event/dropped-files]]]}
+                   :autofocus true}]
 
-     [:button {:type "submit"
-               :disabled (or loading? shell? (str/blank? input-value))}
-      "Send"]]]])
+       [:button {:type "submit"
+                 :disabled (or (not ready?) (str/blank? input-value))}
+        "Send"]]]]))
