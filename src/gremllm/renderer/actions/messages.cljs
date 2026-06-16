@@ -1,7 +1,6 @@
 (ns gremllm.renderer.actions.messages
   (:require [gremllm.schema :as schema]
-            [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.form :as form-state]))
+            [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- base-add-message-effects [topic-id message]
   [[:messages.actions/append-to-state topic-id message]
