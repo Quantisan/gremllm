@@ -23,10 +23,8 @@
   (let [text (form-state/get-user-input state)]
     (when (seq text)
       (let [{topic-id :id :as topic} (topic-state/get-active-topic state)
-            anchor  (when (empty? (:messages topic))
-                      (:anchor topic))
-            message (schema/user-message text {:anchor   anchor
-                                               :excerpts (topic-state/get-excerpts state)})]
+            message (schema/user-message text {:anchor   (topic-state/composer-anchor topic)
+                                               :excerpts (topic-state/get-excerpts topic)})]
         [[:messages.actions/add-to-chat topic-id message]
          [:form.actions/clear-input]
          [:ui.actions/focus-chat-input]
