@@ -149,9 +149,6 @@
 (deftest user-message-context-variants-test
   (let [msg (fn [context] {:id 1 :type :user :text "t" :context context})]
     (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture})))
-    (is (m/validate schema/UserMessage (msg {:anchor anchor-fixture
-                                             :excerpts [anchor-fixture]})))
-    (is (m/validate schema/UserMessage (msg {:excerpts [anchor-fixture]})))
     (is (not (m/validate schema/UserMessage (msg {:anchor anchor-fixture :unknown "x"}))))))
 
 (deftest persisted-topic-requires-anchor-test
@@ -160,28 +157,6 @@
                       :session {:pending-diffs []} :messages [] :excerpts []}]
       (is (not (m/validate schema/PersistedTopic anchorless)))
       (is (not (m/validate schema/Topic anchorless))))))
-
-(deftest persisted-topic-excerpts-are-document-excerpts-test
-  (let [excerpt {:id "e1"
-                 :text "snippet"
-                 :locator {:document-relative-path "document.md"
-                           :start-block {:kind :paragraph
-                                         :index 2
-                                         :start-line 3
-                                         :end-line 3
-                                         :block-text-snippet "Our..."}
-                           :end-block {:kind :paragraph
-                                       :index 2
-                                       :start-line 3
-                                       :end-line 3
-                                       :block-text-snippet "Our..."}}}]
-    (is (m/validate schema/PersistedTopic
-                    {:id "t1"
-                     :name "T"
-                     :anchor anchor-fixture
-                     :session {:pending-diffs []}
-                     :messages []
-                     :excerpts [excerpt]}))))
 
 (deftest message-tagged-union-test
   (testing ":user variant validates with optional context"

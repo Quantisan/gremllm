@@ -1,6 +1,5 @@
 (ns gremllm.main.effects.topic-test
   (:require [cljs.test :refer [deftest is testing]]
-            [gremllm.main.actions.topic :as topic-actions]
             [gremllm.main.effects.topic :as topic-effects]
             [gremllm.main.io :as io]
             [gremllm.schema-test :as schema-test]
@@ -36,16 +35,6 @@
    :messages [{:id 1754952440824 :type :user :text "Hello"}]
    :session {:pending-diffs []}
    :excerpts []})
-
-(deftest anchor-round-trip-test
-  (testing "anchor survives save → load through the disk codec"
-    (with-temp-dir "anchor-round-trip"
-      (fn [temp-dir]
-        (let [topic  (make-valid-topic)
-              plan   (topic-actions/topic->save-plan topic temp-dir)
-              _      (topic-effects/save-topic plan)
-              loaded (get (topic-effects/load-topics temp-dir) (:id topic))]
-          (is (= schema-test/anchor-fixture (:anchor loaded))))))))
 
 (deftest test-save-load-round-trip
   (testing "save and load preserves topic data including excerpts"

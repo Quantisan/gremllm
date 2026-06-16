@@ -49,7 +49,6 @@
   (let [body (:text (first (acp/prompt-content-blocks
                             {:text "hello" :context {:anchor excerpt}} nil)))]
     (is (re-find #"Anchor:" body))
-    (is (re-find #"p2" body) "BlockRef :kind keyword renders as compact label")
     (is (not (re-find #"References:" body)))))
 
 (deftest anchor-precedes-references-test

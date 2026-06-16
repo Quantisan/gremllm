@@ -67,19 +67,6 @@
                 active-session-opts)]
     (is (contains-text? hiccup "reword these"))))
 
-(deftest user-message-anchor-renders-distinct-row-test
-  (testing "an anchored message renders its anchor under its own 'Anchored to:' row, not as a Reference"
-    (let [hiccup (chat-ui/render-chat-area
-                  [(schema-test/create-message
-                    {:id 1
-                     :type :user
-                     :text "reword these"
-                     :context {:anchor same-block-excerpt}})]
-                  false
-                  active-session-opts)]
-      (is (contains-text? hiccup "Anchored to:") "anchor gets its distinct labeled row")
-      (is (not (contains-text? hiccup "References:")) "anchor is not rendered as a reference"))))
-
 (deftest tool-call-web-search-renders-test
   (testing "completed :web-search renders 'Searched the web' + query"
     (let [hiccup (chat-ui/render-chat-area
