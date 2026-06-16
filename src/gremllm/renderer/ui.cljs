@@ -77,7 +77,8 @@
           {:input-value         (form-state/get-user-input state)
            :session-status      session-status
            :pending-attachments (form-state/get-pending-attachments state)
-           :excerpts            excerpts}))]]))
+           :excerpts            excerpts
+           :anchor              anchor}))]]))
 
 (defn render-app [state]
   (if (document-state/loaded? state)

@@ -135,20 +135,37 @@
        (when awaiting-response?
          (render-loading-indicator))])))
 
+(defn- composer-excerpt-chip
+  "A single excerpt chip in the composer. `dismiss` is optional trailing hiccup
+   (e.g. a remove button); the anchor chip omits it."
+  [{:keys [id text]} & [dismiss]]
+  [:span.excerpt-chip {:replicant/key id}
+   "excerpt: " (truncate text composer-excerpt-cap)
+   dismiss])
+
 (defn- render-composer-excerpts [excerpts]
   (when (seq excerpts)
     [:div.excerpt-list
-     (for [{:keys [id text]} excerpts]
-       [:span.excerpt-chip {:replicant/key id}
-        "excerpt: " (truncate text composer-excerpt-cap)
-        [:button.dismiss
-         {:type "button"
-          :on {:click [[:excerpt.actions/remove id]]}}
-         "✕"]])
+     (for [{:keys [id] :as excerpt} excerpts]
+       (composer-excerpt-chip excerpt
+         [:button.dismiss
+          {:type "button"
+           :on {:click [[:excerpt.actions/remove id]]}}
+          "✕"]))
      (when (> (count excerpts) 1)
        [:button {:type "button"
                  :on {:click [[:excerpt.actions/clear-active]]}}
         "Clear excerpts"])]))
+
+(defn- render-composer-anchor
+  "Pill for the session's anchor excerpt. Shown only while composing the first
+   message, mirroring when the anchor is actually attached (see
+   renderer.actions.ui/submit-messages). Non-dismissable — removing a session's
+   anchor is meaningless."
+  [anchor]
+  (when anchor
+    [:div.excerpt-list
+     (composer-excerpt-chip anchor)]))
 
 (defn- render-attachment-indicator [pending-attachments]
   (when (seq pending-attachments)
@@ -163,11 +180,12 @@
                :on {:click [[:ui.actions/clear-pending-attachments]]}}
       "Clear"]]))
 
-(defn render-input-form [{:keys [input-value session-status pending-attachments excerpts]}]
+(defn render-input-form [{:keys [input-value session-status pending-attachments excerpts anchor]}]
   (let [ready? (= session-status :ready)]
     [:footer
      [:form {:on {:submit [[:effects/prevent-default]
                            [:form.actions/submit]]}}
+      (render-composer-anchor anchor)
       (render-composer-excerpts excerpts)
       (render-attachment-indicator pending-attachments)
       [:fieldset {:role "group"}
