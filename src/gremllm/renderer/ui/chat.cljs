@@ -101,39 +101,41 @@
       "⠿"]
      "Computing..."]])
 
+(defn- render-empty-session []
+  [e/chat-area
+   [:div {:style {:display "flex"
+                  :align-items "center"
+                  :justify-content "center"
+                  :height "100%"
+                  :color "var(--pico-muted-color)"
+                  :font-style "italic"}}
+    "Select text in the document to start a session."]])
+
+(defn- render-pending-session [active-topic session-status]
+  [e/chat-area
+   [:div {:style {:padding "var(--pico-spacing)"}}
+    [:blockquote {:style {:border-left-color "var(--pico-primary)"
+                          :font-size "0.9rem"
+                          :opacity 0.8}}
+     (get-in active-topic [:anchor :text])]
+    [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
+     (if (= session-status :connecting)
+       "Connecting session..."
+       "Session not connected — click its session bar to retry.")]]])
+
+(defn- render-thread [messages awaiting-response?]
+  [e/chat-area {}
+   (for [message messages]
+     (render-message message))
+   (when awaiting-response?
+     (render-loading-indicator))])
+
 (defn render-chat-area [messages awaiting-response? session-opts]
   (let [{:keys [active-topic session-status]} session-opts]
-    (cond
-      (= session-status :no-session)
-      [e/chat-area
-       [:div {:style {:display "flex"
-                      :align-items "center"
-                      :justify-content "center"
-                      :height "100%"
-                      :color "var(--pico-muted-color)"
-                      :font-style "italic"}}
-        "Select text in the document to start a session."]]
-
-      ;; :connecting / :disconnected are the shell states (no live ACP session id),
-      ;; derived by session/session-status in ui.cljs.
-      (or (= session-status :connecting) (= session-status :disconnected))
-      [e/chat-area
-       [:div {:style {:padding "var(--pico-spacing)"}}
-        [:blockquote {:style {:border-left-color "var(--pico-primary)"
-                              :font-size "0.9rem"
-                              :opacity 0.8}}
-         (get-in active-topic [:anchor :text])]
-        [:p {:style {:color "var(--pico-muted-color)" :font-size "0.85rem"}}
-         (if (= session-status :connecting)
-           "Connecting session..."
-           "Session not connected — click its session bar to retry.")]]]
-
-      :else
-      [e/chat-area {}
-       (for [message messages]
-         (render-message message))
-       (when awaiting-response?
-         (render-loading-indicator))])))
+    (case session-status
+      :no-session                 (render-empty-session)
+      (:connecting :disconnected) (render-pending-session active-topic session-status)
+      (render-thread messages awaiting-response?))))
 
 (defn- composer-excerpt-chip
   "A single excerpt chip in the composer. `dismiss` is optional trailing hiccup
