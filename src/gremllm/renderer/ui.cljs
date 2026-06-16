@@ -21,6 +21,8 @@
         popover-pos        (excerpt-state/popover-position captured anchor)
         excerpts           (topic-state/get-excerpts state)
         active-topic       (topic-state/get-active-topic state)
+        composer-anchor    (when (empty? (:messages active-topic))
+                             (:anchor active-topic))
         hovered-topic-id   (session-state/get-hovered-bar-topic-id state)
         hovered-topic      (when hovered-topic-id (get topics-map hovered-topic-id))
         active-color       (session-state/color-for-topic topics-map active-topic-id)
@@ -78,7 +80,7 @@
            :session-status      session-status
            :pending-attachments (form-state/get-pending-attachments state)
            :excerpts            excerpts
-           :anchor              anchor}))]]))
+           :anchor              composer-anchor}))]]))
 
 (defn render-app [state]
   (if (document-state/loaded? state)

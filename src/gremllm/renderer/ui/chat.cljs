@@ -158,8 +158,8 @@
         "Clear excerpts"])]))
 
 (defn- render-composer-anchor
-  "Pill for the session's anchor excerpt. Shown only while composing the first
-   message, mirroring when the anchor is actually attached (see
+  "Pill for the session's anchor excerpt; caller passes it only while composing
+   the first message, mirroring when the anchor is attached (see
    renderer.actions.ui/submit-messages). Non-dismissable — removing a session's
    anchor is meaningless."
   [anchor]
