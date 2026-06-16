@@ -114,6 +114,7 @@
 (defn user-message
   "Constructs a UserMessage from chat input. Attaches :context only when
    anchor or excerpts are present."
+  {:malli/schema [:=> [:cat :string :any] UserMessage]}
   [text {:keys [anchor excerpts]}]
   (let [context (cond-> {}
                   anchor         (assoc :anchor anchor)
@@ -223,6 +224,7 @@
 
 (defn create-topic
   "Creates a new topic anchored to the given DocumentExcerpt."
+  {:malli/schema [:=> [:cat DocumentExcerpt] Topic]}
   [anchor]
   (assoc (m/decode Topic {} mt/default-value-transformer) :anchor anchor))
 
@@ -239,5 +241,7 @@
 
 (defn create-document-meta
   "Constructor for document metadata sent over IPC."
+  ;; Runs in the main process; label only — the renderer checker doesn't reach it.
+  {:malli/schema [:=> [:cat :string] DocumentMeta]}
   [name]
   (m/decode DocumentMeta {:name name} mt/default-value-transformer))
