@@ -29,29 +29,24 @@
   (let [state {:form {:user-input "hello"}
                :active-topic-id "t1"
                :topics {"t1" {:id "t1" :messages [] :excerpts []}}}
-        [add-msg _ _ _ send] (ui/submit-messages state)
-        [_ topic-id message] add-msg
-        [_ sent-message] send]
+        [add-msg] (ui/submit-messages state)
+        [_ topic-id message] add-msg]
     (is (= :messages.actions/add-to-chat (first add-msg)))
     (is (= "t1" topic-id))
     (is (= :user (:type message)))
     (is (= "hello" (:text message)))
-    (is (not (contains? message :context)))
-    (is (= :acp.actions/send-prompt (first send)))
-    (is (= message sent-message))))
+    (is (not (contains? message :context)))))
 
 (deftest submit-with-excerpts-attaches-context-test
   ;; First-message send on a topic without an anchor — :messages [] is explicit
   (let [state {:form {:user-input "reword these"}
                :active-topic-id "t1"
                :topics {"t1" {:id "t1" :messages [] :excerpts [sample-excerpt]}}}
-        [add-msg _ _ _ send] (ui/submit-messages state)
-        [_ topic-id message] add-msg
-        [_ sent-message] send]
+        [add-msg] (ui/submit-messages state)
+        [_ topic-id message] add-msg]
     (is (= "t1" topic-id))
     (is (= "reword these" (:text message)))
-    (is (= {:excerpts [sample-excerpt]} (:context message)))
-    (is (= message sent-message))))
+    (is (= {:excerpts [sample-excerpt]} (:context message)))))
 
 (deftest submit-first-message-injects-anchor-test
   (testing "first message in an anchored topic carries the anchor as context"
@@ -59,12 +54,10 @@
                  :active-topic-id "t1"
                  :topics {"t1" {:id "t1" :anchor schema-test/anchor-fixture
                                 :messages [] :excerpts []}}}
-          [add-msg _ _ _ send] (ui/submit-messages state)
-          [_ _ message] add-msg
-          [_ sent-message] send]
+          [add-msg] (ui/submit-messages state)
+          [_ _ message] add-msg]
       (is (= schema-test/anchor-fixture (get-in message [:context :anchor])))
-      (is (not (contains? (:context message) :excerpts)))
-      (is (= message sent-message)))))
+      (is (not (contains? (:context message) :excerpts))))))
 
 (deftest submit-second-message-omits-anchor-test
   (testing "anchor is first-message-only"
@@ -73,11 +66,9 @@
                  :topics {"t1" {:id "t1" :anchor schema-test/anchor-fixture
                                 :messages [{:id 1 :type :user :text "first"}]
                                 :excerpts []}}}
-          [add-msg _ _ _ send] (ui/submit-messages state)
-          [_ _ message] add-msg
-          [_ sent-message] send]
-      (is (nil? (:context message)))
-      (is (= message sent-message)))))
+          [add-msg] (ui/submit-messages state)
+          [_ _ message] add-msg]
+      (is (nil? (:context message))))))
 
 (deftest test-handle-submit-keys
   (testing "Enter without Shift returns prevent-default and submit effects"

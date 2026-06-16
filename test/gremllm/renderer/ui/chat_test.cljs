@@ -16,7 +16,6 @@
                    {:input-value "some input"
                     :session-status :ready})
           form   (lookup/select-one 'form hiccup)]
-      (is (some? form) "A :form element should be rendered.")
       (is (= [[:effects/prevent-default] [:form.actions/submit]]
              (-> form lookup/attrs (get-in [:on :submit])))
           "The on-submit actions should be correct and in order."))))

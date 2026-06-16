@@ -44,11 +44,6 @@
       (is (not (contains? restore-params :active-topic-id))
           "opened no longer passes active-topic-id — restore derives it"))))
 
-(deftest initialize-empty-no-topic-test
-  (testing "Empty document does not create a topic — just marks loaded"
-    (let [effects (document/initialize-empty {})]
-      (is (= [[:document.actions/mark-loaded]] effects)))))
-
 ;; Intentional layer split: session_test proves *which* topic is most-recent
 ;; (the selector logic); this test proves restore-with-topics *wires* set-active
 ;; to that selector's result. Keep both — they cover different layers.

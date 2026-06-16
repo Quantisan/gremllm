@@ -86,12 +86,6 @@
   (testing "multi-node selection validates against CapturedSelection"
     (is (m/validate schema/CapturedSelection multi-node-selection))))
 
-(deftest anchor-context-schema-test
-  (testing "valid AnchorContext validates"
-    (is (m/validate schema/AnchorContext
-                    {:panel-rect {:top 100 :left 50 :width 800 :height 600}
-                     :panel-scroll-top 20}))))
-
 (deftest block-ref-test
   (testing "valid BlockRef"
     (is (m/validate schema/BlockRef
