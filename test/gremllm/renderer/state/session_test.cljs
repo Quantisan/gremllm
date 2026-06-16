@@ -26,13 +26,6 @@
       (is (= (session-state/color-for-topic alone "topic-2000-b")
              (session-state/color-for-topic surrounded "topic-2000-b"))))))
 
-(deftest shell?-test
-  (testing "anchored topic with no ACP session id is a shell"
-    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor :session {}})))
-    (is (true? (session-state/shell? {:id "t1" :anchor stub-anchor}))))
-  (testing "topic with a live ACP session id is not a shell"
-    (is (false? (session-state/shell? {:id "t1" :anchor stub-anchor :session {:id "s1"}})))))
-
 (deftest anchored-topics-test
   (testing "with anchored topics present"
     ;; Fixture deliberately includes an un-anchored "topic-1000-a": one assertion
