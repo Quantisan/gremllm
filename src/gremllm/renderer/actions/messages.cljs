@@ -1,6 +1,6 @@
 (ns gremllm.renderer.actions.messages
-  (:require [gremllm.renderer.state.topic :as topic-state]
-            [gremllm.renderer.state.form :as form-state]))
+  (:require [gremllm.schema :as schema]
+            [gremllm.renderer.state.topic :as topic-state]))
 
 (defn- base-add-message-effects [topic-id message]
   [[:messages.actions/append-to-state topic-id message]
@@ -17,6 +17,7 @@
 
 (defn build-conversation-with-new-message
   "Builds complete conversation history including the new user message."
+  {:malli/schema [:=> [:cat :any schema/TopicId schema/Message] schema/Messages]}
   [state topic-id new-user-message]
   (let [message-history (topic-state/get-topic-field state topic-id :messages)]
     (conj (or message-history []) new-user-message)))

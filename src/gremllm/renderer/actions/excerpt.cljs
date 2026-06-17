@@ -6,7 +6,7 @@
 (defn capture->excerpt
   "Pure transform: ephemeral capture + locator-hints -> durable DocumentExcerpt.
    `id` is supplied by the caller so UUID generation stays outside this helper."
-  {:malli/schema [:=> [:cat schema/CapturedSelection :any :string] schema/DocumentExcerpt]}
+  {:malli/schema [:=> [:cat [:map [:text :string]] :any :string] schema/DocumentExcerpt]}
   [captured locator-hints id]
   {:id id
    :text (:text captured)

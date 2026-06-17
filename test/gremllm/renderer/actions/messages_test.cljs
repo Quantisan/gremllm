@@ -5,11 +5,11 @@
 
 (deftest test-build-conversation-with-new-message
   (testing "builds conversation from state with new message"
-    (let [state {:topics {"t1" {:messages [{:text "first"}]}}
+    (let [state {:topics {"t1" {:messages [{:id 1 :type :user :text "first"}]}}
                  :active-topic-id "t1"}
           topic-id "t1"]
-      (is (= [{:text "first"} {:text "second"}]
-             (msg/build-conversation-with-new-message state topic-id {:text "second"}))))))
+      (is (= [{:id 1 :type :user :text "first"} {:id 2 :type :user :text "second"}]
+             (msg/build-conversation-with-new-message state topic-id {:id 2 :type :user :text "second"}))))))
 
 (deftest test-append-to-state
   (testing "returns action to append message to the active topic's messages"
