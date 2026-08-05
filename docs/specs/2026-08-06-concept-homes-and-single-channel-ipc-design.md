@@ -39,25 +39,54 @@ Two findings ground the design:
 
 ## Design
 
+### What counts as a concept
+
+A concept is a unit of functionality defined from the user's perspective (after
+Jackson, *The Essence of Software*): it has a purpose a user would recognize, it
+owns its own state and actions, and its name means the same thing everywhere it
+appears. Homes are granted per concept, not per feature. Tests before granting
+one:
+
+1. **Purpose:** "X exists so that Y" fits in one sentence a user would recognize.
+2. **State:** it owns state paths and a schema fragment; shared lifetime is the
+   tell — ephemeral UI mechanics and persisted domain data rarely share a concept.
+3. **Stable meaning:** one name never resolves to two types.
+4. **Independence:** explaining it doesn't reach into another concept's internals.
+   Where concepts touch is a seam, not shared ownership.
+
+Applied to "anchor," these tests split it in two. The excerpt ("a user-curated
+piece of the document, saved as AI context") and the anchor ("a session is
+anchored to a document excerpt") are separate concepts with separate lifetimes.
+The selection-popover geometry currently named `AnchorContext` is neither — it is
+capture mechanics inside excerpt, and loses the name (see Migration posture).
+
 ### 1. Concept homes
 
 A concept lives in one directory that owns its schema fragment, actions, state
-selectors, and UI. The anchor concept, consolidated:
+selectors, and UI. The anchored-sessions feature, consolidated — two homes, per
+the definition above:
 
 ```
+src/gremllm/excerpt/
+  model.cljs      — DocumentExcerpt + CapturedSelection schemas, DOM capture
+                    codec, popover geometry (pure)
+  flow.cljs       — capture/dismiss/attach actions, exported registry fragment
+                    {:nexus/actions {...}}
+  ui.cljs         — selection popover, composer excerpt pills
 src/gremllm/anchor/
-  model.cljs      — AnchorContext schema, DOM codec, ACP prompt-section rendering
+  model.cljs      — Topic :anchor schema fragment, ACP prompt-section rendering
                     (pure; main requires it the same way it requires schema.cljs)
-  flow.cljs       — capture/dismiss/start-anchored-session actions, anchored-topic
-                    selectors, exported registry fragment {:nexus/actions {...}}
-  ui.cljs         — gutter render+sync, highlight sync, anchor pills
-test/gremllm/anchor_test.cljs — one file, domain logic only
+  flow.cljs       — start-anchored-session actions, anchored-topic selectors,
+                    exported registry fragment
+  ui.cljs         — gutter render+sync, highlight sync, composer anchor pill
+test/gremllm/excerpt_test.cljs, test/gremllm/anchor_test.cljs
+                  — one file per concept, domain logic only
 ```
 
-What remains outside the home are genuine seams — places the concept meets another
-concept (chat composer attaches the anchor, document renderer paints it, main's
-prompt body includes it). Seams are one call each and would exist under any
-organization.
+What remains outside the homes are genuine seams — places one concept meets
+another (anchor references an excerpt, chat composer attaches it, document
+renderer paints it, main's prompt body includes it). Seams are one call each and
+would exist under any organization.
 
 **Registries become merges.** `renderer/actions.cljs` and `main/actions.cljs` keep
 their role as the system inventory, but list concepts instead of restating every
@@ -112,7 +141,10 @@ costs one map entry and one schema, not preload + channel + wrapper + handler.
 No big-bang rewrite. New concepts get homes from day one. Existing code migrates
 only when a change touches it, concept by concept. Anchor is the designated first
 worked example: the next change to anchoring behavior performs the consolidation
-above as its first step.
+above as its first step. Step zero of that consolidation is a rename: the popover
+geometry (`AnchorContext`, stored at `[:excerpt :anchor]`) loses the word
+"anchor" — e.g. `PopoverGeometry` at `[:excerpt :popover-geometry]` — so the name
+means one thing before any code moves.
 
 ## Verification
 
