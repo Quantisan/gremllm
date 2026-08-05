@@ -138,7 +138,9 @@ fragment) and remains the place boundary validation looks.
 
 ### 2. Single-channel IPC
 
-Replace per-feature preload methods and IPC channels with one chokepoint:
+This applies to the renderer→main request direction, where each new capability
+today costs preload method + channel + wrapper + handler. Replace those
+per-feature sites with one chokepoint:
 
 - **Preload** exposes one `invoke`-style bridge, not one method per feature.
 - **Main** registers one `ipcMain.handle` that dispatches `{action, payload}`
@@ -150,6 +152,12 @@ A closed dispatch table plus edge validation satisfies Electron's security guida
 (the anti-pattern is exposing *raw* `ipcRenderer` passthrough; a validated,
 enumerated dispatch is the recommended shape). New cross-process capability then
 costs one map entry and one schema, not preload + channel + wrapper + handler.
+
+The main→renderer push direction stays as-is: every push already funnels through
+the single `:ipc.effects/send-to-renderer` effect, and the busy channels
+(`acp:session-update`, `menu:command`) already dispatch `{name, payload}` by name
+internally. Collapsing its few channels into one would buy symmetry, not a cost
+reduction.
 
 ### 3. Rule amendments (CLAUDE.md)
 
