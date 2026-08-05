@@ -63,21 +63,41 @@ capture mechanics inside excerpt, and loses the name (see Migration posture).
 ### 1. Concept homes
 
 A concept lives in one directory that owns its schema fragment, actions, state
-selectors, and UI. The anchored-sessions feature, consolidated — two homes, per
-the definition above:
+selectors, and UI. Each home draws from four file roles, each answering one
+question:
+
+- **`model.cljs` — what is it?** Schemas and pure domain logic, in the user's
+  vocabulary. Loadable by either process build; never mentions a host
+  environment (DOM, Node, Electron).
+- **`flow.cljs` — what happens?** Actions, state transitions, and the exported
+  registry fragment.
+- **`ui.cljs` — how does it look?** Replicant components.
+- **`codec.cljs` — how does it cross a boundary?** Interface wire shapes and
+  their translations, per the existing "coercion named for its boundary" rule.
+  An interface's schemas live here with its codec, not in `model.cljs`:
+  `CapturedSelection`'s fields (`anchor-node`, `focus-offset`, `range-count`)
+  are the browser Selection API's vocabulary, not the domain's — the pair is
+  one unit, the contract of the "browser selection → excerpt" boundary.
+
+Not every concept needs all four — a concept with no boundary translations has
+no `codec.cljs`; absence is information. A concept that accumulates several
+interfaces splits by interface, as `schema/codec/acp.cljs` already does (e.g.
+`excerpt/codec/dom.cljs`).
+
+The anchored-sessions feature, consolidated — two homes, per the definition
+above:
 
 ```
 src/gremllm/excerpt/
-  model.cljs      — DocumentExcerpt + CapturedSelection schemas, DOM capture
-                    codec, popover geometry (pure)
+  model.cljs      — DocumentExcerpt schema, popover geometry math (pure, shared)
+  codec.cljs      — CapturedSelection + PopoverGeometry schemas and from-dom
+                    codecs (browser-interface adapter; renderer-only by nature)
   flow.cljs       — capture/dismiss/attach actions, exported registry fragment
                     {:nexus/actions {...}}
   ui.cljs         — selection popover, composer excerpt pills
 src/gremllm/anchor/
-  model.cljs      — Topic :anchor schema fragment, ACP prompt-section rendering
-                    (pure; main requires it the same way it requires schema.cljs)
-  flow.cljs       — start-anchored-session actions, anchored-topic selectors,
-                    exported registry fragment
+  model.cljs      — Topic :anchor schema fragment, anchored-topic selectors
+  flow.cljs       — start-anchored-session actions, exported registry fragment
   ui.cljs         — gutter render+sync, highlight sync, composer anchor pill
 test/gremllm/excerpt_test.cljs, test/gremllm/anchor_test.cljs
                   — one file per concept, domain logic only
@@ -87,6 +107,12 @@ What remains outside the homes are genuine seams — places one concept meets
 another (anchor references an excerpt, chat composer attaches it, document
 renderer paints it, main's prompt body includes it). Seams are one call each and
 would exist under any organization.
+
+ACP prompt-section rendering stays at its seam in `main/actions/acp.cljs`. It
+knows the transport's presentation (`"Anchor:"` headers, blockquote indentation,
+content blocks), so it is the ACP boundary's codec consuming `anchor/model` —
+not anchor domain logic. "Code that mentions anchor" is not "anchor domain
+logic."
 
 **Registries become merges.** `renderer/actions.cljs` and `main/actions.cljs` keep
 their role as the system inventory, but list concepts instead of restating every
@@ -145,6 +171,12 @@ above as its first step. Step zero of that consolidation is a rename: the popove
 geometry (`AnchorContext`, stored at `[:excerpt :anchor]`) loses the word
 "anchor" — e.g. `PopoverGeometry` at `[:excerpt :popover-geometry]` — so the name
 means one thing before any code moves.
+
+The consolidation also fixes an existing boundary flaw it would otherwise
+inherit: today `schema/codec.cljs` houses the live-DOM capture codecs
+(`captured-selection-from-dom` and friends) alongside disk and IPC codecs, in a
+file seven main-process namespaces require — renderer-only code in main's Node
+build. Moving them to `excerpt/codec.cljs` ends that.
 
 ## Verification
 
