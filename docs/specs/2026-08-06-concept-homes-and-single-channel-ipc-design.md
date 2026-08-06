@@ -183,6 +183,17 @@ per-feature sites with one chokepoint behind named methods:
   one-line-per-concept shape as the Nexus registries, with the same
   throw-on-collision merge.
 
+**Execution contract.** A table entry's handler is
+`(fn [context payload]) -> value | Promise`; `ipcMain.handle` returns whatever
+the entry returns. Direct shell calls (`topic/save`) return their value.
+Flows that dispatch into Nexus (the ACP channels) wrap the dispatch in a
+Promise, carry its `resolve`/`reject` in `dispatch-data` where the
+correlation id travels today, and return that Promise — the existing
+`:ipc.effects/reply` and `reply-error` effects call `resolve`/`reject`
+instead of sending on a correlation-named channel. Fire-and-forget entries
+(`acp/resolve-permission`) return nil. The correlation machinery is not
+ported to the new channel; `handle` correlates natively, so it is deleted.
+
 The security lives in main's closed table and sender check, not in the method
 names — the names are cheap ergonomics on top. A closed, validated dispatch
 satisfies Electron's security guidance (the anti-pattern is a generic
