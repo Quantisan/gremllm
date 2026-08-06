@@ -132,6 +132,13 @@ One line per concept. Reading the file still shows everything the system does.
 one per concept — same property, keeps the current `nexus.registry` style. The
 implementation plan picks one.)
 
+The merge must reject duplicate names. A plain `merge-with merge` silently
+last-writer-wins when two concepts register the same action keyword — the
+opposite of stable meaning and of the fail-fast posture the IPC table gets for
+free. Use a merge that throws on key collision; it runs once at load, so a
+collision fails at boot, not at dispatch. (The `register!` form needs the same
+check.)
+
 **Schemas compose.** Each concept owns its schema fragment; `schema.cljs` composes
 fragments into the boundary models (e.g. `PersistedTopic` embeds the anchor
 fragment) and remains the place boundary validation looks.
@@ -187,8 +194,20 @@ reduction.
 
 ### Migration posture
 
-No big-bang rewrite. New concepts get homes from day one. Existing code migrates
-only when a change touches it, concept by concept. Anchor is the designated first
+The two parts migrate differently.
+
+**Single-channel IPC migrates in one bounded change.** The renderer→main request
+surface is eight preload methods, and the conversion is mechanical. Gradual
+migration would be worse than either design alone: the single-chokepoint
+security claim is false while any legacy channel coexists, and the
+promise-correlation machinery in `preload.js` can only be deleted when the last
+channel using it migrates.
+
+**Concept homes migrate gradually** — the surface is large and the moves are
+judgment calls. No big-bang rewrite: new concepts get homes from day one, and
+existing code migrates only when a change touches it, concept by concept.
+
+Anchor is the designated first
 worked example: the next change to anchoring behavior performs the consolidation
 above as its first step. Step zero of that consolidation is a rename: the popover
 geometry (`AnchorContext`, stored at `[:excerpt :anchor]`) loses the word
@@ -206,9 +225,11 @@ build. Moving them to `excerpt/codec.cljs` ends that.
 - `npm run test` and `npm run test:all` stay green through each migration step.
 - The anchor consolidation is verified in the running app (`npm run dev`): gutter
   bars, highlights, composer pill, and ACP prompt anchor section behave unchanged.
-- Success metric, measured over the next several feature PRs: median files touched
-  per feature PR drops from 6 toward 3, and test-to-code churn inside feature PRs
-  drops below 0.5.
+- Expected observations, reviewed over the next several feature PRs: median files
+  touched per feature PR drifts from 6 toward 3–4, and test-to-code churn inside
+  feature PRs falls. These are trailing signals that the design worked, not
+  targets for any single PR — treating them as targets invites larger files and
+  skipped tests. Never hand them to an agent as an instruction.
 
 ## Out of scope
 
