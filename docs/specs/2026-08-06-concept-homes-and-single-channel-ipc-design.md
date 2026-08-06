@@ -206,8 +206,14 @@ satisfies Electron's security guidance (the anti-pattern is a generic
 recommended shape). New cross-process capability then costs one preload
 one-liner, one table entry, and its schemas — the channel constant, promise
 wrapper, and per-feature handler disappear. The preload list and the main
-table are two enumerations kept in sync; drift fails fast, since the closed
-table rejects unknown actions.
+table are two enumerations of the same capabilities, and they can drift. A
+preload method naming an action the table lacks is rejected with a clear
+error at the chokepoint — but only when that method is first invoked, not at
+startup. (Today's send-based channels are worse: a missing handler hangs the
+promise forever.) A table entry with no preload method is dead code, never
+detected at runtime. A contract test closes both gaps: each preload method is
+a mandated one-liner with a literal action string, so the test extracts those
+strings and compares them against the table's keys in both directions.
 
 The main→renderer push direction stays as-is: every push already funnels through
 the single `:ipc.effects/send-to-renderer` effect, and the busy channels
@@ -257,6 +263,9 @@ build. Moving them to `excerpt/codec.cljs` ends that.
 ## Verification
 
 - `npm run test` and `npm run test:all` stay green through each migration step.
+- The preload/table contract test passes: the action strings in `preload.js`
+  match the main table's keys in both directions, so drift fails in CI rather
+  than at first invocation.
 - The anchor consolidation is verified in the running app (`npm run dev`): gutter
   bars, highlights, composer pill, and ACP prompt anchor section behave unchanged.
 - Expected observations, reviewed over the next several feature PRs: median files
