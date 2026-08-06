@@ -63,8 +63,8 @@ capture mechanics inside excerpt, and loses the name (see Migration posture).
 ### 1. Concept homes
 
 A concept lives in one directory that owns its schema fragment, actions, state
-selectors, and UI. Each home draws from four file roles, each answering one
-question:
+selectors, UI, and effect handlers. Each home draws from five file roles, each
+answering one question:
 
 - **`model.cljs` — what is it?** Schemas and pure domain logic, in the user's
   vocabulary. Loadable by either process build; never mentions a host
@@ -79,8 +79,18 @@ question:
   are the browser Selection API's vocabulary, not the domain's — the pair is
   one unit, the contract of the "browser selection → excerpt" boundary.
 
-Not every concept needs all four — a concept with no boundary translations has
-no `codec.cljs`; absence is information. A concept that accumulates several
+- **`effects.cljs` — what does it do to the world?** Imperative-shell effect
+  handlers: file I/O, Electron APIs, DOM operations, async wrappers. FCIS is
+  unchanged — flows still return effect descriptions, and registration still
+  funnels through the process registry file; only where the handler lives
+  moves. Effects are host-specific by nature, so the file is required only by
+  the process that runs them — the same rule that keeps `excerpt/codec.cljs`
+  out of main's Node build. A concept with effects in both processes splits by
+  process (`topic/effects/main.cljs`, `topic/effects/renderer.cljs`), as codec
+  splits by interface.
+
+Not every concept needs all five — a concept with no boundary translations has
+no `codec.cljs`, a pure one no `effects.cljs`; absence is information. A concept that accumulates several
 interfaces splits by interface, as `schema/codec/acp.cljs` already does (e.g.
 `excerpt/codec/dom.cljs`).
 
@@ -128,6 +138,10 @@ action:
 ```
 
 One line per concept. Reading the file still shows everything the system does.
+Fragments are per-process: one shared `registry` var cannot serve two processes
+whose action and effect sets differ, so a spanning concept exports one fragment
+per process — document's dialog flows and file I/O merge into main's registry,
+its renderer actions into the renderer's.
 (Equivalent form: each concept exposes a `register!` fn and the registry file calls
 one per concept — same property, keeps the current `nexus.registry` style. The
 implementation plan picks one.)
@@ -163,7 +177,11 @@ per-feature sites with one chokepoint behind named methods:
   handler. The single handler validates both directions through `schema/codec`
   at this chokepoint, exactly as ACP payloads are in `schema/codec/acp.cljs`.
   The renderer does not re-validate responses: main is trusted same-app code,
-  and contract drift is already caught at the source.
+  and contract drift is already caught at the source. Entries are exported by
+  the owning concept's home (the handler is main-process code from its
+  `effects` file) and merged into the closed table — the same
+  one-line-per-concept shape as the Nexus registries, with the same
+  throw-on-collision merge.
 
 The security lives in main's closed table and sender check, not in the method
 names — the names are cheap ergonomics on top. A closed, validated dispatch
