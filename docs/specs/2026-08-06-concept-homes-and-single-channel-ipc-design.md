@@ -140,18 +140,33 @@ fragment) and remains the place boundary validation looks.
 
 This applies to the renderer→main request direction, where each new capability
 today costs preload method + channel + wrapper + handler. Replace those
-per-feature sites with one chokepoint:
+per-feature sites with one chokepoint behind named methods:
 
-- **Preload** exposes one `invoke`-style bridge, not one method per feature.
-- **Main** registers one `ipcMain.handle` that dispatches `{action, payload}`
-  against a closed map — the same dispatch-by-name shape as the Nexus registries.
-- **Payloads** are validated through `schema/codec` at the boundary, exactly as ACP
-  payloads are in `schema/codec/acp.cljs`.
+- **Preload** keeps one intent-named method per capability (`saveTopic`,
+  `pickDocument`), but each is a one-liner over a single transport channel:
+  `saveTopic: (topic) => request("topic/save", topic)`. Named methods are
+  Electron's recommended `contextBridge` shape, keep call sites greppable, and
+  keep preload.js a readable inventory of what the renderer can ask main to do.
+  The per-feature channel constants and promise-correlation machinery go away.
+- **Main** registers one `ipcMain.handle` that first verifies the sender —
+  `event.senderFrame` is the app window's main frame — then dispatches
+  `{action, payload}` against a closed map, the same dispatch-by-name shape as
+  the Nexus registries.
+- **Each table entry** declares its request and response schemas alongside its
+  handler. The single handler validates both directions through `schema/codec`
+  at this chokepoint, exactly as ACP payloads are in `schema/codec/acp.cljs`.
+  The renderer does not re-validate responses: main is trusted same-app code,
+  and contract drift is already caught at the source.
 
-A closed dispatch table plus edge validation satisfies Electron's security guidance
-(the anti-pattern is exposing *raw* `ipcRenderer` passthrough; a validated,
-enumerated dispatch is the recommended shape). New cross-process capability then
-costs one map entry and one schema, not preload + channel + wrapper + handler.
+The security lives in main's closed table and sender check, not in the method
+names — the names are cheap ergonomics on top. A closed, validated dispatch
+satisfies Electron's security guidance (the anti-pattern is a generic
+`ipcRenderer` passthrough; an enumerated dispatch behind named methods is the
+recommended shape). New cross-process capability then costs one preload
+one-liner, one table entry, and its schemas — the channel constant, promise
+wrapper, and per-feature handler disappear. The preload list and the main
+table are two enumerations kept in sync; drift fails fast, since the closed
+table rejects unknown actions.
 
 The main→renderer push direction stays as-is: every push already funnels through
 the single `:ipc.effects/send-to-renderer` effect, and the busy channels
