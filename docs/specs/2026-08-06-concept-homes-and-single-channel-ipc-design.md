@@ -129,8 +129,8 @@ their role as the system inventory, but list concepts instead of restating every
 action:
 
 ```clojure
-(def nexus
-  (merge-with merge
+(def registry
+  (merge-fragments
     anchor/registry
     topic/registry
     excerpt/registry
@@ -142,16 +142,21 @@ Fragments are per-process: one shared `registry` var cannot serve two processes
 whose action and effect sets differ, so a spanning concept exports one fragment
 per process — document's dialog flows and file I/O merge into main's registry,
 its renderer actions into the renderer's.
-(Equivalent form: each concept exposes a `register!` fn and the registry file calls
-one per concept — same property, keeps the current `nexus.registry` style. The
-implementation plan picks one.)
 
-The merge must reject duplicate names. A plain `merge-with merge` silently
-last-writer-wins when two concepts register the same action keyword — the
-opposite of stable meaning and of the fail-fast posture the IPC table gets for
-free. Use a merge that throws on key collision; it runs once at load, so a
-collision fails at boot, not at dispatch. (The `register!` form needs the same
-check.)
+The registry is a plain value, and dispatch takes it explicitly: shell call
+sites use `(nexus.core/dispatch registry store dispatch-data actions)`.
+`nexus.registry` — the global-atom facade — drops out of the codebase. Its
+`register-*!` calls silently overwrite existing keys and can run from any
+namespace; today three registrations already live outside the central file
+(`renderer/actions/topic.cljs`). The value model makes both impossible: a
+fragment not listed in the merge is not in the registry, so the inventory
+claim is enforced, not conventional.
+
+`merge-fragments` must reject duplicate names. A plain `merge-with merge`
+silently last-writer-wins when two concepts register the same action keyword —
+the opposite of stable meaning and of the fail-fast posture the IPC table gets
+for free. It throws on key collision; it runs once at load, so a collision
+fails at boot, not at dispatch.
 
 **Schemas compose.** Each concept owns its schema fragment; `schema.cljs` composes
 fragments into the boundary models (e.g. `PersistedTopic` embeds the anchor
